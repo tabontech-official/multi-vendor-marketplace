@@ -1,7 +1,6 @@
-import SigninRouter from './userRoute.js';
-import articleRouter from './article.js';
+import auth from './auth.js'
+
 
 export default {
-  SigninRouter,
-  articleRouter,
-};
+    auth,
+}
