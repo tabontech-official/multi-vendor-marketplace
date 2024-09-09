@@ -7,13 +7,13 @@ export const registerSchema = Joi.object({
   password: Joi.string().min(6).required(),
 //   passwordConfirmation: Joi.string().valid(Joi.ref('password')).required(),
   tags: Joi.string().optional(),
-  shopifyId: Joi.string().optional(),
-  phoneNumber: Joi.number().optional(),
-  address: Joi.string().optional(),
-  zip: Joi.number().optional(),
-  country: Joi.string().optional(),
-  city: Joi.string().optional(),
-  profileImage: Joi.string().optional(),
+//   shopifyId: Joi.string().optional(),
+//   phoneNumber: Joi.number().optional(),
+//   address: Joi.string().optional(),
+//   zip: Joi.number().optional(),
+//   country: Joi.string().optional(),
+//   city: Joi.string().optional(),
+//   profileImage: Joi.string().optional(),
 });
 
 export const loginSchema = Joi.object({
