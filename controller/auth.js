@@ -73,7 +73,8 @@ export const signUp = async (req, res) => {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
-      password: req.body.password, // Ensure password is hashed
+      password: req.body.password,
+      password_confirmation: req.body.password, // Ensure password is hashed
       shopifyId: shopifyId, // Save the Shopify ID in MongoDB
       tags: 'Trade User',
     });
