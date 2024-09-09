@@ -2,12 +2,6 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch'
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-// import { revokeShopifyToken } from "../utils/shopify.js";
-
-// import {
-//   loginValidation,
-//   registerValidationSchema,
-// } from "../validations/auth.js";
 
 
 const createToken = (payLoad) => {
@@ -203,6 +197,7 @@ const tagExistsInShopify = async (shopifyId, tag) => {
 };
 
 
+
 // Controller function to update user data
 export const updateUser = async (req, res) => {
   try {
@@ -297,38 +292,6 @@ export const updateUser = async (req, res) => {
   }
 };
 
-
-export const logout = async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1];
-
-    if (!token) {
-      return res.status(400).json({ error: 'Token is required' });
-    }
-
-    const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const user = await authModel.findById(decoded._id);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Blacklist the token
-    tokenBlacklist.add(token);
-
-    await authModel.findByIdAndUpdate(user._id, { $unset: { token: "" } });
-
-    if (user.shopifyAccessToken) {
-      await revokeShopifyToken(user.shopifyAccessToken);
-    }
-
-    res.status(200).json({ message: 'Successfully logged out' });
-  } catch (error) {
-    console.error('Error during logout:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-};
 
 export const newSignUp = async (req, res) => {
   try {
@@ -483,3 +446,13 @@ export const updateUserInShopify = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const logout=async(req,res)=>{
+  try {
+    const userId=await authModel.find({_id:req.params.id})
+    res.clearCookie('token');
+    res.status(200).send({message:'logout successfully',userId})
+  } catch (error) {
+    
+  }
+}

@@ -7,7 +7,7 @@ const authRouter =express.Router()
 authRouter.post('/signIn',signIn)
 authRouter.post('/signUp',signUp)
 authRouter.put('/update/:shopifyId',updateUser)
-authRouter.post('/logout',logout)
+authRouter.post('/logout/:userId',logout)
 authRouter.post('/newSignUp',newSignUp)
 authRouter.put('/updateInShopify',updateUserInShopify)
 
