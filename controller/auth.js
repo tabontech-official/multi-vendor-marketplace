@@ -143,7 +143,7 @@ export const signIn = async (req, res) => {
     // Debugging: Log comparison result
     console.log('Password match result:', isMatch);
 
-    if (isMatch) {
+    if (!isMatch) {
       return res.status(400).json({ error: "Password does not match" });
     }
 
