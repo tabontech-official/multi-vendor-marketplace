@@ -2,7 +2,7 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch'
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { revokeShopifyToken } from "../utils/shopify.js";
+// import { revokeShopifyToken } from "../utils/shopify.js";
 
 // import {
 //   loginValidation,
