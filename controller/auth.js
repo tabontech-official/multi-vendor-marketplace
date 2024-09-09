@@ -2,7 +2,8 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch'
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-
+import { request } from 'https';
+import { Buffer } from 'buffer';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -447,12 +448,85 @@ export const updateUserInShopify = async (req, res) => {
   }
 };
 
-export const logout=async(req,res)=>{
-  try {
-    const userId=await authModel.find({_id:req.params.id})
-    res.clearCookie('token');
-    res.status(200).send({message:'logout successfully',userId})
-  } catch (error) {
+// export const logout=async(req,res)=>{
+//   try {
+//     const userId=await authModel.find({_id:req.params.id})
+//     res.clearCookie('token');
+//     res.status(200).send({message:'logout successfully',userId})
+//   } catch (error) {
     
+//   }
+// }
+
+
+
+// Your Shopify store credentials
+
+
+export const logout = async (req, res) => {
+  try {
+    // Validate request parameters
+    const { id } = req.params; // This should be the Shopify customer ID
+    if (!id) {
+      return res.status(400).json({ error: 'Shopify Customer ID is required' });
+    }
+
+    // Find the user by Shopify customer ID
+    const user = await authModel.findOne({ shopifyId: id });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Clear session or token in MongoDB
+    // Assuming 'shopifyAccessToken' is the field storing the token
+    await authModel.findOneAndUpdate({ shopifyId: id }, { shopifyAccessToken: null });
+
+    // Basic Auth credentials for Shopify
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+
+    // Prepare Shopify request URL (replace with the correct endpoint if needed)
+    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${id}.json`;
+
+    // Revoke or delete user in Shopify (this example assumes a delete request)
+    const response = await fetch(shopifyUrl, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${base64Credentials}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    // Handle Shopify response
+    if (!response.ok) {
+      let errorMessage = 'Failed to revoke token from Shopify';
+      let responseBody = '';
+
+      try {
+        responseBody = await response.text(); // Read response as text
+        if (responseBody) {
+          const errorData = JSON.parse(responseBody);
+          console.error('Error revoking token in Shopify:', errorData);
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          console.error('Shopify response is empty');
+        }
+      } catch (parseError) {
+        console.error('Error parsing Shopify error response:', parseError);
+      }
+
+      return res.status(response.status).json({ error: errorMessage });
+    }
+
+    // Send success response
+    res.status(200).json({
+      message: 'Logged out successfully from both MongoDB and Shopify',
+    });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ error: error.message });
   }
-}
+};
