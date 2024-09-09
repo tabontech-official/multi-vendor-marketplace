@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { request } from 'https';
 import { Buffer } from 'buffer';
+import { registerSchema,loginSchema } from '../validation/auth.js';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -15,13 +16,13 @@ const createToken = (payLoad) => {
 
 export const signUp = async (req, res) => {
   try {
-    // Validate request body
-    // const { error } = registerValidationSchema.validate(req.body);
-    // if (error) {
-    //   return res.status(400).json({ error: error.details[0].message });
-    // }
+    
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-    // Check if user already exists
+   
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
       return res.status(400).json({ error: "User already exists with this email" });

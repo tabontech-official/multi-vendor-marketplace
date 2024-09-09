@@ -4,7 +4,7 @@ import express, { Router } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import authRouter from './Routes/auth.js';
-
+import productRouter from './Routes/product.js';
 console.log('Importing router from:', './Routes/router.js');
 
 import Connect from './connection/connect.js'; // Import the Connect function
@@ -23,7 +23,7 @@ app.use(compression());
 app.use(cors());
 app.use(express.json());
 app.use('/auth',authRouter)
-
+app.use('/product',productRouter)
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
