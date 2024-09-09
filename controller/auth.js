@@ -97,6 +97,10 @@ export const signUp = async (req, res) => {
 
 export const signIn = async (req, res) => {
   try {
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
     const { email, password } = req.body;
 
     const apiKey = process.env.SHOPIFY_API_KEY;
