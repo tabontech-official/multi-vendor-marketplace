@@ -2,6 +2,9 @@ import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
 import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import authRouter from './Routes/auth.js';
@@ -30,4 +33,14 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Set up storage for multer
+const uploadsDir = join(__dirname, 'uploads');
+
+// Create the uploads directory if it doesn't exist
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
 export default app;
