@@ -1,7 +1,10 @@
 import { productModel } from "../Models/product.js";
 import multer from 'multer'
 import path from 'path'
+import fetch from 'node-fetch';
 import fs from 'fs'
+
+
 export const fetchAndStoreProducts = async (req, res) => {
     try {
       // Basic Auth credentials
@@ -61,10 +64,7 @@ export const fetchAndStoreProducts = async (req, res) => {
     }
   };
 
-  
-
-  import fetch from 'node-fetch';
-  import productModel from '../models/productModel'; // Adjust the path as needed
+ 
   
   export const addProduct = async (req, res) => {
     try {
