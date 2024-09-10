@@ -1,11 +1,14 @@
 import compression from 'compression';
 import cors from 'cors';
-import express, { Router } from 'express';
+import express from 'express';
 import helmet from 'helmet';
+import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import authRouter from './Routes/auth.js';
 import productRouter from './Routes/product.js';
 import listingRouter from './Routes/listing.js';
+app.use(bodyParser.json()); // To handle JSON request bodies
+app.use(bodyParser.urlencoded({ extended: true }))
 console.log('Importing router from:', './Routes/router.js');
 
 import Connect from './connection/connect.js'; // Import the Connect function
