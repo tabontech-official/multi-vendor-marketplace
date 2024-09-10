@@ -2,8 +2,10 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch'
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { request } from 'https';
+import path from 'path';
+import multer from 'multer';
 import { Buffer } from 'buffer';
+import FormData from 'form-data';
 import { registerSchema,loginSchema } from '../validation/auth.js';
 
 const createToken = (payLoad) => {
@@ -209,7 +211,7 @@ const tagExistsInShopify = async (shopifyId, tag) => {
 export const updateUser = async (req, res) => {
   try {
     const { shopifyId } = req.params;
-    const { firstName, lastName, email, password,phoneNumber,zip,address } = req.body;
+    const { firstName, lastName, email, password,phoneNumber,zip,address,country,city } = req.body;
 
     if (!shopifyId) {
       return res.status(400).json({ error: "Shopify ID is required" });
@@ -454,7 +456,7 @@ export const updateUserInShopify = async (req, res) => {
   }
 };
 
-// export const logout=async(req,res)=>{
+
 //   try {
 //     const userId=await authModel.find({_id:req.params.id})
 //     res.clearCookie('token');
@@ -529,10 +531,11 @@ export const logout = async (req, res) => {
 
     // Send success response
     res.status(200).json({
-      message: 'Logged out successfully from both MongoDB and Shopify',
+      message: 'Logged out successfully',
     });
   } catch (error) {
     console.error('Error during logout:', error);
     res.status(500).json({ error: error.message });
   }
 };
+
