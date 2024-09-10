@@ -7,8 +7,6 @@ import morgan from 'morgan';
 import authRouter from './Routes/auth.js';
 import productRouter from './Routes/product.js';
 import listingRouter from './Routes/listing.js';
-app.use(bodyParser.json()); // To handle JSON request bodies
-app.use(bodyParser.urlencoded({ extended: true }))
 console.log('Importing router from:', './Routes/router.js');
 
 import Connect from './connection/connect.js'; // Import the Connect function
@@ -20,7 +18,8 @@ const app = express();
 setupSwagger(app);
 // Initialize MongoDB connection
 Connect();
-
+app.use(bodyParser.json()); // To handle JSON request bodies
+app.use(bodyParser.urlencoded({ extended: true }))
 app.use(morgan('combined'));
 app.use(helmet());
 app.use(compression());
