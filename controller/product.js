@@ -175,22 +175,22 @@ export const fetchAndStoreProducts = async (req, res) => {
   });
   
   // Initialize multer with storage configuration
-  export const upload = multer({ storage: storage });
+  export const imageUploader = multer({ storage: storage });
 
 
   export const updateProduct = async (req, res) => {
     try {
       const { id } = req.params; // Product ID to update
-      const { title, description, price } = req.body;
+      const { name, description, price } = req.body;
       const image = req.file; // Optional: new image file, if any
   
-      if (!title && !description && !price && !image) {
+      if (!name && !description && !price && !image) {
         return res.status(400).json({ error: 'At least one field is required to update' });
       }
   
       // Find and update the product in MongoDB
       const updatedProductData = {};
-      if (title) updatedProductData.title = title;
+      if (name) updatedProductData.name = name;
       if (description) updatedProductData.description = description;
       if (price) updatedProductData.price = price;
       if (image) updatedProductData.image = image.path; // Update image path if a new image is provided
@@ -251,16 +251,16 @@ export const fetchAndStoreProducts = async (req, res) => {
   export const addProduct = async (req, res) => {
     try {
       // Extract product data from the request
-      const { title, description, price } = req.body;
+      const { name, description, price } = req.body;
       const image = req.file; // Get the uploaded file
   
-      if (!title || !description || !price || !image) {
+      if (!name || !description || !price || !image) {
         return res.status(400).json({ error: 'All fields are required, including image' });
       }
   
       // Save product to MongoDB
       const newProduct = new productModel({
-        title,
+        name,
         description,
         price,
         image: image.path, // Store the path to the image
