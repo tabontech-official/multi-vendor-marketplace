@@ -5,6 +5,6 @@ const productRouter=express.Router()
 productRouter.get('/shopify',fetchAndStoreProducts)
 productRouter.post('/webhook',handleShopifyWebhook)
 productRouter.post('/addProduct',imageUploader.single('image'),addProduct)
-productRouter.put('/update/:id',upload.single('image'),updateProduct)
+productRouter.put('/update/:id',imageUploader.single('image'),updateProduct)
 
 export default productRouter;
