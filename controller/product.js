@@ -365,8 +365,8 @@ export const addUsedEquipments = async (req, res) => {
     }
 
     // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl =
-      'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
+    const cloudinaryImageUrl =image.path
+      // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
 
     const imagePayload = {
       image: {
