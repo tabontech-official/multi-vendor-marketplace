@@ -3,6 +3,39 @@ import multer from 'multer'
 import path from 'path'
 import fetch from 'node-fetch';
 import fs from 'fs'
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from 'cloudinary';
+
+cloudinary.v2.config({
+  cloud_name: 'djocrwprs', // replace with your Cloudinary cloud name
+  api_key: '433555789235653',       // replace with your Cloudinary API key
+  api_secret: 'YuzeR8ryVZNJ2jPowPxPb3YXWvY'  // replace with your Cloudinary API secret
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary.v2,
+  params: {
+    folder: 'uploads', // specify the folder where images will be uploaded
+    allowed_formats: ['jpg', 'png', 'jpeg'] // specify allowed formats
+  }
+});
+
+export const upload = multer({ storage });
+
+export const imageUpload=async(req,res)=>{
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    const { path: imageUrl, originalname } = req.file;
+    res.status(200).json({ imageUrl, originalname });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'An error occurred during the upload' });
+  }
+}
+
 
 
 export const fetchAndStoreProducts = async (req, res) => {
@@ -117,7 +150,8 @@ export const addProduct = async (req, res) => {
     // Step 2: Upload Image to Shopify
     const imagePayload = {
       image: {
-        src: `http://localhost:4000/${image.path}` // Adjust URL according to your server configuration
+        src: `    "imageUrl": "https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png",
+${image.path}` // Adjust URL according to your server configuration
       }
     };
 
@@ -175,21 +209,21 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath = 'uploads/';
-      // Ensure upload directory exists
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-      cb(null, Date.now() + path.extname(file.originalname));
-    }
-  });
+//   const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//       const uploadPath = 'uploads/';
+//       // Ensure upload directory exists
+//       if (!fs.existsSync(uploadPath)) {
+//         fs.mkdirSync(uploadPath, { recursive: true });
+//       }
+//       cb(null, uploadPath);
+//     },
+//     filename: (req, file, cb) => {
+//       cb(null, Date.now() + path.extname(file.originalname));
+//     }
+//   });
   
- export const upload = multer({ storage });
+//  export const upload = multer({ storage });
 
 
 
