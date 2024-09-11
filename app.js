@@ -19,19 +19,18 @@ setupSwagger(app);
 // Initialize MongoDB connection
 Connect();
 app.use(bodyParser.json()); // To handle JSON request bodies
-app.use(bodyParser.urlencoded({ extended: true }))
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));
 app.use(helmet());
 app.use(compression());
 app.use(cors());
 app.use('/uploads', express.static('uploads'));
 app.use(express.json());
-app.use('/auth',authRouter)
-app.use('/product',productRouter)
+app.use('/auth', authRouter);
+app.use('/product', productRouter);
 
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
-
 
 export default app;

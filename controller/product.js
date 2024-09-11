@@ -1,11 +1,10 @@
 import { productModel } from '../Models/product.js';
 import multer from 'multer';
-import path from 'path';
 import fetch from 'node-fetch';
-import fs from 'fs';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from 'cloudinary';
 
+//storage for images storing
 cloudinary.v2.config({
   cloud_name: 'djocrwprs', // replace with your Cloudinary cloud name
   api_key: '433555789235653', // replace with your Cloudinary API key
@@ -21,7 +20,6 @@ const storage = new CloudinaryStorage({
 });
 
 export const upload = multer({ storage });
-
 
 //routes for image uploads
 export const imageUpload = async (req, res) => {
@@ -103,6 +101,7 @@ export const fetchAndStoreProducts = async (req, res) => {
 };
 
 
+// helper function to add images
 const shopifyRequest = async (url, method, body) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -127,7 +126,7 @@ const shopifyRequest = async (url, method, body) => {
   return response.json();
 };
 
-// Function to handle adding a product
+//for creating product
 export const addProduct = async (req, res) => {
   try {
     const { title, body_html, vendor, product_type, price } = req.body;
@@ -229,84 +228,167 @@ export const addProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// Function to add a product
 
-export const newAddProduct = async (req, res) => {
+
+export const addUsedEquipments = async (req, res) => {
   try {
-    const { title, body_html, vendor, product_type, price, variants } =
-      req.body;
-    const image = req.file;
+    // Extract equipment details from request body
+    const { 
+      location, 
+      name, 
+      brand, 
+      asking_price, 
+      accept_offers, 
+      equipment_type, 
+      certification, 
+      year_purchased, 
+      warranty, 
+      reason_for_selling, 
+      shipping,
+    } = req.body;
+    const image = req.file; // Handle file upload
 
-    if (
-      !title ||
-      !body_html ||
-      !vendor ||
-      !product_type ||
-      !price ||
-      !image ||
-      !variants
-    ) {
-      return res
-        .status(400)
-        .json({
-          error: 'All fields are required, including image and variants',
-        });
+    // Validate required fields
+    if (!name || !asking_price || !image) {
+      return res.status(400).json({ error: 'Name, asking price, and image are required.' });
     }
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title,
-        body_html,
-        vendor,
-        product_type,
-        variants: JSON.parse(variants), // Assuming variants are passed as a JSON string
-        images: [{ src: `http://localhost:4000/${image.filename}` }], // Adjust URL according to your server configuration
+        title: name,  // Use equipment name as the title
+        body_html: '', // Leave body_html empty, as we'll use metafields for details
+        vendor: brand, // Use brand as the vendor
+        product_type: equipment_type, // Use equipment type as the product type
+        variants: [{ price: asking_price.toString() }], // Price should be a string
       },
     };
 
-    const productResponse = await shopifyRequest(
-      `${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`,
-      'POST',
-      shopifyPayload
-    );
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+
     console.log('Product Response:', productResponse);
+
     const productId = productResponse.product.id;
 
-    // Step 2: Upload Image to Shopify
+    // Step 2: Create Structured Metafields for the Equipment Details
+    const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'location',
+          value: location,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'brand',
+          value: brand,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'asking_price',
+          value: asking_price.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'accept_offers',
+          value: accept_offers ? 'true' : 'false',
+          type: 'boolean',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'equipment_type',
+          value: equipment_type,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'certification',
+          value: certification,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'year_purchased',
+          value: year_purchased.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'warranty',
+          value: warranty,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'reason_for_selling',
+          value: reason_for_selling,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'custom',
+          key: 'shipping',
+          value: shipping,
+          type: 'single_line_text_field',
+        },
+      },
+    ];
+
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl =
+      'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
+
     const imagePayload = {
       image: {
-        src: `http://localhost:4000/uploads/${image.path}`, // Adjust URL according to your server configuration
+        src: cloudinaryImageUrl, // Use Cloudinary URL here
       },
     };
 
-    const imageResponse = await shopifyRequest(
-      `${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`,
-      'POST',
-      imagePayload
-    );
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
     const imageId = imageResponse.image.id;
 
-    // Step 3: Save Product to MongoDB
+    // Step 4: Save Product to MongoDB
     const newProduct = new productModel({
       id: productId,
-      title,
-      body_html,
-      vendor,
-      product_type,
+      title: name,
+      body_html: '', // Empty body_html as we use metafields for details
+      vendor: brand,
+      product_type: equipment_type,
       created_at: new Date(),
       handle: productResponse.product.handle,
       updated_at: new Date(),
       published_at: productResponse.product.published_at,
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
-      variants: JSON.parse(variants).map((v) => ({
-        ...v,
-        product_id: productId,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })),
+      variants: productResponse.product.variants,
       images: [
         {
           id: imageId,
@@ -314,7 +396,7 @@ export const newAddProduct = async (req, res) => {
           position: imageResponse.image.position,
           created_at: imageResponse.image.created_at,
           updated_at: imageResponse.image.updated_at,
-          alt: imageResponse.image.alt,
+          alt: 'Equipment Image',
           width: imageResponse.image.width,
           height: imageResponse.image.height,
           src: imageResponse.image.src,
@@ -326,11 +408,24 @@ export const newAddProduct = async (req, res) => {
         position: imageResponse.image.position,
         created_at: imageResponse.image.created_at,
         updated_at: imageResponse.image.updated_at,
-        alt: imageResponse.image.alt,
+        alt: 'Equipment Image',
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
       },
+      equipment: {
+        location,
+        name,
+        brand,
+        asking_price,
+        accept_offers,
+        equipment_type,
+        certification,
+        year_purchased,
+        warranty,
+        reason_for_selling,
+        shipping
+      }
     });
 
     await newProduct.save();
@@ -341,7 +436,7 @@ export const newAddProduct = async (req, res) => {
       product: newProduct,
     });
   } catch (error) {
-    console.error('Error in addProduct function:', error);
+    console.error('Error in addUsedEquipments function:', error);
     res.status(500).json({ error: error.message });
   }
 };
