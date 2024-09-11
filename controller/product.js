@@ -64,126 +64,117 @@ export const fetchAndStoreProducts = async (req, res) => {
     }
   };
 
- 
-  
-  export const addProduct = async (req, res) => {
-    try {
-      // Extract product data from the request
-      const { name, description, price } = req.body;
-      const image = req.file; // Get the uploaded file
-  
-      if (!name || !description || !price || !image) {
-        return res.status(400).json({ error: 'All fields are required, including image' });
-      }
-  
-      // Basic Auth credentials
-      const apiKey = process.env.SHOPIFY_API_KEY;
-      const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-      const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-  
-      const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-      const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products.json`;
-  
-      // Prepare Shopify request payload for product creation
-      const shopifyPayload = {
-        product: {
-          title: name,
-          body_html: description,
-          variants: [{ price }],
-        }
-      };
-  
-      // Save product to Shopify
-      const response = await fetch(shopifyUrl, {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Basic ${base64Credentials}`,
-        },
-        body: JSON.stringify(shopifyPayload),
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error saving product to Shopify:', errorData);
-        return res.status(500).json({ error: 'Failed to register product with Shopify' });
-      }
-  
-      const shopifyResponse = await response.json();
-      const shopifyProductId = shopifyResponse.product.id;
-  
-      // Save product to MongoDB with Shopify product ID
-      const newProduct = new productModel({
-        name,
-        description,
-        price,
-        shopifyId: shopifyProductId,
-        image: image.path, // Store the path to the image
-      });
-      const savedProduct = await newProduct.save();
-  
-      // Optional: Upload Image to Shopify Media
-      const imageUploadUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}/images.json`;
-      const imageUploadResponse = await fetch(imageUploadUrl, {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Basic ${base64Credentials}`,
-        },
-        body: JSON.stringify({
-          image: { src: `http://localhost:5000/${image.path}` } // Adjust URL as needed
-        }),
-      });
-  
-      if (!imageUploadResponse.ok) {
-        const errorData = await imageUploadResponse.json();
-        console.error('Error uploading image to Shopify:', errorData);
-        return res.status(500).json({ error: 'Failed to upload image to Shopify' });
-      }
-  
-      const imageUploadResponseData = await imageUploadResponse.json();
-      const shopifyImageId = imageUploadResponseData.image.id;
-  
-      // Optional: Update Metafields with the image URL
-      const metafieldsUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}/metafields.json`;
-      const metafieldsResponse = await fetch(metafieldsUrl, {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Basic ${base64Credentials}`,
-        },
-        body: JSON.stringify({
-          metafield: {
-            namespace: 'global',
-            key: 'image_url',
-            value: `http://localhost:5000/${image.path}`, // Adjust URL as needed
-            value_type: 'string'
-          }
-        }),
-      });
-  
-      if (!metafieldsResponse.ok) {
-        const errorData = await metafieldsResponse.json();
-        console.error('Error updating metafields in Shopify:', errorData);
-        return res.status(500).json({ error: 'Failed to update metafields in Shopify' });
-      }
-  
-      // Update MongoDB with Shopify Image ID
-      await productModel.findByIdAndUpdate(savedProduct._id, { shopifyImageId });
-  
-      // Send a successful response
-      res.status(201).json({
-        message: 'Product successfully added',
-        product: savedProduct,
-      });
-    } catch (error) {
-      console.error('Error in addProduct function:', error);
-      return res.status(500).json({ error: error.message });
-    }
-  };
-  
-  
 
+const shopifyRequest = async (url, method, body) => {
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${base64Credentials}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Shopify API request failed: ${errorText}`);
+  }
+
+  return response.json();
+};
+
+// Function to add a product
+export const addProduct = async (req, res) => {
+  try {
+    const { title, body_html, vendor, product_type, price } = req.body;
+    const image = req.file; // Handle file upload
+
+    if (!title || !body_html || !vendor || !product_type || !price || !image) {
+      return res.status(400).json({ error: 'All fields are required, including image' });
+    }
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title,
+        body_html,
+        vendor,
+        product_type,
+        variants: [{ price }],
+      },
+    };
+
+    const productResponse = await shopifyRequest(`${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`, 'POST', shopifyPayload);
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Upload Image to Shopify
+    const imagePayload = {
+      image: {
+        src: `http://localhost:4000/${image.path}` // Adjust URL according to your server configuration
+      }
+    };
+
+    const imageResponse = await shopifyRequest(`${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 3: Save Product to MongoDB
+    const newProduct = new productModel({
+      id: productId,
+      title,
+      body_html,
+      vendor,
+      product_type,
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [{
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: imageResponse.image.alt,
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src
+      }],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: imageResponse.image.alt,
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src
+      }
+    });
+
+    await newProduct.save();
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Product successfully created and saved',
+      product: newProduct
+    });
+  } catch (error) {
+    console.error('Error in addProduct function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       const uploadPath = 'uploads/';
@@ -199,3 +190,102 @@ export const fetchAndStoreProducts = async (req, res) => {
   });
   
  export const upload = multer({ storage });
+
+
+
+// Helper function for Shopify requests
+
+
+// Function to add a product
+export const newAddProduct = async (req, res) => {
+  try {
+    const { title, body_html, vendor, product_type, price, variants } = req.body;
+    const image = req.file;
+
+    if (!title || !body_html || !vendor || !product_type || !price || !image || !variants) {
+      return res.status(400).json({ error: 'All fields are required, including image and variants' });
+    }
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title,
+        body_html,
+        vendor,
+        product_type,
+        variants: JSON.parse(variants), // Assuming variants are passed as a JSON string
+        images: [{ src: `http://localhost:4000/${image.filename}` }] // Adjust URL according to your server configuration
+      }
+    };
+
+    const productResponse = await shopifyRequest(`${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`, 'POST', shopifyPayload);
+    console.log('Product Response:', productResponse);
+    const productId = productResponse.product.id;
+
+    // Step 2: Upload Image to Shopify
+    const imagePayload = {
+      image: {
+        src: `http://localhost:4000/uploads/${image.path}` // Adjust URL according to your server configuration
+      }
+    };
+
+    const imageResponse = await shopifyRequest(`${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 3: Save Product to MongoDB
+    const newProduct = new productModel({
+      id: productId,
+      title,
+      body_html,
+      vendor,
+      product_type,
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: JSON.parse(variants).map(v => ({
+        ...v,
+        product_id: productId,
+        created_at: new Date(),
+        updated_at: new Date()
+      })),
+      images: [{
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: imageResponse.image.alt,
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src
+      }],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: imageResponse.image.alt,
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src
+      }
+    });
+
+    await newProduct.save();
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Product successfully created and saved',
+      product: newProduct
+    });
+  } catch (error) {
+    console.error('Error in addProduct function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
