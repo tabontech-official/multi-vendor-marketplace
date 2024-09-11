@@ -100,7 +100,6 @@ export const fetchAndStoreProducts = async (req, res) => {
   }
 };
 
-
 // helper function to add images
 const shopifyRequest = async (url, method, body) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
@@ -229,34 +228,35 @@ export const addProduct = async (req, res) => {
   }
 };
 
-
 export const addUsedEquipments = async (req, res) => {
   try {
     // Extract equipment details from request body
-    const { 
-      location, 
-      name, 
-      brand, 
-      asking_price, 
-      accept_offers, 
-      equipment_type, 
-      certification, 
-      year_purchased, 
-      warranty, 
-      reason_for_selling, 
+    const {
+      location,
+      name,
+      brand,
+      asking_price,
+      accept_offers,
+      equipment_type,
+      certification,
+      year_purchased,
+      warranty,
+      reason_for_selling,
       shipping,
     } = req.body;
     const image = req.file; // Handle file upload
 
     // Validate required fields
     if (!name || !asking_price || !image) {
-      return res.status(400).json({ error: 'Name, asking price, and image are required.' });
+      return res
+        .status(400)
+        .json({ error: 'Name, asking price, and image are required.' });
     }
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name,  // Use equipment name as the title
+        title: name, // Use equipment name as the title
         body_html: '', // Leave body_html empty, as we'll use metafields for details
         vendor: brand, // Use brand as the vendor
         product_type: equipment_type, // Use equipment type as the product type
@@ -265,7 +265,11 @@ export const addUsedEquipments = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
 
     console.log('Product Response:', productResponse);
 
@@ -275,7 +279,7 @@ export const addUsedEquipments = async (req, res) => {
     const metafieldsPayload = [
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'location',
           value: location,
           type: 'single_line_text_field',
@@ -283,7 +287,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'brand',
           value: brand,
           type: 'single_line_text_field',
@@ -291,7 +295,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'asking_price',
           value: asking_price.toString(),
           type: 'number_integer',
@@ -299,7 +303,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'accept_offers',
           value: accept_offers ? 'true' : 'false',
           type: 'boolean',
@@ -307,7 +311,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'equipment_type',
           value: equipment_type,
           type: 'single_line_text_field',
@@ -315,7 +319,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'certification',
           value: certification,
           type: 'single_line_text_field',
@@ -323,7 +327,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'year_purchased',
           value: year_purchased.toString(),
           type: 'number_integer',
@@ -331,7 +335,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'warranty',
           value: warranty,
           type: 'single_line_text_field',
@@ -339,7 +343,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'product_custom',
           key: 'reason_for_selling',
           value: reason_for_selling,
           type: 'single_line_text_field',
@@ -424,8 +428,8 @@ export const addUsedEquipments = async (req, res) => {
         year_purchased,
         warranty,
         reason_for_selling,
-        shipping
-      }
+        shipping,
+      },
     });
 
     await newProduct.save();
@@ -440,3 +444,208 @@ export const addUsedEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const addNewEquipments = async (req, res) => {
+  try {
+    // Extract equipment details from request body
+    const {
+      location,
+      name,
+      brand,
+      sale_price,
+      equipment_type,
+      certification,
+      year_manufactured,
+      warranty,
+      training,
+      shipping,
+    } = req.body;
+    const image = req.file; // Handle file upload
+
+    // Validate required fields
+    if (!name || !sale_price || !image) {
+      return res
+        .status(400)
+        .json({ error: 'Name, sale price, and image are required.' });
+    }
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: name, // Use equipment name as the title
+        body_html: '', // Leave body_html empty, as we'll use metafields for details
+        vendor: brand, // Use brand as the vendor
+        product_type: equipment_type, // Use equipment type as the product type
+        variants: [{ price: sale_price.toString() }], // Price should be a string
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Equipment Details
+    const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'location',
+          value: location,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'brand',
+          value: brand,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'sale_price',
+          value: sale_price.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'equipment_type',
+          value: equipment_type,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'certification',
+          value: certification,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'year_manufactured',
+          value: year_manufactured.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'warranty',
+          value: warranty,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'training',
+          value: training,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'product_custom',
+          key: 'shipping',
+          value: shipping,
+          type: 'single_line_text_field',
+        },
+      },
+    ];
+
+    // Create each metafield under the product
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl = image.path; // Use the uploaded image URL or path
+
+    const imagePayload = {
+      image: {
+        src: cloudinaryImageUrl, // Use the actual image URL or path here
+      },
+    };
+
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 4: Save Product to MongoDB
+    const newProduct = new productModel({
+      id: productId,
+      title: name,
+      body_html: '', // Empty body_html as we use metafields for details
+      vendor: brand,
+      product_type: equipment_type,
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [
+        {
+          id: imageId,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        },
+      ],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Equipment Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      },
+      equipment: {
+        location,
+        name,
+        brand,
+        sale_price,
+        equipment_type,
+        certification,
+        year_manufactured,
+        warranty,
+        training,
+        shipping,
+      },
+    });
+
+    await newProduct.save();
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Product successfully created and saved',
+      product: newProduct,
+    });
+  } catch (error) {
+    console.error('Error in addNewEquipments function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+

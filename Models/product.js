@@ -121,7 +121,10 @@ const productSchema = new mongoose.Schema(
       year_purchased: { type: Number },
       warranty: { type: String },
       reason_for_selling: { type: String },
-      shipping: { type: String }
+      shipping: { type: String },
+      sale_price:{type:Number},
+      year_manufactured:{type:String},
+      training:{type:String}
     }
   },
   {
