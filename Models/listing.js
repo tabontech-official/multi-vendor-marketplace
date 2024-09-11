@@ -19,4 +19,4 @@ const listingSchema=new mongoose.Schema({
   
 })
 
-export const listingModel=mongoose.model('products',listingSchema)
+export const listingModel=mongoose.model('produ',listingSchema)
