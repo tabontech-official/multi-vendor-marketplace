@@ -1,5 +1,5 @@
 import express from 'express'
-import { signIn,signUp,logout,newSignUp,updateUserInShopify} from '../controller/auth.js'
+import { signIn,signUp,logout,newSignUp,updateUserInShopify,webHook} from '../controller/auth.js'
 
 
 
@@ -10,6 +10,7 @@ authRouter.post('/signUp',signUp)
 authRouter.post('/logout/:userId',logout)
 authRouter.post('/newSignUp',newSignUp)
 authRouter.put('/updateInShopify',updateUserInShopify)
+authRouter.post('/webHook',webHook)
 
 
 export default authRouter;

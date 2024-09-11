@@ -507,6 +507,23 @@ export const logout = async (req, res) => {
   }
 };
 
+export const webHook =async(req,res)=>{
+  try {
+    const customer = req.body;
+
+    if (!customer || !customer.id) {
+      return res.status(400).json({ error: 'Customer ID is required' });
+    }
+
+    // Update customer in MongoDB if needed
+    await authModel.updateOne({ id: customer.id }, customer, { upsert: true });
+
+    res.status(200).json({ message: 'Customer successfully updated in database' });
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+}
 
 // export const logout = async (req, res) => {
 //   try {
