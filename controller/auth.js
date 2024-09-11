@@ -105,57 +105,66 @@ export const signIn = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
     const { email, password } = req.body;
-
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
-
-    const response = await fetch(shopifyUrl, {
-      method: 'GET',
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.status !== 200 || !data.customers.length) {
-      return res.status(404).json({ error: "User does not exist in Shopify" });
+    const emailExist=await authModel.findOne({
+      email:email
+    })
+    if(!emailExist){
+      throw new Error('user does not exist with this email')
     }
-
-    const shopifyCustomer = data.customers[0];
-
-    // Debugging: Log Shopify Customer ID
-    console.log('Shopify Customer ID:', shopifyCustomer.id);
-
-    const user = await authModel.findOne({ shopifyId: shopifyCustomer.id });
-
-    if (!user) {
-      return res.status(404).json({ error: "User does not exist in our system" });
+    const isMatch=await emailExist.comparePassword(password)
+    if(isMatch){
+        throw new Error('password does not match')
     }
+    // const apiKey = process.env.SHOPIFY_API_KEY;
+    // const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    // const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    // Debugging: Log user details
-    console.log('User from DB:', user);
+    // const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    // const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
 
-    const isMatch = await user.comparePassword(password);
+    // const response = await fetch(shopifyUrl, {
+    //   method: 'GET',
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     "Authorization": `Basic ${base64Credentials}`,
+    //   },
+    // });
 
-    // Debugging: Log comparison result
-    console.log('Password match result:', isMatch);
+    // const data = await response.json();
 
-    if (isMatch) {
-      return res.status(400).json({ error: "Password does not match" });
-    }
+    // if (response.status !== 200 || !data.customers.length) {
+    //   return res.status(404).json({ error: "User does not exist in Shopify" });
+    // }
 
-    const token = createToken({ _id: user._id });
+    // const shopifyCustomer = data.customers[0];
+
+    // // Debugging: Log Shopify Customer ID
+    // console.log('Shopify Customer ID:', shopifyCustomer.id);
+
+    // const user = await authModel.findOne({ shopifyId: shopifyCustomer.id });
+
+    // if (!user) {
+    //   return res.status(404).json({ error: "User does not exist in our system" });
+    // }
+
+    // // Debugging: Log user details
+    // console.log('User from DB:', user);
+
+    // const isMatch = await user.comparePassword(password);
+
+    // // Debugging: Log comparison result
+    // console.log('Password match result:', isMatch);
+
+    // if (isMatch) {
+    //   return res.status(400).json({ error: "Password does not match" });
+    // }
+
+    const token = createToken({ _id: emailExist._id });
 
     res.json({
       message: "Successfully logged in",
       token,
-      data: user,
+      data: emailExist
     });
   } catch (error) {
     return res.status(400).json({ error: error.message });
