@@ -279,7 +279,7 @@ export const addUsedEquipments = async (req, res) => {
     const metafieldsPayload = [
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'location',
           value: location,
           type: 'single_line_text_field',
@@ -287,7 +287,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'brand',
           value: brand,
           type: 'single_line_text_field',
@@ -295,7 +295,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'asking_price',
           value: asking_price.toString(),
           type: 'number_integer',
@@ -303,7 +303,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'accept_offers',
           value: accept_offers ? 'true' : 'false',
           type: 'boolean',
@@ -311,7 +311,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'equipment_type',
           value: equipment_type,
           type: 'single_line_text_field',
@@ -319,7 +319,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'certification',
           value: certification,
           type: 'single_line_text_field',
@@ -327,7 +327,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'year_purchased',
           value: year_purchased.toString(),
           type: 'number_integer',
@@ -335,7 +335,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'warranty',
           value: warranty,
           type: 'single_line_text_field',
@@ -343,7 +343,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'reason_for_selling',
           value: reason_for_selling,
           type: 'single_line_text_field',
@@ -351,7 +351,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'custom',
+          namespace: 'fold_tech',
           key: 'shipping',
           value: shipping,
           type: 'single_line_text_field',
@@ -491,7 +491,7 @@ export const addNewEquipments = async (req, res) => {
     const metafieldsPayload = [
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'location',
           value: location,
           type: 'single_line_text_field',
@@ -499,7 +499,7 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'brand',
           value: brand,
           type: 'single_line_text_field',
@@ -507,7 +507,7 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'sale_price',
           value: sale_price.toString(),
           type: 'number_integer',
@@ -515,7 +515,7 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'equipment_type',
           value: equipment_type,
           type: 'single_line_text_field',
@@ -523,7 +523,7 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'certification',
           value: certification,
           type: 'single_line_text_field',
@@ -531,7 +531,7 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'year_manufactured',
           value: year_manufactured.toString(),
           type: 'number_integer',
@@ -539,7 +539,7 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'warranty',
           value: warranty,
           type: 'single_line_text_field',
@@ -547,15 +547,15 @@ export const addNewEquipments = async (req, res) => {
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'training',
           value: training,
-          type: 'single_line_text_field',
+          type: 'multi_line_text_field',
         },
       },
       {
         metafield: {
-          namespace: 'product_custom',
+          namespace: 'fold_tech',
           key: 'shipping',
           value: shipping,
           type: 'single_line_text_field',
