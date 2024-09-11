@@ -150,7 +150,7 @@ export const addProduct = async (req, res) => {
       },
     };
 
-    const shopifyUrl = `${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(
       shopifyUrl,
       'POST',
@@ -172,7 +172,7 @@ export const addProduct = async (req, res) => {
       },
     };
 
-    const imageUrl = `${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
     const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
     const imageId = imageResponse.image.id;
