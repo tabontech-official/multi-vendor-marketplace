@@ -647,5 +647,288 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+ 
+export const addNewBusiness = async (req, res) => {
+  try {
+    // Extract equipment details from request body
+    const {
+      business_description,
+      asking_price_range,
+      established_year,
+      number_of_employees,
+      monthly_rent,
+      lease_expiration_date,
+      location_size,
+      gross_yearly_revenue,
+      cash_flow,
+      products_inventory,
+      equipment_value,
+      reason_for_selling,
+      list_of_devices,
+      offered_services,
+      support_and_training,
+      business_type
+    } = req.body;
+    const image = req.file; // Handle file upload
+
+    // Validate required fields
+  // Validate required fields
+  if (!business_description || !asking_price_range || !image ) {
+    return res.status(400).json({ error: 'Business description and asking price range are required.' });
+  }
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: business_description, // Use equipment name as the title
+        body_html: '', // Leave body_html empty, as we'll use metafields for details
+        vendor: '', // Use brand as the vendor
+        product_type: business_type, // Use equipment type as the product type
+        variants: [{ price: '0' }], // Price should be a string
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Equipment Details
+    const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'business_description',
+          value: business_description,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'asking_price_range',
+          value: asking_price_range,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'established_year',
+          value: established_year ? established_year.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'number_of_employees',
+          value: number_of_employees ? number_of_employees.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'monthly_rent',
+          value: monthly_rent ? monthly_rent.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'lease_expiration_date',
+          value: lease_expiration_date || '',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'location_size',
+          value: location_size ? location_size.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'gross_yearly_revenue',
+          value: gross_yearly_revenue ? gross_yearly_revenue.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'cash_flow',
+          value: cash_flow ? cash_flow.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'products_inventory',
+          value: products_inventory ? products_inventory.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'equipment_value',
+          value: equipment_value ? equipment_value.toString() : '',
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'reason_for_selling',
+          value: reason_for_selling || '',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'list_of_devices',
+          value: list_of_devices || '',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'offered_services',
+          value: offered_services || '',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'support_and_training',
+          value: support_and_training || '',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'business_type',
+          value: business_type || '',
+          type: 'single_line_text_field',
+        },
+      },
+    ];
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl =
+      'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
+
+    const imagePayload = {
+      image: {
+        src: cloudinaryImageUrl, // Use Cloudinary URL here
+      },
+    };
+
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 4: Save Product to MongoDB
+    const newProduct = new productModel({
+      id: productId,
+      title: business_description,
+      body_html: '', // Empty body_html as we use metafields for details
+      vendor: brand,
+      product_type: Business,
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [
+        {
+          id: imageId,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Business Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        },
+      ],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Business Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      },
+      business: {
+        business_description,
+        asking_price_range,
+        established_year,
+        number_of_employees,
+        monthly_rent,
+        lease_expiration_date,
+        location_size,
+        gross_yearly_revenue,
+        cash_flow,
+        products_inventory,
+        equipment_value,
+        reason_for_selling,
+        list_of_devices,
+        offered_services,
+        support_and_training,
+        business_type
+      },
+    });
+
+    await newProduct.save();
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Product successfully created and saved',
+      product: newProduct,
+    });
+  } catch (error) {
+    console.error('Error in addUsedEquipments function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
+
+
+
+
+
 
 

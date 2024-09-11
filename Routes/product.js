@@ -5,6 +5,7 @@ import {
   imageUpload,
   addUsedEquipments,
   addNewEquipments,
+  addNewBusiness
 } from '../controller/product.js';
 import express from 'express';
 
@@ -14,4 +15,5 @@ productRouter.post('/upload', upload.single('image'), imageUpload);
 productRouter.post('/addProduct', upload.single('image'), addProduct);
 productRouter.post('/addEquipment',upload.single('image'),addUsedEquipments)
 productRouter.post('/addNewEquipments',upload.single('image'),addNewEquipments)
+productRouter.post('/addBusiness',upload.single('image'),addNewBusiness)
 export default productRouter;

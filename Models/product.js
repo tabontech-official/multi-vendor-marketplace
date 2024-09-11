@@ -125,6 +125,24 @@ const productSchema = new mongoose.Schema(
       sale_price:{type:Number},
       year_manufactured:{type:String},
       training:{type:String}
+    },
+    business: {
+      business_description: { type: String },
+      asking_price_range: { type: String },
+      established_year: { type: Number },
+      number_of_employees: { type: Number },
+      monthly_rent: { type: Number },
+      lease_expiration_date: { type: String },
+      location_size: { type: Number },
+      gross_yearly_revenue: { type: Number },
+      cash_flow: { type: Number },
+      products_inventory: { type: Number },
+      equipment_value: { type: Number },
+      reason_for_selling: { type: String },
+      list_of_devices: { type: String },
+      offered_services: { type: String },
+      support_and_training: { type: String },
+      business_type:{type:String}
     }
   },
   {
