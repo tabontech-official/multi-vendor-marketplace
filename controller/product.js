@@ -2,42 +2,8 @@ import { productModel } from '../Models/product.js';
 import multer from 'multer';
 import fetch from 'node-fetch';
 import fs from 'fs';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from 'cloudinary';
 
-//storage for images storing
-cloudinary.v2.config({
-  cloud_name: 'djocrwprs', // replace with your Cloudinary cloud name
-  api_key: '433555789235653', // replace with your Cloudinary API key
-  api_secret: 'YuzeR8ryVZNJ2jPowPxPb3YXWvY', // replace with your Cloudinary API secret
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary.v2,
-  params: {
-    folder: 'uploads', // specify the folder where images will be uploaded
-    allowed_formats: ['jpg', 'png', 'jpeg'], // specify allowed formats
-  },
-});
-
-export const upload = multer({ storage });
-
-//routes for image uploads
-export const imageUpload = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const { path: imageUrl, originalname } = req.file;
-    res.status(200).json({ imageUrl, originalname });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'An error occurred during the upload' });
-  }
-};
-
-//fetch product data from shopify store
+//fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
     // Basic Auth credentials
@@ -967,14 +933,14 @@ export const addNewJobListing = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
-      { namespace: 'custom', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'custom', key: 'name', value: name, type: 'single_line_text_field' },
-      { namespace: 'custom', key: 'qualification', value: qualification, type: 'single_line_text_field' },
-      { namespace: 'custom', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
-      { namespace: 'custom', key: 'experience', value: experience.toString(), type: 'number_integer' },
-      { namespace: 'custom', key: 'availability', value: availability, type: 'single_line_text_field' },
-      { namespace: 'custom', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
-      { namespace: 'custom', key: 'image', value: image.path, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'qualification', value: qualification, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'experience', value: experience.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'availability', value: availability, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
+      { namespace: 'fold_tech', key: 'image', value: image.path, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {

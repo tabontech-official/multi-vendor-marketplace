@@ -36,7 +36,7 @@ const authSchema=new mongoose.Schema({
     city:{
         type:String
     },
-    profileImage:{
+    avatar:{
         type:String
     },
     token: String,

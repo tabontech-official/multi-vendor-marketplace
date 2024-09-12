@@ -3,9 +3,15 @@ import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto'
+import multer from 'multer';
 import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from 'cloudinary';
+
+//storage for images storing
+
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -600,6 +606,7 @@ export const webHook = async (req, res) => {
 //     res.status(500).json({ error: error.message });
 //   }
 // };
+
 export function verifyWebhook(req, res, next) {
   const hmac = req.headers['x-shopify-hmac-sha256'];
   const secret = efc815de91885a4f86ae3866731288154ec1a168ac208ce9f8196610d13c3bae; // Replace with your Shopify webhook secret
@@ -613,3 +620,4 @@ export function verifyWebhook(req, res, next) {
     res.status(403).send('Unauthorized');
   }
 }
+

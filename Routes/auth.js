@@ -6,7 +6,7 @@ import {
   newSignUp,
   updateUserInShopify,
   webHook,
-  verifyWebhook
+  verifyWebhook,
 } from '../controller/auth.js';
 
 const authRouter = express.Router();
