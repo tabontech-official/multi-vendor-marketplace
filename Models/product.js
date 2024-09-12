@@ -125,6 +125,7 @@ const productSchema = new mongoose.Schema(
       sale_price: { type: Number },
       year_manufactured: { type: String },
       training: { type: String },
+      description:{type:String}
     },
     business: {
       location: String,
@@ -143,7 +144,20 @@ const productSchema = new mongoose.Schema(
       listOfDevices: [String], // Array of strings for device list
       offeredServices: [String], // Array of strings for services
       supportAndTraining: String // Description of support and training offered
-  }},
+  },
+  jobListings: [
+    {
+      location: { type: String },
+      name: { type: String },
+      qualification: { type: String },
+      positionRequestedDescription: { type: String },
+      yearsOfExperience: { type: Number },
+      availability: { type: String },
+      requestedYearlySalary: { type: Number },
+      image: { type: String }, // URL to the uploaded image
+    }
+  ]
+},
   {
     timestamps: true,
   }

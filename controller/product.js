@@ -1,6 +1,7 @@
 import { productModel } from '../Models/product.js';
 import multer from 'multer';
 import fetch from 'node-fetch';
+import fs from 'fs';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from 'cloudinary';
 
@@ -459,6 +460,7 @@ export const addNewEquipments = async (req, res) => {
       warranty,
       training,
       shipping,
+      description,
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -493,6 +495,22 @@ export const addNewEquipments = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'name',
+          value: name,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'description',
+          value: description,
+          type: 'single_line_text_field',
+        },
+      },
       {
         metafield: {
           namespace: 'fold_tech',
@@ -636,6 +654,7 @@ export const addNewEquipments = async (req, res) => {
         warranty,
         training,
         shipping,
+        description,
       },
     });
 
@@ -678,7 +697,9 @@ export const addNewBusiness = async (req, res) => {
 
     // Validate required fields
     if (!location || !askingPrice || !image) {
-      return res.status(400).json({ error: 'Location, asking price, and image are required.' });
+      return res
+        .status(400)
+        .json({ error: 'Location, asking price, and image are required.' });
     }
 
     // Step 1: Create Product in Shopify
@@ -693,7 +714,11 @@ export const addNewBusiness = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
 
     console.log('Product Response:', productResponse);
 
@@ -701,22 +726,102 @@ export const addNewBusiness = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Business Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'business_description', value: businessDescription, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'asking_price', value: askingPrice.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'established_year', value: establishedYear.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'number_of_employees', value: numberOfEmployees.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'location_monthly_rent', value: locationMonthlyRent.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'lease_expiration_date', value: new Date(leaseExpirationDate).toISOString(), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'location_size', value: locationSize.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'gross_yearly_revenue', value: grossYearlyRevenue.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'cash_flow', value: cashFlow.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'products_inventory', value: productsInventory.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'equipment_value', value: equipmentValue.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'reason_for_selling', value: reasonForSelling, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'list_of_devices', value: JSON.stringify(listOfDevices), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'offered_services', value: JSON.stringify(offeredServices), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'support_and_training', value: supportAndTraining, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'business_description',
+        value: businessDescription,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'asking_price',
+        value: askingPrice.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'established_year',
+        value: establishedYear.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'number_of_employees',
+        value: numberOfEmployees.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'location_monthly_rent',
+        value: locationMonthlyRent.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'lease_expiration_date',
+        value: new Date(leaseExpirationDate).toISOString(),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'location_size',
+        value: locationSize.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'gross_yearly_revenue',
+        value: grossYearlyRevenue.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'cash_flow',
+        value: cashFlow.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'products_inventory',
+        value: productsInventory.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'equipment_value',
+        value: equipmentValue.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'reason_for_selling',
+        value: reasonForSelling,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'list_of_devices',
+        value: JSON.stringify(listOfDevices),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'offered_services',
+        value: JSON.stringify(offeredServices),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'support_and_training',
+        value: supportAndTraining,
+        type: 'single_line_text_field',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -809,3 +914,187 @@ export const addNewBusiness = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const addNewJobListing = async (req, res) => { 
+  try {
+    // Extract job listing details from request body
+    const {
+      location,
+      name,
+      qualification,
+      positionRequestedDescription,
+      yearsOfExperience,
+      availability,
+      requestedYearlySalary,
+    } = req.body;
+
+    // Handle file upload
+    const image = req.file; // Handle file upload
+
+    // Validate required fields
+    if (!location || !name || !qualification || !availability || !image) {
+      return res
+        .status(400)
+        .json({ error: 'Location, name, qualification, availability, and image are required.' });
+    }
+
+    if (isNaN(yearsOfExperience)) {
+      return res.status(400).json({ error: 'Years of experience must be a valid number.' });
+    }
+
+    // Convert yearsOfExperience to a number
+    const yearsOfExperienceNumber = Number(yearsOfExperience);
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: name, // Use job name as the title
+        body_html: positionRequestedDescription, // Use position description as body_html
+        vendor: location, // Use location as the vendor
+        product_type: 'Job Listing', // Use a specific type for job listings
+        variants: [{ price: requestedYearlySalary.toString() }], // Salary should be a string
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Job Listing Details
+    const metafieldsPayload = [
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'name',
+        value: name,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'qualification',
+        value: qualification,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'position_requested_description',
+        value: positionRequestedDescription,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'years_of_experience',
+        value: yearsOfExperienceNumber.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'availability',
+        value: availability,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'requested_yearly_salary',
+        value: requestedYearlySalary.toString(),
+        type: 'number_integer',
+      },
+    ];
+
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', { metafield });
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl = image.path; // Use the path to the image
+
+    const imagePayload = {
+      image: {
+        src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
+      },
+    };
+
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 4: Save Product to MongoDB
+    const newJobListing = new productModel({
+      id: productId,
+      title: name,
+      body_html: positionRequestedDescription,
+      vendor: location,
+      product_type: 'Job Listing',
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [
+        {
+          id: imageId,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Job Listing Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        },
+      ],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Job Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      },
+      jobListings: [
+        {
+          location,
+          name,
+          qualification,
+          positionRequestedDescription,
+          yearsOfExperience,
+          availability,
+          requestedYearlySalary,
+          image: imageResponse.image.src, // Store the image URL
+        }
+      ],
+    });
+
+    await newJobListing.save();
+
+    // Clean up the uploaded file if necessary
+    fs.unlinkSync(image.path); // Remove the file from local storage
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Job listing successfully created and saved',
+      product: newJobListing,
+    });
+  } catch (error) {
+    console.error('Error in addNewJobListing function:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
