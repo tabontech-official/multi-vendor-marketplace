@@ -2,14 +2,13 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import crypto from 'crypto'
+import crypto from 'crypto';
 import multer from 'multer';
 import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
-import fs from 'fs'
+import fs from 'fs';
 //storage for images storing
-
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -607,10 +606,12 @@ export const webHook = async (req, res) => {
 
 export function verifyWebhook(req, res, next) {
   const hmac = req.headers['x-shopify-hmac-sha256'];
-  const secret = efc815de91885a4f86ae3866731288154ec1a168ac208ce9f8196610d13c3bae; // Replace with your Shopify webhook secret
-  const generatedHmac = crypto.createHmac('sha256', secret)
-                              .update(req.rawBody, 'utf8', 'hex')
-                              .digest('base64');
+  const secret =
+    efc815de91885a4f86ae3866731288154ec1a168ac208ce9f8196610d13c3bae; // Replace with your Shopify webhook secret
+  const generatedHmac = crypto
+    .createHmac('sha256', secret)
+    .update(req.rawBody, 'utf8', 'hex')
+    .digest('base64');
 
   if (hmac === generatedHmac) {
     next();
@@ -619,7 +620,7 @@ export function verifyWebhook(req, res, next) {
   }
 }
 
-export const editProfile=async(req,res)=>{
+export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
   const { email, password, phone, address, zip, country, city } = req.body;
   const image = req.file; // Handle file upload
@@ -658,10 +659,9 @@ export const editProfile=async(req,res)=>{
     // Save the updated user
     await user.save();
 
-    
     res.status(200).json({ message: 'Profile updated successfully.' });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ error: 'Server error' });
   }
-}
+};

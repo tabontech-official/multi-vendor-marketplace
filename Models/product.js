@@ -185,7 +185,9 @@ roomListing:[
     otherDetails: { type: String },
     image: { type: String }, // Path or URL to the image
   }
-]},
+],
+shopifyId:String
+},
   {
     timestamps: true,
   }

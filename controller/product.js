@@ -889,7 +889,7 @@ export const addNewJobListing = async (req, res) => {
       name,
       qualification,
       positionRequestedDescription,
-      experience,
+      //experience,
       availability,
       requestedYearlySalary,
     } = req.body;
@@ -937,7 +937,7 @@ export const addNewJobListing = async (req, res) => {
       { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'qualification', value: qualification, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'experience', value: experience.toString(), type: 'number_integer' },
+      // { namespace: 'fold_tech', key: 'experience', value: experience.toString(), type: 'number_integer' },
       { namespace: 'fold_tech', key: 'availability', value: availability, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
       { namespace: 'fold_tech', key: 'image', value: image.path, type: 'single_line_text_field' },
@@ -1006,7 +1006,7 @@ export const addNewJobListing = async (req, res) => {
           name,
           qualification,
           positionRequestedDescription,
-          experience,
+          //experience,
           availability,
           requestedYearlySalary,
           image: imageResponse.image.src, // Store the image URL
@@ -1210,7 +1210,7 @@ export const addNewProviderListing = async (req, res) => {
   }
 };
 
-//  Add Room listing
+// Add Room listing
 export const addRoomListing = async (req, res) => {
   try {
     // Extract provider listing details from request body
