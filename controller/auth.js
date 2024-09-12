@@ -7,9 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import cloudinary from 'cloudinary';
-
+import fs from 'fs'
 //storage for images storing
 
 
@@ -648,14 +646,14 @@ export const editProfile=async(req,res)=>{
     if (image) {
       // Remove old image if it exists
       if (user.avatar) {
-        const oldImagePath = path.join(__dirname, 'uploads', user.avatar);
+        const oldImagePath = path.resolve('/tmp/uploads/', user.avatar);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
         }
       }
 
       // Update user's avatar with the new image filename
-      user.avatar = image.filename; // Store only the filename
+      user.avatar = image.filename; // Store only the tore only the filename
     }
     // Save the updated user
     await user.save();
