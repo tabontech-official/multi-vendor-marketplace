@@ -8,6 +8,7 @@ import {
   addNewBusiness,
   addNewJobListing,
   addNewProviderListing,
+  addRoomListing,
 } from '../controller/product.js';
 import express from 'express';
 
@@ -16,6 +17,7 @@ productRouter.get('/shopify', fetchAndStoreProducts);
 productRouter.post('/upload', upload.single('image'), imageUpload);
 productRouter.post('/addProduct', upload.single('image'), addProduct);
 productRouter.post('/addEquipment', upload.single('image'), addUsedEquipments);
+productRouter.post('/addRoom',upload.single('image'),addRoomListing)
 productRouter.post(
   '/addNewEquipments',
   upload.single('image'),

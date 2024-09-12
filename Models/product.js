@@ -167,6 +167,24 @@ providerListings:[
     offeredPositionDescription:{type:String},
     image: {type:String} // Store the image URL
   }
+],
+roomListing:[
+  {
+    location: { type: String, required: true },
+    roomSize: { type: Number, required: true }, // Square feet
+    monthlyRent: { type: Number, required: true },
+    deposit: { type: Number, required: true },
+    minimumInsuranceRequested: { type: Number, required: true },
+    typeOfUseAllowed: {
+      type: String,
+    },
+    rentalTerms: {
+      type: String
+    },
+    wifiAvailable: { type: Boolean, required: true },
+    otherDetails: { type: String },
+    image: { type: String }, // Path or URL to the image
+  }
 ]},
   {
     timestamps: true,

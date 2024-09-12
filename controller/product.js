@@ -1270,3 +1270,146 @@ export const addNewProviderListing = async (req,res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+export const addRoomListing = async (req, res) => {
+  try {
+    // Extract provider listing details from request body
+    const {
+      location,
+      roomSize,
+      monthlyRent,
+      deposit,
+      minimumInsuranceRequested,
+      typeOfUseAllowed,
+      rentalTerms,
+      wifiAvailable,
+      otherDetails,
+    } = req.body;
+
+    // Handle file upload
+    const image = req.file; // Handle file upload
+
+    if (!location || !roomSize || !monthlyRent || !deposit || !minimumInsuranceRequested || wifiAvailable === undefined) {
+      return res.status(400).json({
+        error: 'Location, room size, monthly rent, deposit, minimum insurance requested, and wifi availability are required.',
+      });
+    }
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: location, // Use qualification requested as the title
+        body_html: otherDetails, // Use offered position description as body_html
+        vendor: location, // Use location as the vendor
+        product_type: 'Room Listing', // Use a specific type for provider search listings
+        variants: [{ price: monthlyRent.toString() }], // Salary should be a string
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Provider Listing Details
+    const metafieldsPayload = [
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
+      { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
+    ];
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', { metafield });
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl = image.path; // Use the path to the image
+
+    const imagePayload = {
+      image: {
+        src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
+      },
+    };
+
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 4: Save Provider Listing to MongoDB
+    const newProviderListing = new productModel({
+      id: productId,
+      title: location,
+      body_html: otherDetails,
+      vendor: location,
+      product_type: 'Room Search Listing',
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [
+        {
+          id: imageId,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Room Listing Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        },
+      ],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Room Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      },
+      roomListing: [{
+        location,
+        roomSize,
+        monthlyRent,
+        deposit,
+        minimumInsuranceRequested,
+        typeOfUseAllowed,
+        rentalTerms,
+        wifiAvailable,
+        otherDetails,
+          image: imageResponse.image.src, // Store the image URL
+        }
+      ],
+    });
+
+    await newProviderListing.save();
+
+    // Clean up the uploaded file if necessary
+    // Remove the file from local storage
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Provider listing successfully created and saved',
+      product: newProviderListing,
+    });
+  } catch (error) {
+    console.error('Error in addNewProviderListing function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
