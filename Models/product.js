@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema(
     published_at: { type: Date },
     template_suffix: { type: String },
     tags: { type: String },
-
+    
     // Variants as an array of objects
     variants: [
       {
@@ -186,7 +186,8 @@ roomListing:[
     image: { type: String }, // Path or URL to the image
   }
 ],
-shopifyId:String
+shopifyId:String,
+
 },
   {
     timestamps: true,

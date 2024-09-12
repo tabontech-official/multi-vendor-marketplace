@@ -210,6 +210,7 @@ export const addUsedEquipments = async (req, res) => {
       warranty,
       reason_for_selling,
       shipping,
+      description
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -257,6 +258,14 @@ export const addUsedEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'brand',
           value: brand,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'description',
+          value: description,
           type: 'single_line_text_field',
         },
       },
@@ -396,6 +405,7 @@ export const addUsedEquipments = async (req, res) => {
         warranty,
         reason_for_selling,
         shipping,
+        description,
       },
     });
 
