@@ -915,7 +915,7 @@ export const addNewBusiness = async (req, res) => {
   }
 };
 
-export const addNewJobListing = async (req, res) => { 
+export const addNewJobListing = async (req, res) => {
   try {
     // Extract job listing details from request body
     const {
@@ -935,21 +935,14 @@ export const addNewJobListing = async (req, res) => {
     if (!location || !name || !qualification || !availability || !image) {
       return res
         .status(400)
-        .json({ error: 'Location, name, qualification, availability, and image are required.' });
+        .json({
+          error:
+            'Location, name, qualification, availability, and image are required.',
+        });
     }
 
-    if (experience === undefined || isNaN(Number(experience))) {
-      return res.status(400).json({ error: 'Experience must be a valid number.' });
-    }
-
-    // Convert experience to a number and then to a string for Shopify
-    const experienceNumber = Number(experience);
-    // if (isNaN(yearsOfExperience)) {
-    //   return res.status(400).json({ error: 'Years of experience must be a valid number.' });
-    // }
-
-    // // Convert yearsOfExperience to a number
-    // const yearsOfExperienceNumber = Number(yearsOfExperience);
+    
+   
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -974,48 +967,14 @@ export const addNewJobListing = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
-      {
-        namespace: 'fold_tech',
-        key: 'location',
-        value: location,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'name',
-        value: name,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'qualification',
-        value: qualification,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'position_requested_description',
-        value: positionRequestedDescription,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'experience',
-        value: experienceNumber.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'availability',
-        value: availability,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'requested_yearly_salary',
-        value: requestedYearlySalary.toString(),
-        type: 'number_integer',
-      },
+      { namespace: 'custom', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'custom', key: 'name', value: name, type: 'single_line_text_field' },
+      { namespace: 'custom', key: 'qualification', value: qualification, type: 'single_line_text_field' },
+      { namespace: 'custom', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
+      { namespace: 'custom', key: 'experience', value: experience.toString(), type: 'number_integer' },
+      { namespace: 'custom', key: 'availability', value: availability, type: 'single_line_text_field' },
+      { namespace: 'custom', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
+      { namespace: 'custom', key: 'image', value: image.path, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1081,11 +1040,11 @@ export const addNewJobListing = async (req, res) => {
           name,
           qualification,
           positionRequestedDescription,
-          experience: experienceNumber,
+          experience,
           availability,
           requestedYearlySalary,
           image: imageResponse.image.src, // Store the image URL
-        }
+        },
       ],
     });
 
@@ -1103,9 +1062,9 @@ export const addNewJobListing = async (req, res) => {
     console.error('Error in addNewJobListing function:', error);
     res.status(500).json({ error: error.message });
   }
-}
+};
 
-export const addNewProviderListing = async (req,res) => {
+export const addNewProviderListing = async (req, res) => {
   try {
     // Extract provider listing details from request body
     const {
@@ -1121,10 +1080,20 @@ export const addNewProviderListing = async (req,res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    if (!location || !qualificationRequested || !jobType || !typeOfJobOffered || !offeredYearlySalary || !image) {
+    if (
+      !location ||
+      !qualificationRequested ||
+      !jobType ||
+      !typeOfJobOffered ||
+      !offeredYearlySalary ||
+      !image
+    ) {
       return res
         .status(400)
-        .json({ error: 'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.' });
+        .json({
+          error:
+            'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.',
+        });
     }
 
     // Step 1: Create Product in Shopify
@@ -1139,7 +1108,11 @@ export const addNewProviderListing = async (req,res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
 
     console.log('Product Response:', productResponse);
 
@@ -1251,7 +1224,7 @@ export const addNewProviderListing = async (req,res) => {
           offeredYearlySalary,
           offeredPositionDescription,
           image: imageResponse.image.src, // Store the image URL
-        }
+        },
       ],
     });
 
@@ -1271,7 +1244,7 @@ export const addNewProviderListing = async (req,res) => {
   }
 };
 
-
+//  Add Room listing
 export const addRoomListing = async (req, res) => {
   try {
     // Extract provider listing details from request body
@@ -1290,9 +1263,17 @@ export const addRoomListing = async (req, res) => {
     // Handle file upload
     const image = req.file; // Handle file upload
 
-    if (!location || !roomSize || !monthlyRent || !deposit || !minimumInsuranceRequested || wifiAvailable === undefined) {
+    if (
+      !location ||
+      !roomSize ||
+      !monthlyRent ||
+      !deposit ||
+      !minimumInsuranceRequested ||
+      wifiAvailable === undefined
+    ) {
       return res.status(400).json({
-        error: 'Location, room size, monthly rent, deposit, minimum insurance requested, and wifi availability are required.',
+        error:
+          'Location, room size, monthly rent, deposit, minimum insurance requested, and wifi availability are required.',
       });
     }
 
@@ -1308,7 +1289,11 @@ export const addRoomListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
 
     console.log('Product Response:', productResponse);
 
@@ -1316,15 +1301,60 @@ export const addRoomListing = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Provider Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
-      { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'room_size',
+        value: roomSize.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'monthly_rent',
+        value: monthlyRent.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'deposit',
+        value: deposit.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'minimum_insurance_requested',
+        value: minimumInsuranceRequested.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'type_of_use_allowed',
+        value: typeOfUseAllowed,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'rental_terms',
+        value: rentalTerms,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'wifi_available',
+        value: wifiAvailable.toString(),
+        type: 'boolean',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'other_details',
+        value: otherDetails,
+        type: 'single_line_text_field',
+      },
     ];
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
@@ -1383,18 +1413,19 @@ export const addRoomListing = async (req, res) => {
         height: imageResponse.image.height,
         src: imageResponse.image.src,
       },
-      roomListing: [{
-        location,
-        roomSize,
-        monthlyRent,
-        deposit,
-        minimumInsuranceRequested,
-        typeOfUseAllowed,
-        rentalTerms,
-        wifiAvailable,
-        otherDetails,
+      roomListing: [
+        {
+          location,
+          roomSize,
+          monthlyRent,
+          deposit,
+          minimumInsuranceRequested,
+          typeOfUseAllowed,
+          rentalTerms,
+          wifiAvailable,
+          otherDetails,
           image: imageResponse.image.src, // Store the image URL
-        }
+        },
       ],
     });
 
