@@ -1,33 +1,30 @@
 import { authModel } from '../Models/auth.js';
-import fetch from 'node-fetch'
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import fetch from 'node-fetch';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import path from 'path';
-import multer from 'multer';
 import { Buffer } from 'buffer';
-import FormData from 'form-data';
-import { registerSchema,loginSchema } from '../validation/auth.js';
+import { registerSchema, loginSchema } from '../validation/auth.js';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
-    expiresIn: "125d",
+    expiresIn: '125d',
   });
   return token;
 };
 
-
 export const signUp = async (req, res) => {
   try {
-    
     const { error } = registerSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-   
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
-      return res.status(400).json({ error: "User already exists with this email" });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
     // Prepare Shopify request payload
@@ -47,23 +44,27 @@ export const signUp = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     // Save user to Shopify
     const response = await fetch(shopifyUrl, {
       method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
       },
       body: JSON.stringify(shopifyPayload),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Error saving user to Shopify:", errorData);
-      return res.status(500).json({ error: "Failed to register user with Shopify" });
+      console.error('Error saving user to Shopify:', errorData);
+      return res
+        .status(500)
+        .json({ error: 'Failed to register user with Shopify' });
     }
 
     // Extract Shopify ID from the response
@@ -87,16 +88,15 @@ export const signUp = async (req, res) => {
 
     // Send response
     res.status(201).send({
-      message: "Successfully registered",
+      message: 'Successfully registered',
       token,
       data: savedUser,
     });
   } catch (error) {
-    console.error("Error in signUp function:", error);
+    console.error('Error in signUp function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 export const signIn = async (req, res) => {
   try {
@@ -105,15 +105,15 @@ export const signIn = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
     const { email, password } = req.body;
-    const emailExist=await authModel.findOne({
-      email:email
-    })
-    if(!emailExist){
-      throw new Error('user does not exist with this email')
+    const emailExist = await authModel.findOne({
+      email: email,
+    });
+    if (!emailExist) {
+      throw new Error('user does not exist with this email');
     }
-    const isMatch=await emailExist.comparePassword(password)
-    if(isMatch){
-        throw new Error('password does not match')
+    const isMatch = await emailExist.comparePassword(password);
+    if (isMatch) {
+      throw new Error('password does not match');
     }
     // const apiKey = process.env.SHOPIFY_API_KEY;
     // const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -162,15 +162,14 @@ export const signIn = async (req, res) => {
     const token = createToken({ _id: emailExist._id });
 
     res.json({
-      message: "Successfully logged in",
+      message: 'Successfully logged in',
       token,
-      data: emailExist
+      data: emailExist,
     });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 };
-
 
 const hashPassword = async (password) => {
   if (password) {
@@ -179,29 +178,30 @@ const hashPassword = async (password) => {
   return null;
 };
 
-
 // Helper function to check if the tag exists for the user in Shopify
 const tagExistsInShopify = async (shopifyId, tag) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
   const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+    'base64'
+  );
   const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
   try {
     const response = await fetch(shopifyUrl, {
       method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Error fetching user from Shopify:", errorData);
-      throw new Error("Failed to fetch user from Shopify");
+      console.error('Error fetching user from Shopify:', errorData);
+      throw new Error('Failed to fetch user from Shopify');
     }
 
     const userData = await response.json();
@@ -209,21 +209,29 @@ const tagExistsInShopify = async (shopifyId, tag) => {
 
     return userTags.includes(tag);
   } catch (error) {
-    console.error("Error in tagExistsInShopify function:", error);
+    console.error('Error in tagExistsInShopify function:', error);
     throw error;
   }
 };
-
-
 
 // Controller function to update user data
 export const updateUser = async (req, res) => {
   try {
     const { shopifyId } = req.params;
-    const { firstName, lastName, email, password,phoneNumber,zip,address,country,city } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phoneNumber,
+      zip,
+      address,
+      country,
+      city,
+    } = req.body;
 
     if (!shopifyId) {
-      return res.status(400).json({ error: "Shopify ID is required" });
+      return res.status(400).json({ error: 'Shopify ID is required' });
     }
 
     // Check if the specified tag exists for the user in Shopify
@@ -231,7 +239,9 @@ export const updateUser = async (req, res) => {
     const tagExists = await tagExistsInShopify(shopifyId, defaultTag);
 
     if (!tagExists) {
-      return res.status(404).json({ error: "User with the specified tag not found in Shopify" });
+      return res
+        .status(404)
+        .json({ error: 'User with the specified tag not found in Shopify' });
     }
 
     // Prepare Shopify update payload
@@ -242,9 +252,9 @@ export const updateUser = async (req, res) => {
         email: email,
         password: password,
         password_confirmation: password,
-        phoneNumber:phoneNumber,
-        zip:zip,
-        address:address,
+        phoneNumber: phoneNumber,
+        zip: zip,
+        address: address,
         tags: defaultTag, // Tags are managed as default, not included in the body
       },
     };
@@ -253,23 +263,27 @@ export const updateUser = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
     // Update user in Shopify
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
       },
       body: JSON.stringify(shopifyPayload),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Error updating user in Shopify:", errorData);
-      return res.status(500).json({ error: "Failed to update user with Shopify" });
+      console.error('Error updating user in Shopify:', errorData);
+      return res
+        .status(500)
+        .json({ error: 'Failed to update user with Shopify' });
     }
 
     // Hash password if provided and update in MongoDB
@@ -281,7 +295,7 @@ export const updateUser = async (req, res) => {
       email,
       zip,
       address,
-      phoneNumber   
+      phoneNumber,
       // The tags field is not included in the update payload because it's a default value
     };
 
@@ -296,20 +310,19 @@ export const updateUser = async (req, res) => {
     );
 
     if (!updatedUser) {
-      return res.status(404).json({ error: "User not found in MongoDB" });
+      return res.status(404).json({ error: 'User not found in MongoDB' });
     }
 
     // Send response
     res.status(200).json({
-      message: "User updated successfully",
+      message: 'User updated successfully',
       data: updatedUser,
     });
   } catch (error) {
-    console.error("Error in updateUser function:", error);
+    console.error('Error in updateUser function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 export const newSignUp = async (req, res) => {
   try {
@@ -322,7 +335,9 @@ export const newSignUp = async (req, res) => {
     // Check if user already exists
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
-      return res.status(400).json({ error: "User already exists with this email" });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
     // Prepare Shopify request payload
@@ -342,23 +357,27 @@ export const newSignUp = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     // Save user to Shopify
     const response = await fetch(shopifyUrl, {
       method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
       },
       body: JSON.stringify(shopifyPayload),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Error saving user to Shopify:", errorData);
-      return res.status(500).json({ error: "Failed to register user with Shopify" });
+      console.error('Error saving user to Shopify:', errorData);
+      return res
+        .status(500)
+        .json({ error: 'Failed to register user with Shopify' });
     }
 
     // Extract Shopify ID from the response
@@ -381,17 +400,17 @@ export const newSignUp = async (req, res) => {
 
     // Send response
     res.status(201).send({
-      message: "Successfully registered",
+      message: 'Successfully registered',
       token,
       data: savedUser,
     });
   } catch (error) {
-    console.error("Error in signUp function:", error);
+    console.error('Error in signUp function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
-// Helper function to revoke Shopify token
 
+// Helper function to revoke Shopify token
 export const updateUserInShopify = async (req, res) => {
   try {
     // Validate request body
@@ -422,8 +441,10 @@ export const updateUserInShopify = async (req, res) => {
     const apiKey = process.env.SHOPIFY_API_KEY;
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-    
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
+
     // Prepare Shopify update URL
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${user.shopifyId}.json`;
 
@@ -431,16 +452,18 @@ export const updateUserInShopify = async (req, res) => {
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
       },
       body: JSON.stringify(shopifyPayload),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Error updating user in Shopify:", errorData);
-      return res.status(500).json({ error: "Failed to update user with Shopify" });
+      console.error('Error updating user in Shopify:', errorData);
+      return res
+        .status(500)
+        .json({ error: 'Failed to update user with Shopify' });
     }
 
     // Update user in MongoDB
@@ -452,33 +475,22 @@ export const updateUserInShopify = async (req, res) => {
       tags: `Trade User${additionalTags ? `, ${additionalTags}` : ''}`, // Update tags
     };
 
-    const updatedUser = await authModel.findOneAndUpdate({ email }, updateData, { new: true });
+    const updatedUser = await authModel.findOneAndUpdate(
+      { email },
+      updateData,
+      { new: true }
+    );
 
     // Send response
     res.status(200).json({
-      message: "User updated successfully",
+      message: 'User updated successfully',
       data: updatedUser,
     });
   } catch (error) {
-    console.error("Error in updateUser function:", error);
+    console.error('Error in updateUser function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
-
-
-//   try {
-//     const userId=await authModel.find({_id:req.params.id})
-//     res.clearCookie('token');
-//     res.status(200).send({message:'logout successfully',userId})
-//   } catch (error) {
-    
-//   }
-// }
-
-
-
-// Your Shopify store credentials
-
 
 export const logout = async (req, res) => {
   try {
@@ -491,7 +503,7 @@ export const logout = async (req, res) => {
 
     // Find user by ID (if needed)
     const user = await authModel.findById(userId);
-    
+
     // Optionally check if user exists
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -507,7 +519,7 @@ export const logout = async (req, res) => {
   }
 };
 
-export const webHook =async(req,res)=>{
+export const webHook = async (req, res) => {
   try {
     const customer = req.body;
 
@@ -515,17 +527,30 @@ export const webHook =async(req,res)=>{
       return res.status(400).json({ error: 'Customer ID is required' });
     }
 
-    // Update customer in MongoDB if needed
-    await authModel.updateOne({ id: customer.id }, customer, { upsert: true });
-
-    res.status(200).json({ message: 'Customer successfully updated in database' });
+    // Check if the request indicates a delete event
+    if (req.headers['x-shopify-topic'] === 'customers/delete') {
+      // Handle delete event
+      await authModel.deleteOne({ id: customer.id });
+      res
+        .status(200)
+        .json({ message: 'Customer successfully deleted from database' });
+    } else {
+      // Handle other events, e.g., update
+      await authModel.updateOne({ id: customer.id }, customer, {
+        upsert: true,
+      });
+      res
+        .status(200)
+        .json({ message: 'Customer successfully updated in database' });
+    }
   } catch (error) {
     console.error('Error handling webhook:', error);
     res.status(500).json({ error: 'An error occurred' });
   }
-}
+};
 
-// export const logout = async (req, res) => {
+// export const logout = async (req res) => {
+
 //   try {
 //     // Validate request parameters
 //     const { id } = req.params; // This should be the Shopify customer ID
@@ -592,4 +617,3 @@ export const webHook =async(req,res)=>{
 //     res.status(500).json({ error: error.message });
 //   }
 // };
-

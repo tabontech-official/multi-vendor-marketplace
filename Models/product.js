@@ -122,29 +122,28 @@ const productSchema = new mongoose.Schema(
       warranty: { type: String },
       reason_for_selling: { type: String },
       shipping: { type: String },
-      sale_price:{type:Number},
-      year_manufactured:{type:String},
-      training:{type:String}
+      sale_price: { type: Number },
+      year_manufactured: { type: String },
+      training: { type: String },
     },
     business: {
-      business_description: { type: String },
-      asking_price_range: { type: String },
-      established_year: { type: Number },
-      number_of_employees: { type: Number },
-      monthly_rent: { type: Number },
-      lease_expiration_date: { type: String },
-      location_size: { type: Number },
-      gross_yearly_revenue: { type: Number },
-      cash_flow: { type: Number },
-      products_inventory: { type: Number },
-      equipment_value: { type: Number },
-      reason_for_selling: { type: String },
-      list_of_devices: { type: String },
-      offered_services: { type: String },
-      support_and_training: { type: String },
-      business_type:{type:String}
-    }
-  },
+      location: String,
+      businessDescription: String,
+      askingPrice: Number,
+      establishedYear: Number,
+      numberOfEmployees: Number,
+      locationMonthlyRent: Number,
+      leaseExpirationDate: Date,
+      locationSize: Number,
+      grossYearlyRevenue: Number,
+      cashFlow: Number,
+      productsInventory: Number,
+      equipmentValue: Number,
+      reasonForSelling: String,
+      listOfDevices: [String], // Array of strings for device list
+      offeredServices: [String], // Array of strings for services
+      supportAndTraining: String // Description of support and training offered
+  }},
   {
     timestamps: true,
   }

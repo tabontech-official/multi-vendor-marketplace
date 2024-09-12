@@ -365,8 +365,8 @@ export const addUsedEquipments = async (req, res) => {
     }
 
     // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl =image.path
-      // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
+    const cloudinaryImageUrl = image.path;
+    // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
 
     const imagePayload = {
       image: {
@@ -481,7 +481,11 @@ export const addNewEquipments = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
 
     console.log('Product Response:', productResponse);
 
@@ -647,197 +651,82 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
- 
+
 export const addNewBusiness = async (req, res) => {
   try {
-    // Extract equipment details from request body
+    // Extract business listing details from request body
     const {
-      business_description,
-      asking_price_range,
-      established_year,
-      number_of_employees,
-      monthly_rent,
-      lease_expiration_date,
-      location_size,
-      gross_yearly_revenue,
-      cash_flow,
-      products_inventory,
-      equipment_value,
-      reason_for_selling,
-      list_of_devices,
-      offered_services,
-      support_and_training,
-      business_type
+      location,
+      businessDescription,
+      askingPrice,
+      establishedYear,
+      numberOfEmployees,
+      locationMonthlyRent,
+      leaseExpirationDate,
+      locationSize,
+      grossYearlyRevenue,
+      cashFlow,
+      productsInventory,
+      equipmentValue,
+      reasonForSelling,
+      listOfDevices,
+      offeredServices,
+      supportAndTraining,
     } = req.body;
+
     const image = req.file; // Handle file upload
 
     // Validate required fields
-  // Validate required fields
-  if (!business_description || !asking_price_range || !image ) {
-    return res.status(400).json({ error: 'Business description and asking price range are required.' });
-  }
+    if (!location || !askingPrice || !image) {
+      return res.status(400).json({ error: 'Location, asking price, and image are required.' });
+    }
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: business_description, // Use equipment name as the title
+        title: businessDescription, // Use business description as the title
         body_html: '', // Leave body_html empty, as we'll use metafields for details
-        vendor: '', // Use brand as the vendor
-        product_type: business_type, // Use equipment type as the product type
-        variants: [{ price: '0' }], // Price should be a string
+        vendor: location, // Use location as the vendor
+        product_type: 'Business Listing', // Use a specific type for business listings
+        variants: [{ price: askingPrice.toString() }], // Price should be a string
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
 
     console.log('Product Response:', productResponse);
 
     const productId = productResponse.product.id;
 
-    // Step 2: Create Structured Metafields for the Equipment Details
+    // Step 2: Create Structured Metafields for the Business Listing Details
     const metafieldsPayload = [
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'business_description',
-          value: business_description,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'asking_price_range',
-          value: asking_price_range,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'established_year',
-          value: established_year ? established_year.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'number_of_employees',
-          value: number_of_employees ? number_of_employees.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'monthly_rent',
-          value: monthly_rent ? monthly_rent.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'lease_expiration_date',
-          value: lease_expiration_date || '',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'location_size',
-          value: location_size ? location_size.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'gross_yearly_revenue',
-          value: gross_yearly_revenue ? gross_yearly_revenue.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'cash_flow',
-          value: cash_flow ? cash_flow.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'products_inventory',
-          value: products_inventory ? products_inventory.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'equipment_value',
-          value: equipment_value ? equipment_value.toString() : '',
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'reason_for_selling',
-          value: reason_for_selling || '',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'list_of_devices',
-          value: list_of_devices || '',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'offered_services',
-          value: offered_services || '',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'support_and_training',
-          value: support_and_training || '',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'business_type',
-          value: business_type || '',
-          type: 'single_line_text_field',
-        },
-      },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'business_description', value: businessDescription, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'asking_price', value: askingPrice.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'established_year', value: establishedYear.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'number_of_employees', value: numberOfEmployees.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'location_monthly_rent', value: locationMonthlyRent.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'lease_expiration_date', value: new Date(leaseExpirationDate).toISOString(), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'location_size', value: locationSize.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'gross_yearly_revenue', value: grossYearlyRevenue.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'cash_flow', value: cashFlow.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'products_inventory', value: productsInventory.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'equipment_value', value: equipmentValue.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'reason_for_selling', value: reasonForSelling, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'list_of_devices', value: JSON.stringify(listOfDevices), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'offered_services', value: JSON.stringify(offeredServices), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'support_and_training', value: supportAndTraining, type: 'single_line_text_field' },
     ];
+
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+      await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
     // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl =
-      'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
+    const cloudinaryImageUrl = image.path;
+    // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with actual Cloudinary URL
 
     const imagePayload = {
       image: {
@@ -853,10 +742,10 @@ export const addNewBusiness = async (req, res) => {
     // Step 4: Save Product to MongoDB
     const newProduct = new productModel({
       id: productId,
-      title: business_description,
+      title: businessDescription,
       body_html: '', // Empty body_html as we use metafields for details
-      vendor: brand,
-      product_type: Business,
+      vendor: location,
+      product_type: 'Business Listing',
       created_at: new Date(),
       handle: productResponse.product.handle,
       updated_at: new Date(),
@@ -871,7 +760,7 @@ export const addNewBusiness = async (req, res) => {
           position: imageResponse.image.position,
           created_at: imageResponse.image.created_at,
           updated_at: imageResponse.image.updated_at,
-          alt: 'Business Image',
+          alt: 'Business Listing Image',
           width: imageResponse.image.width,
           height: imageResponse.image.height,
           src: imageResponse.image.src,
@@ -883,28 +772,28 @@ export const addNewBusiness = async (req, res) => {
         position: imageResponse.image.position,
         created_at: imageResponse.image.created_at,
         updated_at: imageResponse.image.updated_at,
-        alt: 'Business Image',
+        alt: 'Business Listing Image',
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
       },
       business: {
-        business_description,
-        asking_price_range,
-        established_year,
-        number_of_employees,
-        monthly_rent,
-        lease_expiration_date,
-        location_size,
-        gross_yearly_revenue,
-        cash_flow,
-        products_inventory,
-        equipment_value,
-        reason_for_selling,
-        list_of_devices,
-        offered_services,
-        support_and_training,
-        business_type
+        location,
+        businessDescription,
+        askingPrice,
+        establishedYear,
+        numberOfEmployees,
+        locationMonthlyRent,
+        leaseExpirationDate: new Date(leaseExpirationDate),
+        locationSize,
+        grossYearlyRevenue,
+        cashFlow,
+        productsInventory,
+        equipmentValue,
+        reasonForSelling,
+        listOfDevices: JSON.parse(listOfDevices),
+        offeredServices: JSON.parse(offeredServices),
+        supportAndTraining,
       },
     });
 
@@ -912,23 +801,11 @@ export const addNewBusiness = async (req, res) => {
 
     // Send a successful response
     res.status(201).json({
-      message: 'Product successfully created and saved',
+      message: 'Business listing successfully created and saved',
       product: newProduct,
     });
   } catch (error) {
-    console.error('Error in addUsedEquipments function:', error);
+    console.error('Error in addBusinessListing function:', error);
     res.status(500).json({ error: error.message });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
