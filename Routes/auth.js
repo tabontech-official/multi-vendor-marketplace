@@ -6,6 +6,7 @@ import {
   newSignUp,
   updateUserInShopify,
   webHook,
+  verifyWebhook
 } from '../controller/auth.js';
 
 const authRouter = express.Router();
@@ -15,6 +16,6 @@ authRouter.post('/signUp', signUp);
 authRouter.post('/logout/:userId', logout);
 authRouter.post('/newSignUp', newSignUp);
 authRouter.put('/updateInShopify', updateUserInShopify);
-authRouter.post('/webHook', webHook);
+authRouter.post('/webHook',verifyWebhook,webHook);
 
 export default authRouter;

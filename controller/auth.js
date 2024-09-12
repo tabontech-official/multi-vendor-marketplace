@@ -2,6 +2,7 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto'
 import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
@@ -520,32 +521,14 @@ export const logout = async (req, res) => {
 };
 
 export const webHook = async (req, res) => {
+  const shopifyId = req.body.id; // Adjust according to the webhook payload
+
   try {
-    const customer = req.body;
-
-    if (!customer || !customer.id) {
-      return res.status(400).json({ error: 'Customer ID is required' });
-    }
-
-    // Check if the request indicates a delete event
-    if (req.headers['x-shopify-topic'] === 'customers/delete') {
-      // Handle delete event
-      await authModel.deleteOne({ id: customer.id });
-      res
-        .status(200)
-        .json({ message: 'Customer successfully deleted from database' });
-    } else {
-      // Handle other events, e.g., update
-      await authModel.updateOne({ id: customer.id }, customer, {
-        upsert: true,
-      });
-      res
-        .status(200)
-        .json({ message: 'Customer successfully updated in database' });
-    }
+    await User.deleteOne({ shopifyId: shopifyId });
+    res.status(200).send('User profile deleted from MongoDB');
   } catch (error) {
-    console.error('Error handling webhook:', error);
-    res.status(500).json({ error: 'An error occurred' });
+    res.status(500).send('Error deleting user profile from MongoDB');
+    console.error(error);
   }
 };
 
@@ -617,3 +600,16 @@ export const webHook = async (req, res) => {
 //     res.status(500).json({ error: error.message });
 //   }
 // };
+export function verifyWebhook(req, res, next) {
+  const hmac = req.headers['x-shopify-hmac-sha256'];
+  const secret = efc815de91885a4f86ae3866731288154ec1a168ac208ce9f8196610d13c3bae; // Replace with your Shopify webhook secret
+  const generatedHmac = crypto.createHmac('sha256', secret)
+                              .update(req.rawBody, 'utf8', 'hex')
+                              .digest('base64');
+
+  if (hmac === generatedHmac) {
+    next();
+  } else {
+    res.status(403).send('Unauthorized');
+  }
+}
