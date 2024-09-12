@@ -648,7 +648,7 @@ export const editProfile=async(req,res)=>{
     if (image) {
       // Remove old image if it exists
       if (user.avatar) {
-        const oldImagePath = path.join(__dirname, '../uploads', user.avatar);
+        const oldImagePath = path.join(__dirname, 'uploads', user.avatar);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
         }
