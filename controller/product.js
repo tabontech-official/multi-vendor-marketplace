@@ -923,7 +923,7 @@ export const addNewJobListing = async (req, res) => {
       name,
       qualification,
       positionRequestedDescription,
-      yearsOfExperience,
+      experience,
       availability,
       requestedYearlySalary,
     } = req.body;
@@ -938,12 +938,18 @@ export const addNewJobListing = async (req, res) => {
         .json({ error: 'Location, name, qualification, availability, and image are required.' });
     }
 
-    if (isNaN(yearsOfExperience)) {
-      return res.status(400).json({ error: 'Years of experience must be a valid number.' });
+    if (experience === undefined || isNaN(Number(experience))) {
+      return res.status(400).json({ error: 'Experience must be a valid number.' });
     }
 
-    // Convert yearsOfExperience to a number
-    const yearsOfExperienceNumber = Number(yearsOfExperience);
+    // Convert experience to a number and then to a string for Shopify
+    const experienceNumber = Number(experience);
+    // if (isNaN(yearsOfExperience)) {
+    //   return res.status(400).json({ error: 'Years of experience must be a valid number.' });
+    // }
+
+    // // Convert yearsOfExperience to a number
+    // const yearsOfExperienceNumber = Number(yearsOfExperience);
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -994,8 +1000,8 @@ export const addNewJobListing = async (req, res) => {
       },
       {
         namespace: 'fold_tech',
-        key: 'years_of_experience',
-        value: yearsOfExperienceNumber.toString(),
+        key: 'experience',
+        value: experienceNumber.toString(),
         type: 'number_integer',
       },
       {
@@ -1075,7 +1081,7 @@ export const addNewJobListing = async (req, res) => {
           name,
           qualification,
           positionRequestedDescription,
-          yearsOfExperience,
+          experience: experienceNumber,
           availability,
           requestedYearlySalary,
           image: imageResponse.image.src, // Store the image URL
@@ -1086,7 +1092,7 @@ export const addNewJobListing = async (req, res) => {
     await newJobListing.save();
 
     // Clean up the uploaded file if necessary
-    fs.unlinkSync(image.path); // Remove the file from local storage
+    // Remove the file from local storage
 
     // Send a successful response
     res.status(201).json({
@@ -1098,3 +1104,169 @@ export const addNewJobListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }
+
+export const addNewProviderListing = async (req,res) => {
+  try {
+    // Extract provider listing details from request body
+    const {
+      location,
+      qualificationRequested,
+      jobType,
+      typeOfJobOffered,
+      offeredYearlySalary,
+      offeredPositionDescription,
+    } = req.body;
+
+    // Handle file upload
+    const image = req.file; // Handle file upload
+
+    // Validate required fields
+    if (!location || !qualificationRequested || !jobType || !typeOfJobOffered || !offeredYearlySalary || !image) {
+      return res
+        .status(400)
+        .json({ error: 'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.' });
+    }
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: qualificationRequested, // Use qualification requested as the title
+        body_html: offeredPositionDescription, // Use offered position description as body_html
+        vendor: location, // Use location as the vendor
+        product_type: 'Provider Search Listing', // Use a specific type for provider search listings
+        variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Provider Listing Details
+    const metafieldsPayload = [
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'qualification_requested',
+        value: qualificationRequested,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'job_type',
+        value: jobType,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'type_of_job_offered',
+        value: typeOfJobOffered,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'offered_yearly_salary',
+        value: offeredYearlySalary.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'offered_position_description',
+        value: offeredPositionDescription,
+        type: 'single_line_text_field',
+      },
+    ];
+
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', { metafield });
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl = image.path; // Use the path to the image
+
+    const imagePayload = {
+      image: {
+        src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
+      },
+    };
+
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 4: Save Provider Listing to MongoDB
+    const newProviderListing = new productModel({
+      id: productId,
+      title: qualificationRequested,
+      body_html: offeredPositionDescription,
+      vendor: location,
+      product_type: 'Provider Search Listing',
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [
+        {
+          id: imageId,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Provider Listing Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        },
+      ],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Provider Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      },
+      providerListings: [
+        {
+          location,
+          qualificationRequested,
+          jobType,
+          typeOfJobOffered,
+          offeredYearlySalary,
+          offeredPositionDescription,
+          image: imageResponse.image.src, // Store the image URL
+        }
+      ],
+    });
+
+    await newProviderListing.save();
+
+    // Clean up the uploaded file if necessary
+    // Remove the file from local storage
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Provider listing successfully created and saved',
+      product: newProviderListing,
+    });
+  } catch (error) {
+    console.error('Error in addNewProviderListing function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};

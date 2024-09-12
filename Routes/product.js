@@ -7,6 +7,7 @@ import {
   addNewEquipments,
   addNewBusiness,
   addNewJobListing,
+  addNewProviderListing,
 } from '../controller/product.js';
 import express from 'express';
 
@@ -22,4 +23,5 @@ productRouter.post(
 );
 productRouter.post('/addJob',upload.single('image'),addNewJobListing)
 productRouter.post('/addBusiness', upload.single('image'), addNewBusiness);
+productRouter.post('/addProvider',upload.single('image'),addNewProviderListing)
 export default productRouter;

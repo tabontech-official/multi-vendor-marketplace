@@ -151,13 +151,23 @@ const productSchema = new mongoose.Schema(
       name: { type: String },
       qualification: { type: String },
       positionRequestedDescription: { type: String },
-      yearsOfExperience: { type: Number },
+      experience: { type: Number },
       availability: { type: String },
       requestedYearlySalary: { type: Number },
       image: { type: String }, // URL to the uploaded image
     }
-  ]
-},
+  ],
+providerListings:[
+  {
+    location:{type:String},
+    qualificationRequested:{type:String},
+    jobType:{type:String},
+    typeOfJobOffered:{type:String},
+    offeredYearlySalary:{type:Number},
+    offeredPositionDescription:{type:String},
+    image: {type:String} // Store the image URL
+  }
+]},
   {
     timestamps: true,
   }
