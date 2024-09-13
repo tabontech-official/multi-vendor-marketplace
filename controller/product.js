@@ -1457,34 +1457,4 @@ export const getProduct=async(req,res)=>{
   }
 }
 
-const SHOPIFY_SECRET = efc815de91885a4f86ae3866731288154ec1a168ac208ce9f8196610d13c3bae;
 
-export const productWebHook=async(req,res)=>{
-  const hmac = req.get('X-Shopify-Hmac-Sha256');
-  const generatedHmac = crypto.createHmac('sha256', SHOPIFY_SECRET)
-                             .update(req.rawBody, 'utf8', 'hex')
-                             .digest('base64');
-  
-  if (hmac !== generatedHmac) {
-    return res.status(401).send('Unauthorized');
-  }
-
-  try {
-    const product = req.body;
-    // Update product in MongoDB
-    const result = await Product.findByIdAndUpdate(product.id, {
-      name: product.title,
-      price: product.variants[0].price, // or whichever price field you use
-      description: product.body_html
-    }, { new: true });
-
-    if (!result) {
-      return res.status(404).send('Product not found');
-    }
-
-    res.status(200).send('Product updated successfully');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-}

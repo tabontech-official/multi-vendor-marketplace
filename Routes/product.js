@@ -8,7 +8,6 @@ import {
   addNewProviderListing,
   addRoomListing,
   getProduct,
-  productWebHook
 } from '../controller/product.js';
 import { upload } from '../middleware/cloudinary.js';
 import express from 'express';
@@ -31,5 +30,5 @@ productRouter.post(
   addNewProviderListing
 );
 productRouter.get('/getProduct/:userId',getProduct)
-productRouter.post('/productwebHook',productWebHook)
+
 export default productRouter;
