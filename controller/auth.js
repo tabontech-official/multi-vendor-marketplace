@@ -595,11 +595,15 @@ export const logout = async (req, res) => {
 
 export function verifyWebhook(req, res, next) {
   const hmac = req.headers['x-shopify-hmac-sha256'];
-  const secret =process.env.SHOPIFY_API_KEY
+  const secret = process.env.SHOPIFY_API_SECRET; // Make sure this is correctly set
+
+  if (!req.rawBody) {
+    return res.status(400).send('Bad Request: Missing raw body');
+  }
 
   const generatedHmac = crypto
     .createHmac('sha256', secret)
-    .update(req.rawBody, 'utf8', 'hex')
+    .update(req.rawBody, 'utf8')
     .digest('base64');
 
   if (hmac === generatedHmac) {
