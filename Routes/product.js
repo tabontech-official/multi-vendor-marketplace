@@ -7,6 +7,7 @@ import {
   addNewJobListing,
   addNewProviderListing,
   addRoomListing,
+  getProduct
 } from '../controller/product.js';
 import { upload } from '../middleware/cloudinary.js';
 import express from 'express';
@@ -28,4 +29,5 @@ productRouter.post(
   upload.single('image'),
   addNewProviderListing
 );
+productRouter.get('/getProduct/:userId',getProduct)
 export default productRouter;

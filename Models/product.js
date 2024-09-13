@@ -102,7 +102,7 @@ const productSchema = new mongoose.Schema(
         namespace: { type: String },
         key: { type: String },
         value: { type: String },
-        value_type: { type: String },
+        type: { type: String },
         description: { type: String },
         owner_id: { type: Number },
         owner_resource: { type: String },
@@ -187,7 +187,7 @@ roomListing:[
   }
 ],
 shopifyId:String,
-
+userId: mongoose.Schema.Types.ObjectId, 
 },
   {
     timestamps: true,

@@ -606,8 +606,8 @@ export const webHook = async (req, res) => {
 
 export function verifyWebhook(req, res, next) {
   const hmac = req.headers['x-shopify-hmac-sha256'];
-  const secret =
-    efc815de91885a4f86ae3866731288154ec1a168ac208ce9f8196610d13c3bae; // Replace with your Shopify webhook secret
+  const secret =process.env.SHOPIFY_API_KEY
+
   const generatedHmac = crypto
     .createHmac('sha256', secret)
     .update(req.rawBody, 'utf8', 'hex')

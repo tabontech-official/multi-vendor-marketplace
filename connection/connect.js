@@ -12,9 +12,7 @@ const disconnected = red;
 
 const Connect = () => {
   mongoose.connect(process.env.DB_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 500000000, // Optional: increase timeout
+    
   });
 
   mongoose.connection.on('connected', () => {

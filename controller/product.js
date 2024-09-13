@@ -1,7 +1,5 @@
 import { productModel } from '../Models/product.js';
-import multer from 'multer';
 import fetch from 'node-fetch';
-import fs from 'fs';
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -210,7 +208,8 @@ export const addUsedEquipments = async (req, res) => {
       warranty,
       reason_for_selling,
       shipping,
-      description
+      description,
+      userId
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -407,6 +406,7 @@ export const addUsedEquipments = async (req, res) => {
         shipping,
         description,
       },
+      userId: userId,
     });
 
     await newProduct.save();
@@ -437,6 +437,7 @@ export const addNewEquipments = async (req, res) => {
       training,
       shipping,
       description,
+      userId
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -632,6 +633,7 @@ export const addNewEquipments = async (req, res) => {
         shipping,
         description,
       },
+      userId:userId
     });
 
     await newProduct.save();
@@ -667,6 +669,7 @@ export const addNewBusiness = async (req, res) => {
       listOfDevices,
       offeredServices,
       supportAndTraining,
+      userId
     } = req.body;
 
     const image = req.file; // Handle file upload
@@ -876,6 +879,7 @@ export const addNewBusiness = async (req, res) => {
         offeredServices: JSON.parse(offeredServices),
         supportAndTraining,
       },
+      userId:userId
     });
 
     await newProduct.save();
@@ -902,6 +906,7 @@ export const addNewJobListing = async (req, res) => {
       //experience,
       availability,
       requestedYearlySalary,
+      userId
     } = req.body;
 
     // Handle file upload
@@ -1022,6 +1027,7 @@ export const addNewJobListing = async (req, res) => {
           image: imageResponse.image.src, // Store the image URL
         },
       ],
+      userId:userId
     });
 
     await newJobListing.save();
@@ -1050,6 +1056,7 @@ export const addNewProviderListing = async (req, res) => {
       typeOfJobOffered,
       offeredYearlySalary,
       offeredPositionDescription,
+      userId
     } = req.body;
 
     // Handle file upload
@@ -1202,6 +1209,7 @@ export const addNewProviderListing = async (req, res) => {
           image: imageResponse.image.src, // Store the image URL
         },
       ],
+      userId:userId
     });
 
     await newProviderListing.save();
@@ -1221,6 +1229,7 @@ export const addNewProviderListing = async (req, res) => {
 };
 
 // Add Room listing
+
 export const addRoomListing = async (req, res) => {
   try {
     // Extract provider listing details from request body
@@ -1234,6 +1243,7 @@ export const addRoomListing = async (req, res) => {
       rentalTerms,
       wifiAvailable,
       otherDetails,
+      userId
     } = req.body;
 
     // Handle file upload
@@ -1403,6 +1413,7 @@ export const addRoomListing = async (req, res) => {
           image: imageResponse.image.src, // Store the image URL
         },
       ],
+      userId:userId
     });
 
     await newProviderListing.save();
@@ -1420,3 +1431,28 @@ export const addRoomListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getProduct=async(req,res)=>{
+  try {
+    const userId = req.params.userId;
+
+    // Validate userId (basic check, you can enhance this)
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required.' });
+    }
+
+    // Find products by userId
+    const products = await productModel.find({ userId: userId });
+
+    // Check if products were found
+    if (products.length === 0) {
+      return res.status(404).json({ message: 'No products found for this user.' });
+    }
+
+    // Send the found products as a response
+    res.status(200).json({ products });
+  } catch (error) {
+    console.error('Error in getProductsByUserId function:', error);
+    res.status(500).json({ error: error.message });
+  }
+}

@@ -6,9 +6,6 @@ import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import authRouter from './Routes/auth.js';
 import productRouter from './Routes/product.js';
-
-console.log('Importing router from:', './Routes/router.js');
-
 import Connect from './connection/connect.js'; // Import the Connect function
 
 import setupSwagger from './swaggerConfig.js';
