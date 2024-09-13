@@ -609,10 +609,17 @@ export function verifyWebhook(req, res, next) {
   }
 }
 export const webHook = async (req, res) => {
-  const shopifyId = req.body.id; // Adjust according to the webhook payload
 
   try {
+    const payload = req.body; // Depending on Shopify's webhook, this might need adjustment
+    const shopifyId = payload.id; // Adjust according to the actual payload
+
+    // Log payload for debugging
+    console.log('Received payload:', payload);
+
+    // Perform your MongoDB operation
     await authModel.deleteOne({ shopifyId: shopifyId });
+
     res.status(200).send('User profile deleted from MongoDB');
   } catch (error) {
     res.status(500).send('Error deleting user profile from MongoDB');
