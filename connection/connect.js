@@ -12,7 +12,7 @@ const disconnected = red;
 
 const Connect = () => {
   mongoose.connect(process.env.DB_URL, {
-    
+
   });
 
   mongoose.connection.on('connected', () => {
