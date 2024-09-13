@@ -523,17 +523,6 @@ export const logout = async (req, res) => {
   }
 };
 
-export const webHook = async (req, res) => {
-  const shopifyId = req.body.id; // Adjust according to the webhook payload
-
-  try {
-    await User.deleteOne({ shopifyId: shopifyId });
-    res.status(200).send('User profile deleted from MongoDB');
-  } catch (error) {
-    res.status(500).send('Error deleting user profile from MongoDB');
-    console.error(error);
-  }
-};
 
 // export const logout = async (req res) => {
 
@@ -619,6 +608,17 @@ export function verifyWebhook(req, res, next) {
     res.status(403).send('Unauthorized');
   }
 }
+export const webHook = async (req, res) => {
+  const shopifyId = req.body.id; // Adjust according to the webhook payload
+
+  try {
+    await authModel.deleteOne({ shopifyId: shopifyId });
+    res.status(200).send('User profile deleted from MongoDB');
+  } catch (error) {
+    res.status(500).send('Error deleting user profile from MongoDB');
+    console.error(error);
+  }
+};
 
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
