@@ -31,5 +31,5 @@ productRouter.post(
   addNewProviderListing
 );
 productRouter.get('/getProduct/:userId',getProduct)
-productRouter.post('/product/webHook',productWebHook)
+productRouter.post('/productwebHook',productWebHook)
 export default productRouter;
