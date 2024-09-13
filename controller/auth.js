@@ -595,9 +595,10 @@ export const logout = async (req, res) => {
 
 export function verifyWebhook(req, res, next) {
   const hmac = req.headers['x-shopify-hmac-sha256'];
-  const secret = process.env.SHOPIFY_API_SECRET; // Make sure this is correctly set
+  const secret = process.env.SHOPIFY_API_SECRET; // Ensure this environment variable is correctly set
 
   if (!req.rawBody) {
+    console.error('Raw body is missing');
     return res.status(400).send('Bad Request: Missing raw body');
   }
 
@@ -609,19 +610,25 @@ export function verifyWebhook(req, res, next) {
   if (hmac === generatedHmac) {
     next();
   } else {
+    console.error('HMAC verification failed');
     res.status(403).send('Unauthorized');
   }
 }
-export const webHook = async (req, res) => {
 
+// Webhook Handler
+export const webHook = async (req, res) => {
   try {
-    const payload = req.body; // Depending on Shopify's webhook, this might need adjustment
-    const shopifyId = payload.id; // Adjust according to the actual payload
+    const payload = req.body; // Adjust based on actual payload structure
+    if (!payload || !payload.id) {
+      console.error('Invalid payload:', payload);
+      return res.status(400).send('Bad Request: Invalid payload');
+    }
+    const shopifyId = payload.id;
 
     // Log payload for debugging
     console.log('Received payload:', payload);
 
-    // Perform your MongoDB operation
+    // Perform MongoDB operation
     await authModel.deleteOne({ shopifyId: shopifyId });
 
     res.status(200).send('User profile deleted from MongoDB');
