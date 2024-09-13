@@ -25,8 +25,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
-app.use(bodyParser.json({ verify: (req, res, buf) => { req.rawBody = buf.toString(); } }));
-app.use(bodyParser.raw({ type: 'application/json' }));
+
 app.get('/', (req, res) => {
   res.send('API is running...');
 });

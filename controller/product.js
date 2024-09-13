@@ -209,7 +209,7 @@ export const addUsedEquipments = async (req, res) => {
       reason_for_selling,
       shipping,
       description,
-      userId
+      userId,
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -437,7 +437,7 @@ export const addNewEquipments = async (req, res) => {
       training,
       shipping,
       description,
-      userId
+      userId,
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -633,7 +633,7 @@ export const addNewEquipments = async (req, res) => {
         shipping,
         description,
       },
-      userId:userId
+      userId: userId,
     });
 
     await newProduct.save();
@@ -669,7 +669,7 @@ export const addNewBusiness = async (req, res) => {
       listOfDevices,
       offeredServices,
       supportAndTraining,
-      userId
+      userId,
     } = req.body;
 
     const image = req.file; // Handle file upload
@@ -879,7 +879,7 @@ export const addNewBusiness = async (req, res) => {
         offeredServices: JSON.parse(offeredServices),
         supportAndTraining,
       },
-      userId:userId
+      userId: userId,
     });
 
     await newProduct.save();
@@ -906,7 +906,7 @@ export const addNewJobListing = async (req, res) => {
       //experience,
       availability,
       requestedYearlySalary,
-      userId
+      userId,
     } = req.body;
 
     // Handle file upload
@@ -914,16 +914,12 @@ export const addNewJobListing = async (req, res) => {
 
     // Validate required fields
     if (!location || !name || !qualification || !availability || !image) {
-      return res
-        .status(400)
-        .json({
-          error:
-            'Location, name, qualification, availability, and image are required.',
-        });
+      return res.status(400).json({
+        error:
+          'Location, name, qualification, availability, and image are required.',
+      });
     }
 
-    
-   
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -948,14 +944,49 @@ export const addNewJobListing = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'qualification', value: qualification, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'name',
+        value: name,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'qualification',
+        value: qualification,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'position_requested_description',
+        value: positionRequestedDescription,
+        type: 'single_line_text_field',
+      },
       // { namespace: 'fold_tech', key: 'experience', value: experience.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'availability', value: availability, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
-      { namespace: 'fold_tech', key: 'image', value: image.path, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'availability',
+        value: availability,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'requested_yearly_salary',
+        value: requestedYearlySalary.toString(),
+        type: 'number_decimal',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'image',
+        value: image.path,
+        type: 'single_line_text_field',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1027,7 +1058,7 @@ export const addNewJobListing = async (req, res) => {
           image: imageResponse.image.src, // Store the image URL
         },
       ],
-      userId:userId
+      userId: userId,
     });
 
     await newJobListing.save();
@@ -1056,7 +1087,7 @@ export const addNewProviderListing = async (req, res) => {
       typeOfJobOffered,
       offeredYearlySalary,
       offeredPositionDescription,
-      userId
+      userId,
     } = req.body;
 
     // Handle file upload
@@ -1071,12 +1102,10 @@ export const addNewProviderListing = async (req, res) => {
       !offeredYearlySalary ||
       !image
     ) {
-      return res
-        .status(400)
-        .json({
-          error:
-            'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.',
-        });
+      return res.status(400).json({
+        error:
+          'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.',
+      });
     }
 
     // Step 1: Create Product in Shopify
@@ -1209,7 +1238,7 @@ export const addNewProviderListing = async (req, res) => {
           image: imageResponse.image.src, // Store the image URL
         },
       ],
-      userId:userId
+      userId: userId,
     });
 
     await newProviderListing.save();
@@ -1243,7 +1272,7 @@ export const addRoomListing = async (req, res) => {
       rentalTerms,
       wifiAvailable,
       otherDetails,
-      userId
+      userId,
     } = req.body;
 
     // Handle file upload
@@ -1413,7 +1442,7 @@ export const addRoomListing = async (req, res) => {
           image: imageResponse.image.src, // Store the image URL
         },
       ],
-      userId:userId
+      userId: userId,
     });
 
     await newProviderListing.save();
@@ -1432,7 +1461,7 @@ export const addRoomListing = async (req, res) => {
   }
 };
 
-export const getProduct=async(req,res)=>{
+export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
 
@@ -1446,7 +1475,9 @@ export const getProduct=async(req,res)=>{
 
     // Check if products were found
     if (products.length === 0) {
-      return res.status(404).json({ message: 'No products found for this user.' });
+      return res
+        .status(404)
+        .json({ message: 'No products found for this user.' });
     }
 
     // Send the found products as a response
@@ -1455,6 +1486,18 @@ export const getProduct=async(req,res)=>{
     console.error('Error in getProductsByUserId function:', error);
     res.status(500).json({ error: error.message });
   }
-}
+};
 
-
+//delete product
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await productModel.findByIdAndDelete(id).then((result) => {
+      if (result) {
+        res.status(200).send({
+          message: 'successfully product deleted',
+        });
+      }
+    });
+  } catch (error) {}
+};
