@@ -368,6 +368,7 @@ export const addUsedEquipments = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
+      approved:productResponse.product.approved,
       images: [
         {
           id: imageId,
@@ -1488,6 +1489,260 @@ export const getProduct = async (req, res) => {
   }
 };
 
+export const getSoldOutProducts = async (req, res) => {
+  try {
+    const response = await productModel.aggregate([
+      { 
+        $unwind: "$variants" 
+      },
+      { 
+        $match: { 
+          "variants.inventory_quantity": 0 
+        } 
+      },
+      { 
+        $group: {
+          _id: "$_id",  // Group by product ID
+          title: { $first: "$title" },
+          body_html: { $first: "$body_html" },
+          vendor: { $first: "$vendor" },
+          product_type: { $first: "$product_type" },
+          created_at: { $first: "$created_at" },
+          handle: { $first: "$handle" },
+          updated_at: { $first: "$updated_at" },
+          published_at: { $first: "$published_at" },
+          template_suffix: { $first: "$template_suffix" },
+          tags: { $first: "$tags" },
+          variants: { $push: "$variants" },  // Include all variants
+          images: { $first: "$images" },
+          image: { $first: "$image" },
+          metafields: { $first: "$metafields" },
+          equipment: { $first: "$equipment" },
+          business: { $first: "$business" },
+          jobListings: { $first: "$jobListings" },
+          providerListings: { $first: "$providerListings" },
+          roomListing: { $first: "$roomListing" },
+          shopifyId: { $first: "$shopifyId" },
+          userId: { $first: "$userId" }
+        }
+      },
+      { 
+        $project: {
+          _id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          handle: 1,
+          updated_at: 1,
+          published_at: 1,
+          template_suffix: 1,
+          tags: 1,
+          variants: 1,
+          images: 1,
+          image: 1,
+          metafields: 1,
+          equipment: 1,
+          business: 1,
+          jobListings: 1,
+          providerListings: 1,
+          roomListing: 1,
+          shopifyId: 1,
+          userId: 1
+        }
+      }
+    ]);
+
+    res.json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving sold out products');
+  }
+};
+
+export const getApproved=async(req,res)=>{
+  try {
+    const response = await productModel.aggregate([
+      {
+        $match: {
+          approved: true
+        }
+      }
+    ]);
+
+    res.json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving approved products');
+  }
+}
+
+export const getBySku=async(req,res)=>{
+  const sku = req.query.sku; // Get SKU from query parameters
+
+  if (!sku) {
+    return res.status(400).send('SKU query parameter is required');
+  }
+
+  try {
+    const response = await productModel.aggregate([
+      {
+        $unwind: "$variants" // Flatten the variants array
+      },
+      {
+        $match: { 
+          "variants.sku": sku // Match documents where SKU is the given value
+        }
+      },
+      {
+        $group: {
+          _id: "$_id",  // Group by product ID
+          title: { $first: "$title" },
+          body_html: { $first: "$body_html" },
+          vendor: { $first: "$vendor" },
+          product_type: { $first: "$product_type" },
+          created_at: { $first: "$created_at" },
+          handle: { $first: "$handle" },
+          updated_at: { $first: "$updated_at" },
+          published_at: { $first: "$published_at" },
+          template_suffix: { $first: "$template_suffix" },
+          tags: { $first: "$tags" },
+          variants: { $push: "$variants" },  // Include all variants
+          images: { $first: "$images" },
+          image: { $first: "$image" },
+          metafields: { $first: "$metafields" },
+          equipment: { $first: "$equipment" },
+          business: { $first: "$business" },
+          jobListings: { $first: "$jobListings" },
+          providerListings: { $first: "$providerListings" },
+          roomListing: { $first: "$roomListing" },
+          shopifyId: { $first: "$shopifyId" },
+          userId: { $first: "$userId" }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          handle: 1,
+          updated_at: 1,
+          published_at: 1,
+          template_suffix: 1,
+          tags: 1,
+          variants: 1,
+          images: 1,
+          image: 1,
+          metafields: 1,
+          equipment: 1,
+          business: 1,
+          jobListings: 1,
+          providerListings: 1,
+          roomListing: 1,
+          shopifyId: 1,
+          userId: 1
+        }
+      }
+    ]);
+
+    res.json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving products by SKU');
+  }
+}
+
+export const reApprovalProducts=async(req,res)=>{
+  try {
+    const response = await productModel.aggregate([
+      {
+        $match: {
+          reapprovalRequired: true // Match documents where reapprovalRequired is true
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          handle: 1,
+          updated_at: 1,
+          published_at: 1,
+          template_suffix: 1,
+          tags: 1,
+          variants: 1,
+          images: 1,
+          image: 1,
+          metafields: 1,
+          equipment: 1,
+          business: 1,
+          jobListings: 1,
+          providerListings: 1,
+          roomListing: 1,
+          shopifyId: 1,
+          userId: 1,
+          reapprovalRequired: 1 // Include reapprovalRequired field in the response
+        }
+      }
+    ]);
+
+    res.json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving products requiring reapproval');
+  }
+}
+
+export const approvalStatus=async(req,res)=>{
+  try {
+    const response = await productModel.aggregate([
+      {
+        $match: {
+          approvalStatus: 'pending' // Match documents where approvalStatus is 'pending'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          handle: 1,
+          updated_at: 1,
+          published_at: 1,
+          template_suffix: 1,
+          tags: 1,
+          variants: 1,
+          images: 1,
+          image: 1,
+          metafields: 1,
+          equipment: 1,
+          business: 1,
+          jobListings: 1,
+          providerListings: 1,
+          roomListing: 1,
+          shopifyId: 1,
+          userId: 1,
+          approvalStatus: 1 // Include the approvalStatus field in the response
+        }
+      }
+    ]);
+
+    res.json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving products pending approval');
+  }
+}
 //delete product
 export const deleteProduct = async (req, res) => {
   try {
@@ -1501,3 +1756,4 @@ export const deleteProduct = async (req, res) => {
     });
   } catch (error) {}
 };
+

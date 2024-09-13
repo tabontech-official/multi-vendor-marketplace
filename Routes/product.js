@@ -8,7 +8,12 @@ import {
   addNewProviderListing,
   addRoomListing,
   getProduct,
+  getSoldOutProducts,
+  getApproved,
+  getBySku,
   deleteProduct,
+  reApprovalProducts,
+  approvalStatus,
 } from '../controller/product.js';
 import { upload } from '../middleware/cloudinary.js';
 import express from 'express';
@@ -31,6 +36,12 @@ productRouter.post(
   addNewProviderListing
 );
 productRouter.get('/getProduct/:userId', getProduct);
+productRouter.get('/soldOut',getSoldOutProducts)
+productRouter.get('/Approved',getApproved)
+productRouter.get('/sku',getBySku)
+productRouter.get('/reaproval',reApprovalProducts)
+productRouter.get('/approvalStatus',approvalStatus)
 productRouter.delete('/deleteProduct/:id', deleteProduct);
+
 
 export default productRouter;
