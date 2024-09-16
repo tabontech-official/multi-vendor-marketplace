@@ -363,10 +363,6 @@ export const addUsedEquipments = async (req, res) => {
       vendor: brand,
       product_type: equipment_type,
       created_at: new Date(),
-      handle: productResponse.product.handle,
-      updated_at: new Date(),
-      published_at: productResponse.product.published_at,
-      template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       approved:productResponse.product.approved,
@@ -375,8 +371,6 @@ export const addUsedEquipments = async (req, res) => {
           id: imageId,
           product_id: productId,
           position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
           alt: 'Equipment Image',
           width: imageResponse.image.width,
           height: imageResponse.image.height,
@@ -387,8 +381,6 @@ export const addUsedEquipments = async (req, res) => {
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
         alt: 'Equipment Image',
         width: imageResponse.image.width,
         height: imageResponse.image.height,
@@ -1017,11 +1009,6 @@ export const addNewJobListing = async (req, res) => {
       body_html: positionRequestedDescription,
       vendor: location,
       product_type: 'Job Listing',
-      created_at: new Date(),
-      handle: productResponse.product.handle,
-      updated_at: new Date(),
-      published_at: productResponse.product.published_at,
-      template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: [
@@ -1029,8 +1016,6 @@ export const addNewJobListing = async (req, res) => {
           id: imageId,
           product_id: productId,
           position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
           alt: 'Job Listing Image',
           width: imageResponse.image.width,
           height: imageResponse.image.height,
@@ -1041,8 +1026,6 @@ export const addNewJobListing = async (req, res) => {
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
         alt: 'Job Listing Image',
         width: imageResponse.image.width,
         height: imageResponse.image.height,
@@ -1198,11 +1181,6 @@ export const addNewProviderListing = async (req, res) => {
       body_html: offeredPositionDescription,
       vendor: location,
       product_type: 'Provider Search Listing',
-      created_at: new Date(),
-      handle: productResponse.product.handle,
-      updated_at: new Date(),
-      published_at: productResponse.product.published_at,
-      template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: [
@@ -1399,11 +1377,6 @@ export const addRoomListing = async (req, res) => {
       body_html: otherDetails,
       vendor: location,
       product_type: 'Room Search Listing',
-      created_at: new Date(),
-      handle: productResponse.product.handle,
-      updated_at: new Date(),
-      published_at: productResponse.product.published_at,
-      template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: [
@@ -1411,8 +1384,6 @@ export const addRoomListing = async (req, res) => {
           id: imageId,
           product_id: productId,
           position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
           alt: 'Room Listing Image',
           width: imageResponse.image.width,
           height: imageResponse.image.height,
@@ -1423,8 +1394,6 @@ export const addRoomListing = async (req, res) => {
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
         alt: 'Room Listing Image',
         width: imageResponse.image.width,
         height: imageResponse.image.height,
@@ -1797,7 +1766,7 @@ export const productDelete = async (req, res) => {
 
   try {
     // Assuming `shopifyId` is the unique identifier in MongoDB
-    const result = await productModel.deleteOne({ shopifyId: shopifyProductId });
+    const result = await productModel.deleteOne({ productId: shopifyProductId });
 
     if (result.deletedCount === 0) {
       res.status(404).send('Product not found in MongoDB');

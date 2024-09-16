@@ -32,8 +32,6 @@ const productSchema = new mongoose.Schema(
         option1: { type: String },
         option2: { type: String },
         option3: { type: String },
-        created_at: { type: Date },
-        updated_at: { type: Date },
         taxable: { type: Boolean },
         barcode: { type: String },
         grams: { type: Number },
