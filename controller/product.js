@@ -1062,6 +1062,9 @@ export const addNewJobListing = async (req, res) => {
 };
 
 export const addNewProviderListing = async (req, res) => {
+  console.log('Request Body:', req.body);
+  console.log('Uploaded File:', req.file);
+
   try {
     // Extract provider listing details from request body
     const {
