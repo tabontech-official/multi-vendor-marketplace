@@ -14,10 +14,11 @@ import {
   deleteProduct,
   reApprovalProducts,
   approvalStatus,
+  getSearchProduct,
   productDelete,
-  verifyShopifyWebhook,
 } from '../controller/product.js';
 import { upload } from '../middleware/cloudinary.js';
+import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
 
 const productRouter = express.Router();
@@ -38,12 +39,17 @@ productRouter.post(
   addNewProviderListing
 );
 productRouter.get('/getProduct/:userId', getProduct);
-productRouter.get('/soldOut',getSoldOutProducts)
-productRouter.get('/Approved',getApproved)
-productRouter.get('/sku',getBySku)
-productRouter.get('/reaproval',reApprovalProducts)
-productRouter.get('/approvalStatus',approvalStatus)
+productRouter.get('/soldOut', getSoldOutProducts);
+productRouter.get('/Approved', getApproved);
+productRouter.get('/sku', getBySku);
+productRouter.get('/reaproval', reApprovalProducts);
+productRouter.get('/approvalStatus', approvalStatus);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
-productRouter.post('/webhooks/products/delete',verifyShopifyWebhook,productDelete)
+productRouter.post(
+  '/webhooks/products/delete',
+  verifyShopifyWebhook,
+  productDelete
+);
+productRouter.get('/search/:userId', getSearchProduct);
 
 export default productRouter;

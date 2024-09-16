@@ -1,6 +1,5 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
-import crypto from 'crypto'
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -365,7 +364,7 @@ export const addUsedEquipments = async (req, res) => {
       created_at: new Date(),
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      approved:productResponse.product.approved,
+      approved: productResponse.product.approved,
       images: [
         {
           id: imageId,
@@ -1432,7 +1431,7 @@ export const addRoomListing = async (req, res) => {
   }
 };
 
-
+// get product of specific user
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -1463,41 +1462,41 @@ export const getProduct = async (req, res) => {
 export const getSoldOutProducts = async (req, res) => {
   try {
     const response = await productModel.aggregate([
-      { 
-        $unwind: "$variants" 
+      {
+        $unwind: '$variants',
       },
-      { 
-        $match: { 
-          "variants.inventory_quantity": 0 
-        } 
+      {
+        $match: {
+          'variants.inventory_quantity': 0,
+        },
       },
-      { 
+      {
         $group: {
-          _id: "$_id",  // Group by product ID
-          title: { $first: "$title" },
-          body_html: { $first: "$body_html" },
-          vendor: { $first: "$vendor" },
-          product_type: { $first: "$product_type" },
-          created_at: { $first: "$created_at" },
-          handle: { $first: "$handle" },
-          updated_at: { $first: "$updated_at" },
-          published_at: { $first: "$published_at" },
-          template_suffix: { $first: "$template_suffix" },
-          tags: { $first: "$tags" },
-          variants: { $push: "$variants" },  // Include all variants
-          images: { $first: "$images" },
-          image: { $first: "$image" },
-          metafields: { $first: "$metafields" },
-          equipment: { $first: "$equipment" },
-          business: { $first: "$business" },
-          jobListings: { $first: "$jobListings" },
-          providerListings: { $first: "$providerListings" },
-          roomListing: { $first: "$roomListing" },
-          shopifyId: { $first: "$shopifyId" },
-          userId: { $first: "$userId" }
-        }
+          _id: '$_id', // Group by product ID
+          title: { $first: '$title' },
+          body_html: { $first: '$body_html' },
+          vendor: { $first: '$vendor' },
+          product_type: { $first: '$product_type' },
+          created_at: { $first: '$created_at' },
+          handle: { $first: '$handle' },
+          updated_at: { $first: '$updated_at' },
+          published_at: { $first: '$published_at' },
+          template_suffix: { $first: '$template_suffix' },
+          tags: { $first: '$tags' },
+          variants: { $push: '$variants' }, // Include all variants
+          images: { $first: '$images' },
+          image: { $first: '$image' },
+          metafields: { $first: '$metafields' },
+          equipment: { $first: '$equipment' },
+          business: { $first: '$business' },
+          jobListings: { $first: '$jobListings' },
+          providerListings: { $first: '$providerListings' },
+          roomListing: { $first: '$roomListing' },
+          shopifyId: { $first: '$shopifyId' },
+          userId: { $first: '$userId' },
+        },
       },
-      { 
+      {
         $project: {
           _id: 1,
           title: 1,
@@ -1520,9 +1519,9 @@ export const getSoldOutProducts = async (req, res) => {
           providerListings: 1,
           roomListing: 1,
           shopifyId: 1,
-          userId: 1
-        }
-      }
+          userId: 1,
+        },
+      },
     ]);
 
     res.json(response);
@@ -1532,14 +1531,14 @@ export const getSoldOutProducts = async (req, res) => {
   }
 };
 
-export const getApproved=async(req,res)=>{
+export const getApproved = async (req, res) => {
   try {
     const response = await productModel.aggregate([
       {
         $match: {
-          approved: true
-        }
-      }
+          approved: true,
+        },
+      },
     ]);
 
     res.json(response);
@@ -1547,9 +1546,9 @@ export const getApproved=async(req,res)=>{
     console.error(error);
     res.status(500).send('Error retrieving approved products');
   }
-}
+};
 
-export const getBySku=async(req,res)=>{
+export const getBySku = async (req, res) => {
   const sku = req.query.sku; // Get SKU from query parameters
 
   if (!sku) {
@@ -1559,38 +1558,38 @@ export const getBySku=async(req,res)=>{
   try {
     const response = await productModel.aggregate([
       {
-        $unwind: "$variants" // Flatten the variants array
+        $unwind: '$variants', // Flatten the variants array
       },
       {
-        $match: { 
-          "variants.sku": sku // Match documents where SKU is the given value
-        }
+        $match: {
+          'variants.sku': sku, // Match documents where SKU is the given value
+        },
       },
       {
         $group: {
-          _id: "$_id",  // Group by product ID
-          title: { $first: "$title" },
-          body_html: { $first: "$body_html" },
-          vendor: { $first: "$vendor" },
-          product_type: { $first: "$product_type" },
-          created_at: { $first: "$created_at" },
-          handle: { $first: "$handle" },
-          updated_at: { $first: "$updated_at" },
-          published_at: { $first: "$published_at" },
-          template_suffix: { $first: "$template_suffix" },
-          tags: { $first: "$tags" },
-          variants: { $push: "$variants" },  // Include all variants
-          images: { $first: "$images" },
-          image: { $first: "$image" },
-          metafields: { $first: "$metafields" },
-          equipment: { $first: "$equipment" },
-          business: { $first: "$business" },
-          jobListings: { $first: "$jobListings" },
-          providerListings: { $first: "$providerListings" },
-          roomListing: { $first: "$roomListing" },
-          shopifyId: { $first: "$shopifyId" },
-          userId: { $first: "$userId" }
-        }
+          _id: '$_id', // Group by product ID
+          title: { $first: '$title' },
+          body_html: { $first: '$body_html' },
+          vendor: { $first: '$vendor' },
+          product_type: { $first: '$product_type' },
+          created_at: { $first: '$created_at' },
+          handle: { $first: '$handle' },
+          updated_at: { $first: '$updated_at' },
+          published_at: { $first: '$published_at' },
+          template_suffix: { $first: '$template_suffix' },
+          tags: { $first: '$tags' },
+          variants: { $push: '$variants' }, // Include all variants
+          images: { $first: '$images' },
+          image: { $first: '$image' },
+          metafields: { $first: '$metafields' },
+          equipment: { $first: '$equipment' },
+          business: { $first: '$business' },
+          jobListings: { $first: '$jobListings' },
+          providerListings: { $first: '$providerListings' },
+          roomListing: { $first: '$roomListing' },
+          shopifyId: { $first: '$shopifyId' },
+          userId: { $first: '$userId' },
+        },
       },
       {
         $project: {
@@ -1615,9 +1614,9 @@ export const getBySku=async(req,res)=>{
           providerListings: 1,
           roomListing: 1,
           shopifyId: 1,
-          userId: 1
-        }
-      }
+          userId: 1,
+        },
+      },
     ]);
 
     res.json(response);
@@ -1625,15 +1624,15 @@ export const getBySku=async(req,res)=>{
     console.error(error);
     res.status(500).send('Error retrieving products by SKU');
   }
-}
+};
 
-export const reApprovalProducts=async(req,res)=>{
+export const reApprovalProducts = async (req, res) => {
   try {
     const response = await productModel.aggregate([
       {
         $match: {
-          reapprovalRequired: true // Match documents where reapprovalRequired is true
-        }
+          reapprovalRequired: true, // Match documents where reapprovalRequired is true
+        },
       },
       {
         $project: {
@@ -1659,9 +1658,9 @@ export const reApprovalProducts=async(req,res)=>{
           roomListing: 1,
           shopifyId: 1,
           userId: 1,
-          reapprovalRequired: 1 // Include reapprovalRequired field in the response
-        }
-      }
+          reapprovalRequired: 1, // Include reapprovalRequired field in the response
+        },
+      },
     ]);
 
     res.json(response);
@@ -1669,15 +1668,15 @@ export const reApprovalProducts=async(req,res)=>{
     console.error(error);
     res.status(500).send('Error retrieving products requiring reapproval');
   }
-}
+};
 
-export const approvalStatus=async(req,res)=>{
+export const approvalStatus = async (req, res) => {
   try {
     const response = await productModel.aggregate([
       {
         $match: {
-          approvalStatus: 'pending' // Match documents where approvalStatus is 'pending'
-        }
+          approvalStatus: 'pending', // Match documents where approvalStatus is 'pending'
+        },
       },
       {
         $project: {
@@ -1703,9 +1702,9 @@ export const approvalStatus=async(req,res)=>{
           roomListing: 1,
           shopifyId: 1,
           userId: 1,
-          approvalStatus: 1 // Include the approvalStatus field in the response
-        }
-      }
+          approvalStatus: 1, // Include the approvalStatus field in the response
+        },
+      },
     ]);
 
     res.json(response);
@@ -1713,7 +1712,7 @@ export const approvalStatus=async(req,res)=>{
     console.error(error);
     res.status(500).send('Error retrieving products pending approval');
   }
-}
+};
 //delete product
 export const deleteProduct = async (req, res) => {
   try {
@@ -1725,39 +1724,10 @@ export const deleteProduct = async (req, res) => {
         });
       }
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log({error:error.message})
+  }
 };
-// Shopify webhook verification
-export function verifyShopifyWebhook(req, res, next) {
-  // Extract the HMAC signature from the request headers
-  const hmac = req.get('X-Shopify-Hmac-Sha256');
-  console.log('Received HMAC:', hmac);
-
-  // Secret from environment variables
-  const secret = process.env.SHOPIFY_API_SECRET;
-
-  if (!secret) {
-    console.error('SHOPIFY_API_SECRET is not defined.');
-    return res.status(500).send('Internal Server Error');
-  }
-
-  // Convert the request body to a JSON string
-  const body = req.rawBody ? req.rawBody.toString() : JSON.stringify(req.body);
-  console.log('Request Body:', body);
-  // Compute the HMAC hash
-  const computedHash = crypto
-    .createHmac('sha256', secret)
-    .update(body, 'utf8')
-    .digest('base64');
-  console.log('Computed HMAC:', computedHash);
-
-  // Compare the computed HMAC with the received HMAC
-  if (computedHash === hmac) {
-    next(); // HMACs match, proceed to the next middleware or route handler
-  } else {
-    res.status(403).send('Forbidden'); // HMACs do not match, respond with a 403 status
-  }
-}
 
 // Handler for product deletion
 export const productDelete = async (req, res) => {
@@ -1765,7 +1735,9 @@ export const productDelete = async (req, res) => {
 
   try {
     // Assuming `shopifyId` is the unique identifier in MongoDB
-    const result = await productModel.deleteOne({ productId: shopifyProductId });
+    const result = await productModel.deleteOne({
+      productId: shopifyProductId,
+    });
 
     if (result.deletedCount === 0) {
       res.status(404).send('Product not found in MongoDB');
@@ -1778,3 +1750,43 @@ export const productDelete = async (req, res) => {
   }
 };
 
+// get product by search
+export const getSearchProduct = async (req, res) => {
+  const { query } = req.query; // Get search query from query parameters
+  const { userId } = req.params; // Get user ID from URL parameters
+
+  if (!query) {
+    return res.status(400).send('Query parameter is required');
+  }
+  try {
+    const products = await productModel.aggregate([
+      {
+        $match: {
+          title: { $regex: query, $options: 'i' }, // Case-insensitive regex search
+        },
+      },
+      {
+        $project: {
+          title: 1,
+          price: 1,
+          quantity: 1,
+          produc:1,
+          createtId:1,
+          statusdAt:1,
+          updatedAt:1,
+          reapprovalRequired:1,
+          product_type:1,
+          image:{
+            alt:1,
+            product_id:1
+          }
+        },
+      },
+    ]);
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};

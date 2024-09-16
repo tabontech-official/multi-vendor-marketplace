@@ -2,8 +2,6 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import crypto from 'crypto';
-import multer from 'multer';
 import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
@@ -523,7 +521,6 @@ export const logout = async (req, res) => {
   }
 };
 
-
 // export const logout = async (req res) => {
 
 //   try {
@@ -593,41 +590,21 @@ export const logout = async (req, res) => {
 //   }
 // };
 
-export function verifyWebhook(req, res, next) {
-  const hmac = req.headers['x-shopify-hmac-sha256'];
-  const secret = process.env.SHOPIFY_API_SECRET; // Make sure this is correctly set
-
-  if (!req.rawBody) {
-    return res.status(400).send('Bad Request: Missing raw body');
-  }
-
-  const generatedHmac = crypto
-    .createHmac('sha256', secret)
-    .update(req.rawBody, 'utf8')
-    .digest('base64');
-
-  if (hmac === generatedHmac) {
-    next();
-  } else {
-    res.status(403).send('Unauthorized');
-  }
-}
 export const webHook = async (req, res) => {
+  const shopifyUserId = req.body.id;
 
-   try {
-    const payload = req.body; // Depending on Shopify's webhook, this might need adjustment
-    const shopifyId = payload.id; // Adjust according to the actual payload
+  try {
+    // Assuming `shopifyId` is the unique identifier in MongoDB
+    const result = await authModel.deleteOne({ shopifyId: shopifyUserId });
 
-    // Log payload for debugging
-    console.log('Received payload:', payload);
-
-    // Perform your MongoDB operation
-    await authModel.deleteOne({ shopifyId: shopifyId });
-
-    res.status(200).send('User profile deleted from MongoDB');
+    if (result.deletedCount === 0) {
+      res.status(404).send('User not found in MongoDB');
+    } else {
+      res.status(200).send('User deleted from MongoDB');
+    }
   } catch (error) {
-    res.status(500).send('Error deleting user profile from MongoDB');
-    console.error(error);
+    console.error('Error deleting user from MongoDB:', error);
+    res.status(500).send('Internal Server Error');
   }
 };
 

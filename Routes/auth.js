@@ -6,10 +6,10 @@ import {
   newSignUp,
   updateUserInShopify,
   webHook,
-  verifyWebhook,
   editProfile,
 } from '../controller/auth.js';
 import { upload } from '../middleware/cloudinary.js';
+import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 
 const authRouter = express.Router();
 
@@ -19,6 +19,6 @@ authRouter.post('/signUp', signUp);
 authRouter.post('/logout/:userId', logout);
 authRouter.post('/newSignUp', newSignUp);
 authRouter.put('/updateInShopify', updateUserInShopify);
-authRouter.post('/webHook', verifyWebhook, webHook);
+authRouter.post('/webHook',verifyShopifyWebhook, webHook);
 authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
 export default authRouter;
