@@ -1773,9 +1773,8 @@ export function verifyShopifyWebhook(req, res, next) {
   }
 
   // Convert the request body to a JSON string
-  const body = req.rawBody.toString();
+  const body = JSON.stringify(req.body);
   console.log('Request Body:', body);
-
 
   // Compute the HMAC hash
   const computedHash = crypto
