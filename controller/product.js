@@ -1715,17 +1715,29 @@ export const approvalStatus = async (req, res) => {
 };
 //delete product
 export const deleteProduct = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    await productModel.findByIdAndDelete(id).then((result) => {
-      if (result) {
-        res.status(200).send({
-          message: 'successfully product deleted',
-        });
-      }
-    });
+    // Attempt to find and delete the product by its ID
+    const result = await productModel.findByIdAndDelete(id);
+
+    if (result) {
+      // If the product was found and deleted
+      res.status(200).json({
+        message: 'Product successfully deleted',
+      });
+    } else {
+      // If the product was not found
+      res.status(404).json({
+        message: 'Product not found',
+      });
+    }
   } catch (error) {
-    console.log({error:error.message})
+    // Log and return a 500 status code for server errors
+    console.error('Error in deleteProduct function:', error);
+    res.status(500).json({
+      error: error.message,
+    });
   }
 };
 
