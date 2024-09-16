@@ -1,6 +1,7 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 
+
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -1644,16 +1645,9 @@ export const reApprovalProducts = async (req, res) => {
           body_html: 1,
           vendor: 1,
           product_type: 1,
-          created_at: 1,
-          handle: 1,
-          updated_at: 1,
-          published_at: 1,
-          template_suffix: 1,
-          tags: 1,
           variants: 1,
           images: 1,
           image: 1,
-          metafields: 1,
           equipment: 1,
           business: 1,
           jobListings: 1,
@@ -1716,6 +1710,45 @@ export const approvalStatus = async (req, res) => {
     res.status(500).send('Error retrieving products pending approval');
   }
 };
+
+// get product by search
+export const getSearchProduct = async (req, res) => {
+  const { query } = req.query; // Get search query from query parameters
+  const { userId } = req.params; // Get user ID from URL parameters
+
+  if (!query) {
+    return res.status(400).send('Query parameter is required');
+  }
+  
+  try {
+    const products = await productModel.aggregate([
+      {
+        $match: {
+          title: { $regex: query, $options: 'i' }, // Case-insensitive regex search
+        },
+      },
+      {
+        $unwind: '$variants' // Unwind the variants array if needed
+      },
+      {
+        $project: {
+          _id: 0,
+          title: 1,
+          product_type: 1,
+          price: '$variants.price',
+          product_id: '$variants.product_id',
+          status: '$variants.status'
+        },
+      },
+    ]);
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
 //delete product
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -1765,43 +1798,4 @@ export const productDelete = async (req, res) => {
   }
 };
 
-// get product by search
-export const getSearchProduct = async (req, res) => {
-  const { query } = req.query; // Get search query from query parameters
-  const { userId } = req.params; // Get user ID from URL parameters
 
-  if (!query) {
-    return res.status(400).send('Query parameter is required');
-  }
-  try {
-    const products = await productModel.aggregate([
-      {
-        $match: {
-          title: { $regex: query, $options: 'i' }, // Case-insensitive regex search
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          price: 1,
-          quantity: 1,
-          produc:1,
-          createtId:1,
-          statusdAt:1,
-          updatedAt:1,
-          reapprovalRequired:1,
-          product_type:1,
-          image:{
-            alt:1,
-            product_id:1
-          }
-        },
-      },
-    ]);
-
-    res.status(200).json(products);
-  } catch (error) {
-    console.error('Error searching products:', error);
-    res.status(500).send('Internal Server Error');
-  }
-};

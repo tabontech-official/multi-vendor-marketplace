@@ -6,6 +6,7 @@ import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
+import mongoose from 'mongoose'
 //storage for images storing
 
 const createToken = (payLoad) => {
@@ -653,3 +654,22 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+export const fetchUserData=async(req,res)=>{
+  try {
+    const {id}=req.params
+ const response=await authModel.aggregate([
+  { $match: { _id: new mongoose.Types.ObjectId(id) } },
+  { $project: { email: 1, password: 1 } } 
+ ])
+ if (response.length > 0) {
+  res.status(200).json(response[0]);
+} else {
+  res.status(404).json({ message: 'User not found' });
+}
+} catch (error) {
+console.error('Error fetching user data:', error);
+res.status(500).json({ error: 'An error occurred while fetching user data' });
+}
+}
