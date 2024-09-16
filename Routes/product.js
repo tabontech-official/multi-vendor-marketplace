@@ -14,6 +14,8 @@ import {
   deleteProduct,
   reApprovalProducts,
   approvalStatus,
+  productDelete,
+  verifyShopifyWebhook,
 } from '../controller/product.js';
 import { upload } from '../middleware/cloudinary.js';
 import express from 'express';
@@ -42,6 +44,6 @@ productRouter.get('/sku',getBySku)
 productRouter.get('/reaproval',reApprovalProducts)
 productRouter.get('/approvalStatus',approvalStatus)
 productRouter.delete('/deleteProduct/:id', deleteProduct);
-
+productRouter.post('/webhooks/products/delete',verifyShopifyWebhook,productDelete)
 
 export default productRouter;

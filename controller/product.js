@@ -1,5 +1,6 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
+import crypto from 'crypto'
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -1462,6 +1463,7 @@ export const addRoomListing = async (req, res) => {
   }
 };
 
+
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -1756,4 +1758,42 @@ export const deleteProduct = async (req, res) => {
     });
   } catch (error) {}
 };
+// Shopify webhook verification
+export function verifyShopifyWebhook(req, res, next) {
+  // Extract the HMAC signature from the request headers
+  const hmac = req.get('X-Shopify-Hmac-Sha256');
+  
+  // The secret from your environment variables
+  const secret = process.env.SHOPIFY_API_SECRET; // Replace with your Shopify app secret
 
+  // Convert the request body to a JSON string
+  const body = JSON.stringify(req.body);
+
+  // Compute the HMAC hash
+  const computedHash = crypto
+    .createHmac('sha256', secret)
+    .update(body, 'utf8')
+    .digest('base64');
+
+  // Log both HMACs for debugging
+  console.log('Received HMAC:', hmac);
+  console.log('Computed HMAC:', computedHash);
+
+  // Compare the computed HMAC with the received HMAC
+  if (computedHash === hmac) {
+    next(); // HMACs match, proceed to the next middleware or route handler
+  } else {
+    res.status(403).send('Forbidden'); // HMACs do not match, respond with a 403 status
+  }
+}
+export const productDelete=async(req,res)=>{
+  const shopifyProductId = req.body.id;
+
+  try {
+    await productModel.deleteOne({ shopifyId: shopifyProductId });
+    res.status(200).send('Product deleted from MongoDB');
+  } catch (error) {
+    console.error('Error deleting product from MongoDB:', error);
+    res.status(500).send('Internal Server Error');
+  }
+}

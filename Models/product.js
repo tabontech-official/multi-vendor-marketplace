@@ -13,9 +13,9 @@ const productSchema = new mongoose.Schema(
     published_at: { type: Date },
     template_suffix: { type: String },
     tags: { type: String },
-    approved:Boolean,
+    approved: Boolean,
     reapprovalRequired: { type: Boolean, default: false },
-    approvalStatus: { type: String},
+    approvalStatus: { type: String },
     // Variants as an array of objects
     variants: [
       {
@@ -127,7 +127,7 @@ const productSchema = new mongoose.Schema(
       sale_price: { type: Number },
       year_manufactured: { type: String },
       training: { type: String },
-      description:{type:String}
+      description: { type: String },
     },
     business: {
       location: String,
@@ -145,52 +145,52 @@ const productSchema = new mongoose.Schema(
       reasonForSelling: String,
       listOfDevices: [String], // Array of strings for device list
       offeredServices: [String], // Array of strings for services
-      supportAndTraining: String // Description of support and training offered
+      supportAndTraining: String, // Description of support and training offered
+    },
+    jobListings: [
+      {
+        location: { type: String },
+        name: { type: String },
+        qualification: { type: String },
+        positionRequestedDescription: { type: String },
+        experience: { type: Number },
+        availability: { type: String },
+        requestedYearlySalary: { type: Number },
+        image: { type: String }, // URL to the uploaded image
+      },
+    ],
+    providerListings: [
+      {
+        location: { type: String },
+        qualificationRequested: { type: String },
+        jobType: { type: String },
+        typeOfJobOffered: { type: String },
+        offeredYearlySalary: { type: Number },
+        offeredPositionDescription: { type: String },
+        image: { type: String }, // Store the image URL
+      },
+    ],
+    roomListing: [
+      {
+        location: { type: String, required: true },
+        roomSize: { type: Number, required: true }, // Square feet
+        monthlyRent: { type: Number, required: true },
+        deposit: { type: Number, required: true },
+        minimumInsuranceRequested: { type: Number, required: true },
+        typeOfUseAllowed: {
+          type: String,
+        },
+        rentalTerms: {
+          type: String,
+        },
+        wifiAvailable: { type: Boolean, required: true },
+        otherDetails: { type: String },
+        image: { type: String }, // Path or URL to the image
+      },
+    ],
+    shopifyId: String,
+    userId: mongoose.Schema.Types.ObjectId,
   },
-  jobListings: [
-    {
-      location: { type: String },
-      name: { type: String },
-      qualification: { type: String },
-      positionRequestedDescription: { type: String },
-      experience: { type: Number },
-      availability: { type: String },
-      requestedYearlySalary: { type: Number },
-      image: { type: String }, // URL to the uploaded image
-    }
-  ],
-providerListings:[
-  {
-    location:{type:String},
-    qualificationRequested:{type:String},
-    jobType:{type:String},
-    typeOfJobOffered:{type:String},
-    offeredYearlySalary:{type:Number},
-    offeredPositionDescription:{type:String},
-    image: {type:String} // Store the image URL
-  }
-],
-roomListing:[
-  {
-    location: { type: String, required: true },
-    roomSize: { type: Number, required: true }, // Square feet
-    monthlyRent: { type: Number, required: true },
-    deposit: { type: Number, required: true },
-    minimumInsuranceRequested: { type: Number, required: true },
-    typeOfUseAllowed: {
-      type: String,
-    },
-    rentalTerms: {
-      type: String
-    },
-    wifiAvailable: { type: Boolean, required: true },
-    otherDetails: { type: String },
-    image: { type: String }, // Path or URL to the image
-  }
-],
-shopifyId:String,
-userId: mongoose.Schema.Types.ObjectId, 
-},
   {
     timestamps: true,
   }
