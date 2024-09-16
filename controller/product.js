@@ -1762,21 +1762,25 @@ export const deleteProduct = async (req, res) => {
 export function verifyShopifyWebhook(req, res, next) {
   // Extract the HMAC signature from the request headers
   const hmac = req.get('X-Shopify-Hmac-Sha256');
-  
-  // The secret from your environment variables
-  const secret = process.env.SHOPIFY_API_SECRET; // Replace with your Shopify app secret
+  console.log('Received HMAC:', hmac);
+
+  // Secret from environment variables
+  const secret = process.env.SHOPIFY_API_SECRET;
+
+  if (!secret) {
+    console.error('SHOPIFY_API_SECRET is not defined.');
+    return res.status(500).send('Internal Server Error');
+  }
 
   // Convert the request body to a JSON string
   const body = JSON.stringify(req.body);
+  console.log('Request Body:', body);
 
   // Compute the HMAC hash
   const computedHash = crypto
     .createHmac('sha256', secret)
     .update(body, 'utf8')
     .digest('base64');
-
-  // Log both HMACs for debugging
-  console.log('Received HMAC:', hmac);
   console.log('Computed HMAC:', computedHash);
 
   // Compare the computed HMAC with the received HMAC
@@ -1786,14 +1790,23 @@ export function verifyShopifyWebhook(req, res, next) {
     res.status(403).send('Forbidden'); // HMACs do not match, respond with a 403 status
   }
 }
-export const productDelete=async(req,res)=>{
+
+// Handler for product deletion
+export const productDelete = async (req, res) => {
   const shopifyProductId = req.body.id;
 
   try {
-    await productModel.deleteOne({ shopifyId: shopifyProductId });
-    res.status(200).send('Product deleted from MongoDB');
+    // Assuming `shopifyId` is the unique identifier in MongoDB
+    const result = await productModel.deleteOne({ shopifyId: shopifyProductId });
+
+    if (result.deletedCount === 0) {
+      res.status(404).send('Product not found in MongoDB');
+    } else {
+      res.status(200).send('Product deleted from MongoDB');
+    }
   } catch (error) {
     console.error('Error deleting product from MongoDB:', error);
     res.status(500).send('Internal Server Error');
   }
-}
+};
+
