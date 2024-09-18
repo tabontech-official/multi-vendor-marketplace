@@ -9,6 +9,7 @@ import productRouter from './Routes/product.js';
 import Connect from './connection/connect.js'; // Import the Connect function
 
 import setupSwagger from './swaggerConfig.js';
+import { verifyShopifyWebhook } from './middleware/verifyShopifyWebhook.js';
 
 const app = express();
 // Setup Swagger documentation
@@ -17,9 +18,7 @@ setupSwagger(app);
 Connect();
 app.use(bodyParser.json()); // To handle JSON request bodies
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.raw({ type: 'application/json' }));
-app.use(bodyParser.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
-
+app.use(express.json({ verify: verifyShopifyWebhook }));
 app.use(morgan('combined'));
 app.use(helmet());
 app.use(compression());

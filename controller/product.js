@@ -1602,17 +1602,24 @@ export const deleteProduct = async (req, res) => {
 
 // Handler for product deletion
 export const productDelete = async (req, res) => {
-  const { id } = req.body;  // Get the Shopify ID from the request parameters
-    try {
-        const result = await productModel.deleteOne({ id });  // Delete the product based on Shopify ID
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-        res.status(200).json({ message: 'Product deleted successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
+  const { id } = req.body;
+
+  if (!id) {
+      return res.status(400).json({ message: 'Product ID is required' });
+  }
+
+  try {
+      const result = await productModel.deleteOne({ shopifyId: id });
+      
+      if (result.deletedCount === 0) {
+          return res.status(404).json({ message: 'Product not found in MongoDB' });
+      }
+
+      res.status(200).json({ message: 'Product successfully deleted from MongoDB' });
+  } catch (error) {
+      console.error('Error in deleteProduct function:', error);
+      res.status(500).json({ error: error.message });
+  }
 };
 
 export const subscriptionEquipments = async (req, res) => {
