@@ -16,8 +16,10 @@ import {
 import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
+import bodyParser from 'body-parser';
 
 const productRouter = express.Router();
+productRouter.use(bodyParser.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 productRouter.get('/shopify', fetchAndStoreProducts);
 productRouter.post('/addProduct', upload.single('image'), addProduct);
 productRouter.post('/addEquipment', upload.single('image'), addUsedEquipments);
