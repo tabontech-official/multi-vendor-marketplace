@@ -1,7 +1,6 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
-
-
+import { authModel } from '../Models/auth.js';
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -441,7 +440,11 @@ export const addNewEquipments = async (req, res) => {
         .status(400)
         .json({ error: 'Name, sale price, and image are required.' });
     }
+    const user = await authModel.findById(userId);
 
+    if (!user || !user.hasPaidSubscription) {
+      return res.status(403).json({ error: 'Access denied. User does not have a paid subscription.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -675,6 +678,11 @@ export const addNewBusiness = async (req, res) => {
         .json({ error: 'Location, asking price, and image are required.' });
     }
 
+    const user = await authModel.findById(userId);
+
+    if (!user || !user.hasPaidSubscription) {
+      return res.status(403).json({ error: 'Access denied. User does not have a paid subscription.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -914,6 +922,11 @@ export const addNewJobListing = async (req, res) => {
       });
     }
 
+    const user = await authModel.findById(userId);
+
+    if (!user || !user.hasPaidSubscription) {
+      return res.status(403).json({ error: 'Access denied. User does not have a paid subscription.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1095,7 +1108,11 @@ export const addNewProviderListing = async (req, res) => {
           'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.',
       });
     }
+    const user = await authModel.findById(userId);
 
+    if (!user || !user.hasPaidSubscription) {
+      return res.status(403).json({ error: 'Access denied. User does not have a paid subscription.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1274,7 +1291,11 @@ export const addRoomListing = async (req, res) => {
           'Location, room size, monthly rent, deposit, minimum insurance requested, and wifi availability are required.',
       });
     }
+    const user = await authModel.findById(userId);
 
+    if (!user || !user.hasPaidSubscription) {
+      return res.status(403).json({ error: 'Access denied. User does not have a paid subscription.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1799,3 +1820,238 @@ export const productDelete = async (req, res) => {
 };
 
 
+
+export const subscriptionEquipments = async (req, res) => {
+  try {
+    console.log('Request body:', req.body);
+    console.log('File:', req.file);
+
+    // Extract equipment details from request body
+    const {
+      location,
+      name,
+      brand,
+      sale_price,
+      equipment_type,
+      certification,
+      year_manufactured,
+      warranty,
+      training,
+      shipping,
+      description,
+      userId,
+    } = req.body;
+    const image = req.file; // Handle file upload
+
+    // Validate required fields
+    if (!name || !sale_price || !image) {
+      return res
+        .status(400)
+        .json({ error: 'Name, sale price, and image are required.' });
+    }
+
+    const user = await authModel.findById(userId);
+
+    if (!user || !user.hasPaidSubscription) {
+      return res.status(403).json({ error: 'Access denied. User does not have a paid subscription.' });
+    }
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: name, // Use equipment name as the title
+        body_html: '', // Leave body_html empty, as we'll use metafields for details
+        vendor: brand, // Use brand as the vendor
+        product_type: equipment_type, // Use equipment type as the product type
+        variants: [{ price: sale_price.toString() }], // Price should be a string
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
+
+    console.log('Product Response:', productResponse);
+
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Equipment Details
+    const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'name',
+          value: name,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'description',
+          value: description,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'location',
+          value: location,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'brand',
+          value: brand,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'sale_price',
+          value: sale_price.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'equipment_type',
+          value: equipment_type,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'certification',
+          value: certification,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'year_manufactured',
+          value: year_manufactured.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'warranty',
+          value: warranty,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'training',
+          value: training,
+          type: 'multi_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'shipping',
+          value: shipping,
+          type: 'single_line_text_field',
+        },
+      },
+    ];
+
+    // Create each metafield under the product
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+    }
+
+    // Step 3: Upload Image to Shopify
+    const cloudinaryImageUrl = image.path; // Use the uploaded image URL or path
+
+    const imagePayload = {
+      image: {
+        src: cloudinaryImageUrl, // Use the actual image URL or path here
+      },
+    };
+
+    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+    const imageId = imageResponse.image.id;
+
+    // Step 4: Save Product to MongoDB
+    const newProduct = new productModel({
+      id: productId,
+      title: name,
+      body_html: '', // Empty body_html as we use metafields for details
+      vendor: brand,
+      product_type: equipment_type,
+      created_at: new Date(),
+      handle: productResponse.product.handle,
+      updated_at: new Date(),
+      published_at: productResponse.product.published_at,
+      template_suffix: productResponse.product.template_suffix,
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: [
+        {
+          id: imageId,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        },
+      ],
+      image: {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Equipment Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      },
+      equipment: {
+        location,
+        name,
+        brand,
+        sale_price,
+        equipment_type,
+        certification,
+        year_manufactured,
+        warranty,
+        training,
+        shipping,
+        description,
+      },
+      userId: userId,
+    });
+
+    await newProduct.save();
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Product successfully created and saved',
+      product: newProduct,
+    });
+  } catch (error) {
+    console.error('Error in addNewEquipments function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};

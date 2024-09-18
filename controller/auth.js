@@ -673,3 +673,51 @@ console.error('Error fetching user data:', error);
 res.status(500).json({ error: 'An error occurred while fetching user data' });
 }
 }
+
+
+export const subscription = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if userId is provided
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+
+    // Find the user
+    const user = await authModel.findById(userId);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    // Check if the user has a valid subscription
+    const currentDate = new Date();
+    const hasValidSubscription = user.subscription.status === 'active' &&
+      user.subscription.endDate > currentDate;
+
+    if (!user.hasPaidSubscription || !hasValidSubscription) {
+      return res.status(403).send('User does not have an active paid subscription');
+    }
+
+    // Update subscription if they have paid
+    const newSubscription = await authModel.findByIdAndUpdate(
+      userId,
+      { 
+        hasPaidSubscription: true,
+        subscription: {
+          ...user.subscription,
+          status: 'active',
+          startDate: currentDate,
+          endDate: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)), // Example: 1 year later
+        }
+      },
+      { new: true }
+    );
+
+    res.status(200).send(newSubscription);
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).send('Internal server error');
+  }
+};
+

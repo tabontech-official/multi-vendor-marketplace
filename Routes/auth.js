@@ -7,7 +7,8 @@ import {
   updateUserInShopify,
   webHook,
   editProfile,
-  fetchUserData
+  fetchUserData,
+  subscription,
 } from '../controller/auth.js';
 import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -23,4 +24,5 @@ authRouter.put('/updateInShopify', updateUserInShopify);
 authRouter.post('/webHook',verifyShopifyWebhook, webHook);
 authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
 authRouter.get('/user/:id',fetchUserData)
+authRouter.post('/subscription/:userId',subscription)
 export default authRouter;

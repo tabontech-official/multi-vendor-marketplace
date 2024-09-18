@@ -40,6 +40,26 @@ const authSchema = new mongoose.Schema({
   },
   token: String,
   shopifyAccessToken: String,
+  hasPaidSubscription: {
+    type: Boolean,
+    default: false,
+  },
+  subscription: {
+    id: {
+      type: String, // Subscription ID from payment service
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'canceled', 'pending'],
+      default: 'inactive',
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
+    },
+  },
 });
 authSchema.pre('save', async function (next) {
   const user = this;

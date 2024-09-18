@@ -16,6 +16,7 @@ import {
   approvalStatus,
   getSearchProduct,
   productDelete,
+  subscriptionEquipments,
 } from '../controller/product.js';
 import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -51,5 +52,5 @@ productRouter.post(
   productDelete
 );
 productRouter.get('/search/:userId', getSearchProduct);
-
+productRouter.post('/subscription',upload.single('image'),subscriptionEquipments)
 export default productRouter;
