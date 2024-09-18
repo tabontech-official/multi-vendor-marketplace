@@ -73,6 +73,8 @@ export const deleteOrder=async(req,res)=>{
                     message:'order deleted successfully',
                     data:data
                 })
+            }else{
+                res.status(400).send('unable to delete order')
             }
         })
     } catch (error) {
