@@ -446,22 +446,41 @@ export const addNewEquipments = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    const errors = [];
-    if (!name) errors.push('Name is required.');
-    if (!brand) errors.push('Brand is required.');
-    if (!sale_price) errors.push('Sale price is required.');
-    if (!equipment_type) errors.push('Equipment type is required.');
-    if (!certification) errors.push('Certification is required.');
-    if (!year_manufactured) errors.push('Year manufactured is required.');
-    if (!warranty) errors.push('Warranty is required.');
-    if (!training) errors.push('Training is required.');
-    if (!shipping) errors.push('Shipping is required.');
-    if (!description) errors.push('Description is required.');
-    if (!location) errors.push('Location is required.');
-    if (!image) errors.push('Image is required.');
-
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
+    if (!location) {
+      return res.status(400).send('Location is required.');
+    }
+    if (!name) {
+      return res.status(400).send('Name is required.');
+    }
+    if (!brand) {
+      return res.status(400).send('Brand is required.');
+    }
+    if (!sale_price) {
+      return res.status(400).send('Sale price is required.');
+    }
+    if (!equipment_type) {
+      return res.status(400).send('Equipment type is required.');
+    }
+    if (!certification) {
+      return res.status(400).send('Certification is required.');
+    }
+    if (!year_manufactured) {
+      return res.status(400).send('Year manufactured is required.');
+    }
+    if (!warranty) {
+      return res.status(400).send('Warranty is required.');
+    }
+    if (!training) {
+      return res.status(400).send('Training is required.');
+    }
+    if (!shipping) {
+      return res.status(400).send('Shipping details are required.');
+    }
+    if (!description) {
+      return res.status(400).send('Description is required.');
+    }
+    if (!image) {
+      return res.status(400).send('Image is required.');
     }
     
 
