@@ -36,7 +36,7 @@ productRouter.post(
 );
 productRouter.get('/getProduct/:userId', getProduct);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
-productRouter.post('/webhooks/products/delete',productDelete);
+productRouter.post('/webhooks/products/delete/',productDelete);
 productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
 productRouter.post(
   '/subscription',

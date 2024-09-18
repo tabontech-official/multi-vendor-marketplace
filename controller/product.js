@@ -1602,17 +1602,17 @@ export const deleteProduct = async (req, res) => {
 
 // Handler for product deletion
 export const productDelete = async (req, res) => {
-  const { shopifyId } = req.params;
-  try {
-      const result = await productModel.deleteOne({ product_id:shopifyId });
-      if (result.deletedCount === 0) {
-          return res.status(404).json({ message: 'Product not found' });
-      }
-      res.status(200).json({ message: 'Product deleted successfully' });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
-  }
+  const { id } = req.body;  // Get the Shopify ID from the request parameters
+    try {
+        const result = await productModel.deleteOne({ id });  // Delete the product based on Shopify ID
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        res.status(200).json({ message: 'Product deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
 };
 
 export const subscriptionEquipments = async (req, res) => {
