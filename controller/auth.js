@@ -593,20 +593,23 @@ export const logout = async (req, res) => {
 // };
 
 export const webHook = async (req, res) => {
-  const shopifyUserId = req.body.id;
+  const { shopifyId } = req.body;
+
+  if (!shopifyId) {
+      return res.status(400).json({ message: 'user ID is required' });
+  }
 
   try {
-    // Assuming `shopifyId` is the unique identifier in MongoDB
-    const result = await authModel.deleteOne({ shopifyId: shopifyUserId });
+      const result = await authModel.deleteOne({ shopifyId: shopifyId });
+      
+      if (result.deletedCount === 0) {
+          return res.status(404).json({ message: 'user not found in MongoDB' });
+      }
 
-    if (result.deletedCount === 0) {
-      res.status(404).send('User not found in MongoDB');
-    } else {
-      res.status(200).send('User deleted from MongoDB');
-    }
+      res.status(200).json({ message: 'user successfully deleted from MongoDB' });
   } catch (error) {
-    console.error('Error deleting user from MongoDB:', error);
-    res.status(500).send('Internal Server Error');
+      console.error('Error in deleteProduct function:', error);
+      res.status(500).json({ error: error.message });
   }
 };
 
@@ -816,6 +819,7 @@ export const subscriptionForTwoMonth = async (req, res) => {
     res.status(500).send('Internal server error');
   }
 };
+
 
 // export const checkSubscription = async (req, res) => {
 //   try {
