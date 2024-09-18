@@ -1602,20 +1602,16 @@ export const deleteProduct = async (req, res) => {
 
 // Handler for product deletion
 export const productDelete = async (req, res) => {
-  const shopifyProductId = req.body.id;
-
+  const { shopifyId } = req.params;
   try {
-    // Assuming `productId` is the unique identifier in MongoDB
-    const result = await productModel.deleteOne({ productId: shopifyProductId });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).send('Product not found in MongoDB');
-    } else {
-      return res.status(200).send('Product deleted from MongoDB');
-    }
+      const result = await productModel.deleteOne({ product_id:shopifyId });
+      if (result.deletedCount === 0) {
+          return res.status(404).json({ message: 'Product not found' });
+      }
+      res.status(200).json({ message: 'Product deleted successfully' });
   } catch (error) {
-    console.error('Error deleting product from MongoDB:', error);
-    return res.status(500).send('Internal Server Error');
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
   }
 };
 
