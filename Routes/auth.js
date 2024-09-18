@@ -9,6 +9,8 @@ import {
   editProfile,
   fetchUserData,
   subscription,
+  subscriptionForOneMonth,
+  subscriptionForTwoMonth,
 } from '../controller/auth.js';
 import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -20,9 +22,13 @@ authRouter.post('/signUp', signUp);
 // authRouter.put('/update/:shopifyId',updateUser)
 authRouter.post('/logout/:userId', logout);
 authRouter.post('/newSignUp', newSignUp);
-authRouter.put('/updateInShopify', updateUserInShopify);
+authRouter.post('/subscription',subscription)
 authRouter.post('/webHook',verifyShopifyWebhook, webHook);
-authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
+authRouter.post('/oneMonth',subscriptionForOneMonth)
+authRouter.post('/twoMonths',subscriptionForTwoMonth)
 authRouter.get('/user/:id',fetchUserData)
-authRouter.post('/subscription/:userId',subscription)
+authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
+authRouter.put('/updateInShopify', updateUserInShopify);
+
+
 export default authRouter;

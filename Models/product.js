@@ -13,9 +13,6 @@ const productSchema = new mongoose.Schema(
     published_at: { type: Date },
     template_suffix: { type: String },
     tags: { type: String },
-    approved: Boolean,
-    reapprovalRequired: { type: Boolean, default: false },
-    approvalStatus: { type: String },
     // Variants as an array of objects
     variants: [
       {

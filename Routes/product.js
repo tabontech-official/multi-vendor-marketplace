@@ -8,12 +8,7 @@ import {
   addNewProviderListing,
   addRoomListing,
   getProduct,
-  getSoldOutProducts,
-  getApproved,
-  getBySku,
   deleteProduct,
-  reApprovalProducts,
-  approvalStatus,
   getSearchProduct,
   productDelete,
   subscriptionEquipments,
@@ -40,11 +35,6 @@ productRouter.post(
   addNewProviderListing
 );
 productRouter.get('/getProduct/:userId', getProduct);
-productRouter.get('/soldOut', getSoldOutProducts);
-productRouter.get('/Approved', getApproved);
-productRouter.get('/sku', getBySku);
-productRouter.get('/reaproval', reApprovalProducts);
-productRouter.get('/approvalStatus', approvalStatus);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.post(
   '/webhooks/products/delete',
@@ -52,5 +42,9 @@ productRouter.post(
   productDelete
 );
 productRouter.get('/search/:userId', getSearchProduct);
-productRouter.post('/subscription',upload.single('image'),subscriptionEquipments)
+productRouter.post(
+  '/subscription',
+  upload.single('image'),
+  subscriptionEquipments
+);
 export default productRouter;

@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
 import mongoose from 'mongoose'
+import { processPayment } from '../middleware/paymentService.js';
 //storage for images storing
 
 const createToken = (payLoad) => {
@@ -677,47 +678,171 @@ res.status(500).json({ error: 'An error occurred while fetching user data' });
 
 export const subscription = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId, paymentDetails } = req.body;
 
     // Check if userId is provided
     if (!userId) {
       return res.status(400).send('User ID is required');
     }
 
-    // Find the user
-    const user = await authModel.findById(userId);
-    if (!user) {
-      return res.status(404).send('User not found');
+    // Process payment
+    const paymentResult = await processPayment(paymentDetails);
+
+    // Check if payment was successful
+    if (!paymentResult.success) {
+      return res.status(400).send('Payment failed');
     }
 
-    // Check if the user has a valid subscription
     const currentDate = new Date();
-    const hasValidSubscription = user.subscription.status === 'active' &&
-      user.subscription.endDate > currentDate;
 
-    if (!user.hasPaidSubscription || !hasValidSubscription) {
-      return res.status(403).send('User does not have an active paid subscription');
-    }
-
-    // Update subscription if they have paid
-    const newSubscription = await authModel.findByIdAndUpdate(
+    // Update the user's subscription details
+    const updatedUser = await authModel.findByIdAndUpdate(
       userId,
-      { 
+      {
         hasPaidSubscription: true,
         subscription: {
-          ...user.subscription,
+          id: paymentResult.subscriptionId,
           status: 'active',
           startDate: currentDate,
-          endDate: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)), // Example: 1 year later
-        }
+          endDate: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)), // Adjust for desired duration
+        },
       },
       { new: true }
     );
 
-    res.status(200).send(newSubscription);
+    // Check if user was updated successfully
+    if (!updatedUser) {
+      return res.status(404).send('User not found');
+    }
+
+    // Respond with the updated user information
+    res.status(201).send(updatedUser);
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    console.error(error);
     res.status(500).send('Internal server error');
   }
 };
 
+export const subscriptionForOneMonth = async (req, res) => {
+  try {
+    const { userId, paymentDetails } = req.body;
+
+    // Check if userId is provided
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+
+    // Process payment
+    const paymentResult = await processPayment(paymentDetails);
+
+    // Check if payment was successful
+    if (!paymentResult.success) {
+      return res.status(400).send('Payment failed');
+    }
+
+    const currentDate = new Date();
+
+    // Update the user's subscription details for 30 days
+    const updatedUser = await authModel.findByIdAndUpdate(
+      userId,
+      {
+        hasPaidSubscription: true,
+        subscription: {
+          id: paymentResult.subscriptionId,
+          status: 'active',
+          startDate: currentDate,
+          endDate: new Date(currentDate.setDate(currentDate.getDate() + 30)), // Set end date to 30 days later
+        },
+      },
+      { new: true }
+    );
+
+    // Check if user was updated successfully
+    if (!updatedUser) {
+      return res.status(404).send('User not found');
+    }
+
+    // Respond with the updated user information
+    res.status(201).send(updatedUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
+};
+
+export const subscriptionForTwoMonth = async (req, res) => {
+  try {
+    const { userId, paymentDetails } = req.body;
+
+    // Check if userId is provided
+    if (!userId) {
+      return res.status(400).send('User ID is required');
+    }
+
+    // Process payment
+    const paymentResult = await processPayment(paymentDetails);
+
+    // Check if payment was successful
+    if (!paymentResult.success) {
+      return res.status(400).send('Payment failed');
+    }
+
+    const currentDate = new Date();
+
+    // Update the user's subscription details for 60 days
+    const updatedUser = await authModel.findByIdAndUpdate(
+      userId,
+      {
+        hasPaidSubscription: true,
+        subscription: {
+          id: paymentResult.subscriptionId,
+          status: 'active',
+          startDate: currentDate,
+          endDate: new Date(currentDate.setDate(currentDate.getDate() + 60)), // Set end date to 60 days later
+        },
+      },
+      { new: true }
+    );
+
+    // Check if user was updated successfully
+    if (!updatedUser) {
+      return res.status(404).send('User not found');
+    }
+
+    // Respond with the updated user information
+    res.status(201).send(updatedUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
+};
+
+// export const checkSubscription = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     // Check if userId is provided
+//     if (!userId) {
+//       return res.status(400).send('User ID is required');
+//     }
+
+//     // Find the user
+//     const user = await Auth.findById(userId);
+//     if (!user) {
+//       return res.status(404).send('User not found');
+//     }
+
+//     const currentDate = new Date();
+//     const hasValidSubscription = user.subscription.status === 'active' &&
+//       user.subscription.endDate > currentDate;
+
+//     if (!user.hasPaidSubscription || !hasValidSubscription) {
+//       return res.status(403).send('User does not have an active paid subscription');
+//     }
+
+//     res.status(200).send(user.subscription);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Internal server error');
+//   }
+// };
