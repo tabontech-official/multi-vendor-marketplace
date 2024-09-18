@@ -214,11 +214,22 @@ export const addUsedEquipments = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    if (!name || !asking_price || !image) {
-      return res
-        .status(400)
-        .json({ error: 'Name, asking price, and image are required.' });
+    const errors = [];
+
+    // Validate required fields
+    if (!name) errors.push('Name is required.');
+    if (!asking_price) errors.push('Asking price is required.');
+    if (!image) errors.push('Image is required.');
+
+    // Additional optional field checks (if required)
+    if (!brand) errors.push('Brand is required.');
+    if (!equipment_type) errors.push('Equipment type is required.');
+
+    // If there are errors, respond with them
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
+
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -435,26 +446,25 @@ export const addNewEquipments = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    if (!name || !sale_price || !image) {
-      return res
-        .status(400)
-        .json({ error: 'Name, sale price, and image are required.' });
-    }
-    const user = await authModel.findById(userId);
+    const errors = [];
+    if (!name) errors.push('Name is required.');
+    if (!brand) errors.push('Brand is required.');
+    if (!sale_price) errors.push('Sale price is required.');
+    if (!equipment_type) errors.push('Equipment type is required.');
+    if (!certification) errors.push('Certification is required.');
+    if (!year_manufactured) errors.push('Year manufactured is required.');
+    if (!warranty) errors.push('Warranty is required.');
+    if (!training) errors.push('Training is required.');
+    if (!shipping) errors.push('Shipping is required.');
+    if (!description) errors.push('Description is required.');
+    if (!location) errors.push('Location is required.');
+    if (!image) errors.push('Image is required.');
 
-    if (
-      !user ||
-      !user.hasPaidSubscription ||
-      !user.subscription ||
-      user.subscription.status !== 'active'
-    ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            'Access denied. User does not have an active paid subscription.',
-        });
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
+    
+
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -682,26 +692,27 @@ export const addNewBusiness = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    if (!location || !askingPrice || !image) {
-      return res
-        .status(400)
-        .json({ error: 'Location, asking price, and image are required.' });
-    }
+    const errors = [];
+    if (!location) errors.push('Location is required.');
+    if (!businessDescription) errors.push('Business description is required.');
+    if (!askingPrice) errors.push('Asking price is required.');
+    if (!establishedYear) errors.push('Established year is required.');
+    if (!numberOfEmployees) errors.push('Number of employees is required.');
+    if (!locationMonthlyRent) errors.push('Location monthly rent is required.');
+    if (!leaseExpirationDate) errors.push('Lease expiration date is required.');
+    if (!locationSize) errors.push('Location size is required.');
+    if (!grossYearlyRevenue) errors.push('Gross yearly revenue is required.');
+    if (!cashFlow) errors.push('Cash flow is required.');
+    if (!productsInventory) errors.push('Products inventory is required.');
+    if (!equipmentValue) errors.push('Equipment value is required.');
+    if (!reasonForSelling) errors.push('Reason for selling is required.');
+    if (!listOfDevices) errors.push('List of devices is required.');
+    if (!offeredServices) errors.push('Offered services are required.');
+    if (!supportAndTraining) errors.push('Support and training information is required.');
+    if (!image) errors.push('Image is required.');
 
-    const user = await authModel.findById(userId);
-
-    if (
-      !user ||
-      !user.hasPaidSubscription ||
-      !user.subscription ||
-      user.subscription.status !== 'active'
-    ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            'Access denied. User does not have an active paid subscription.',
-        });
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -925,7 +936,7 @@ export const addNewJobListing = async (req, res) => {
       name,
       qualification,
       positionRequestedDescription,
-      //experience,
+     
       availability,
       requestedYearlySalary,
       userId,
@@ -934,28 +945,17 @@ export const addNewJobListing = async (req, res) => {
     // Handle file upload
     const image = req.file; // Handle file upload
 
-    // Validate required fields
-    if (!location || !name || !qualification || !availability || !image) {
-      return res.status(400).json({
-        error:
-          'Location, name, qualification, availability, and image are required.',
-      });
-    }
+    const errors = [];
+    if (!location) errors.push('Location is required.');
+    if (!name) errors.push('Name is required.');
+    if (!qualification) errors.push('Qualification is required.');
+    if (!positionRequestedDescription) errors.push('Position requested description is required.');
+    if (!availability) errors.push('Availability is required.');
+    if (!requestedYearlySalary) errors.push('Requested yearly salary is required.');
+    if (!image) errors.push('Image is required.');
 
-    const user = await authModel.findById(userId);
-
-    if (
-      !user ||
-      !user.hasPaidSubscription ||
-      !user.subscription ||
-      user.subscription.status !== 'active'
-    ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            'Access denied. User does not have an active paid subscription.',
-        });
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1125,33 +1125,17 @@ export const addNewProviderListing = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    if (
-      !location ||
-      !qualificationRequested ||
-      !jobType ||
-      !typeOfJobOffered ||
-      !offeredYearlySalary ||
-      !image
-    ) {
-      return res.status(400).json({
-        error:
-          'Location, qualification requested, job type, type of job offered, offered yearly salary, and image are required.',
-      });
-    }
-    const user = await authModel.findById(userId);
+    const errors = [];
+    if (!location) errors.push('Location is required.');
+    if (!qualificationRequested) errors.push('Qualification requested is required.');
+    if (!jobType) errors.push('Job type is required.');
+    if (!typeOfJobOffered) errors.push('Type of job offered is required.');
+    if (!offeredYearlySalary) errors.push('Offered yearly salary is required.');
+    if (!offeredPositionDescription) errors.push('Offered position description is required.');
+    if (!image) errors.push('Image is required.');
 
-    if (
-      !user ||
-      !user.hasPaidSubscription ||
-      !user.subscription ||
-      user.subscription.status !== 'active'
-    ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            'Access denied. User does not have an active paid subscription.',
-        });
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1318,33 +1302,20 @@ export const addRoomListing = async (req, res) => {
     // Handle file upload
     const image = req.file; // Handle file upload
 
-    if (
-      !location ||
-      !roomSize ||
-      !monthlyRent ||
-      !deposit ||
-      !minimumInsuranceRequested ||
-      wifiAvailable === undefined
-    ) {
-      return res.status(400).json({
-        error:
-          'Location, room size, monthly rent, deposit, minimum insurance requested, and wifi availability are required.',
-      });
-    }
-    const user = await authModel.findById(userId);
+    const errors = [];
+    if (!location) errors.push('Location is required.');
+    if (!roomSize) errors.push('Room size is required.');
+    if (!monthlyRent) errors.push('Monthly rent is required.');
+    if (!deposit) errors.push('Deposit is required.');
+    if (!minimumInsuranceRequested) errors.push('Minimum insurance requested is required.');
+    if (!typeOfUseAllowed) errors.push('Type of use allowed is required.');
+    if (!rentalTerms) errors.push('Rental terms are required.');
+    if (wifiAvailable === undefined) errors.push('WiFi availability is required.'); // Check for boolean
+    if (!otherDetails) errors.push('Other details are required.');
+    if (!image) errors.push('Image is required.');
 
-    if (
-      !user ||
-      !user.hasPaidSubscription ||
-      !user.subscription ||
-      user.subscription.status !== 'active'
-    ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            'Access denied. User does not have an active paid subscription.',
-        });
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
