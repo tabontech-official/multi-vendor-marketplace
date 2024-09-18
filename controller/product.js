@@ -214,20 +214,44 @@ export const addUsedEquipments = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    const errors = [];
-
-    // Validate required fields
-    if (!name) errors.push('Name is required.');
-    if (!asking_price) errors.push('Asking price is required.');
-    if (!image) errors.push('Image is required.');
-
-    // Additional optional field checks (if required)
-    if (!brand) errors.push('Brand is required.');
-    if (!equipment_type) errors.push('Equipment type is required.');
-
-    // If there are errors, respond with them
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
+    if (!location) {
+      return res.status(400).send('Location is required.');
+    }
+    if (!name) {
+      return res.status(400).send('Name is required.');
+    }
+    if (!brand) {
+      return res.status(400).send('Brand is required.');
+    }
+    if (!asking_price) {
+      return res.status(400).send('Asking price is required.');
+    }
+    if (accept_offers === undefined) {
+      return res.status(400).send('Accept offers is required.');
+    }
+    if (!equipment_type) {
+      return res.status(400).send('Equipment type is required.');
+    }
+    if (!certification) {
+      return res.status(400).send('Certification is required.');
+    }
+    if (!year_purchased) {
+      return res.status(400).send('Year purchased is required.');
+    }
+    if (!warranty) {
+      return res.status(400).send('Warranty is required.');
+    }
+    if (!reason_for_selling) {
+      return res.status(400).send('Reason for selling is required.');
+    }
+    if (!shipping) {
+      return res.status(400).send('Shipping details are required.');
+    }
+    if (!description) {
+      return res.status(400).send('Description is required.');
+    }
+    if (!image) {
+      return res.status(400).send('Image is required.');
     }
 
 
@@ -711,28 +735,58 @@ export const addNewBusiness = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    const errors = [];
-    if (!location) errors.push('Location is required.');
-    if (!businessDescription) errors.push('Business description is required.');
-    if (!askingPrice) errors.push('Asking price is required.');
-    if (!establishedYear) errors.push('Established year is required.');
-    if (!numberOfEmployees) errors.push('Number of employees is required.');
-    if (!locationMonthlyRent) errors.push('Location monthly rent is required.');
-    if (!leaseExpirationDate) errors.push('Lease expiration date is required.');
-    if (!locationSize) errors.push('Location size is required.');
-    if (!grossYearlyRevenue) errors.push('Gross yearly revenue is required.');
-    if (!cashFlow) errors.push('Cash flow is required.');
-    if (!productsInventory) errors.push('Products inventory is required.');
-    if (!equipmentValue) errors.push('Equipment value is required.');
-    if (!reasonForSelling) errors.push('Reason for selling is required.');
-    if (!listOfDevices) errors.push('List of devices is required.');
-    if (!offeredServices) errors.push('Offered services are required.');
-    if (!supportAndTraining) errors.push('Support and training information is required.');
-    if (!image) errors.push('Image is required.');
-
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
+    if (!location) {
+      return res.status(400).send('Location is required.');
     }
+    if (!businessDescription) {
+      return res.status(400).send('Business description is required.');
+    }
+    if (!askingPrice) {
+      return res.status(400).send('Asking price is required.');
+    }
+    if (!establishedYear) {
+      return res.status(400).send('Established year is required.');
+    }
+    if (!numberOfEmployees) {
+      return res.status(400).send('Number of employees is required.');
+    }
+    if (!locationMonthlyRent) {
+      return res.status(400).send('Location monthly rent is required.');
+    }
+    if (!leaseExpirationDate) {
+      return res.status(400).send('Lease expiration date is required.');
+    }
+    if (!locationSize) {
+      return res.status(400).send('Location size is required.');
+    }
+    if (!grossYearlyRevenue) {
+      return res.status(400).send('Gross yearly revenue is required.');
+    }
+    if (!cashFlow) {
+      return res.status(400).send('Cash flow is required.');
+    }
+    if (!productsInventory) {
+      return res.status(400).send('Products inventory is required.');
+    }
+    if (!equipmentValue) {
+      return res.status(400).send('Equipment value is required.');
+    }
+    if (!reasonForSelling) {
+      return res.status(400).send('Reason for selling is required.');
+    }
+    if (!listOfDevices) {
+      return res.status(400).send('List of devices is required.');
+    }
+    if (!offeredServices) {
+      return res.status(400).send('Offered services are required.');
+    }
+    if (!supportAndTraining) {
+      return res.status(400).send('Support and training information is required.');
+    }
+    if (!image) {
+      return res.status(400).send('Image is required.');
+    }
+
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -964,17 +1018,26 @@ export const addNewJobListing = async (req, res) => {
     // Handle file upload
     const image = req.file; // Handle file upload
 
-    const errors = [];
-    if (!location) errors.push('Location is required.');
-    if (!name) errors.push('Name is required.');
-    if (!qualification) errors.push('Qualification is required.');
-    if (!positionRequestedDescription) errors.push('Position requested description is required.');
-    if (!availability) errors.push('Availability is required.');
-    if (!requestedYearlySalary) errors.push('Requested yearly salary is required.');
-    if (!image) errors.push('Image is required.');
-
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
+    if (!location) {
+      return res.status(400).send('Location is required.');
+    }
+    if (!name) {
+      return res.status(400).send('Name is required.');
+    }
+    if (!qualification) {
+      return res.status(400).send('Qualification is required.');
+    }
+    if (!positionRequestedDescription) {
+      return res.status(400).send('Position requested description is required.');
+    }
+    if (!availability) {
+      return res.status(400).send('Availability is required.');
+    }
+    if (!requestedYearlySalary) {
+      return res.status(400).send('Requested yearly salary is required.');
+    }
+    if (!image) {
+      return res.status(400).send('Image is required.');
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1144,17 +1207,26 @@ export const addNewProviderListing = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    const errors = [];
-    if (!location) errors.push('Location is required.');
-    if (!qualificationRequested) errors.push('Qualification requested is required.');
-    if (!jobType) errors.push('Job type is required.');
-    if (!typeOfJobOffered) errors.push('Type of job offered is required.');
-    if (!offeredYearlySalary) errors.push('Offered yearly salary is required.');
-    if (!offeredPositionDescription) errors.push('Offered position description is required.');
-    if (!image) errors.push('Image is required.');
-
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
+    if (!location) {
+      return res.status(400).send('Location is required.');
+    }
+    if (!qualificationRequested) {
+      return res.status(400).send('Qualification requested is required.');
+    }
+    if (!jobType) {
+      return res.status(400).send('Job type is required.');
+    }
+    if (!typeOfJobOffered) {
+      return res.status(400).send('Type of job offered is required.');
+    }
+    if (!offeredYearlySalary) {
+      return res.status(400).send('Offered yearly salary is required.');
+    }
+    if (!offeredPositionDescription) {
+      return res.status(400).send('Offered position description is required.');
+    }
+    if (!image) {
+      return res.status(400).send('Image is required.');
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1321,20 +1393,35 @@ export const addRoomListing = async (req, res) => {
     // Handle file upload
     const image = req.file; // Handle file upload
 
-    const errors = [];
-    if (!location) errors.push('Location is required.');
-    if (!roomSize) errors.push('Room size is required.');
-    if (!monthlyRent) errors.push('Monthly rent is required.');
-    if (!deposit) errors.push('Deposit is required.');
-    if (!minimumInsuranceRequested) errors.push('Minimum insurance requested is required.');
-    if (!typeOfUseAllowed) errors.push('Type of use allowed is required.');
-    if (!rentalTerms) errors.push('Rental terms are required.');
-    if (wifiAvailable === undefined) errors.push('WiFi availability is required.'); // Check for boolean
-    if (!otherDetails) errors.push('Other details are required.');
-    if (!image) errors.push('Image is required.');
-
-    if (errors.length > 0) {
-      return res.status(400).json({ errors });
+    if (!location) {
+      return res.status(400).send('Location is required.');
+    }
+    if (!roomSize) {
+      return res.status(400).send('Room size is required.');
+    }
+    if (!monthlyRent) {
+      return res.status(400).send('Monthly rent is required.');
+    }
+    if (!deposit) {
+      return res.status(400).send('Deposit is required.');
+    }
+    if (!minimumInsuranceRequested) {
+      return res.status(400).send('Minimum insurance requested is required.');
+    }
+    if (!typeOfUseAllowed) {
+      return res.status(400).send('Type of use allowed is required.');
+    }
+    if (!rentalTerms) {
+      return res.status(400).send('Rental terms are required.');
+    }
+    if (typeof wifiAvailable === 'undefined') {
+      return res.status(400).send('WiFi availability must be specified.');
+    }
+    if (!otherDetails) {
+      return res.status(400).send('Other details are required.');
+    }
+    if (!image) {
+      return res.status(400).send('Image is required.');
     }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
