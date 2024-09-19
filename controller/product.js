@@ -1032,7 +1032,7 @@ export const addNewJobListing = async (req, res) => {
       return res.status(400).json({ error: 'Qualification is required.' });
   }
   if (!positionRequestedDescription) {
-      return res.status(400).json({ error: 'Position requested description is required.' });
+      return res.status(400).json({ error: 'Position description is required.' });
   }
   if (!availability) {
       return res.status(400).json({ error: 'Availability is required.' });
@@ -1229,7 +1229,7 @@ export const addNewProviderListing = async (req, res) => {
       return res.status(400).json({ error: 'Offered yearly salary is required.' });
   }
   if (!offeredPositionDescription) {
-      return res.status(400).json({ error: 'Offered position description is required.' });
+      return res.status(400).json({ error: 'position description is required.' });
   }
   if (!image) {
       return res.status(400).json({ error: 'Image is required.' });

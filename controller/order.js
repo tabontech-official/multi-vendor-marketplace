@@ -64,6 +64,23 @@ export const getOrder = async (req, res) => {
     }
 };
 
+export const updateOrder=async(req,res)=>{
+    try {
+        const {id}=req.paarams
+        const query=({$set:req.body})
+        const data=await orderModel.findByIdAndUpdate(id,query).then(result=>{
+            if(result){
+                res.status(200).send({
+                    message:"successfully updated",
+                    data:data
+                })
+            }
+        })
+    } catch (error) {
+        
+    }
+}
+
 export const deleteOrder=async(req,res)=>{
     try {
         const {id}=req.params
