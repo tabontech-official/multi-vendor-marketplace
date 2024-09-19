@@ -6,10 +6,9 @@ import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
-import mongoose from 'mongoose'
-import { processPayment } from '../middleware/paymentService.js';
-//storage for images storing
+import mongoose from 'mongoose';
 
+//storage for images storing
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
     expiresIn: '125d',
@@ -128,21 +127,23 @@ export const signIn = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
 
     const response = await fetch(shopifyUrl, {
       method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${base64Credentials}`,
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
       },
     });
 
     const data = await response.json();
 
     if (response.status !== 200 || !data.customers.length) {
-      return res.status(404).json({ error: "User does not exist in Shopify" });
+      return res.status(404).json({ error: 'User does not exist in Shopify' });
     }
 
     const shopifyCustomer = data.customers[0];
@@ -154,7 +155,9 @@ export const signIn = async (req, res) => {
     const user = await authModel.findOne({ shopifyId: shopifyCustomer.id });
 
     if (!user) {
-      return res.status(404).json({ error: "User does not exist in our system" });
+      return res
+        .status(404)
+        .json({ error: 'User does not exist in our system' });
     }
 
     // Create a JWT token for your application
@@ -665,20 +668,20 @@ export const webHook = async (req, res) => {
   const { shopifyId } = req.body;
 
   if (!shopifyId) {
-      return res.status(400).json({ message: 'user ID is required' });
+    return res.status(400).json({ message: 'user ID is required' });
   }
 
   try {
-      const result = await authModel.deleteOne({ shopifyId: shopifyId });
-      
-      if (result.deletedCount === 0) {
-          return res.status(404).json({ message: 'user not found in MongoDB' });
-      }
+    const result = await authModel.deleteOne({ shopifyId: shopifyId });
 
-      res.status(200).json({ message: 'user successfully deleted from MongoDB' });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'user not found in MongoDB' });
+    }
+
+    res.status(200).json({ message: 'user successfully deleted from MongoDB' });
   } catch (error) {
-      console.error('Error in deleteProduct function:', error);
-      res.status(500).json({ error: error.message });
+    console.error('Error in deleteProduct function:', error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -727,28 +730,35 @@ export const editProfile = async (req, res) => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`
+        Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
       },
       body: JSON.stringify({
         customer: {
           id: user.shopifyId, // Make sure to have this ID in your user model
           email: user.email,
           phone: user.phone,
-          addresses: [{
-            address1: user.address,
-            city: user.city,
-            province: user.state, // Assuming you have a state field
-            country: user.country,
-            zip: user.zip,
-          }],
+          addresses: [
+            {
+              address1: user.address,
+              city: user.city,
+              province: user.state, // Assuming you have a state field
+              country: user.country,
+              zip: user.zip,
+            },
+          ],
           // Include other fields as necessary
-        }
-      })
+        },
+      }),
     });
 
     if (!shopifyResponse.ok) {
-      console.error('Failed to update user in Shopify:', await shopifyResponse.text());
-      return res.status(500).json({ error: 'Failed to update user in Shopify' });
+      console.error(
+        'Failed to update user in Shopify:',
+        await shopifyResponse.text()
+      );
+      return res
+        .status(500)
+        .json({ error: 'Failed to update user in Shopify' });
     }
 
     res.status(200).json({ message: 'Profile updated successfully.' });
@@ -804,167 +814,25 @@ export const editProfile = async (req, res) => {
 //   }
 // };
 
-
-export const fetchUserData=async(req,res)=>{
+export const fetchUserData = async (req, res) => {
   try {
-    const {id}=req.params
- const response=await authModel.aggregate([
-  { $match: { _id: new mongoose.Types.ObjectId(id) } },
-  { $project: { email: 1, password: 1 } } 
- ])
- if (response.length > 0) {
-  res.status(200).json(response[0]);
-} else {
-  res.status(404).json({ message: 'User not found' });
-}
-} catch (error) {
-console.error('Error fetching user data:', error);
-res.status(500).json({ error: 'An error occurred while fetching user data' });
-}
-}
-
-
-export const subscription = async (req, res) => {
-  try {
-    const { userId, paymentDetails } = req.body;
-
-    // Check if userId is provided
-    if (!userId) {
-      return res.status(400).send('User ID is required');
+    const { id } = req.params;
+    const response = await authModel.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      { $project: { email: 1, password: 1 } },
+    ]);
+    if (response.length > 0) {
+      res.status(200).json(response[0]);
+    } else {
+      res.status(404).json({ message: 'User not found' });
     }
-
-    // Process payment
-    const paymentResult = await processPayment(paymentDetails);
-
-    // Check if payment was successful
-    if (!paymentResult.success) {
-      return res.status(400).send('Payment failed');
-    }
-
-    const currentDate = new Date();
-
-    // Update the user's subscription details
-    const updatedUser = await authModel.findByIdAndUpdate(
-      userId,
-      {
-        hasPaidSubscription: true,
-        subscription: {
-          id: paymentResult.subscriptionId,
-          status: 'active',
-          startDate: currentDate,
-          endDate: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)), // Adjust for desired duration
-        },
-      },
-      { new: true }
-    );
-
-    // Check if user was updated successfully
-    if (!updatedUser) {
-      return res.status(404).send('User not found');
-    }
-
-    // Respond with the updated user information
-    res.status(201).send(updatedUser);
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
+    console.error('Error fetching user data:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching user data' });
   }
 };
-
-export const subscriptionForOneMonth = async (req, res) => {
-  try {
-    const { userId, paymentDetails } = req.body;
-
-    // Check if userId is provided
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-
-    // Process payment
-    const paymentResult = await processPayment(paymentDetails);
-
-    // Check if payment was successful
-    if (!paymentResult.success) {
-      return res.status(400).send('Payment failed');
-    }
-
-    const currentDate = new Date();
-
-    // Update the user's subscription details for 30 days
-    const updatedUser = await authModel.findByIdAndUpdate(
-      userId,
-      {
-        hasPaidSubscription: true,
-        subscription: {
-          id: paymentResult.subscriptionId,
-          status: 'active',
-          startDate: currentDate,
-          endDate: new Date(currentDate.setDate(currentDate.getDate() + 30)), // Set end date to 30 days later
-        },
-      },
-      { new: true }
-    );
-
-    // Check if user was updated successfully
-    if (!updatedUser) {
-      return res.status(404).send('User not found');
-    }
-
-    // Respond with the updated user information
-    res.status(201).send(updatedUser);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-};
-
-export const subscriptionForTwoMonth = async (req, res) => {
-  try {
-    const { userId, paymentDetails } = req.body;
-
-    // Check if userId is provided
-    if (!userId) {
-      return res.status(400).send('User ID is required');
-    }
-
-    // Process payment
-    const paymentResult = await processPayment(paymentDetails);
-
-    // Check if payment was successful
-    if (!paymentResult.success) {
-      return res.status(400).send('Payment failed');
-    }
-
-    const currentDate = new Date();
-
-    // Update the user's subscription details for 60 days
-    const updatedUser = await authModel.findByIdAndUpdate(
-      userId,
-      {
-        hasPaidSubscription: true,
-        subscription: {
-          id: paymentResult.subscriptionId,
-          status: 'active',
-          startDate: currentDate,
-          endDate: new Date(currentDate.setDate(currentDate.getDate() + 60)), // Set end date to 60 days later
-        },
-      },
-      { new: true }
-    );
-
-    // Check if user was updated successfully
-    if (!updatedUser) {
-      return res.status(404).send('User not found');
-    }
-
-    // Respond with the updated user information
-    res.status(201).send(updatedUser);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-};
-
 
 // export const checkSubscription = async (req, res) => {
 //   try {

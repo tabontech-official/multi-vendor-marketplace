@@ -1,6 +1,8 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
+
+
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -64,6 +66,7 @@ export const fetchAndStoreProducts = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 // helper function to add images
 const shopifyRequest = async (url, method, body) => {
@@ -232,6 +235,7 @@ export const addUsedEquipments = async (req, res) => {
     if (!description) return res.status(400).json({ error: 'description is required' });
     if (!image) return res.status(400).json({ error: 'image is required' });
 
+
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -239,7 +243,9 @@ export const addUsedEquipments = async (req, res) => {
         body_html: description,
         vendor: brand,
         product_type: 'used equipments',
-        variants: [{ price: askingPriceValue.toFixed(2).toString() }], // Use formatted asking price
+        variants: [{ price: askingPriceValue.toFixed(2).toString() }],
+        
+         // Use formatted asking price
       },
     };
 
@@ -1242,7 +1248,6 @@ export const addNewJobListing = async (req, res) => {
       name,
       qualification,
       positionRequestedDescription,
-     
       availability,
       requestedYearlySalary,
       userId,
@@ -1609,7 +1614,6 @@ export const addNewProviderListing = async (req, res) => {
 };
 
 // Add Room listing
-
 export const addRoomListing = async (req, res) => {
   try {
     // Extract provider listing details from request body
@@ -1928,7 +1932,8 @@ export const deleteProduct = async (req, res) => {
 };
 
 
-// Handler for product deletion
+// webhook product deletion
+
 export const productDelete = async (req, res) => {
   const { id } = req.body;
 
@@ -1949,5 +1954,4 @@ export const productDelete = async (req, res) => {
       res.status(500).json({ error: error.message });
   }
 };
-
 

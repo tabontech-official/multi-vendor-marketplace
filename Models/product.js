@@ -13,7 +13,11 @@ const productSchema = new mongoose.Schema(
     published_at: { type: Date },
     template_suffix: { type: String },
     tags: { type: String },
-    status:{type:String,enum:['pending','active','inactive'],default :'inactive'},
+    status: {
+      type: String,
+      enum: ['pending', 'active', 'inactive'],
+      default: 'active',
+    },
     // Variants as an array of objects
     variants: [
       {
@@ -126,7 +130,7 @@ const productSchema = new mongoose.Schema(
       description: { type: String },
     },
     business: {
-      name:String,
+      name: String,
       location: String,
       businessDescription: String,
       askingPrice: Number,
