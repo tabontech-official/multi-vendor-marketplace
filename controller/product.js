@@ -369,9 +369,9 @@ export const addUsedEquipments = async (req, res) => {
     const newProduct = new productModel({
       id: productId,
       title: name,
-      body_html: '',
+      body_html: description,
       vendor: brand,
-      product_type: equipment_type,
+      product_type: 'used Equipment',
       created_at: new Date(),
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
