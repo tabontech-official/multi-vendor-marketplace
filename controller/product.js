@@ -214,52 +214,46 @@ export const addUsedEquipments = async (req, res) => {
     const image = req.file; // Handle file upload
 
     // Validate required fields
-    if (!location) {
-      errors.push('Location is required.');
-  }
-  if (!name) {
-      errors.push('Name is required.');
-  }
-  if (!brand) {
-      errors.push('Brand is required.');
-  }
-  if (!asking_price) {
-      errors.push('Asking price is required.');
-  }
-  if (accept_offers === undefined) {
-      errors.push('Accept offers is required.');
-  }
-  if (!equipment_type) {
-      errors.push('Equipment type is required.');
-  }
-  if (!certification) {
-      errors.push('Certification is required.');
-  }
-  if (!year_purchased) {
-      errors.push('Year purchased is required.');
-  }
-  if (!warranty) {
-      errors.push('Warranty is required.');
-  }
-  if (!reason_for_selling) {
-      errors.push('Reason for selling is required.');
-  }
-  if (!shipping) {
-      errors.push('Shipping details are required.');
-  }
-  if (!description) {
-      errors.push('Description is required.');
-  }
-  if (!image) {
-      errors.push('Image is required.');
-  }
-
-  // If there are errors, return them in a JSON response
-  if (errors.length > 0) {
-      return res.status(400).json({ errors });
-  }
-
-  
+   if(!location){
+    return res.status(400).json({error:'location is required'})
+   }
+   if(!name){
+    return res.status(400).json({error:'name is required'})
+   }
+   if(!brand){
+    return res.status(400).json({error:'brand is required'})
+   }
+   if(!asking_price){
+    return res.status(400).json({error:'asking_price is required'})
+   }
+   if(!accept_offers){
+    return res.status(400).json({error:'accept_offers is required'})
+   }
+   if(!equipment_type){
+    return res.status(400).json({error:'equipment_type is required'})
+   }
+   if(!certification){
+    return res.status(400).json({error:'certification is required'})
+   }
+   if(!year_purchased){
+    return res.status(400).json({error:'year_purchased is required'})
+   }
+   if(!warranty){
+    return res.status(400).json({error:'warranty is required'})
+   }
+   if(!reason_for_selling){
+    return res.status(400).json({error:'reason_for_selling is required'})
+   }
+   if(!shipping){
+    return res.status(400).json({error:'shipping is required'})
+   }
+   if(!description){
+    return res.status(400).json({error:'description is required'})
+   }
+   if(!image){
+    return res.status(400).json({error:'image is required'})
+   }
+   
  
 
 
