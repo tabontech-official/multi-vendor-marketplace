@@ -218,7 +218,7 @@ export const addUsedEquipments = async (req, res) => {
     return res.status(400).json({error:'location is required'})
    }
    if(!name){
-    return res.status(400).json({error:'name is required'})
+    return res.status(400).json({error:'Equipment Name is required'})
    }
    if(!brand){
     return res.status(400).json({error:'brand is required'})
@@ -476,7 +476,7 @@ export const addNewEquipments = async (req, res) => {
       return res.status(400).json({ error: 'Location is required.' });
   }
   if (!name) {
-      return res.status(400).json({ error: 'Name is required.' });
+      return res.status(400).json({ error: 'Title is required.' });
   }
   if (!brand) {
       return res.status(400).json({ error: 'Brand is required.' });

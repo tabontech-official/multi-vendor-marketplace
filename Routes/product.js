@@ -34,9 +34,9 @@ productRouter.post(
   upload.single('image'),
   addNewProviderListing
 );
-productRouter.get('/getProduct/:userId', getProduct);
-productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.post('/webhooks/delete',verifyShopifyWebhook,productDelete);
 productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
+productRouter.get('/getProduct/:userId', getProduct);
+productRouter.delete('/deleteProduct/:id', deleteProduct);
 
 export default productRouter;
