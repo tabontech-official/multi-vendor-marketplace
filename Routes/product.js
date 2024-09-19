@@ -16,7 +16,6 @@ import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
 
-
 const productRouter = express.Router();
 productRouter.get('/shopify', fetchAndStoreProducts);
 productRouter.post('/addProduct', upload.single('image'), addProduct);
@@ -34,8 +33,8 @@ productRouter.post(
   upload.single('image'),
   addNewProviderListing
 );
-productRouter.post('/webhooks/delete',verifyShopifyWebhook,productDelete);
-productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
+productRouter.post('/webhooks/delete', verifyShopifyWebhook, productDelete);
+productRouter.get('/search/:userId', verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 

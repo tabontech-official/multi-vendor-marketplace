@@ -193,6 +193,7 @@ export const addProduct = async (req, res) => {
   }
 };
 
+
 export const addUsedEquipments = async (req, res) => {
   try {
     // Extract equipment details from request body
@@ -213,69 +214,37 @@ export const addUsedEquipments = async (req, res) => {
     } = req.body;
     const image = req.file; // Handle file upload
 
-    // Validate required fields
-   if(!location){
-    return res.status(400).json({error:'location is required'})
-   }
-   if(!name){
-    return res.status(400).json({error:'Equipment Name is required'})
-   }
-   if(!brand){
-    return res.status(400).json({error:'brand is required'})
-   }
-   if(!asking_price){
-    return res.status(400).json({error:'asking_price is required'})
-   }
-   if(!accept_offers){
-    return res.status(400).json({error:'accept_offers is required'})
-   }
-   if(!equipment_type){
-    return res.status(400).json({error:'equipment_type is required'})
-   }
-   if(!certification){
-    return res.status(400).json({error:'certification is required'})
-   }
-   if(!year_purchased){
-    return res.status(400).json({error:'year_purchased is required'})
-   }
-   if(!warranty){
-    return res.status(400).json({error:'warranty is required'})
-   }
-   if(!reason_for_selling){
-    return res.status(400).json({error:'reason_for_selling is required'})
-   }
-   if(!shipping){
-    return res.status(400).json({error:'shipping is required'})
-   }
-   if(!description){
-    return res.status(400).json({error:'description is required'})
-   }
-   if(!image){
-    return res.status(400).json({error:'image is required'})
-   }
-   
- 
+    // Set asking_price to 0.00 if not provided
+    const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
 
+    // Validate required fields
+    if (!location) return res.status(400).json({ error: 'location is required' });
+    if (!name) return res.status(400).json({ error: 'Equipment Name is required' });
+    if (!brand) return res.status(400).json({ error: 'brand is required' });
+    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
+    if (!accept_offers) return res.status(400).json({ error: 'accept_offers is required' });
+    if (!equipment_type) return res.status(400).json({ error: 'equipment_type is required' });
+    if (!certification) return res.status(400).json({ error: 'certification is required' });
+    if (!year_purchased) return res.status(400).json({ error: 'year_purchased is required' });
+    if (!warranty) return res.status(400).json({ error: 'warranty is required' });
+    if (!reason_for_selling) return res.status(400).json({ error: 'reason_for_selling is required' });
+    if (!shipping) return res.status(400).json({ error: 'shipping is required' });
+    if (!description) return res.status(400).json({ error: 'description is required' });
+    if (!image) return res.status(400).json({ error: 'image is required' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name, // Use equipment name as the title
-        body_html: '', // Leave body_html empty, as we'll use metafields for details
-        vendor: brand, // Use brand as the vendor
-        product_type: equipment_type, // Use equipment type as the product type
-        variants: [{ price: asking_price.toString() }], // Price should be a string
+        title: name,
+        body_html: description,
+        vendor: brand,
+        product_type: 'used equipments',
+        variants: [{ price: askingPriceValue.toFixed(2).toString() }], // Use formatted asking price
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
-
-    console.log('Product Response:', productResponse);
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
 
     const productId = productResponse.product.id;
 
@@ -309,8 +278,8 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'asking_price',
-          value: asking_price.toString(),
-          type: 'number_integer',
+          value: askingPriceValue.toFixed(2), // Save formatted asking price
+          type: 'single_line_text_field',
         },
       },
       {
@@ -378,11 +347,10 @@ export const addUsedEquipments = async (req, res) => {
 
     // Step 3: Upload Image to Shopify
     const cloudinaryImageUrl = image.path;
-    // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
 
     const imagePayload = {
       image: {
-        src: cloudinaryImageUrl, // Use Cloudinary URL here
+        src: cloudinaryImageUrl,
       },
     };
 
@@ -395,7 +363,7 @@ export const addUsedEquipments = async (req, res) => {
     const newProduct = new productModel({
       id: productId,
       title: name,
-      body_html: '', // Empty body_html as we use metafields for details
+      body_html: '',
       vendor: brand,
       product_type: equipment_type,
       created_at: new Date(),
@@ -426,7 +394,7 @@ export const addUsedEquipments = async (req, res) => {
         location,
         name,
         brand,
-        asking_price,
+        asking_price: askingPriceValue.toFixed(2), // Save formatted asking price
         accept_offers,
         equipment_type,
         certification,
@@ -452,6 +420,266 @@ export const addUsedEquipments = async (req, res) => {
   }
 };
 
+
+// export const addUsedEquipments = async (req, res) => {
+//   try {
+//     // Extract equipment details from request body
+//     const {
+//       location,
+//       name,
+//       brand,
+//       asking_price,
+//       accept_offers,
+//       equipment_type,
+//       certification,
+//       year_purchased,
+//       warranty,
+//       reason_for_selling,
+//       shipping,
+//       description,
+//       userId,
+//     } = req.body;
+//     const image = req.file; // Handle file upload
+
+//     // Validate required fields
+//    if(!location){
+//     return res.status(400).json({error:'location is required'})
+//    }
+//    if(!name){
+//     return res.status(400).json({error:'Equipment Name is required'})
+//    }
+//    if(!brand){
+//     return res.status(400).json({error:'brand is required'})
+//    }
+//    if(!asking_price){
+//     return res.status(400).json({error:'asking_price is required'})
+//    }
+//    if(!accept_offers){
+//     return res.status(400).json({error:'accept_offers is required'})
+//    }
+//    if(!equipment_type){
+//     return res.status(400).json({error:'equipment_type is required'})
+//    }
+//    if(!certification){
+//     return res.status(400).json({error:'certification is required'})
+//    }
+//    if(!year_purchased){
+//     return res.status(400).json({error:'year_purchased is required'})
+//    }
+//    if(!warranty){
+//     return res.status(400).json({error:'warranty is required'})
+//    }
+//    if(!reason_for_selling){
+//     return res.status(400).json({error:'reason_for_selling is required'})
+//    }
+//    if(!shipping){
+//     return res.status(400).json({error:'shipping is required'})
+//    }
+//    if(!description){
+//     return res.status(400).json({error:'description is required'})
+//    }
+//    if(!image){
+//     return res.status(400).json({error:'image is required'})
+//    }
+   
+ 
+
+
+//     // Step 1: Create Product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: name, // Use equipment name as the title
+//         body_html: description, // Leave body_html empty, as we'll use metafields for details
+//         vendor: brand, // Use brand as the vendor
+//         product_type: 'used equipments', // Use equipment type as the product type
+//         variants: [{ price: asking_price.toString() }], // Price should be a string
+//       },
+//     };
+
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+//     const productResponse = await shopifyRequest(
+//       shopifyUrl,
+//       'POST',
+//       shopifyPayload
+//     );
+
+//     console.log('Product Response:', productResponse);
+
+//     const productId = productResponse.product.id;
+
+//     // Step 2: Create Structured Metafields for the Equipment Details
+//     const metafieldsPayload = [
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'location',
+//           value: location,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'brand',
+//           value: brand,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'description',
+//           value: description,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'asking_price',
+//           value: asking_price.toString(),
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'accept_offers',
+//           value: accept_offers ? 'true' : 'false',
+//           type: 'boolean',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'equipment_type',
+//           value: equipment_type,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'certification',
+//           value: certification,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'year_purchased',
+//           value: year_purchased.toString(),
+//           type: 'number_integer',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'warranty',
+//           value: warranty,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'reason_for_selling',
+//           value: reason_for_selling,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'shipping',
+//           value: shipping,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//     ];
+
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
+//     }
+
+//     // Step 3: Upload Image to Shopify
+//     const cloudinaryImageUrl = image.path;
+//     // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
+
+//     const imagePayload = {
+//       image: {
+//         src: cloudinaryImageUrl, // Use Cloudinary URL here
+//       },
+//     };
+
+//     const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+//     const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+//     const imageId = imageResponse.image.id;
+
+//     // Step 4: Save Product to MongoDB
+//     const newProduct = new productModel({
+//       id: productId,
+//       title: name,
+//       body_html: '', // Empty body_html as we use metafields for details
+//       vendor: brand,
+//       product_type: equipment_type,
+//       created_at: new Date(),
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       approved: productResponse.product.approved,
+//       images: [
+//         {
+//           id: imageId,
+//           product_id: productId,
+//           position: imageResponse.image.position,
+//           alt: 'Equipment Image',
+//           width: imageResponse.image.width,
+//           height: imageResponse.image.height,
+//           src: imageResponse.image.src,
+//         },
+//       ],
+//       image: {
+//         id: imageId,
+//         product_id: productId,
+//         position: imageResponse.image.position,
+//         alt: 'Equipment Image',
+//         width: imageResponse.image.width,
+//         height: imageResponse.image.height,
+//         src: imageResponse.image.src,
+//       },
+//       equipment: {
+//         location,
+//         name,
+//         brand,
+//         asking_price,
+//         accept_offers,
+//         equipment_type,
+//         certification,
+//         year_purchased,
+//         warranty,
+//         reason_for_selling,
+//         shipping,
+//         description,
+//       },
+//       userId: userId,
+//     });
+
+//     await newProduct.save();
+
+//     // Send a successful response
+//     res.status(201).json({
+//       message: 'Product successfully created and saved',
+//       product: newProduct,
+//     });
+//   } catch (error) {
+//     console.error('Error in addUsedEquipments function:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const addNewEquipments = async (req, res) => {
   try {
     // Extract equipment details from request body
@@ -470,8 +698,9 @@ export const addNewEquipments = async (req, res) => {
       userId,
     } = req.body;
     const image = req.file; // Handle file upload
-
+    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00
     // Validate required fields
+    const brandValue = brand || 'medspa';
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
   }
@@ -481,9 +710,7 @@ export const addNewEquipments = async (req, res) => {
   if (!brand) {
       return res.status(400).json({ error: 'Brand is required.' });
   }
-  if (!sale_price) {
-      return res.status(400).json({ error: 'Sale price is required.' });
-  }
+  if (isNaN(salePriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
   if (!equipment_type) {
       return res.status(400).json({ error: 'Equipment type is required.' });
   }
@@ -516,10 +743,10 @@ export const addNewEquipments = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: name, // Use equipment name as the title
-        body_html: '', // Leave body_html empty, as we'll use metafields for details
-        vendor: brand, // Use brand as the vendor
-        product_type: equipment_type, // Use equipment type as the product type
-        variants: [{ price: sale_price.toString() }], // Price should be a string
+        body_html: description, // Leave body_html empty, as we'll use metafields for details
+        vendor: brandValue, // Use brand as the vendor
+        product_type: 'New Equipment', // Use equipment type as the product type
+        variants: [{ price: salePriceValue.toFixed(2).toString() }], // Price should be a string
       },
     };
 
@@ -564,7 +791,7 @@ export const addNewEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'brand',
-          value: brand,
+          value: brandValue,
           type: 'single_line_text_field',
         },
       },
@@ -572,7 +799,7 @@ export const addNewEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'sale_price',
-          value: sale_price.toString(),
+          value: salePriceValue.toFixed(2),
           type: 'number_integer',
         },
       },
@@ -651,8 +878,8 @@ export const addNewEquipments = async (req, res) => {
       id: productId,
       title: name,
       body_html: '', // Empty body_html as we use metafields for details
-      vendor: brand,
-      product_type: equipment_type,
+      vendor: brandValue,
+      product_type: 'New Equipment',
       created_at: new Date(),
       handle: productResponse.product.handle,
       updated_at: new Date(),
@@ -688,7 +915,7 @@ export const addNewEquipments = async (req, res) => {
         location,
         name,
         brand,
-        sale_price,
+        sale_price:salePriceValue.toFixed(2),
         equipment_type,
         certification,
         year_manufactured,
@@ -717,9 +944,10 @@ export const addNewBusiness = async (req, res) => {
   try {
     // Extract business listing details from request body
     const {
+      name,
       location,
       businessDescription,
-      askingPrice,
+      asking_price,
       establishedYear,
       numberOfEmployees,
       locationMonthlyRent,
@@ -737,16 +965,15 @@ export const addNewBusiness = async (req, res) => {
     } = req.body;
 
     const image = req.file; // Handle file upload
-
+    const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
   }
   if (!businessDescription) {
       return res.status(400).json({ error: 'Business description is required.' });
   }
-  if (!askingPrice) {
-      return res.status(400).json({ error: 'Asking price is required.' });
-  }
+  if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
+
   if (!establishedYear) {
       return res.status(400).json({ error: 'Established year is required.' });
   }
@@ -795,11 +1022,11 @@ export const addNewBusiness = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: businessDescription, // Use business description as the title
-        body_html: '', // Leave body_html empty, as we'll use metafields for details
+        title: name, // Use business description as the title
+        body_html: businessDescription, // Leave body_html empty, as we'll use metafields for details
         vendor: location, // Use location as the vendor
         product_type: 'Business Listing', // Use a specific type for business listings
-        variants: [{ price: askingPrice.toString() }], // Price should be a string
+        variants:  [{ price: askingPriceValue.toFixed(2).toString() }], // Price should be a string
       },
     };
 
@@ -831,8 +1058,8 @@ export const addNewBusiness = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'asking_price',
-        value: askingPrice.toString(),
-        type: 'number_integer',
+        value: askingPriceValue.toString(),
+        type: 'single_line_text_field',
       },
       {
         namespace: 'fold_tech',
@@ -937,8 +1164,8 @@ export const addNewBusiness = async (req, res) => {
     // Step 4: Save Product to MongoDB
     const newProduct = new productModel({
       id: productId,
-      title: businessDescription,
-      body_html: '', // Empty body_html as we use metafields for details
+      title: name,
+      body_html: businessDescription, // Empty body_html as we use metafields for details
       vendor: location,
       product_type: 'Business Listing',
       created_at: new Date(),
@@ -973,9 +1200,10 @@ export const addNewBusiness = async (req, res) => {
         src: imageResponse.image.src,
       },
       business: {
+        name,
         location,
         businessDescription,
-        askingPrice,
+        asking_price:askingPriceValue,
         establishedYear,
         numberOfEmployees,
         locationMonthlyRent,
@@ -1663,28 +1891,42 @@ export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Attempt to find and delete the product by its ID
-    const result = await productModel.findByIdAndDelete(id);
-
-    if (result) {
-      // If the product was found and deleted
-      res.status(200).json({
-        message: 'Product successfully deleted',
-      });
-    } else {
-      // If the product was not found
-      res.status(404).json({
-        message: 'Product not found',
-      });
+    // Find product in MongoDB
+    const product = await productModel.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
-  } catch (error) {
-    // Log and return a 500 status code for server errors
-    console.error('Error in deleteProduct function:', error);
-    res.status(500).json({
-      error: error.message,
+
+    // Check if shopifyId is defined
+    if (!product.id) {  // Use the correct field name
+      return res.status(400).json({ message: 'Shopify ID is not available for this product' });
+    }
+
+    // Construct the Shopify URL
+    const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/products/${product.id}.json`;
+
+    // Delete from Shopify using Authorization header
+    const response = await fetch(shopifyUrl, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`
+      }
     });
+
+    if (!response.ok) {
+      return res.status(500).json({ message: 'Failed to delete product from Shopify', details: await response.text() });
+    }
+
+    // Delete from MongoDB
+    await productModel.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
+
 
 // Handler for product deletion
 export const productDelete = async (req, res) => {
