@@ -259,8 +259,8 @@ export const addUsedEquipments = async (req, res) => {
       return res.status(400).json({ errors });
   }
 
-  // If all checks pass, proceed to the next middleware or route handler
-  next();
+  
+ 
 
 
     // Step 1: Create Product in Shopify
@@ -516,7 +516,6 @@ export const addNewEquipments = async (req, res) => {
   }
 
   // If all checks pass, proceed to the next middleware or route handler
-  next();
     
 
     // Step 1: Create Product in Shopify
@@ -798,7 +797,7 @@ export const addNewBusiness = async (req, res) => {
   }
 
   // If all checks pass, proceed to the next middleware or route handler
-  next();
+
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1052,7 +1051,6 @@ export const addNewJobListing = async (req, res) => {
   }
 
   // If all checks pass, proceed to the next middleware or route handler
-  next();
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1244,7 +1242,6 @@ export const addNewProviderListing = async (req, res) => {
   }
 
   // If all checks pass, proceed to the next middleware or route handler
-  next();
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1441,7 +1438,6 @@ export const addRoomListing = async (req, res) => {
   }
 
   // If all checks pass, proceed to the next middleware or route handler
-  next();
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
