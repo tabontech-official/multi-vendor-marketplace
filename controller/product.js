@@ -408,7 +408,7 @@ export const addUsedEquipments = async (req, res) => {
     });
 
     await newProduct.save();
-
+    console.log(newProduct)
     // Send a successful response
     res.status(201).json({
       message: 'Product successfully created and saved',
