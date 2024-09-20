@@ -257,11 +257,12 @@ export const addUsedEquipments = async (req, res) => {
 
     // Set asking_price to 0.00 if not provided
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
+    const brandValue = brand || 'medspa';
 
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'location is required' });
     if (!name) return res.status(400).json({ error: 'Equipment Name is required' });
-    if (!brand) return res.status(400).json({ error: 'brand is required' });
+    // if (!brand) return res.status(400).json({ error: 'brand is required' });
     if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
     if (!accept_offers) return res.status(400).json({ error: 'accept_offers is required' });
     if (!equipment_type) return res.status(400).json({ error: 'equipment_type is required' });
@@ -279,7 +280,7 @@ export const addUsedEquipments = async (req, res) => {
       product: {
         title: name,
         body_html: description,
-        vendor: brand,
+        vendor: brandValue,
         product_type: 'used equipments',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
         status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
@@ -306,7 +307,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'brand',
-          value: brand,
+          value: brandValue,
           type: 'single_line_text_field',
         },
       },
@@ -408,7 +409,7 @@ export const addUsedEquipments = async (req, res) => {
       id: productId,
       title: name,
       body_html: description,
-      vendor: brand,
+      vendor: brandValue,
       product_type: 'used Equipment',
       created_at: new Date(),
       tags: productResponse.product.tags,
@@ -805,7 +806,6 @@ export const addNewEquipments = async (req, res) => {
       shopifyPayload
     );
 
-    console.log('Product Response:', productResponse);
 
     const productId = productResponse.product.id;
 
