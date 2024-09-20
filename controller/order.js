@@ -1,4 +1,29 @@
 import { orderModel } from "../Models/order.js";
+import { productModel } from "../Models/product.js";
+
+// export const createOrder = async (req, res) => {
+//     const orderData = req.body;
+
+//     // Create a new order object based on Shopify data
+//     const newOrder = new orderModel({
+//         orderId: orderData.id.toString(), // Ensure the order ID is a string
+//         items: orderData.line_items.map(item => ({
+//             productId: item.product_id.toString(), // Ensure the product ID is a string
+//             quantity: item.quantity,
+//             price: item.price
+//         })),
+//         totalAmount: orderData.total_price // Assuming total price is in the incoming data
+//     });
+
+//     try {
+//         // Save the new order to MongoDB
+//         await newOrder.save();
+//         res.status(201).send({ message: 'Order saved successfully', orderId: newOrder.orderId });
+//     } catch (error) {
+//         console.error('Error saving order:', error);
+//         res.status(500).send({ message: 'Error saving order', error });
+//     }
+// };
 
 
 export const createOrder = async (req, res) => {
@@ -18,12 +43,37 @@ export const createOrder = async (req, res) => {
     try {
         // Save the new order to MongoDB
         await newOrder.save();
+
+        // Update product quantities and manage subscription status
+        for (const item of newOrder.items) {
+            const product = await productModel.findById(item.productId);
+
+            if (product) {
+                // Update product quantity
+                product.quantity -= item.quantity;
+
+                if (item.quantity > 0) {
+                    // If quantity is greater than 0, set subscription end date
+                    product.subscriptionEndDate = new Date(Date.now() + item.quantity * 30 * 24 * 60 * 60 * 1000); // Add months based on quantity
+                    product.status = 'active'; // Set status to active
+                } else {
+                    // If quantity is 0, mark as inactive
+                    product.status = 'inactive';
+                    product.subscriptionEndDate = null; // Clear the subscription end date
+                }
+
+                // Save the updated product
+                await product.save();
+            }
+        }
+
         res.status(201).send({ message: 'Order saved successfully', orderId: newOrder.orderId });
     } catch (error) {
         console.error('Error saving order:', error);
         res.status(500).send({ message: 'Error saving order', error });
     }
 };
+
 
 export const getOrder = async (req, res) => {
     const { shopifyUserId } = req.params;
