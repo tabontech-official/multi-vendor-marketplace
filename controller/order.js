@@ -1,44 +1,28 @@
-import mongoose from "mongoose";
 import { orderModel } from "../Models/order.js";
-import { productModel } from "../Models/product.js";
 
 
 export const createOrder = async (req, res) => {
+    const orderData = req.body;
+
     try {
-        const userId = req.params.userId;
-        const orderProducts = req.body.products; // [{ productId, variantId, quantity }]
-        
-        let totalPrice = 0;
+        const lineItems = orderData.line_items.map(item => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: parseFloat(item.price),
+        }));
 
-        for (const orderProduct of orderProducts) {
-            const product = await productModel.findById(orderProduct.productId);
-            if (!product) {
-                return res.status(400).send({ message: `Product not found for ID: ${orderProduct.productId}` });
-            }
-            
-            const variant = product.variants.find(v => v.id === orderProduct.variantId);
-            if (!variant) {
-                return res.status(400).send({ message: `Variant not found for ID: ${orderProduct.variantId}` });
-            }
-
-            const price = parseFloat(variant.price);
-            totalPrice += price * orderProduct.quantity; 
-        }
-
-        const orderData = new orderModel({
-            userId: userId,
-            items: orderProducts.map(p => ({ productId: p.productId, quantity: p.quantity })),
-            totalPrice: totalPrice
+        const newOrder = new orderModel({
+            order_id: orderData.id,
+            customer_name: orderData.customer ? `${orderData.customer.first_name} ${orderData.customer.last_name}` : 'Guest',
+            total_price: parseFloat(orderData.total_price),
+            line_items: lineItems,
         });
 
-        const savedOrder = await orderData.save();
-
-        res.status(200).send({
-            message: 'Order created',
-            data: savedOrder
-        });
+        await newOrder.save();
+        res.status(200).send('Order saved to MongoDB');
     } catch (error) {
-        res.status(400).send({ message: error.message });
+        console.error('Error saving order:', error);
+        res.status(500).send('Internal Server Error');
     }
 };
 

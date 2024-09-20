@@ -190,7 +190,7 @@ const productSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['draft', 'active', 'inactive'],
-      default: 'inactive',
+
     },
     subscriptionEndDate: { type: Date },
   },

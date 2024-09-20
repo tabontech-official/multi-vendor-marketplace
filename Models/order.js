@@ -1,8 +1,13 @@
 import mongoose from "mongoose";
 const orderSchema=new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    items: [{ productId: String, quantity: Number }],
-    totalPrice: { type: Number, required: true },
+    order_id: Number,
+    customer_name: String,
+    total_price: Number,
+    line_items: [{
+        product_id: Number,
+        quantity: Number,
+        price: Number,
+    }],
 },{
     timestamps:true
 })

@@ -251,7 +251,7 @@ export const addUsedEquipments = async (req, res) => {
       shipping,
       description,
       userId,
-      status = 'inactive', 
+      status = 'active', 
     } = req.body;
 
     const image = req.file; // Handle file upload
@@ -663,7 +663,7 @@ export const addNewEquipments = async (req, res) => {
       shipping,
       description,
       userId,
-      status = 'inactive', 
+      status ,
     } = req.body;
 
     const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
@@ -823,7 +823,7 @@ export const addNewBusiness = async (req, res) => {
       offeredServices,
       supportAndTraining,
       userId,
-      status = 'inactive',
+      status,
     } = req.body;
 
     const image = req.file; // Handle file upload
@@ -990,7 +990,7 @@ export const addNewJobListing = async (req, res) => {
       availability,
       requestedYearlySalary,
       userId,
-      status = 'inactive',
+      status,
     } = req.body;
 
     // Handle file upload
@@ -1121,7 +1121,7 @@ export const addNewProviderListing = async (req, res) => {
       offeredYearlySalary,
       offeredPositionDescription,
       userId,
-      status = 'inactive', 
+      status, 
     } = req.body;
 
     // Handle file upload
@@ -1302,7 +1302,7 @@ export const addRoomListing = async (req, res) => {
       wifiAvailable,
       otherDetails,
       userId,
-      status = 'inactive', 
+      status, 
     } = req.body;
 
     // Handle file upload
