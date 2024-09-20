@@ -25,7 +25,6 @@ import { productModel } from "../Models/product.js";
 //     }
 // };
 
-
 export const createOrder = async (req, res) => {
     const orderData = req.body;
 
@@ -160,7 +159,6 @@ export const getOnProductId = async (req, res) => {
         res.status(500).send({ message: 'Error fetching orders', error });
     }
 };
-
 
 export const getOrderUserId=async(req,res)=>{
     try {
