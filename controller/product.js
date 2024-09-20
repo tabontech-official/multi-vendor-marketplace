@@ -253,6 +253,7 @@ export const addUsedEquipments = async (req, res) => {
       userId,
       status = 'inactive', 
     } = req.body;
+
     const image = req.file; // Handle file upload
 
     // Set asking_price to 0.00 if not provided
@@ -260,20 +261,17 @@ export const addUsedEquipments = async (req, res) => {
     const brandValue = brand || 'medspa';
 
     // Validate required fields
-    if (!location) return res.status(400).json({ error: 'location is required' });
+    if (!location) return res.status(400).json({ error: 'Location is required' });
     if (!name) return res.status(400).json({ error: 'Equipment Name is required' });
-    // if (!brand) return res.status(400).json({ error: 'brand is required' });
-    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
-    if (!accept_offers) return res.status(400).json({ error: 'accept_offers is required' });
-    if (!equipment_type) return res.status(400).json({ error: 'equipment_type is required' });
-    if (!certification) return res.status(400).json({ error: 'certification is required' });
-    if (!year_purchased) return res.status(400).json({ error: 'year_purchased is required' });
-    if (!warranty) return res.status(400).json({ error: 'warranty is required' });
-    if (!reason_for_selling) return res.status(400).json({ error: 'reason_for_selling is required' });
-    if (!shipping) return res.status(400).json({ error: 'shipping is required' });
-    if (!description) return res.status(400).json({ error: 'description is required' });
-    if (!image) return res.status(400).json({ error: 'image is required' });
-
+    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number' });
+    if (!accept_offers) return res.status(400).json({ error: 'Accept offers is required' });
+    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required' });
+    if (!certification) return res.status(400).json({ error: 'Certification is required' });
+    if (!year_purchased) return res.status(400).json({ error: 'Year purchased is required' });
+    if (!warranty) return res.status(400).json({ error: 'Warranty is required' });
+    if (!reason_for_selling) return res.status(400).json({ error: 'Reason for selling is required' });
+    if (!shipping) return res.status(400).json({ error: 'Shipping is required' });
+    if (!description) return res.status(400).json({ error: 'Description is required' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -283,106 +281,27 @@ export const addUsedEquipments = async (req, res) => {
         vendor: brandValue,
         product_type: 'used equipments',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
-         // Use formatted asking price
+        status: status === 'inactive' ? 'draft' : 'active',
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'location',
-          value: location,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'brand',
-          value: brandValue,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'description',
-          value: description,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'asking_price',
-          value: askingPriceValue.toFixed(2), // Save formatted asking price
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'accept_offers',
-          value: accept_offers ? 'true' : 'false',
-          type: 'boolean',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'equipment_type',
-          value: equipment_type,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'certification',
-          value: certification,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'year_purchased',
-          value: year_purchased.toString(),
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'warranty',
-          value: warranty,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'reason_for_selling',
-          value: reason_for_selling,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'shipping',
-          value: shipping,
-          type: 'single_line_text_field',
-        },
-      },
+      { metafield: { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'brand', value: brandValue, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'description', value: description, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'asking_price', value: askingPriceValue.toFixed(2), type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'accept_offers', value: accept_offers ? 'true' : 'false', type: 'boolean' }},
+      { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipment_type, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'certification', value: certification, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'year_purchased', value: year_purchased.toString(), type: 'number_integer' }},
+      { metafield: { namespace: 'fold_tech', key: 'warranty', value: warranty, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'reason_for_selling', value: reason_for_selling, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'shipping', value: shipping, type: 'single_line_text_field' }},
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -390,19 +309,23 @@ export const addUsedEquipments = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
 
-    // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl = image.path;
+    // Step 3: Upload Image to Shopify if provided
+    let imageId = null;
+    let imageResponse = null; // Initialize imageResponse to null
 
-    const imagePayload = {
-      image: {
-        src: cloudinaryImageUrl,
-      },
-    };
+    if (image) {
+      const cloudinaryImageUrl = image.path;
 
-    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
 
-    const imageId = imageResponse.image.id;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageId = imageResponse.image.id;
+    }
 
     // Step 4: Save Product to MongoDB
     const newProduct = new productModel({
@@ -415,18 +338,7 @@ export const addUsedEquipments = async (req, res) => {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       approved: productResponse.product.approved,
-      images: [
-        {
-          id: imageId,
-          product_id: productId,
-          position: imageResponse.image.position,
-          alt: 'Equipment Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        },
-      ],
-      image: {
+      images: imageId ? [{
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
@@ -434,12 +346,21 @@ export const addUsedEquipments = async (req, res) => {
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
-      },
+      }] : [],
+      image: imageId ? {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        alt: 'Equipment Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      } : null,
       equipment: {
         location,
         name,
         brand,
-        asking_price: askingPriceValue.toFixed(2), // Save formatted asking price
+        asking_price: askingPriceValue.toFixed(2),
         accept_offers,
         equipment_type,
         certification,
@@ -450,12 +371,11 @@ export const addUsedEquipments = async (req, res) => {
         description,
       },
       userId: userId,
-      status: status, // Save the status (active/inactive)
-
+      status: status,
     });
 
     await newProduct.save();
-    console.log(newProduct)
+
     // Send a successful response
     res.status(201).json({
       message: 'Product successfully created and saved',
@@ -745,181 +665,74 @@ export const addNewEquipments = async (req, res) => {
       userId,
       status = 'inactive', 
     } = req.body;
-    const image = req.file; // Handle file upload
-    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00
+
+    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
+
     // Validate required fields
     const brandValue = brand || 'medspa';
-    if (!location) {
-      return res.status(400).json({ error: 'Location is required.' });
-  }
-  if (!name) {
-      return res.status(400).json({ error: 'Title is required.' });
-  }
-  // if (!brand) {
-  //     return res.status(400).json({ error: 'Brand is required.' });
-  // }
-  if (isNaN(salePriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
-  if (!equipment_type) {
-      return res.status(400).json({ error: 'Equipment type is required.' });
-  }
-  if (!certification) {
-      return res.status(400).json({ error: 'Certification is required.' });
-  }
-  if (!year_manufactured) {
-      return res.status(400).json({ error: 'Year manufactured is required.' });
-  }
-  if (!warranty) {
-      return res.status(400).json({ error: 'Warranty is required.' });
-  }
-  if (!training) {
-      return res.status(400).json({ error: 'Training is required.' });
-  }
-  if (!shipping) {
-      return res.status(400).json({ error: 'Shipping details are required.' });
-  }
-  if (!description) {
-      return res.status(400).json({ error: 'Description is required.' });
-  }
-  if (!image) {
-      return res.status(400).json({ error: 'Image is required.' });
-  }
-
-  // If all checks pass, proceed to the next middleware or route handler
-    
+    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!name) return res.status(400).json({ error: 'Title is required.' });
+    if (isNaN(salePriceValue)) return res.status(400).json({ error: 'Sale price must be a number.' });
+    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
+    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
+    if (!year_manufactured) return res.status(400).json({ error: 'Year manufactured is required.' });
+    if (!warranty) return res.status(400).json({ error: 'Warranty is required.' });
+    if (!training) return res.status(400).json({ error: 'Training is required.' });
+    if (!shipping) return res.status(400).json({ error: 'Shipping details are required.' });
+    if (!description) return res.status(400).json({ error: 'Description is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name, // Use equipment name as the title
-        body_html: description, // Leave body_html empty, as we'll use metafields for details
-        vendor: brandValue, // Use brand as the vendor
-        product_type: 'New Equipment', // Use equipment type as the product type
-        variants: [{ price: salePriceValue.toFixed(2).toString() }], // Price should be a string
-        status: status === 'inactive' ? 'draft' : 'active', 
+        title: name,
+        body_html: description,
+        vendor: brandValue,
+        product_type: 'New Equipment',
+        variants: [{ price: salePriceValue.toFixed(2).toString() }],
+        status: status === 'inactive' ? 'draft' : 'active',
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
-
-
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'name',
-          value: name,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'description',
-          value: description,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'location',
-          value: location,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'brand',
-          value: brandValue,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'sale_price',
-          value: salePriceValue.toFixed(2),
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'equipment_type',
-          value: equipment_type,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'certification',
-          value: certification,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'year_manufactured',
-          value: year_manufactured.toString(),
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'warranty',
-          value: warranty,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'training',
-          value: training,
-          type: 'multi_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'shipping',
-          value: shipping,
-          type: 'single_line_text_field',
-        },
-      },
+      { metafield: { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'description', value: description, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'brand', value: brandValue, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'sale_price', value: salePriceValue.toFixed(2), type: 'number_integer' }},
+      { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipment_type, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'certification', value: certification, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'year_manufactured', value: year_manufactured.toString(), type: 'number_integer' }},
+      { metafield: { namespace: 'fold_tech', key: 'warranty', value: warranty, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'training', value: training, type: 'multi_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'shipping', value: shipping, type: 'single_line_text_field' }},
     ];
 
-    // Create each metafield under the product
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
 
-    // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl = image.path; // Use the uploaded image URL or path
+    // Step 3: Upload Image to Shopify if provided
+    let imageId = null;
+    let imageResponse = null; // Define the variable here
 
-    const imagePayload = {
-      image: {
-        src: cloudinaryImageUrl, // Use the actual image URL or path here
-      },
-    };
+    if (req.file) {
+      const cloudinaryImageUrl = req.file.path; // Use the uploaded image URL or path here
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
 
-    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-
-    const imageId = imageResponse.image.id;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageId = imageResponse.image.id;
+    }
 
     // Step 4: Save Product to MongoDB
     const newProduct = new productModel({
@@ -935,20 +748,7 @@ export const addNewEquipments = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: [
-        {
-          id: imageId,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Equipment Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        },
-      ],
-      image: {
+      images: imageId ? [{
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
@@ -958,12 +758,23 @@ export const addNewEquipments = async (req, res) => {
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
-      },
+      }] : [],
+      image: imageId ? {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Equipment Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      } : null,
       equipment: {
         location,
         name,
-        brand,
-        sale_price:salePriceValue.toFixed(2),
+        brand: brandValue,
+        sale_price: salePriceValue.toFixed(2),
         equipment_type,
         certification,
         year_manufactured,
@@ -973,9 +784,7 @@ export const addNewEquipments = async (req, res) => {
         description,
       },
       userId: userId,
-      status: status, // Save the status (active/inactive)
-
-
+      status: status,
     });
 
     await newProduct.save();
@@ -990,6 +799,7 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const addNewBusiness = async (req, res) => {
   try {
@@ -1013,185 +823,64 @@ export const addNewBusiness = async (req, res) => {
       offeredServices,
       supportAndTraining,
       userId,
-      status = 'inactive', 
+      status = 'inactive',
     } = req.body;
 
     const image = req.file; // Handle file upload
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
-    if (!location) {
-      return res.status(400).json({ error: 'Location is required.' });
-  }
-  if (!businessDescription) {
-      return res.status(400).json({ error: 'Business description is required.' });
-  }
-  if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
 
-  if (!establishedYear) {
-      return res.status(400).json({ error: 'Established year is required.' });
-  }
-  if (!numberOfEmployees) {
-      return res.status(400).json({ error: 'Number of employees is required.' });
-  }
-  if (!locationMonthlyRent) {
-      return res.status(400).json({ error: 'Location monthly rent is required.' });
-  }
-  if (!leaseExpirationDate) {
-      return res.status(400).json({ error: 'Lease expiration date is required.' });
-  }
-  if (!locationSize) {
-      return res.status(400).json({ error: 'Location size is required.' });
-  }
-  if (!grossYearlyRevenue) {
-      return res.status(400).json({ error: 'Gross yearly revenue is required.' });
-  }
-  if (!cashFlow) {
-      return res.status(400).json({ error: 'Cash flow is required.' });
-  }
-  if (!productsInventory) {
-      return res.status(400).json({ error: 'Products inventory is required.' });
-  }
-  if (!equipmentValue) {
-      return res.status(400).json({ error: 'Equipment value is required.' });
-  }
-  if (!reasonForSelling) {
-      return res.status(400).json({ error: 'Reason for selling is required.' });
-  }
-  if (!listOfDevices) {
-      return res.status(400).json({ error: 'List of devices is required.' });
-  }
-  if (!offeredServices) {
-      return res.status(400).json({ error: 'Offered services are required.' });
-  }
-  if (!supportAndTraining) {
-      return res.status(400).json({ error: 'Support and training information is required.' });
-  }
-  if (!image) {
-      return res.status(400).json({ error: 'Image is required.' });
-  }
-
-  // If all checks pass, proceed to the next middleware or route handler
+    // Validate required fields
+    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!businessDescription) return res.status(400).json({ error: 'Business description is required.' });
+    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number' });
+    if (!establishedYear) return res.status(400).json({ error: 'Established year is required.' });
+    if (!numberOfEmployees) return res.status(400).json({ error: 'Number of employees is required.' });
+    if (!locationMonthlyRent) return res.status(400).json({ error: 'Location monthly rent is required.' });
+    if (!leaseExpirationDate) return res.status(400).json({ error: 'Lease expiration date is required.' });
+    if (!locationSize) return res.status(400).json({ error: 'Location size is required.' });
+    if (!grossYearlyRevenue) return res.status(400).json({ error: 'Gross yearly revenue is required.' });
+    if (!cashFlow) return res.status(400).json({ error: 'Cash flow is required.' });
+    if (!productsInventory) return res.status(400).json({ error: 'Products inventory is required.' });
+    if (!equipmentValue) return res.status(400).json({ error: 'Equipment value is required.' });
+    if (!reasonForSelling) return res.status(400).json({ error: 'Reason for selling is required.' });
+    if (!listOfDevices) return res.status(400).json({ error: 'List of devices is required.' });
+    if (!offeredServices) return res.status(400).json({ error: 'Offered services are required.' });
+    if (!supportAndTraining) return res.status(400).json({ error: 'Support and training information is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name, // Use business description as the title
-        body_html: businessDescription, // Leave body_html empty, as we'll use metafields for details
-        vendor: location, // Use location as the vendor
-        product_type: 'Business Listing', // Use a specific type for business listings
-        variants:  [{ price: askingPriceValue.toFixed(2).toString() }], // Price should be a string
-        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
+        title: name,
+        body_html: businessDescription,
+        vendor: location,
+        product_type: 'Business Listing',
+        variants: [{ price: askingPriceValue.toFixed(2).toString() }],
+        status: status === 'inactive' ? 'draft' : 'active',
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
-
-    console.log('Product Response:', productResponse);
-
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Business Listing Details
     const metafieldsPayload = [
-      {
-        namespace: 'fold_tech',
-        key: 'location',
-        value: location,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'business_description',
-        value: businessDescription,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'asking_price',
-        value: askingPriceValue.toString(),
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'established_year',
-        value: establishedYear.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'number_of_employees',
-        value: numberOfEmployees.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'location_monthly_rent',
-        value: locationMonthlyRent.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'lease_expiration_date',
-        value: new Date(leaseExpirationDate).toISOString(),
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'location_size',
-        value: locationSize.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'gross_yearly_revenue',
-        value: grossYearlyRevenue.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'cash_flow',
-        value: cashFlow.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'products_inventory',
-        value: productsInventory.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'equipment_value',
-        value: equipmentValue.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'reason_for_selling',
-        value: reasonForSelling,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'list_of_devices',
-        value: JSON.stringify(listOfDevices),
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'offered_services',
-        value: JSON.stringify(offeredServices),
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'support_and_training',
-        value: supportAndTraining,
-        type: 'single_line_text_field',
-      },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'business_description', value: businessDescription, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'asking_price', value: askingPriceValue.toString(), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'established_year', value: establishedYear.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'number_of_employees', value: numberOfEmployees.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'location_monthly_rent', value: locationMonthlyRent.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'lease_expiration_date', value: new Date(leaseExpirationDate).toISOString(), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'location_size', value: locationSize.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'gross_yearly_revenue', value: grossYearlyRevenue.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'cash_flow', value: cashFlow.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'products_inventory', value: productsInventory.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'equipment_value', value: equipmentValue.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'reason_for_selling', value: reasonForSelling, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'list_of_devices', value: JSON.stringify(listOfDevices), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'offered_services', value: JSON.stringify(offeredServices), type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'support_and_training', value: supportAndTraining, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1199,26 +888,29 @@ export const addNewBusiness = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl = image.path;
-    // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with actual Cloudinary URL
+    // Step 3: Upload Image to Shopify if provided
+    let imageId = null;
+    let imageResponse = null; // Initialize to null
 
-    const imagePayload = {
-      image: {
-        src: cloudinaryImageUrl, // Use Cloudinary URL here
-      },
-    };
+    if (image) {
+      const cloudinaryImageUrl = image.path;
 
-    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
 
-    const imageId = imageResponse.image.id;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageId = imageResponse.image.id;
+    }
 
     // Step 4: Save Product to MongoDB
     const newProduct = new productModel({
       id: productId,
       title: name,
-      body_html: businessDescription, // Empty body_html as we use metafields for details
+      body_html: businessDescription,
       vendor: location,
       product_type: 'Business Listing',
       created_at: new Date(),
@@ -1228,20 +920,7 @@ export const addNewBusiness = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: [
-        {
-          id: imageId,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Business Listing Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        },
-      ],
-      image: {
+      images: imageId ? [{
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
@@ -1251,12 +930,23 @@ export const addNewBusiness = async (req, res) => {
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
-      },
+      }] : [],
+      image: imageId ? {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Business Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      } : null,
       business: {
         name,
         location,
         businessDescription,
-        asking_price:askingPriceValue,
+        asking_price: askingPriceValue,
         establishedYear,
         numberOfEmployees,
         locationMonthlyRent,
@@ -1272,7 +962,7 @@ export const addNewBusiness = async (req, res) => {
         supportAndTraining,
       },
       userId: userId,
-      status: status, // Save the status (active/inactive)
+      status: status,
     });
 
     await newProduct.save();
@@ -1283,10 +973,11 @@ export const addNewBusiness = async (req, res) => {
       product: newProduct,
     });
   } catch (error) {
-    console.error('Error in addBusinessListing function:', error);
+    console.error('Error in addNewBusiness function:', error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const addNewJobListing = async (req, res) => {
   try {
@@ -1299,34 +990,20 @@ export const addNewJobListing = async (req, res) => {
       availability,
       requestedYearlySalary,
       userId,
-      status = 'inactive', 
-     } = req.body;
+      status = 'inactive',
+    } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-    if (!location) {
-      return res.status(400).json({ error: 'Location is required.' });
-  }
-  if (!name) {
-      return res.status(400).json({ error: 'Name is required.' });
-  }
-  if (!qualification) {
-      return res.status(400).json({ error: 'Qualification is required.' });
-  }
-  if (!positionRequestedDescription) {
-      return res.status(400).json({ error: 'Position description is required.' });
-  }
-  if (!availability) {
-      return res.status(400).json({ error: 'Availability is required.' });
-  }
-  if (!requestedYearlySalary) {
-      return res.status(400).json({ error: 'Requested yearly salary is required.' });
-  }
-  if (!image) {
-      return res.status(400).json({ error: 'Image is required.' });
-  }
 
-  // If all checks pass, proceed to the next middleware or route handler
+    // Validate required fields
+    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    if (!qualification) return res.status(400).json({ error: 'Qualification is required.' });
+    if (!positionRequestedDescription) return res.status(400).json({ error: 'Position description is required.' });
+    if (!availability) return res.status(400).json({ error: 'Availability is required.' });
+    if (!requestedYearlySalary) return res.status(400).json({ error: 'Requested yearly salary is required.' });
+
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1340,61 +1017,17 @@ export const addNewJobListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
-
-    console.log('Product Response:', productResponse);
-
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
-      {
-        namespace: 'fold_tech',
-        key: 'location',
-        value: location,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'name',
-        value: name,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'qualification',
-        value: qualification,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'position_requested_description',
-        value: positionRequestedDescription,
-        type: 'single_line_text_field',
-      },
-      // { namespace: 'fold_tech', key: 'experience', value: experience.toString(), type: 'number_integer' },
-      {
-        namespace: 'fold_tech',
-        key: 'availability',
-        value: availability,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'requested_yearly_salary',
-        value: requestedYearlySalary.toString(),
-        type: 'number_decimal',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'image',
-        value: image.path,
-        type: 'single_line_text_field',
-      },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'qualification', value: qualification, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'availability', value: availability, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1402,19 +1035,23 @@ export const addNewJobListing = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl = image.path; // Use the path to the image
+    // Step 3: Upload Image to Shopify if provided
+    let imageId = null;
+    let imageResponse = null;
 
-    const imagePayload = {
-      image: {
-        src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
-      },
-    };
+    if (image) {
+      const cloudinaryImageUrl = image.path; // Assuming image.path is the URL
 
-    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl, // Use the path to the image
+        },
+      };
 
-    const imageId = imageResponse.image.id;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageId = imageResponse.image.id;
+    }
 
     // Step 4: Save Product to MongoDB
     const newJobListing = new productModel({
@@ -1425,18 +1062,7 @@ export const addNewJobListing = async (req, res) => {
       product_type: 'Job Listing',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: [
-        {
-          id: imageId,
-          product_id: productId,
-          position: imageResponse.image.position,
-          alt: 'Job Listing Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        },
-      ],
-      image: {
+      images: imageId ? [{
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
@@ -1444,29 +1070,30 @@ export const addNewJobListing = async (req, res) => {
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
-      },
-      jobListings: [
-        {
-          location,
-          name,
-          qualification,
-          positionRequestedDescription,
-          //experience,
-          availability,
-          requestedYearlySalary,
-          image: imageResponse.image.src, // Store the image URL
-        },
-      ],
+      }] : [],
+      image: imageId ? {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        alt: 'Job Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      } : null,
+      jobListings: [{
+        location,
+        name,
+        qualification,
+        positionRequestedDescription,
+        availability,
+        requestedYearlySalary,
+        image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
+      }],
       userId: userId,
       status: status, // Save the status (active/inactive)
-
-
     });
 
     await newJobListing.save();
-
-    // Clean up the uploaded file if necessary
-    // Remove the file from local storage
 
     // Send a successful response
     res.status(201).json({
@@ -1478,6 +1105,7 @@ export const addNewJobListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const addNewProviderListing = async (req, res) => {
   console.log('Request Body:', req.body);
@@ -1502,27 +1130,23 @@ export const addNewProviderListing = async (req, res) => {
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
-  }
-  if (!qualificationRequested) {
+    }
+    if (!qualificationRequested) {
       return res.status(400).json({ error: 'Qualification requested is required.' });
-  }
-  if (!jobType) {
+    }
+    if (!jobType) {
       return res.status(400).json({ error: 'Job type is required.' });
-  }
-  if (!typeOfJobOffered) {
+    }
+    if (!typeOfJobOffered) {
       return res.status(400).json({ error: 'Type of job offered is required.' });
-  }
-  if (!offeredYearlySalary) {
+    }
+    if (!offeredYearlySalary) {
       return res.status(400).json({ error: 'Offered yearly salary is required.' });
-  }
-  if (!offeredPositionDescription) {
-      return res.status(400).json({ error: 'position description is required.' });
-  }
-  if (!image) {
-      return res.status(400).json({ error: 'Image is required.' });
-  }
+    }
+    if (!offeredPositionDescription) {
+      return res.status(400).json({ error: 'Position description is required.' });
+    }
 
-  // If all checks pass, proceed to the next middleware or route handler
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1532,16 +1156,11 @@ export const addNewProviderListing = async (req, res) => {
         product_type: 'Provider Search Listing', // Use a specific type for provider search listings
         variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
         status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
- 
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
 
     console.log('Product Response:', productResponse);
 
@@ -1592,19 +1211,23 @@ export const addNewProviderListing = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl = image.path; // Use the path to the image
+    // Step 3: Upload Image to Shopify if provided
+    let imageId = null;
+    let imageResponse = null;
 
-    const imagePayload = {
-      image: {
-        src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
-      },
-    };
+    if (image) {
+      const cloudinaryImageUrl = image.path; // Use the path to the image
 
-    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
+        },
+      };
 
-    const imageId = imageResponse.image.id;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageId = imageResponse.image.id;
+    }
 
     // Step 4: Save Provider Listing to MongoDB
     const newProviderListing = new productModel({
@@ -1615,20 +1238,7 @@ export const addNewProviderListing = async (req, res) => {
       product_type: 'Provider Search Listing',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: [
-        {
-          id: imageId,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Provider Listing Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        },
-      ],
-      image: {
+      images: imageId ? [{
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
@@ -1638,26 +1248,32 @@ export const addNewProviderListing = async (req, res) => {
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
-      },
-      providerListings: [
-        {
-          location,
-          qualificationRequested,
-          jobType,
-          typeOfJobOffered,
-          offeredYearlySalary,
-          offeredPositionDescription,
-          image: imageResponse.image.src, // Store the image URL
-        },
-      ],
+      }] : [],
+      image: imageId ? {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        created_at: imageResponse.image.created_at,
+        updated_at: imageResponse.image.updated_at,
+        alt: 'Provider Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      } : null,
+      providerListings: [{
+        location,
+        qualificationRequested,
+        jobType,
+        typeOfJobOffered,
+        offeredYearlySalary,
+        offeredPositionDescription,
+        image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
+      }],
       userId: userId,
       status: status, // Save the status (active/inactive)
     });
 
     await newProviderListing.save();
-
-    // Clean up the uploaded file if necessary
-    // Remove the file from local storage
 
     // Send a successful response
     res.status(201).json({
@@ -1670,10 +1286,11 @@ export const addNewProviderListing = async (req, res) => {
   }
 };
 
+
 // Add Room listing
 export const addRoomListing = async (req, res) => {
   try {
-    // Extract provider listing details from request body
+    // Extract room listing details from request body
     const {
       location,
       roomSize,
@@ -1690,62 +1307,56 @@ export const addRoomListing = async (req, res) => {
 
     // Handle file upload
     const image = req.file; // Handle file upload
+
+    // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
-  }
-  if (!roomSize) {
+    }
+    if (!roomSize) {
       return res.status(400).json({ error: 'Room size is required.' });
-  }
-  if (!monthlyRent) {
+    }
+    if (!monthlyRent) {
       return res.status(400).json({ error: 'Monthly rent is required.' });
-  }
-  if (!deposit) {
+    }
+    if (!deposit) {
       return res.status(400).json({ error: 'Deposit is required.' });
-  }
-  if (!minimumInsuranceRequested) {
+    }
+    if (!minimumInsuranceRequested) {
       return res.status(400).json({ error: 'Minimum insurance requested is required.' });
-  }
-  if (!typeOfUseAllowed) {
+    }
+    if (!typeOfUseAllowed) {
       return res.status(400).json({ error: 'Type of use allowed is required.' });
-  }
-  if (!rentalTerms) {
+    }
+    if (!rentalTerms) {
       return res.status(400).json({ error: 'Rental terms are required.' });
-  }
-  if (typeof wifiAvailable === 'undefined') {
+    }
+    if (typeof wifiAvailable === 'undefined') {
       return res.status(400).json({ error: 'WiFi availability must be specified.' });
-  }
-  if (!otherDetails) {
+    }
+    if (!otherDetails) {
       return res.status(400).json({ error: 'Other details are required.' });
-  }
-  if (!image) {
-      return res.status(400).json({ error: 'Image is required.' });
-  }
+    }
 
-  // If all checks pass, proceed to the next middleware or route handler
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: location, // Use qualification requested as the title
-        body_html: otherDetails, // Use offered position description as body_html
+        title: location, // Use location as the title
+        body_html: otherDetails, // Use other details as body_html
         vendor: location, // Use location as the vendor
-        product_type: 'Room Listing', // Use a specific type for provider search listings
-        variants: [{ price: monthlyRent.toString() }], // Salary should be a string
+        product_type: 'Room Listing', // Use a specific type for room listings
+        variants: [{ price: monthlyRent.toString() }], // Rent should be a string
         status: status === 'inactive' ? 'draft' : 'active', 
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
 
     console.log('Product Response:', productResponse);
 
     const productId = productResponse.product.id;
 
-    // Step 2: Create Structured Metafields for the Provider Listing Details
+    // Step 2: Create Structured Metafields for the Room Listing Details
     const metafieldsPayload = [
       {
         namespace: 'fold_tech',
@@ -1802,46 +1413,40 @@ export const addRoomListing = async (req, res) => {
         type: 'single_line_text_field',
       },
     ];
+
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify
-    const cloudinaryImageUrl = image.path; // Use the path to the image
+    // Step 3: Upload Image to Shopify if provided
+    let imageId = null;
+    let imageResponse = null;
 
-    const imagePayload = {
-      image: {
-        src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
-      },
-    };
+    if (image) {
+      const cloudinaryImageUrl = image.path; // Use the path to the image
 
-    const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
+        },
+      };
 
-    const imageId = imageResponse.image.id;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageId = imageResponse.image.id;
+    }
 
-    // Step 4: Save Provider Listing to MongoDB
-    const newProviderListing = new productModel({
+    // Step 4: Save Room Listing to MongoDB
+    const newRoomListing = new productModel({
       id: productId,
       title: location,
       body_html: otherDetails,
       vendor: location,
-      product_type: 'Room Search Listing',
+      product_type: 'Room Listing',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: [
-        {
-          id: imageId,
-          product_id: productId,
-          position: imageResponse.image.position,
-          alt: 'Room Listing Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        },
-      ],
-      image: {
+      images: imageId ? [{
         id: imageId,
         product_id: productId,
         position: imageResponse.image.position,
@@ -1849,40 +1454,45 @@ export const addRoomListing = async (req, res) => {
         width: imageResponse.image.width,
         height: imageResponse.image.height,
         src: imageResponse.image.src,
-      },
-      roomListing: [
-        {
-          location,
-          roomSize,
-          monthlyRent,
-          deposit,
-          minimumInsuranceRequested,
-          typeOfUseAllowed,
-          rentalTerms,
-          wifiAvailable,
-          otherDetails,
-          image: imageResponse.image.src, // Store the image URL
-        },
-      ],
+      }] : [],
+      image: imageId ? {
+        id: imageId,
+        product_id: productId,
+        position: imageResponse.image.position,
+        alt: 'Room Listing Image',
+        width: imageResponse.image.width,
+        height: imageResponse.image.height,
+        src: imageResponse.image.src,
+      } : null,
+      roomListing: [{
+        location,
+        roomSize,
+        monthlyRent,
+        deposit,
+        minimumInsuranceRequested,
+        typeOfUseAllowed,
+        rentalTerms,
+        wifiAvailable,
+        otherDetails,
+        image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
+      }],
       userId: userId,
       status: status,
     });
 
-    await newProviderListing.save();
-
-    // Clean up the uploaded file if necessary
-    // Remove the file from local storage
+    await newRoomListing.save();
 
     // Send a successful response
     res.status(201).json({
-      message: 'Provider listing successfully created and saved',
-      product: newProviderListing,
+      message: 'Room listing successfully created and saved',
+      product: newRoomListing,
     });
   } catch (error) {
-    console.error('Error in addNewProviderListing function:', error);
+    console.error('Error in addRoomListing function:', error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // get product of specific user
 export const getProduct = async (req, res) => {
