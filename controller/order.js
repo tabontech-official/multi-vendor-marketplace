@@ -139,9 +139,7 @@ export const getOnProductId = async (req, res) => {
                     customerEmail: 1, // Include customerEmail
                     createdAt: 1, // Include createdAt date
                     price: "$items.price", // Include item price
-                    quantity: { 
-                        $multiply: ["$items.quantity", { $dayOfMonth: "$createdAt" }] // Multiply quantity by the day of the month
-                    }
+                    quantity: "$items.quantity" // Include item quantity without multiplication
                 }
             }
         ]);
@@ -152,7 +150,7 @@ export const getOnProductId = async (req, res) => {
             createdAt: item.createdAt,
             items: [{
                 price: item.price,
-                quantity: item.quantity
+                quantity: item.quantity // Directly using the quantity from the order
             }]
         }));
 
@@ -162,6 +160,7 @@ export const getOnProductId = async (req, res) => {
         res.status(500).send({ message: 'Error fetching orders', error });
     }
 };
+
 
 export const getOrderUserId=async(req,res)=>{
     try {
