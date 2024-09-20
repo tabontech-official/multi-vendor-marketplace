@@ -13,11 +13,7 @@ const productSchema = new mongoose.Schema(
     published_at: { type: Date },
     template_suffix: { type: String },
     tags: { type: String },
-    status: {
-      type: String,
-      enum: ['pending', 'active', 'inactive'],
-      default: 'active',
-    },
+    
     // Variants as an array of objects
     variants: [
       {
@@ -191,6 +187,12 @@ const productSchema = new mongoose.Schema(
     ],
     shopifyId: String,
     userId: mongoose.Schema.Types.ObjectId,
+    status: {
+      type: String,
+      enum: ['draft', 'active', 'inactive'],
+      default: 'inactive',
+    },
+    subscriptionEndDate: { type: Date },
   },
   {
     timestamps: true,

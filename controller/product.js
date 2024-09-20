@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 
 
+
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -196,6 +197,42 @@ export const addProduct = async (req, res) => {
   }
 };
 
+export const publishProduct = async (req, res) => {
+  const { id,status } = req.query
+
+  try {
+    // Find the product in MongoDB
+    const product = await productModel.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Update the product's status in MongoDB
+    product.status = status;
+    if (status === 'active') {
+      product.subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+    } else {
+      product.subscriptionEndDate = null; // Clear if not active
+    }
+    await product.save();
+
+    // Update the product in Shopify
+    const shopifyPayload = {
+      product: {
+        id: product.id,
+        status: status,
+      },
+    };
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
+    await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+
+    res.status(200).json({ message: 'Product published successfully' });
+  } catch (error) {
+    console.error('Error in publishProduct function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const addUsedEquipments = async (req, res) => {
   try {
@@ -214,6 +251,7 @@ export const addUsedEquipments = async (req, res) => {
       shipping,
       description,
       userId,
+      status = 'inactive', 
     } = req.body;
     const image = req.file; // Handle file upload
 
@@ -244,7 +282,7 @@ export const addUsedEquipments = async (req, res) => {
         vendor: brand,
         product_type: 'used equipments',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        
+        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
          // Use formatted asking price
       },
     };
@@ -411,6 +449,8 @@ export const addUsedEquipments = async (req, res) => {
         description,
       },
       userId: userId,
+      status: status, // Save the status (active/inactive)
+
     });
 
     await newProduct.save();
@@ -702,6 +742,7 @@ export const addNewEquipments = async (req, res) => {
       shipping,
       description,
       userId,
+      status = 'inactive', 
     } = req.body;
     const image = req.file; // Handle file upload
     const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00
@@ -713,9 +754,9 @@ export const addNewEquipments = async (req, res) => {
   if (!name) {
       return res.status(400).json({ error: 'Title is required.' });
   }
-  if (!brand) {
-      return res.status(400).json({ error: 'Brand is required.' });
-  }
+  // if (!brand) {
+  //     return res.status(400).json({ error: 'Brand is required.' });
+  // }
   if (isNaN(salePriceValue)) return res.status(400).json({ error: 'asking_price must be a number' });
   if (!equipment_type) {
       return res.status(400).json({ error: 'Equipment type is required.' });
@@ -753,6 +794,7 @@ export const addNewEquipments = async (req, res) => {
         vendor: brandValue, // Use brand as the vendor
         product_type: 'New Equipment', // Use equipment type as the product type
         variants: [{ price: salePriceValue.toFixed(2).toString() }], // Price should be a string
+        status: status === 'inactive' ? 'draft' : 'active', 
       },
     };
 
@@ -931,6 +973,9 @@ export const addNewEquipments = async (req, res) => {
         description,
       },
       userId: userId,
+      status: status, // Save the status (active/inactive)
+
+
     });
 
     await newProduct.save();
@@ -968,6 +1013,7 @@ export const addNewBusiness = async (req, res) => {
       offeredServices,
       supportAndTraining,
       userId,
+      status = 'inactive', 
     } = req.body;
 
     const image = req.file; // Handle file upload
@@ -1033,6 +1079,7 @@ export const addNewBusiness = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Business Listing', // Use a specific type for business listings
         variants:  [{ price: askingPriceValue.toFixed(2).toString() }], // Price should be a string
+        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
       },
     };
 
@@ -1225,6 +1272,7 @@ export const addNewBusiness = async (req, res) => {
         supportAndTraining,
       },
       userId: userId,
+      status: status, // Save the status (active/inactive)
     });
 
     await newProduct.save();
@@ -1251,7 +1299,8 @@ export const addNewJobListing = async (req, res) => {
       availability,
       requestedYearlySalary,
       userId,
-    } = req.body;
+      status = 'inactive', 
+     } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
@@ -1286,6 +1335,7 @@ export const addNewJobListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Job Listing', // Use a specific type for job listings
         variants: [{ price: requestedYearlySalary.toString() }], // Salary should be a string
+        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
       },
     };
 
@@ -1408,6 +1458,9 @@ export const addNewJobListing = async (req, res) => {
         },
       ],
       userId: userId,
+      status: status, // Save the status (active/inactive)
+
+
     });
 
     await newJobListing.save();
@@ -1440,6 +1493,7 @@ export const addNewProviderListing = async (req, res) => {
       offeredYearlySalary,
       offeredPositionDescription,
       userId,
+      status = 'inactive', 
     } = req.body;
 
     // Handle file upload
@@ -1477,6 +1531,8 @@ export const addNewProviderListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Provider Search Listing', // Use a specific type for provider search listings
         variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
+        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
+ 
       },
     };
 
@@ -1595,6 +1651,7 @@ export const addNewProviderListing = async (req, res) => {
         },
       ],
       userId: userId,
+      status: status, // Save the status (active/inactive)
     });
 
     await newProviderListing.save();
@@ -1628,6 +1685,7 @@ export const addRoomListing = async (req, res) => {
       wifiAvailable,
       otherDetails,
       userId,
+      status = 'inactive', 
     } = req.body;
 
     // Handle file upload
@@ -1672,6 +1730,7 @@ export const addRoomListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Room Listing', // Use a specific type for provider search listings
         variants: [{ price: monthlyRent.toString() }], // Salary should be a string
+        status: status === 'inactive' ? 'draft' : 'active', 
       },
     };
 
@@ -1806,6 +1865,7 @@ export const addRoomListing = async (req, res) => {
         },
       ],
       userId: userId,
+      status: status,
     });
 
     await newProviderListing.save();
@@ -1889,6 +1949,69 @@ export const getSearchProduct = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
+
+export const updateListing = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find product in MongoDB
+    const product = await productModel.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+   
+
+    // Check if the product has a Shopify ID
+    if (!product.id) {  // Use the correct field for Shopify ID
+      return res.status(400).json({ message: 'Shopify ID is not available for this product' });
+    }
+
+    // Prepare data for MongoDB update
+    const updateData = { $set: req.body };
+
+    // Update in MongoDB
+    const updatedProduct = await productModel.findByIdAndUpdate(id, updateData, { new: true });
+
+    // Prepare data for Shopify
+    const shopifyData = {
+      product: {
+        id: product.id, // Use the correct field and convert to string
+        ...req.body // Only include fields you want to update
+      }
+    };
+
+    // Construct the Shopify URL
+    const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/products/${shopifyData.product.id}.json`;
+
+    // Log the request to Shopify for debugging
+    console.log('Updating Shopify product with data:', shopifyData);
+
+    // Update in Shopify using Authorization header
+    const response = await fetch(shopifyUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(shopifyData)
+    });
+
+    if (!response.ok) {
+      return res.status(500).json({ message: 'Failed to update product in Shopify', details: await response.text() });
+    }
+
+    // Send successful response
+    res.status(200).json({
+      message: 'Product successfully updated in both MongoDB and Shopify',
+      data: updatedProduct,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'An error occurred', error: error.message });
+  }
+};
+
+
 
 //delete product
 export const deleteProduct = async (req, res) => {

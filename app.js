@@ -9,13 +9,14 @@ import productRouter from './Routes/product.js';
 import orderRouter from './Routes/order.js';
 import Connect from './connection/connect.js'; // Import the Connect function
 import setupSwagger from './swaggerConfig.js';
-
+import { productSubscriptionExpiration } from './controller/scheduleFunction.js';
 
 const app = express();
 // Setup Swagger documentation
 setupSwagger(app);
 // Initialize MongoDB connection
 Connect();
+productSubscriptionExpiration();
 app.use(bodyParser.json()); // To handle JSON request bodies
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));
