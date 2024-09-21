@@ -79,25 +79,22 @@ import fetch from 'node-fetch';
 
 export const createOrder = async (req, res) => {
     const orderData = req.body;
-    console.log("Incoming order data:", orderData); // Log the incoming data
+    console.log("Incoming order data:", orderData);
 
-    // Extract customer details
     const { customer_email, customerName, line_items } = orderData;
 
-    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0) {
-        return res.status(400).send({ message: 'Customer name, email, and line items are required' });
+    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
+        return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
     }
 
     try {
         const productIds = line_items.map(item => item.product_id.toString());
         const validItems = [];
         
-        // Basic Auth credentials
         const shopifyApiKey = process.env.SHOPIFY_API_KEY;
         const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
         const shopifyStore = process.env.SHOPIFY_STORE_URL;
 
-        // Fetch valid items from Shopify
         for (const productId of productIds) {
             try {
                 const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
@@ -115,7 +112,7 @@ export const createOrder = async (req, res) => {
                             productId: productId,
                             name: data.product.title,
                             quantity: item.quantity,
-                            price: parseFloat(item.price), // Ensure price is a number
+                            price: parseFloat(item.price),
                         });
                     }
                 } else {
@@ -140,33 +137,24 @@ export const createOrder = async (req, res) => {
             totalAmount,
         });
 
-        // Calculate subscription end date
         let subscriptionEndDate = new Date();
-
         validItems.forEach(item => {
             if (item.quantity > 0) {
                 subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + item.quantity);
             }
         });
-
         newOrder.subscriptionEndDate = subscriptionEndDate;
 
         await newOrder.save();
 
-        // Update inventory and subscription status logic
         for (const item of validItems) {
             const product = await productModel.findOne({ shopifyId: item.productId });
-
             if (product) {
                 product.inventory_quantity -= item.quantity;
-
-                if (product.inventory_quantity > 0) {
-                    product.status = 'active';
-                } else {
-                    product.status = 'inactive';
-                    product.subscriptionEndDate = null; // Cancel subscription
+                product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
+                if (product.inventory_quantity === 0) {
+                    product.subscriptionEndDate = null;
                 }
-
                 await product.save();
             }
         }
@@ -174,8 +162,8 @@ export const createOrder = async (req, res) => {
         res.status(201).send({
             message: 'Order saved successfully',
             orderId: newOrder.orderId,
-            createdAt: newOrder.createdAt, // Include createdAt date
-            subscriptionEndDate: newOrder.subscriptionEndDate, // Include subscription end date
+            createdAt: newOrder.createdAt,
+            subscriptionEndDate: newOrder.subscriptionEndDate,
             totalAmount: totalAmount,
             items: validItems,
         });
@@ -216,62 +204,4 @@ export const getOrderById = async (req, res) => {
     }
 };
 
-
-
-
-
-
-
-
-
-// export const getOrder= async (req, res) => {
-//     const { userId } = req.params; // Extract userId from request parameters
-
-//     if (!userId) {
-//         return res.status(400).send({ message: 'User ID is required' });
-//     }
-
-//     try {
-//         // Fetch orders associated with the provided userId
-//         const orders = await orderModel.find({ userId: userId });
-
-//         if (orders.length === 0) {
-//             return res.status(404).send({ message: 'No orders found for this user' });
-//         }
-
-//         res.status(200).send({
-//             message: 'Orders retrieved successfully',
-//             orders: orders,
-//         });
-//     } catch (error) {
-//         console.error('Error fetching orders:', error);
-//         res.status(500).send({ message: 'Error fetching orders', error: error.message });
-//     }
-// };
-
-
-// export const getOnProductId=async(req,res)=>{
-//     const { productId } = req.params;
-
-//     try {
-//         // Find orders containing the specified productId
-//         const orders = await orderModel.find({ "items.productId": productId });
-
-//         // Map to extract only the required fields
-//         const response = orders.map(order => ({
-//             customerEmail: order.customerEmail,
-//             items: order.items
-//                 .filter(item => item.productId === productId) // Filter items for the specific productId
-//                 .map(item => ({
-//                     price: item.price,
-//                     quantity: item.quantity
-//                 }))
-//         }));
-
-//         res.status(200).json(response);
-//     } catch (error) {
-//         console.error('Error fetching orders:', error);
-//         res.status(500).send({ message: 'Error fetching orders', error });
-//     }
-// }
 
