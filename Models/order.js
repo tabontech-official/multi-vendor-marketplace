@@ -1,24 +1,20 @@
 import mongoose from "mongoose";
+const orderItemSchema = new mongoose.Schema({
+    productId: { type: String, required: true }, // Product ID as a string (e.g., from Shopify)
+    name: { type: String, required: true }, // Product name
+    quantity: { type: Number, required: true }, // Quantity of the product ordered
+    price: { type: Number, required: true } // Price of the product at the time of order
+});
+
 const orderSchema = new mongoose.Schema({
-    orderId: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    items: [
-        {
-            productId: { type: String, required: true },
-            quantity: { type: Number, required: true },
-            price: { type: Number, required: true }
-        }
-    ],
-    totalAmount: {
-        type: Number,
-        required: true
-    },
+    orderId: { type: String, required: true, unique: true }, // Unique order ID from Shopify
+    customerEmail: { type: String, required: true }, // Customer's email address
+    customerName: { type: String, required: true }, // Customer's name
+    items: [orderItemSchema], // Array of order items
+    totalAmount: { type: Number, required: true }, // Total amount for the order
+    createdAt: { type: Date, default: Date.now }, // Order creation date
     subscriptionEndDate: { type: Date },
-    
 },{
- timeStamp:true
+    timestamps:true
 });
 export const orderModel=mongoose.model('orders',orderSchema)

@@ -25,45 +25,108 @@ import { productModel } from "../Models/product.js";
 //     }
 // };
 
+// export const createOrder = async (req, res) => {
+//     const orderData = req.body;
+
+//     // Create a new order object based on Shopify data
+//     const newOrder = new orderModel({
+//         orderId: orderData.id.toString(), // Ensure the order ID is a string
+//         items: orderData.line_items.map(item => ({
+//             productId: item.product_id.toString(), // Ensure the product ID is a string
+//             quantity: item.quantity,
+//             price: item.price
+//         })),
+//         totalAmount: orderData.total_price // Assuming total price is in the incoming data
+//     });
+
+//     try {
+//         // Save the new order to MongoDB
+//         await newOrder.save();
+
+//         // Update product quantities and manage subscription status
+//         for (const item of newOrder.items) {
+//             const product = await productModel.findById(item.productId);
+
+//             if (product) {
+//                 // Update product quantity
+//                 product.quantity -= item.quantity;
+
+//                 if (item.quantity > 0) {
+//                     // If quantity is greater than 0, set subscription end date
+//                     product.subscriptionEndDate = new Date(Date.now() + item.quantity * 30 * 24 * 60 * 60 * 1000); // Add months based on quantity
+//                     product.status = 'active'; // Set status to active
+//                 } else {
+//                     // If quantity is 0, mark as inactive
+//                     product.status = 'inactive';
+//                     product.subscriptionEndDate = null; // Clear the subscription end date
+//                 }
+
+//                 // Save the updated product
+//                 await product.save();
+//             }
+//         }
+
+//         res.status(201).send({ message: 'Order saved successfully', orderId: newOrder.orderId });
+//     } catch (error) {
+//         console.error('Error saving order:', error);
+//         res.status(500).send({ message: 'Error saving order', error });
+//     }
+// };
+
+
 export const createOrder = async (req, res) => {
     const orderData = req.body;
 
-    // Create a new order object based on Shopify data
+    // Extract customer details
+    const { customer_email, customer_name, line_items } = orderData;
+
+    const validItems = [];
+    const invalidItems = [];
+
+    for (const item of line_items) {
+        const product = await productModel.findOne({ shopifyId: item.product_id.toString() });
+
+        if (product) {
+            validItems.push({
+                productId: product._id, // MongoDB _id
+                quantity: item.quantity,
+                price: item.price,
+            });
+        } else {
+            invalidItems.push(item.product_id);
+        }
+    }
+
+    if (validItems.length === 0) {
+        return res.status(400).send({ message: 'No valid product IDs found', invalidItems });
+    }
+
+    const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
+
     const newOrder = new orderModel({
-        orderId: orderData.id.toString(), // Ensure the order ID is a string
-        items: orderData.line_items.map(item => ({
-            productId: item.product_id.toString(), // Ensure the product ID is a string
-            quantity: item.quantity,
-            price: item.price
-        })),
-        totalAmount: orderData.total_price // Assuming total price is in the incoming data
+        orderId: orderData.id.toString(),
+        customerEmail: customer_email,
+        customerName: customer_name,
+        items: validItems,
+        totalAmount,
     });
 
     try {
-        // Save the new order to MongoDB
         await newOrder.save();
 
-        // Update product quantities and manage subscription status
-        for (const item of newOrder.items) {
+        for (const item of validItems) {
             const product = await productModel.findById(item.productId);
+            product.inventory_quantity -= item.quantity;
 
-            if (product) {
-                // Update product quantity
-                product.quantity -= item.quantity;
-
-                if (item.quantity > 0) {
-                    // If quantity is greater than 0, set subscription end date
-                    product.subscriptionEndDate = new Date(Date.now() + item.quantity * 30 * 24 * 60 * 60 * 1000); // Add months based on quantity
-                    product.status = 'active'; // Set status to active
-                } else {
-                    // If quantity is 0, mark as inactive
-                    product.status = 'inactive';
-                    product.subscriptionEndDate = null; // Clear the subscription end date
-                }
-
-                // Save the updated product
-                await product.save();
+            if (product.inventory_quantity > 0) {
+                product.subscriptionEndDate = new Date(Date.now() + item.quantity * 30 * 24 * 60 * 60 * 1000);
+                product.status = 'active';
+            } else {
+                product.status = 'inactive';
+                product.subscriptionEndDate = null;
             }
+
+            await product.save();
         }
 
         res.status(201).send({ message: 'Order saved successfully', orderId: newOrder.orderId });
@@ -72,6 +135,9 @@ export const createOrder = async (req, res) => {
         res.status(500).send({ message: 'Error saving order', error });
     }
 };
+
+
+
 
 
 export const getOrder = async (req, res) => {
@@ -91,8 +157,6 @@ export const getOrder = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
-
 
 // export const getOnProductId=async(req,res)=>{
 //     const { productId } = req.params;

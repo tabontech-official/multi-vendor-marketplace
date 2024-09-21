@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 //storage for images storing
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
-    expiresIn: '125d',
+    expiresIn: '1d',
   });
   return token;
 };
