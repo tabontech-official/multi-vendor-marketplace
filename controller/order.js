@@ -97,22 +97,17 @@ const fetchProductIds = async () => {
     }
 };
 
+
+
 export const createOrder = async (req, res) => {
     const orderData = req.body;
+
     console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
 
-    const { customer_email, customerName, line_items } = orderData;
-
     // Validate required fields
-    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
-        return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
-    }
-
-    // Check if line items have correct structure
-    for (const item of line_items) {
-        if (!item.product_id || typeof item.quantity !== 'number') {
-            return res.status(400).send({ message: 'Each line item must have a valid product_id and quantity' });
-        }
+    const { shipping_address, line_items, id } = orderData;
+    if (!shipping_address || !Array.isArray(line_items) || line_items.length === 0 || !id) {
+        return res.status(400).send({ message: 'Shipping address, line items, and order ID are required' });
     }
 
     try {
@@ -137,11 +132,10 @@ export const createOrder = async (req, res) => {
                     if (data.product) {
                         const item = line_items.find(item => item.product_id.toString() === productId);
                         validItems.push({
-                            id: data.product.id, // Use the Shopify product ID
+                            productId: productId,
                             name: data.product.title,
-                            price: parseFloat(item.price),
                             quantity: item.quantity,
-                            total_discount: item.total_discount || "0.00", // Optional field
+                            price: parseFloat(item.price),
                         });
                     }
                 } else {
@@ -156,53 +150,35 @@ export const createOrder = async (req, res) => {
             return res.status(400).send({ message: 'No valid product IDs found in Shopify' });
         }
 
-        const totalAmount = validItems.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0).toFixed(2);
+        const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
+        const shippingCost = parseFloat(orderData.shipping_lines[0]?.price || 0);
+        const grandTotal = totalAmount + shippingCost;
 
         const newOrder = new orderModel({
             id: orderData.id,
-            email: customer_email,
-            customer: {
-                first_name: customerName.split(' ')[0],
-                last_name: customerName.split(' ')[1] || '',
-                email: customer_email,
-            },
-            line_items: validItems,
-            total_price: totalAmount,
+            shipping_address,
+            total_amount: grandTotal.toFixed(2),
+            items: validItems,
             created_at: new Date(),
-        });
-
-        // Calculate subscription end date based on line items
-        newOrder.subscriptionEndDate = new Date();
-        validItems.forEach(item => {
-            if (item.quantity > 0) {
-                newOrder.subscriptionEndDate.setMonth(newOrder.subscriptionEndDate.getMonth() + item.quantity);
-            }
+            shipping_lines: orderData.shipping_lines,
+            // Additional fields can be added as necessary
         });
 
         await newOrder.save();
 
-        for (const item of validItems) {
-            const product = await productModel.findOne({ shopifyId: item.id });
-            if (product) {
-                product.inventory_quantity -= item.quantity;
-                product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
-                await product.save();
-            }
-        }
-
         res.status(201).send({
             message: 'Order saved successfully',
             orderId: newOrder.id,
-            createdAt: newOrder.createdAt,
-            subscriptionEndDate: newOrder.subscriptionEndDate,
-            totalAmount: totalAmount,
-            line_items: validItems,
+            totalAmount: grandTotal,
+            items: validItems,
+            shipping_address: newOrder.shipping_address,
         });
     } catch (error) {
         console.error('Error saving order:', error);
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
 
 
 // export const createOrder = async (req, res) => {
