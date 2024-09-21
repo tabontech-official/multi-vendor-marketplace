@@ -98,60 +98,112 @@ const fetchProductIds = async () => {
 };
 
 export const createOrder = async (req, res) => {
-    const { order } = req.body; // Assume order data is sent in the request body
+    const orderData = req.body;
+    console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
+
+    const { customer_email, customerName, line_items } = orderData;
+
+    // Validate required fields
+    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
+        return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
+    }
+
+    // Check if line items have correct structure
+    for (const item of line_items) {
+        if (!item.product_id || typeof item.quantity !== 'number') {
+            return res.status(400).send({ message: 'Each line item must have a valid product_id and quantity' });
+        }
+    }
 
     try {
-        const productIdsFromShopify = await fetchProductIds();
+        const productIds = line_items.map(item => item.product_id.toString());
+        const validItems = [];
+        
+        const shopifyApiKey = process.env.SHOPIFY_API_KEY;
+        const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+        const shopifyStore = process.env.SHOPIFY_STORE_URL;
 
-        // Check if any productId in the order exists in Shopify product IDs
-        const validProductIds = order.items.filter(item => 
-            productIdsFromShopify.includes(item.productId)
-        );
+        for (const productId of productIds) {
+            try {
+                const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Basic ${Buffer.from(`${shopifyApiKey}:${shopifyPassword}`).toString('base64')}`,
+                    }
+                });
 
-        if (validProductIds.length === 0) {
-            return res.status(400).json({ error: 'Product ID(s) not valid.' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.product) {
+                        const item = line_items.find(item => item.product_id.toString() === productId);
+                        validItems.push({
+                            id: data.product.id, // Use the Shopify product ID
+                            name: data.product.title,
+                            price: parseFloat(item.price),
+                            quantity: item.quantity,
+                            total_discount: item.total_discount || "0.00", // Optional field
+                        });
+                    }
+                } else {
+                    console.error(`Product ID ${productId} not found: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error(`Error fetching product ID ${productId}: ${error.message}`);
+            }
         }
 
-        // Calculate total price and handle subscriptions
-        let totalPrice = 0;
-        const currentDate = new Date();
-        order.line_items = order.items.map(item => {
-            const lineItemTotal = parseFloat(item.price) * item.quantity;
-            totalPrice += lineItemTotal;
+        if (validItems.length === 0) {
+            return res.status(400).send({ message: 'No valid product IDs found in Shopify' });
+        }
 
-            // Handle subscription logic
+        const totalAmount = validItems.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0).toFixed(2);
+
+        const newOrder = new orderModel({
+            id: orderData.id,
+            email: customer_email,
+            customer: {
+                first_name: customerName.split(' ')[0],
+                last_name: customerName.split(' ')[1] || '',
+                email: customer_email,
+            },
+            line_items: validItems,
+            total_price: totalAmount,
+            created_at: new Date(),
+        });
+
+        // Calculate subscription end date based on line items
+        newOrder.subscriptionEndDate = new Date();
+        validItems.forEach(item => {
             if (item.quantity > 0) {
-                const subscriptionMonths = item.quantity;
-                const subscriptionEndDate = new Date(currentDate);
-                subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + subscriptionMonths);
-                
-                return {
-                    ...item,
-                    subscriptionEndDate,
-                    status: 'active' // Active if quantity > 0
-                };
-            } else {
-                return {
-                    ...item,
-                    status: 'inactive', // Inactive if quantity is 0
-                    message: 'Subscription canceled'
-                };
+                newOrder.subscriptionEndDate.setMonth(newOrder.subscriptionEndDate.getMonth() + item.quantity);
             }
         });
 
-        // Add total price to the order
-        order.total_price = totalPrice.toFixed(2);
-
-        // Proceed to save the order if at least one valid product ID exists
-        const newOrder = new orderModel(order);
         await newOrder.save();
 
-        res.status(201).json({ message: 'Order saved successfully.', order: newOrder });
+        for (const item of validItems) {
+            const product = await productModel.findOne({ shopifyId: item.id });
+            if (product) {
+                product.inventory_quantity -= item.quantity;
+                product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
+                await product.save();
+            }
+        }
+
+        res.status(201).send({
+            message: 'Order saved successfully',
+            orderId: newOrder.id,
+            createdAt: newOrder.createdAt,
+            subscriptionEndDate: newOrder.subscriptionEndDate,
+            totalAmount: totalAmount,
+            line_items: validItems,
+        });
     } catch (error) {
-        console.error('Error processing order:', error);
-        res.status(500).json({ error: 'An error occurred while processing the order.' });
+        console.error('Error saving order:', error);
+        res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
 
 // export const createOrder = async (req, res) => {
 //     const orderData = req.body;
