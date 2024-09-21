@@ -27,7 +27,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
-app.use('/order',orderRouter)
+app.use('/order', orderRouter);
 app.get('/', (req, res) => {
   res.send('API is running...');
 });

@@ -1,3 +1,4 @@
+import { authModel } from "../Models/auth.js";
 import { orderModel } from "../Models/order.js";
 import { productModel } from "../Models/product.js";
 import fetch from 'node-fetch';
@@ -80,15 +81,11 @@ export const createOrder = async (req, res) => {
     const orderData = req.body;
     console.log("Incoming order data:", orderData); // Log the incoming data
 
-    // Extract customer details and user ID
-    const { customer_email, customerName, line_items, userId } = orderData;
+    // Extract customer details
+    const { customer_email, customerName, line_items } = orderData;
 
     if (!customerName) {
         return res.status(400).send({ message: 'Customer name is required' });
-    }
-
-    if (!userId) {
-        return res.status(400).send({ message: 'User ID is required' });
     }
 
     try {
@@ -138,7 +135,6 @@ export const createOrder = async (req, res) => {
             orderId: orderData.id.toString(),
             customerEmail: customer_email,
             customerName: customerName,
-            userId: userId, // Include userId here
             items: validItems,
             totalAmount,
         });
@@ -181,7 +177,6 @@ export const createOrder = async (req, res) => {
             subscriptionEndDate: newOrder.subscriptionEndDate, // Include subscription end date
             totalAmount: totalAmount,
             items: validItems,
-            userId:userId
         });
     } catch (error) {
         console.error('Error saving order:', error);
@@ -189,31 +184,70 @@ export const createOrder = async (req, res) => {
     }
 };
 
+export const getOrderById = async (req, res) => {
+    const { shopifyUserId } = req.params; // Get shopifyUserId from URL parameters
 
+    if (!shopifyUserId) {
+        return res.status(400).send({ message: 'Shopify User ID is required' });
+    }
 
-
-
-
-
-
-
-export const getOrder = async (req, res) => {
-    const { shopifyUserId } = req.params;
-    console.log(`Fetching orders for Shopify user: ${shopifyUserId}`);
-    
     try {
-        const orders = await orderModel.find({ shopifyUserId }); // Query based on shopifyUserId
-  
+        // Fetch orders associated with the shopifyUserId
+        const orders = await orderModel.find({ customerEmail: shopifyUserId });
+
         if (orders.length === 0) {
-            return res.status(404).json({ message: 'No orders found for this user.' });
+            return res.status(404).send({ message: 'No subscriptions found for this Shopify user' });
         }
-  
-        res.status(200).json(orders);
+
+        // Filter orders to return only subscription-related information
+        const subscriptionData = orders.map(order => ({
+            orderId: order.orderId,
+            totalAmount: order.totalAmount,
+            subscriptionEndDate: order.subscriptionEndDate,
+            items: order.items,
+            createdAt: order.createdAt,
+        }));
+
+        res.status(200).send({ message: 'Subscriptions fetched successfully', subscriptions: subscriptionData });
     } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching subscriptions:', error);
+        res.status(500).send({ message: 'Error fetching subscriptions', error: error.message });
     }
 };
+
+
+
+
+
+
+
+
+
+// export const getOrder= async (req, res) => {
+//     const { userId } = req.params; // Extract userId from request parameters
+
+//     if (!userId) {
+//         return res.status(400).send({ message: 'User ID is required' });
+//     }
+
+//     try {
+//         // Fetch orders associated with the provided userId
+//         const orders = await orderModel.find({ userId: userId });
+
+//         if (orders.length === 0) {
+//             return res.status(404).send({ message: 'No orders found for this user' });
+//         }
+
+//         res.status(200).send({
+//             message: 'Orders retrieved successfully',
+//             orders: orders,
+//         });
+//     } catch (error) {
+//         console.error('Error fetching orders:', error);
+//         res.status(500).send({ message: 'Error fetching orders', error: error.message });
+//     }
+// };
+
 
 // export const getOnProductId=async(req,res)=>{
 //     const { productId } = req.params;
@@ -240,96 +274,3 @@ export const getOrder = async (req, res) => {
 //     }
 // }
 
-export const getOnProductId = async (req, res) => {
-    const { productId } = req.params;
-
-    try {
-        const result = await orderModel.aggregate([
-            { 
-                $match: { "items.productId": productId } // Match orders containing the specified productId 
-            },
-            { 
-                $unwind: "$items" // Unwind the items array to work with individual items
-            },
-            { 
-                $match: { "items.productId": productId } // Filter again for the specific productId
-            },
-            {
-                $project: {
-                    customerEmail: 1, // Include customerEmail
-                    createdAt: 1, // Include createdAt date
-                    price: "$items.price", // Include item price
-                    quantity: "$items.quantity" // Include item quantity without multiplication
-                }
-            }
-        ]);
-
-        // Format the response
-        const response = result.map(item => ({
-            customerEmail: item.customerEmail,
-            createdAt: item.createdAt,
-            items: [{
-                price: item.price,
-                quantity: item.quantity // Directly using the quantity from the order
-            }]
-        }));
-
-        res.status(200).json(response);
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).send({ message: 'Error fetching orders', error });
-    }
-};
-
-export const getOrderUserId=async(req,res)=>{
-    try {
-        const {userId}=req.params
-        const data =await orderModel.find(userId).then(result=>{
-            if(result){
-                res.status(200).send({
-                    message:'successfully fetched data',
-                    data:data
-                })
-            }else{
-                res.status(400).send('unable to fetch')
-            }
-        })
-    } catch (error) {
-        res.status(500).send({message:error.message})
-    }
-}
-
-export const updateOrder=async(req,res)=>{
-    try {
-        const {id}=req.paarams
-        const query=({$set:req.body})
-        const data=await orderModel.findByIdAndUpdate(id,query).then(result=>{
-            if(result){
-                res.status(200).send({
-                    message:"successfully updated",
-                    data:data
-                })
-            }
-        })
-    } catch (error) {
-        
-    }
-}
-
-export const deleteOrder=async(req,res)=>{
-    try {
-        const {id}=req.params
-       const data= await orderModel.findByIdAndDelete(id).then(result=>{
-            if(result){
-                res.status(200).send({
-                    message:'order deleted successfully',
-                    data:data
-                })
-            }else{
-                res.status(400).send('unable to delete order')
-            }
-        })
-    } catch (error) {
-        
-    }
-} 

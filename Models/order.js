@@ -11,7 +11,6 @@ const orderSchema = new mongoose.Schema({
     orderId: { type: String, required: true, unique: true }, // Unique order ID from Shopify
     customerEmail: { type: String, required: true }, // Customer's email address
     customerName: { type: String, required: true }, // Customer's name
-    userId: { type: String, required: true }, // User ID associated with the order
     items: [orderItemSchema], // Array of order items
     totalAmount: { type: Number, required: true }, // Total amount for the order
     createdAt: { type: Date, default: Date.now }, // Order creation date
