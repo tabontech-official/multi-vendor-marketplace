@@ -281,7 +281,7 @@ export const addUsedEquipments = async (req, res) => {
         vendor: brandValue,
         product_type: 'used equipments',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        status: status === 'inactive' ? 'draft' : 'active',
+        status: status,
       },
     };
 

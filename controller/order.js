@@ -44,7 +44,7 @@ export const createOrder = async (req, res) => {
                         const item = line_items.find(item => item.product_id.toString() === productId);
                         validItems.push({
                             productId: productId,
-                            name: data.product.title,
+                            name: data.product.title, // Fetching product name
                             quantity: item.quantity,
                             price: parseFloat(item.price),
                         });
@@ -67,10 +67,11 @@ export const createOrder = async (req, res) => {
             orderId: orderData.id.toString(),
             customerEmail: customer_email,
             customerName: customerName,
-            items: validItems,
+            items: validItems, // validItems includes product names
             totalAmount,
         });
 
+        // Calculate subscription end date based on item quantities
         newOrder.subscriptionEndDate = new Date();
         validItems.forEach(item => {
             if (item.quantity > 0) {
@@ -80,6 +81,7 @@ export const createOrder = async (req, res) => {
 
         await newOrder.save();
 
+        // Update inventory based on purchased items
         for (const item of validItems) {
             const product = await productModel.findOne({ shopifyId: item.productId });
             if (product) {
@@ -92,19 +94,22 @@ export const createOrder = async (req, res) => {
             }
         }
 
+        // Send response with order details including product names
         res.status(201).send({
             message: 'Order saved successfully',
             orderId: newOrder.orderId,
             createdAt: newOrder.createdAt,
             subscriptionEndDate: newOrder.subscriptionEndDate,
             totalAmount: totalAmount,
-            items: validItems,
+            items: validItems, // This includes product names
         });
     } catch (error) {
         console.error('Error saving order:', error);
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
+
 
 
 export const getOrderById = async (req, res) => {
