@@ -251,7 +251,7 @@ export const addUsedEquipments = async (req, res) => {
       shipping,
       description,
       userId,
-      status = 'active', 
+      //status = 'active', 
     } = req.body;
 
     const image = req.file; // Handle file upload
@@ -259,7 +259,7 @@ export const addUsedEquipments = async (req, res) => {
     // Set asking_price to 0.00 if not provided
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
     const brandValue = brand || 'medspa';
-
+    const status = 'active';
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required' });
     if (!name) return res.status(400).json({ error: 'Equipment Name is required' });
