@@ -174,7 +174,8 @@ export const createOrder = async (req, res) => {
             orderId: newOrder.orderId,
             createdAt: newOrder.createdAt, // Include createdAt date
             subscriptionEndDate: newOrder.subscriptionEndDate, // Include subscription end date
-            totalAmount:totalAmount
+            totalAmount:totalAmount,
+            items: validItems
         });
     } catch (error) {
         console.error('Error saving order:', error);
