@@ -1493,7 +1493,6 @@ export const addRoomListing = async (req, res) => {
   }
 };
 
-
 // get product of specific user
 export const getProduct = async (req, res) => {
   try {
