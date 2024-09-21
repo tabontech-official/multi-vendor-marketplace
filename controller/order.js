@@ -78,9 +78,14 @@ import fetch from 'node-fetch';
 
 export const createOrder = async (req, res) => {
     const orderData = req.body;
+    console.log("Incoming order data:", orderData); // Log the incoming data
 
     // Extract customer details
     const { customer_email, customerName, line_items } = orderData;
+
+    if (!customerName) {
+        return res.status(400).send({ message: 'Customer name is required' });
+    }
 
     try {
         const productIds = line_items.map(item => item.product_id.toString());
@@ -128,21 +133,55 @@ export const createOrder = async (req, res) => {
         const newOrder = new orderModel({
             orderId: orderData.id.toString(),
             customerEmail: customer_email,
-            customerName: customerName, // Ensure this matches the schema
+            customerName: customerName,
             items: validItems,
             totalAmount,
         });
 
+        // Calculate subscription end date
+        let subscriptionEndDate = new Date(); // Start from now
+
+        validItems.forEach(item => {
+            if (item.quantity > 0) {
+                subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + item.quantity);
+            }
+        });
+
+        newOrder.subscriptionEndDate = subscriptionEndDate;
+
         await newOrder.save();
 
-        // Inventory update logic...
+        // Update inventory and subscription status logic...
+        for (const item of validItems) {
+            const product = await productModel.findOne({ shopifyId: item.productId });
 
-        res.status(201).send({ message: 'Order saved successfully', orderId: newOrder.orderId });
+            if (product) {
+                product.inventory_quantity -= item.quantity;
+
+                if (product.inventory_quantity > 0) {
+                    product.status = 'active';
+                } else {
+                    product.status = 'inactive';
+                    product.subscriptionEndDate = null; // Cancel subscription
+                }
+
+                await product.save();
+            }
+        }
+
+        res.status(201).send({
+            message: 'Order saved successfully',
+            orderId: newOrder.orderId,
+            createdAt: newOrder.createdAt, // Include createdAt date
+            subscriptionEndDate: newOrder.subscriptionEndDate, // Include subscription end date
+            totalAmount:totalAmount
+        });
     } catch (error) {
         console.error('Error saving order:', error);
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
 
 ;
 
