@@ -81,7 +81,7 @@ export const createOrder = async (req, res) => {
     const { customer_email, customer_name, line_items } = orderData;
 
     const validItems = [];
-    const invalidItems = [];
+    
 
     for (const item of line_items) {
         const product = await productModel.findOne({ shopifyId: item.product_id.toString() });
@@ -92,13 +92,11 @@ export const createOrder = async (req, res) => {
                 quantity: item.quantity,
                 price: item.price,
             });
-        } else {
-            invalidItems.push(item.product_id);
         }
     }
 
     if (validItems.length === 0) {
-        return res.status(400).send({ message: 'No valid product IDs found', invalidItems });
+        return res.status(400).send({ message: 'No valid product IDs found' });
     }
 
     const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
