@@ -81,80 +81,59 @@ export const createOrder = async (req, res) => {
     const orderData = req.body;
     console.log("Incoming order data:", orderData);
 
-    const { customer_email, customerName, line_items } = orderData;
+    // Extract required fields
+    const { customer_email, customerName, line_items, id: orderId } = orderData;
 
-    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
+    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderId) {
         return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
     }
 
     try {
-        const productIds = line_items.map(item => item.product_id.toString());
         const validItems = [];
-        
-        const shopifyApiKey = process.env.SHOPIFY_API_KEY;
-        const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-        const shopifyStore = process.env.SHOPIFY_STORE_URL;
 
-        for (const productId of productIds) {
-            try {
-                const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Basic ${Buffer.from(`${shopifyApiKey}:${shopifyPassword}`).toString('base64')}`,
-                    }
+        // Check each line item
+        for (const item of line_items) {
+            const productId = item.product_id.toString();
+
+            // Check if the product exists in your database
+            const product = await productModel.findOne({ shopifyId: productId });
+            if (product) {
+                validItems.push({
+                    productId: productId,
+                    name: item.title || product.name,
+                    quantity: item.quantity,
+                    price: parseFloat(item.price),
                 });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.product) {
-                        const item = line_items.find(item => item.product_id.toString() === productId);
-                        validItems.push({
-                            productId: productId,
-                            name: data.product.title,
-                            quantity: item.quantity,
-                            price: parseFloat(item.price),
-                        });
-                    }
-                } else {
-                    console.error(`Product ID ${productId} not found: ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error(`Error fetching product ID ${productId}: ${error.message}`);
+            } else {
+                console.error(`Product ID ${productId} not found in your database.`);
             }
         }
 
         if (validItems.length === 0) {
-            return res.status(400).send({ message: 'No valid product IDs found in Shopify' });
+            return res.status(400).send({ message: 'No valid products found' });
         }
 
+        // Calculate total amount
         const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
+        // Create new order object
         const newOrder = new orderModel({
-            orderId: orderData.id.toString(),
+            orderId: orderId.toString(),
             customerEmail: customer_email,
             customerName: customerName,
             items: validItems,
             totalAmount,
         });
 
-        let subscriptionEndDate = new Date();
-        validItems.forEach(item => {
-            if (item.quantity > 0) {
-                subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + item.quantity);
-            }
-        });
-        newOrder.subscriptionEndDate = subscriptionEndDate;
-
+        // Save the new order
         await newOrder.save();
 
+        // Update inventory
         for (const item of validItems) {
             const product = await productModel.findOne({ shopifyId: item.productId });
             if (product) {
                 product.inventory_quantity -= item.quantity;
                 product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
-                if (product.inventory_quantity === 0) {
-                    product.subscriptionEndDate = null;
-                }
                 await product.save();
             }
         }
@@ -163,8 +142,7 @@ export const createOrder = async (req, res) => {
             message: 'Order saved successfully',
             orderId: newOrder.orderId,
             createdAt: newOrder.createdAt,
-            subscriptionEndDate: newOrder.subscriptionEndDate,
-            totalAmount: totalAmount,
+            totalAmount,
             items: validItems,
         });
     } catch (error) {
@@ -172,6 +150,7 @@ export const createOrder = async (req, res) => {
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
 
 export const getOrderById = async (req, res) => {
     const { shopifyUserId } = req.params; // Get shopifyUserId from URL parameters
