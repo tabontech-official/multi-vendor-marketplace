@@ -79,15 +79,20 @@ import fetch from 'node-fetch';
 
 export const createOrder = async (req, res) => {
     const orderData = req.body;
-    console.log("Incoming order data:", orderData);
-    console.log("Incoming request from Shopify:", req.body);
-    console.log("Headers:", req.headers);
-
+    console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
 
     const { customer_email, customerName, line_items } = orderData;
 
+    // Validate required fields
     if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
         return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
+    }
+
+    // Check if line items have correct structure
+    for (const item of line_items) {
+        if (!item.product_id || typeof item.quantity !== 'number') {
+            return res.status(400).send({ message: 'Each line item must have a valid product_id and quantity' });
+        }
     }
 
     try {
@@ -140,13 +145,12 @@ export const createOrder = async (req, res) => {
             totalAmount,
         });
 
-        let subscriptionEndDate = new Date();
+        newOrder.subscriptionEndDate = new Date();
         validItems.forEach(item => {
             if (item.quantity > 0) {
-                subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + item.quantity);
+                newOrder.subscriptionEndDate.setMonth(newOrder.subscriptionEndDate.getMonth() + item.quantity);
             }
         });
-        newOrder.subscriptionEndDate = subscriptionEndDate;
 
         await newOrder.save();
 
@@ -175,6 +179,7 @@ export const createOrder = async (req, res) => {
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
 
 export const getOrderById = async (req, res) => {
     const { shopifyUserId } = req.params; // Get shopifyUserId from URL parameters
