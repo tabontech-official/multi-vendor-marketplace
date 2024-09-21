@@ -80,11 +80,15 @@ export const createOrder = async (req, res) => {
     const orderData = req.body;
     console.log("Incoming order data:", orderData); // Log the incoming data
 
-    // Extract customer details
-    const { customer_email, customerName, line_items } = orderData;
+    // Extract customer details and user ID
+    const { customer_email, customerName, line_items, userId } = orderData;
 
     if (!customerName) {
         return res.status(400).send({ message: 'Customer name is required' });
+    }
+
+    if (!userId) {
+        return res.status(400).send({ message: 'User ID is required' });
     }
 
     try {
@@ -134,6 +138,7 @@ export const createOrder = async (req, res) => {
             orderId: orderData.id.toString(),
             customerEmail: customer_email,
             customerName: customerName,
+            userId: userId, // Include userId here
             items: validItems,
             totalAmount,
         });
@@ -174,8 +179,9 @@ export const createOrder = async (req, res) => {
             orderId: newOrder.orderId,
             createdAt: newOrder.createdAt, // Include createdAt date
             subscriptionEndDate: newOrder.subscriptionEndDate, // Include subscription end date
-            totalAmount:totalAmount,
-            items: validItems
+            totalAmount: totalAmount,
+            items: validItems,
+            userId:userId
         });
     } catch (error) {
         console.error('Error saving order:', error);
@@ -184,7 +190,8 @@ export const createOrder = async (req, res) => {
 };
 
 
-;
+
+
 
 
 
