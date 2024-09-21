@@ -1,6 +1,6 @@
 import { orderModel } from "../Models/order.js";
 import { productModel } from "../Models/product.js";
-
+import fetch from 'node-fetch';
 // export const createOrder = async (req, res) => {
 //     const orderData = req.body;
 
@@ -74,65 +74,77 @@ import { productModel } from "../Models/product.js";
 // };
 
 
+
+
 export const createOrder = async (req, res) => {
     const orderData = req.body;
 
     // Extract customer details
-    const { customer_email, customer_name, line_items } = orderData;
-
-    const validItems = [];
-    
-
-    for (const item of line_items) {
-        const product = await productModel.findOne({ shopifyId: item.product_id.toString() });
-
-        if (product) {
-            validItems.push({
-                productId: product._id, // MongoDB _id
-                quantity: item.quantity,
-                price: item.price,
-            });
-        }
-    }
-
-    if (validItems.length === 0) {
-        return res.status(400).send({ message: 'No valid product IDs found' });
-    }
-
-    const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
-
-    const newOrder = new orderModel({
-        orderId: orderData.id.toString(),
-        customerEmail: customer_email,
-        customerName: customer_name,
-        items: validItems,
-        totalAmount,
-    });
+    const { customer_email, customerName, line_items } = orderData;
 
     try {
+        const productIds = line_items.map(item => item.product_id.toString());
+        const validItems = [];
+        
+        // Basic Auth credentials
+        const shopifyApiKey = process.env.SHOPIFY_API_KEY;
+        const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+        const shopifyStore = process.env.SHOPIFY_STORE_URL;
+
+        for (const productId of productIds) {
+            try {
+                const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Basic ${Buffer.from(`${shopifyApiKey}:${shopifyPassword}`).toString('base64')}`,
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.product) {
+                        const item = line_items.find(item => item.product_id.toString() === productId);
+                        validItems.push({
+                            productId: productId,
+                            name: data.product.title,
+                            quantity: item.quantity,
+                            price: item.price,
+                        });
+                    }
+                } else {
+                    console.error(`Product ID ${productId} not found: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error(`Error fetching product ID ${productId}: ${error.message}`);
+            }
+        }
+
+        if (validItems.length === 0) {
+            return res.status(400).send({ message: 'No valid product IDs found in Shopify' });
+        }
+
+        const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
+
+        const newOrder = new orderModel({
+            orderId: orderData.id.toString(),
+            customerEmail: customer_email,
+            customerName: customerName, // Ensure this matches the schema
+            items: validItems,
+            totalAmount,
+        });
+
         await newOrder.save();
 
-        for (const item of validItems) {
-            const product = await productModel.findById(item.productId);
-            product.inventory_quantity -= item.quantity;
-
-            if (product.inventory_quantity > 0) {
-                product.subscriptionEndDate = new Date(Date.now() + item.quantity * 30 * 24 * 60 * 60 * 1000);
-                product.status = 'active';
-            } else {
-                product.status = 'inactive';
-                product.subscriptionEndDate = null;
-            }
-
-            await product.save();
-        }
+        // Inventory update logic...
 
         res.status(201).send({ message: 'Order saved successfully', orderId: newOrder.orderId });
     } catch (error) {
         console.error('Error saving order:', error);
-        res.status(500).send({ message: 'Error saving order', error });
+        res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
+;
 
 
 
