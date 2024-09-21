@@ -84,8 +84,8 @@ export const createOrder = async (req, res) => {
     // Extract customer details
     const { customer_email, customerName, line_items } = orderData;
 
-    if (!customerName) {
-        return res.status(400).send({ message: 'Customer name is required' });
+    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0) {
+        return res.status(400).send({ message: 'Customer name, email, and line items are required' });
     }
 
     try {
@@ -97,6 +97,7 @@ export const createOrder = async (req, res) => {
         const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
         const shopifyStore = process.env.SHOPIFY_STORE_URL;
 
+        // Fetch valid items from Shopify
         for (const productId of productIds) {
             try {
                 const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
@@ -114,7 +115,7 @@ export const createOrder = async (req, res) => {
                             productId: productId,
                             name: data.product.title,
                             quantity: item.quantity,
-                            price: item.price,
+                            price: parseFloat(item.price), // Ensure price is a number
                         });
                     }
                 } else {
@@ -140,7 +141,7 @@ export const createOrder = async (req, res) => {
         });
 
         // Calculate subscription end date
-        let subscriptionEndDate = new Date(); // Start from now
+        let subscriptionEndDate = new Date();
 
         validItems.forEach(item => {
             if (item.quantity > 0) {
@@ -152,7 +153,7 @@ export const createOrder = async (req, res) => {
 
         await newOrder.save();
 
-        // Update inventory and subscription status logic...
+        // Update inventory and subscription status logic
         for (const item of validItems) {
             const product = await productModel.findOne({ shopifyId: item.productId });
 
