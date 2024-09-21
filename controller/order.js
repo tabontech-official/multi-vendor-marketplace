@@ -75,140 +75,6 @@ import fetch from 'node-fetch';
 // };
 
 
-const fetchProductIds = async () => {
-    try {
-        const response = await fetch('https://med-spa-trader.myshopify.com/admin/api/2023-01/products.json', {
-            method: 'GET',
-            headers: {
-                'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch product IDs.');
-        }
-
-        const data = await response.json();
-        return data.products.map(product => product.id.toString()); // Return array of product IDs as strings
-    } catch (error) {
-        console.error('Error fetching product IDs from Shopify:', error);
-        throw new Error('Unable to fetch product IDs.');
-    }
-};
-
-
-
-
-
-
-
-
-
-
-export const createOrder = async (req, res) => {
-    const orderData = req.body;
-    console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
-
-    const { customer_email, customerName, line_items } = orderData;
-
-    // Validate required fields
-    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
-        return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
-    }
-
-    // Check if line items have correct structure
-    for (const item of line_items) {
-        if (!item.product_id || typeof item.quantity !== 'number') {
-            return res.status(400).send({ message: 'Each line item must have a valid product_id and quantity' });
-        }
-    }
-
-    try {
-        const productIds = line_items.map(item => item.product_id.toString());
-        const validItems = [];
-        
-        const shopifyApiKey = process.env.SHOPIFY_API_KEY;
-        const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-        const shopifyStore = process.env.SHOPIFY_STORE_URL;
-
-        for (const productId of productIds) {
-            try {
-                const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Basic ${Buffer.from(`${shopifyApiKey}:${shopifyPassword}`).toString('base64')}`,
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.product) {
-                        const item = line_items.find(item => item.product_id.toString() === productId);
-                        validItems.push({
-                            productId: productId,
-                            name: data.product.title,
-                            quantity: item.quantity,
-                            price: parseFloat(item.price),
-                        });
-                    }
-                } else {
-                    console.error(`Product ID ${productId} not found: ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error(`Error fetching product ID ${productId}: ${error.message}`);
-            }
-        }
-
-        if (validItems.length === 0) {
-            return res.status(400).send({ message: 'No valid product IDs found in Shopify' });
-        }
-
-        const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
-
-        const newOrder = new orderModel({
-            orderId: orderData.id.toString(),
-            customerEmail: customer_email,
-            customerName: customerName,
-            items: validItems,
-            totalAmount,
-        });
-
-        newOrder.subscriptionEndDate = new Date();
-        validItems.forEach(item => {
-            if (item.quantity > 0) {
-                newOrder.subscriptionEndDate.setMonth(newOrder.subscriptionEndDate.getMonth() + item.quantity);
-            }
-        });
-
-        await newOrder.save();
-
-        for (const item of validItems) {
-            const product = await productModel.findOne({ shopifyId: item.productId });
-            if (product) {
-                product.inventory_quantity -= item.quantity;
-                product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
-                if (product.inventory_quantity === 0) {
-                    product.subscriptionEndDate = null;
-                }
-                await product.save();
-            }
-        }
-
-        res.status(201).send({
-            message: 'Order saved successfully',
-            orderId: newOrder.orderId,
-            createdAt: newOrder.createdAt,
-            subscriptionEndDate: newOrder.subscriptionEndDate,
-            totalAmount: totalAmount,
-            items: validItems,
-        });
-    } catch (error) {
-        console.error('Error saving order:', error);
-        res.status(500).send({ message: 'Error saving order', error: error.message });
-    }
-};
-
 
 export const getOrderById = async (req, res) => {
     const { shopifyUserId } = req.params; // Get shopifyUserId from URL parameters
@@ -242,3 +108,81 @@ export const getOrderById = async (req, res) => {
 };
 
 
+export const createOrder = async (req, res) => {
+    const orderData = req.body;
+
+    console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
+
+    // Validate required fields
+    const { line_items } = orderData;
+    if (!Array.isArray(line_items) || line_items.length === 0) {
+        return res.status(400).send({ message: 'Line items are required' });
+    }
+
+    try {
+        const productIds = line_items.map(item => item.product_id.toString());
+        
+        // Check for existing product IDs in the MongoDB order collection
+        const existingProducts = await orderModel.find({
+            "items.productId": { $in: productIds }
+        });
+
+        const validItems = [];
+        
+        line_items.forEach(item => {
+            const exists = existingProducts.some(product =>
+                product.items.some(validItem => validItem.productId === item.product_id.toString())
+            );
+
+            if (exists) {
+                validItems.push({
+                    productId: item.product_id,
+                    name: item.name || 'Unknown', // Ensure name is available
+                    quantity: item.quantity,
+                    price: parseFloat(item.price),
+                });
+            }
+        });
+
+        // If no valid items are found, respond accordingly
+        if (validItems.length === 0) {
+            return res.status(400).send({ message: 'No valid product IDs found in the database' });
+        }
+
+        // Proceed to save the order if at least one valid item exists
+        const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2);
+
+        const newOrder = new orderModel({
+            orderId: orderData.id,
+            customerEmail: orderData.email,
+            customerName: `${orderData.shipping_address.first_name} ${orderData.shipping_address.last_name}`,
+            shippingAddress: {
+                firstName: orderData.shipping_address.first_name,
+                lastName: orderData.shipping_address.last_name,
+                address1: orderData.shipping_address.address1,
+                address2: orderData.shipping_address.address2,
+                city: orderData.shipping_address.city,
+                province: orderData.shipping_address.province,
+                country: orderData.shipping_address.country,
+                zip: orderData.shipping_address.zip,
+                phone: orderData.shipping_address.phone,
+            },
+            items: validItems,
+            totalAmount,
+            createdAt: new Date(),
+        });
+
+        await newOrder.save();
+
+        res.status(201).send({
+            message: 'Order saved successfully',
+            orderId: newOrder.orderId,
+            totalAmount: newOrder.totalAmount,
+            items: validItems,
+        });
+
+    } catch (error) {
+        console.error('Error processing order:', error);
+        res.status(500).send({ message: 'Error processing order', error: error.message });
+    }
+}
