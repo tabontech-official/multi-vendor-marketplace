@@ -156,42 +156,65 @@ async function checkProductExists(productId) {
     }
   }
 
-export const createOrder=async(req,res)=>{
+  export const createOrder = async (req, res) => {
     try {
-        const orderData = req.body;
-        const productId = orderData.line_items[0].product_id; // Assuming single product per order
-    
-        // Check if product exists in Shopify
-        const productExists = await checkProductExists(productId);
-    
-        if (!productExists) {
-          return res.status(404).send('Product does not exist');
-        }
-    
-        // Calculate expiration date based on quantity
-        const quantity = orderData.line_items[0].quantity;
-        const expirationDate = new Date();
-        expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
-    
-        // Save order to MongoDB
-        const order = new orderModel({
-          orderId: orderData.id,
-          customer: orderData.customer,
-          lineItems: orderData.line_items,
-          createdAt: orderData.created_at,
-          expiresAt: expirationDate, // Add expiration date field
-        });
-
-        console.log(orderData)
-    
-        await order.save();
-    
-        res.status(200).send('Order saved');
-      } catch (error) {
-        console.error('Error saving order:', error);
-        res.status(500).send('Error saving order');
+      const orderData = req.body;
+      const productId = orderData.line_items[0].product_id; // Assuming single product per order
+  
+      // Check if product exists in Shopify
+      const productExists = await checkProductExists(productId);
+      if (!productExists) {
+        return res.status(404).send('Product does not exist');
       }
-}
+  
+      // Calculate expiration date based on quantity
+      const quantity = orderData.line_items[0].quantity;
+      const expirationDate = new Date();
+      expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
+  
+      // Save order to MongoDB
+      const order = new orderModel({
+        orderId: orderData.id,
+        customer: orderData.customer,
+        lineItems: orderData.line_items,
+        createdAt: orderData.created_at,
+        expiresAt: expirationDate, // Add expiration date field
+      });
+  
+      await order.save();
+  
+      // Find user by email
+      const user = await authModel.findOne({ email: orderData.customer.email });
+      if (!user) {
+        return res.status(404).send('User not found');
+      }
+  
+      // Update user's subscription
+      if (user.subscription) {
+        user.subscription.quantity = (user.subscription.quantity || 0) + quantity; // Add to existing quantity
+        user.subscription.expiresAt = expirationDate; // Update the expiration date
+      } else {
+        user.subscription = {
+          quantity,
+          expiresAt: expirationDate, // Set expiration date if subscription doesn't exist
+        };
+      }
+  
+      await user.save(); // Save the updated user
+  
+      // Respond with order details including expiresAt
+      res.status(200).json({
+        message: 'Order saved and user updated',
+        expiresAt: expirationDate,
+        orderId: orderData.id
+      });
+    } catch (error) {
+      console.error('Error saving order:', error);
+      res.status(500).send('Error saving order');
+    }
+  };
+  
+  
 
 export const getOrderById = async (req, res) => {
     const { email } = req.params; // Get the email from the request parameters

@@ -1,7 +1,8 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
-
+import mongoose from 'mongoose';
+import { Console } from 'console';
 
 
 //fetch product data fom shopify store
@@ -197,42 +198,42 @@ export const addProduct = async (req, res) => {
   }
 };
 
-export const publishProduct = async (req, res) => {
-  const { id,status } = req.query
+// export const publishProduct = async (req, res) => {
+//   const { id,status } = req.query
 
-  try {
-    // Find the product in MongoDB
-    const product = await productModel.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
+//   try {
+//     // Find the product in MongoDB
+//     const product = await productModel.findById(id);
+//     if (!product) {
+//       return res.status(404).json({ message: 'Product not found' });
+//     }
 
-    // Update the product's status in MongoDB
-    product.status = status;
-    if (status === 'active') {
-      product.subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-    } else {
-      product.subscriptionEndDate = null; // Clear if not active
-    }
-    await product.save();
+//     // Update the product's status in MongoDB
+//     product.status = status;
+//     if (status === 'active') {
+//       product.subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+//     } else {
+//       product.subscriptionEndDate = null; // Clear if not active
+//     }
+//     await product.save();
 
-    // Update the product in Shopify
-    const shopifyPayload = {
-      product: {
-        id: product.id,
-        status: status,
-      },
-    };
+//     // Update the product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         id: product.id,
+//         status: status,
+//       },
+//     };
 
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
-    await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
+//     await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
 
-    res.status(200).json({ message: 'Product published successfully' });
-  } catch (error) {
-    console.error('Error in publishProduct function:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
+//     res.status(200).json({ message: 'Product published successfully' });
+//   } catch (error) {
+//     console.error('Error in publishProduct function:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 export const addUsedEquipments = async (req, res) => {
   try {
@@ -1685,4 +1686,98 @@ export const productDelete = async (req, res) => {
       res.status(500).json({ error: error.message });
   }
 };
+
+
+export const publishProduct = async (req, res) => {
+  try {
+    const { productId } = req.params; // Get product ID from request parameters
+    const { userId } = req.body; // Get user ID from request body
+
+    // Validate productId and userId
+    if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(userId)) {
+      console.error('Validation Error: Invalid product ID or user ID');
+      return res.status(400).send('Invalid product ID or user ID');
+    }
+
+    // Find the user by ID
+    const user = await authModel.findById(userId);
+    if (!user) {
+      console.error(`User not found: ${userId}`);
+      return res.status(404).send('User not found');
+    }
+
+    // Check user's subscription quantity
+    if (!user.subscription || user.subscription.quantity < 1) {
+      console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
+      return res.status(400).send('Insufficient quantity to publish product');
+    }
+
+    // Find the product in your database
+    const product = await productModel.findById(productId);
+    if (!product) {
+      console.error(`Product not found: ${productId}`);
+      return res.status(404).send('Product not found or missing required fields');
+    }
+
+    // Log product details
+    console.log('Found product:', product);
+
+    // Get the Shopify ID from the product
+    const id=product.id; // Ensure shopifyId is correctly stored in the product
+    // Debugging line
+
+    // Prepare Shopify API request data
+    const shopifyUpdateData = {
+      product: {
+        id: id, // Use the correct shopifyId
+        title: product.title, // Ensure title is included
+        status: 'active', // Set status to active for publishing
+      },
+    };
+
+    console.log('Shopify Update Data:', shopifyUpdateData); // Debugging line
+
+    // Create Basic Auth header
+    const basicAuth = Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64');
+
+    // Update the product in Shopify
+    const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${id}.json`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${basicAuth}`,
+      },
+      body: JSON.stringify(shopifyUpdateData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Shopify API error for product ID ${id}: ${errorText}`); // Log detailed error
+      return res.status(response.status).send(`Failed to update in Shopify: ${errorText}`);
+    }
+
+    // Update product status to 'active' in local database after successful Shopify update
+    product.status = 'active';
+    await product.save();
+
+    // Decrease user subscription quantity
+    user.subscription.quantity -= 1;
+    await user.save();
+
+    // Fetch the expiration date from the user's subscription
+    const expirationDate = user.subscription.expiresAt;
+
+    res.status(200).json({
+      message: 'Product published successfully in both database and Shopify',
+      expiresAt: expirationDate,
+    });
+  } catch (error) {
+    console.error('Unexpected error while publishing product:', error);
+    res.status(500).send('Error publishing product');
+  }
+};
+
+
+
+
 

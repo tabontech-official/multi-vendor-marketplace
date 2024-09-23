@@ -8,7 +8,7 @@ const authSchema = new mongoose.Schema({
     type: String,
   },
   email: {
-    type: String,
+    type: String, 
   },
   password: {
     type: String,
@@ -56,7 +56,7 @@ const authSchema = new mongoose.Schema({
     startDate: {
       type: Date,
     },
-    endDate: {
+    expiresAt: {
       type: Date,
     },
     quantity:{

@@ -40,7 +40,7 @@ productRouter.post('/webhooks/delete',verifyShopifyWebhook,productDelete);
 productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
 productRouter.put('/updateListing/:id',updateListing)
-productRouter.put('/publishedProduct',publishProduct)
+productRouter.put('/publishedProduct/:productId',publishProduct)
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 
 export default productRouter;
