@@ -195,17 +195,25 @@ export const createOrder=async(req,res)=>{
 
 
 export const getOrderById = async (req, res) => {
+    const { email } = req.params; // Get the email from the request parameters
+
     try {
-        const customerId = req.params.customerId;
-    
-        // Fetch orders for the specific customer
-        const orders = await orderModel.find({ 'customer.id': customerId });
-    
-        res.status(200).json(orders);
-      } catch (error) {
+        // Use find to fetch all orders associated with the provided email
+        const orders = await orderModel.find({ 'customer.email': email }); // Adjusted to match the structure
+
+        if (orders.length > 0) {
+            res.status(200).send({
+                message: 'Successfully fetched orders',
+                data: orders
+            });
+        } else {
+            res.status(404).send({ message: 'No orders found for this email' });
+        }
+    } catch (error) {
         console.error('Error fetching orders:', error);
-        res.status(500).send('Error fetching orders');
-      }
+        res.status(500).send({ message: 'Error fetching orders' });
+    }
 };
+
 
 
