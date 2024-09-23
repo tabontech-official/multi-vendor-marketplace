@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"; 
 
 const orderItemSchema = new mongoose.Schema({
     productId: { type: String, required: true }, // Product ID as a string (e.g., from Shopify)
@@ -10,6 +10,9 @@ const orderItemSchema = new mongoose.Schema({
     taxable: { type: Boolean, default: true }, // Whether the product is taxable
     totalDiscount: { type: Number, default: 0 }, // Total discount applied to the product
     grams: { type: Number }, // Weight of the product in grams
+    properties: [{ type: String }], // Additional properties (if any)
+    variantId: { type: Number }, // Variant ID (if applicable)
+    giftCard: { type: Boolean, default: false }, // Whether this item is a gift card
     totalDiscountSet: {
         shopMoney: {
             amount: { type: Number, default: 0 },
@@ -19,8 +22,7 @@ const orderItemSchema = new mongoose.Schema({
             amount: { type: Number, default: 0 },
             currency_code: { type: String, default: 'USD' }
         }
-    },
-    // Additional fields as needed
+    }
 });
 
 const shippingLineSchema = new mongoose.Schema({
@@ -39,7 +41,8 @@ const shippingLineSchema = new mongoose.Schema({
         }
     },
     isRemoved: { type: Boolean, default: false }, // Indicates if the shipping line is removed
-    // Additional fields as needed
+    carrierIdentifier: { type: String }, // Carrier identifier
+    code: { type: String } // Shipping method code
 });
 
 const shippingAddressSchema = new mongoose.Schema({
@@ -66,6 +69,7 @@ const orderSchema = new mongoose.Schema({
     shippingAddress: shippingAddressSchema, // Shipping address details
     shippingLines: [shippingLineSchema], // Array of shipping methods
     createdAt: { type: Date, default: Date.now }, // Order creation date
+    updatedAt: { type: Date }, // Last updated date
     financialStatus: { type: String }, // Financial status
     fulfillmentStatus: { type: String }, // Fulfillment status
     note: { type: String }, // Order notes
@@ -73,7 +77,7 @@ const orderSchema = new mongoose.Schema({
     totalPrice: { type: Number }, // Total price of the order
     totalDiscounts: { type: Number }, // Total discounts applied
     taxesIncluded: { type: Boolean, default: false }, // Are taxes included
-    updatedAt: { type: Date }, // Last updated date
+    subscriptionEndDate: { type: Date } // Subscription end date (if applicable)
 }, {
     timestamps: true // Automatically manages createdAt and updatedAt fields
 });

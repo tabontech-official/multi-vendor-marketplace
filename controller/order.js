@@ -10,27 +10,16 @@ export const createOrder = async (req, res) => {
     const { customer_email, customerName, line_items, shipping_address, shipping_lines } = orderData;
 
     // Validate required fields
-    if (!customerName) {
-        return res.status(400).send({ message: 'Customer name is required' });
+    if (!customer_email || !customerName || !line_items || !shipping_address) {
+        return res.status(400).send({ message: 'Missing required fields' });
     }
-    if (!customer_email) {
-        return res.status(400).send({ message: 'Customer email is required' });
-    }
-    if (!shipping_address || !shipping_address.first_name || !shipping_address.last_name || !shipping_address.address1) {
-        return res.status(400).send({ message: 'Shipping address is incomplete' });
-    }
-    if (!Array.isArray(line_items) || line_items.length === 0) {
-        return res.status(400).send({ message: 'Line items are required' });
-    }
-    
-    
+
     // Validate line items
     for (const item of line_items) {
         if (!item.product_id || typeof item.quantity !== 'number' || !item.price) {
             return res.status(400).send({ message: 'Each line item must have valid product_id, quantity, and price' });
         }
     }
-    
 
     try {
         const validItems = await Promise.all(line_items.map(async item => {
@@ -41,9 +30,10 @@ export const createOrder = async (req, res) => {
                 quantity: item.quantity,
                 price: parseFloat(item.price),
                 sku: productData.sku,
-                requiresShipping: productData.requires_shipping || true,
+                requiresShipping: productData.requiresShipping || true,
                 taxable: productData.taxable || true,
                 totalDiscount: 0, // Set if applicable
+                grams: productData.grams || 0,
                 totalDiscountSet: {
                     shopMoney: {
                         amount: 0,
@@ -54,10 +44,9 @@ export const createOrder = async (req, res) => {
                         currency_code: 'USD'
                     }
                 },
-                grams: productData.grams || 0,
             };
         }));
-        
+
         const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
         const newOrder = new orderModel({
@@ -128,9 +117,6 @@ export const createOrder = async (req, res) => {
 };
 
 // Helper function to fetch product data
-
-
-
 const fetchProductData = async (item) => {
     const shopifyApiKey = process.env.SHOPIFY_API_KEY;
     const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -150,12 +136,10 @@ const fetchProductData = async (item) => {
                 return {
                     productId: item.product_id.toString(),
                     name: data.product.title,
-                    quantity: item.quantity,
-                    price: parseFloat(item.price),
-                    sku: data.product.sku,
+                    sku: data.product.variants[0]?.sku || null,
                     requiresShipping: data.product.requires_shipping || true,
                     taxable: data.product.taxable || true,
-                    totalDiscount: 0,
+                    grams: data.product.variants[0]?.grams || 0,
                 };
             }
         }

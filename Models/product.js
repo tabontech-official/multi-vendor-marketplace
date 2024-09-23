@@ -140,8 +140,8 @@ const productSchema = new mongoose.Schema(
       productsInventory: Number,
       equipmentValue: Number,
       reasonForSelling: String,
-      listOfDevices: [String], // Array of strings for device list
-      offeredServices: [String], // Array of strings for services
+      listOfDevices: String, // Array of strings for device list
+      offeredServices: String, // Array of strings for services
       supportAndTraining: String, // Description of support and training offered
     },
     jobListings: [
