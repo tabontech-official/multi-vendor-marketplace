@@ -7,29 +7,30 @@ export const createOrder = async (req, res) => {
     const orderData = req.body;
     console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
 
-    const { 
-        customer_email, 
-        customerName, 
-        line_items, 
-        shipping_address, 
-        shipping_lines 
-    } = orderData;
+    const { customer_email, customerName, line_items, shipping_address, shipping_lines } = orderData;
 
     // Validate required fields
-    if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
-        return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
+    if (!customerName) {
+        return res.status(400).send({ message: 'Customer name is required' });
     }
-
+    if (!customer_email) {
+        return res.status(400).send({ message: 'Customer email is required' });
+    }
     if (!shipping_address || !shipping_address.first_name || !shipping_address.last_name || !shipping_address.address1) {
-        return res.status(400).send({ message: 'Shipping address must include first name, last name, and address1' });
+        return res.status(400).send({ message: 'Shipping address is incomplete' });
     }
-
-    // Check line items structure
+    if (!Array.isArray(line_items) || line_items.length === 0) {
+        return res.status(400).send({ message: 'Line items are required' });
+    }
+    
+    
+    // Validate line items
     for (const item of line_items) {
         if (!item.product_id || typeof item.quantity !== 'number' || !item.price) {
             return res.status(400).send({ message: 'Each line item must have valid product_id, quantity, and price' });
         }
     }
+    
 
     try {
         const validItems = await Promise.all(line_items.map(async item => {
