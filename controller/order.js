@@ -7,7 +7,13 @@ export const createOrder = async (req, res) => {
     const orderData = req.body;
     console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
 
-    const { customer_email, customerName, line_items, shipping_address, shipping_lines } = orderData;
+    const { 
+        customer_email, 
+        customerName, 
+        line_items, 
+        shipping_address, 
+        shipping_lines 
+    } = orderData;
 
     // Validate required fields
     if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
@@ -26,7 +32,30 @@ export const createOrder = async (req, res) => {
     }
 
     try {
-        const validItems = await Promise.all(line_items.map(item => fetchProductData(item)));
+        const validItems = await Promise.all(line_items.map(async item => {
+            const productData = await fetchProductData(item);
+            return {
+                productId: item.product_id.toString(),
+                name: productData.name,
+                quantity: item.quantity,
+                price: parseFloat(item.price),
+                sku: productData.sku,
+                requiresShipping: productData.requires_shipping || true,
+                taxable: productData.taxable || true,
+                totalDiscount: 0, // Set if applicable
+                totalDiscountSet: {
+                    shopMoney: {
+                        amount: 0,
+                        currency_code: 'USD'
+                    },
+                    presentmentMoney: {
+                        amount: 0,
+                        currency_code: 'USD'
+                    }
+                },
+                grams: productData.grams || 0,
+            };
+        }));
         
         const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
@@ -47,12 +76,25 @@ export const createOrder = async (req, res) => {
                 zip: shipping_address.zip,
                 phone: shipping_address.phone,
                 company: shipping_address.company,
+                latitude: shipping_address.latitude || null,
+                longitude: shipping_address.longitude || null,
             },
             shippingLines: shipping_lines.map(line => ({
                 title: line.title,
                 price: parseFloat(line.price),
                 discountedPrice: parseFloat(line.discounted_price || line.price),
                 discount: parseFloat(line.discount || 0),
+                currentDiscountedPriceSet: {
+                    shopMoney: {
+                        amount: parseFloat(line.current_discounted_price_set?.shop_money?.amount || 0),
+                        currency_code: 'USD'
+                    },
+                    presentmentMoney: {
+                        amount: parseFloat(line.current_discounted_price_set?.presentment_money?.amount || 0),
+                        currency_code: 'USD'
+                    }
+                },
+                isRemoved: line.is_removed || false,
             })),
         });
 
@@ -83,6 +125,10 @@ export const createOrder = async (req, res) => {
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
+// Helper function to fetch product data
+
+
 
 const fetchProductData = async (item) => {
     const shopifyApiKey = process.env.SHOPIFY_API_KEY;

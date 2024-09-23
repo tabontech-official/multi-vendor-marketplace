@@ -9,6 +9,17 @@ const orderItemSchema = new mongoose.Schema({
     requiresShipping: { type: Boolean, default: true }, // Whether the product requires shipping
     taxable: { type: Boolean, default: true }, // Whether the product is taxable
     totalDiscount: { type: Number, default: 0 }, // Total discount applied to the product
+    totalDiscountSet: {
+        shopMoney: {
+            amount: { type: Number, default: 0 },
+            currency_code: { type: String, default: 'USD' }
+        },
+        presentmentMoney: {
+            amount: { type: Number, default: 0 },
+            currency_code: { type: String, default: 'USD' }
+        }
+    },
+    grams: { type: Number }, // Weight of the product in grams
 });
 
 const shippingLineSchema = new mongoose.Schema({
@@ -16,6 +27,17 @@ const shippingLineSchema = new mongoose.Schema({
     price: { type: Number, required: true }, // Shipping cost
     discountedPrice: { type: Number }, // Discounted shipping price
     discount: { type: Number, default: 0 }, // Discount on shipping
+    currentDiscountedPriceSet: {
+        shopMoney: {
+            amount: { type: Number, default: 0 },
+            currency_code: { type: String, default: 'USD' }
+        },
+        presentmentMoney: {
+            amount: { type: Number, default: 0 },
+            currency_code: { type: String, default: 'USD' }
+        }
+    },
+    isRemoved: { type: Boolean, default: false }, // Indicates if the shipping line is removed
 });
 
 const shippingAddressSchema = new mongoose.Schema({
@@ -29,6 +51,8 @@ const shippingAddressSchema = new mongoose.Schema({
     zip: { type: String, required: true },
     phone: { type: String }, // Phone number
     company: { type: String }, // Company name
+    latitude: { type: Number }, // Latitude (optional)
+    longitude: { type: Number }, // Longitude (optional)
 });
 
 const orderSchema = new mongoose.Schema({
