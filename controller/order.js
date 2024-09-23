@@ -146,7 +146,7 @@ import fetch from 'node-fetch';
 // };
 
 async function checkProductExists(productId) {
-    const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_PASSWORD}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
+    const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
     
     try {
       const response = await fetch(url);
