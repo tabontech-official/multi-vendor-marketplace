@@ -14,57 +14,20 @@ export const createOrder = async (req, res) => {
         return res.status(400).send({ message: 'Customer name, email, line items, and order ID are required' });
     }
 
-    // Check if line items have correct structure
+    if (!shipping_address || !shipping_address.first_name || !shipping_address.last_name || !shipping_address.address1) {
+        return res.status(400).send({ message: 'Shipping address must include first name, last name, and address1' });
+    }
+
+    // Check line items structure
     for (const item of line_items) {
-        if (!item.product_id || typeof item.quantity !== 'number') {
-            return res.status(400).send({ message: 'Each line item must have a valid product_id and quantity' });
+        if (!item.product_id || typeof item.quantity !== 'number' || !item.price) {
+            return res.status(400).send({ message: 'Each line item must have valid product_id, quantity, and price' });
         }
     }
 
     try {
-        const productIds = line_items.map(item => item.product_id.toString());
-        const validItems = [];
+        const validItems = await Promise.all(line_items.map(item => fetchProductData(item)));
         
-        const shopifyApiKey = process.env.SHOPIFY_API_KEY;
-        const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-        const shopifyStore = process.env.SHOPIFY_STORE_URL;
-
-        for (const productId of productIds) {
-            try {
-                const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${productId}.json`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Basic ${Buffer.from(`${shopifyApiKey}:${shopifyPassword}`).toString('base64')}`,
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.product) {
-                        const item = line_items.find(item => item.product_id.toString() === productId);
-                        validItems.push({
-                            productId: productId,
-                            name: data.product.title, // Fetching product name
-                            quantity: item.quantity,
-                            price: parseFloat(item.price),
-                            sku: data.product.sku, // Assuming SKU is fetched
-                            requiresShipping: data.product.requires_shipping || true, // Default to true if not provided
-                            taxable: data.product.taxable || true, // Default to true if not provided
-                            totalDiscount: 0, // No discounts applied
-                        });
-                    }
-                } else {
-                    console.error(`Product ID ${productId} not found: ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error(`Error fetching product ID ${productId}: ${error.message}`);
-            }
-        }
-
-        if (validItems.length === 0) {
-            return res.status(400).send({ message: 'No valid product IDs found in Shopify' });
-        }
-
         const totalAmount = validItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
         const newOrder = new orderModel({
@@ -88,33 +51,21 @@ export const createOrder = async (req, res) => {
             shippingLines: shipping_lines.map(line => ({
                 title: line.title,
                 price: parseFloat(line.price),
-                discountedPrice: parseFloat(line.discounted_price || line.price), // Handle discounted price if available
-                discount: parseFloat(line.discount || 0), // Discount on shipping
+                discountedPrice: parseFloat(line.discounted_price || line.price),
+                discount: parseFloat(line.discount || 0),
             })),
         });
 
         // Calculate subscription end date based on item quantities
         newOrder.subscriptionEndDate = new Date();
         validItems.forEach(item => {
-            if (item.quantity > 0) {
-                newOrder.subscriptionEndDate.setMonth(newOrder.subscriptionEndDate.getMonth() + item.quantity);
-            }
+            newOrder.subscriptionEndDate.setMonth(newOrder.subscriptionEndDate.getMonth() + item.quantity);
         });
 
         await newOrder.save();
 
         // Update inventory based on purchased items
-        for (const item of validItems) {
-            const product = await productModel.findOne({ shopifyId: item.productId });
-            if (product) {
-                product.inventory_quantity -= item.quantity;
-                product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
-                if (product.inventory_quantity === 0) {
-                    product.subscriptionEndDate = null;
-                }
-                await product.save();
-            }
-        }
+        await Promise.all(validItems.map(item => updateInventory(item)));
 
         // Send response with order details
         res.status(201).send({
@@ -122,7 +73,7 @@ export const createOrder = async (req, res) => {
             orderId: newOrder.orderId,
             createdAt: newOrder.createdAt,
             subscriptionEndDate: newOrder.subscriptionEndDate,
-            totalAmount: totalAmount,
+            totalAmount,
             items: validItems,
             shippingAddress: newOrder.shippingAddress,
             shippingLines: newOrder.shippingLines,
@@ -132,6 +83,53 @@ export const createOrder = async (req, res) => {
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
+const fetchProductData = async (item) => {
+    const shopifyApiKey = process.env.SHOPIFY_API_KEY;
+    const shopifyPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyStore = process.env.SHOPIFY_STORE_URL;
+    
+    try {
+        const response = await fetch(`https://${shopifyStore}/admin/api/2023-04/products/${item.product_id}.json`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Basic ${Buffer.from(`${shopifyApiKey}:${shopifyPassword}`).toString('base64')}`,
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.product) {
+                return {
+                    productId: item.product_id.toString(),
+                    name: data.product.title,
+                    quantity: item.quantity,
+                    price: parseFloat(item.price),
+                    sku: data.product.sku,
+                    requiresShipping: data.product.requires_shipping || true,
+                    taxable: data.product.taxable || true,
+                    totalDiscount: 0,
+                };
+            }
+        }
+    } catch (error) {
+        console.error(`Error fetching product ID ${item.product_id}: ${error.message}`);
+    }
+    throw new Error(`Product ID ${item.product_id} not found`);
+};
+
+const updateInventory = async (item) => {
+    const product = await productModel.findOne({ shopifyId: item.productId });
+    if (product) {
+        product.inventory_quantity -= item.quantity;
+        product.status = product.inventory_quantity > 0 ? 'active' : 'inactive';
+        if (product.inventory_quantity === 0) {
+            product.subscriptionEndDate = null;
+        }
+        await product.save();
+    }
+};
+
 
 
 
