@@ -9,6 +9,7 @@ const orderItemSchema = new mongoose.Schema({
     requiresShipping: { type: Boolean, default: true }, // Whether the product requires shipping
     taxable: { type: Boolean, default: true }, // Whether the product is taxable
     totalDiscount: { type: Number, default: 0 }, // Total discount applied to the product
+    grams: { type: Number }, // Weight of the product in grams
     totalDiscountSet: {
         shopMoney: {
             amount: { type: Number, default: 0 },
@@ -19,11 +20,11 @@ const orderItemSchema = new mongoose.Schema({
             currency_code: { type: String, default: 'USD' }
         }
     },
-    grams: { type: Number }, // Weight of the product in grams
+    // Additional fields as needed
 });
 
 const shippingLineSchema = new mongoose.Schema({
-    title: { type: String }, // Shipping method title
+    title: { type: String, required: true }, // Shipping method title
     price: { type: Number, required: true }, // Shipping cost
     discountedPrice: { type: Number }, // Discounted shipping price
     discount: { type: Number, default: 0 }, // Discount on shipping
@@ -38,6 +39,7 @@ const shippingLineSchema = new mongoose.Schema({
         }
     },
     isRemoved: { type: Boolean, default: false }, // Indicates if the shipping line is removed
+    // Additional fields as needed
 });
 
 const shippingAddressSchema = new mongoose.Schema({
@@ -64,7 +66,14 @@ const orderSchema = new mongoose.Schema({
     shippingAddress: shippingAddressSchema, // Shipping address details
     shippingLines: [shippingLineSchema], // Array of shipping methods
     createdAt: { type: Date, default: Date.now }, // Order creation date
-    subscriptionEndDate: { type: Date }, // Subscription end date
+    financialStatus: { type: String }, // Financial status
+    fulfillmentStatus: { type: String }, // Fulfillment status
+    note: { type: String }, // Order notes
+    tags: { type: String }, // Tags associated with the order
+    totalPrice: { type: Number }, // Total price of the order
+    totalDiscounts: { type: Number }, // Total discounts applied
+    taxesIncluded: { type: Boolean, default: false }, // Are taxes included
+    updatedAt: { type: Date }, // Last updated date
 }, {
     timestamps: true // Automatically manages createdAt and updatedAt fields
 });
