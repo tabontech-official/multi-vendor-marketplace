@@ -175,7 +175,7 @@ export const createOrder=async(req,res)=>{
         expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
     
         // Save order to MongoDB
-        const order = new Order({
+        const order = new orderModel({
           orderId: orderData.id,
           customer: orderData.customer,
           lineItems: orderData.line_items,
