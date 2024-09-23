@@ -4,6 +4,7 @@ import {
   signUp,
   logout,
   newSignUp,
+  AdminSignIn,
   updateUserInShopify,
   webHook,
   editProfile,
@@ -23,5 +24,5 @@ authRouter.post('/webHook', verifyShopifyWebhook, webHook);
 authRouter.get('/user/:id', fetchUserData);
 authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
 authRouter.put('/updateInShopify', updateUserInShopify);
-
+authRouter.post('/Admin',AdminSignIn)
 export default authRouter;

@@ -1,86 +1,96 @@
-import mongoose from "mongoose"; 
+// import mongoose from "mongoose"; 
 
-const orderItemSchema = new mongoose.Schema({
-    productId: { type: String, required: true }, // Product ID as a string (e.g., from Shopify)
-    name: { type: String, required: true }, // Product name
-    quantity: { type: Number, required: true }, // Quantity of the product ordered
-    price: { type: Number, required: true }, // Price of the product at the time of order
-    sku: { type: String }, // SKU of the product
-    requiresShipping: { type: Boolean, default: true }, // Whether the product requires shipping
-    taxable: { type: Boolean, default: true }, // Whether the product is taxable
-    totalDiscount: { type: Number, default: 0 }, // Total discount applied to the product
-    grams: { type: Number }, // Weight of the product in grams
-    properties: [{ type: String }], // Additional properties (if any)
-    variantId: { type: Number }, // Variant ID (if applicable)
-    giftCard: { type: Boolean, default: false }, // Whether this item is a gift card
-    totalDiscountSet: {
-        shopMoney: {
-            amount: { type: Number, default: 0 },
-            currency_code: { type: String, default: 'USD' }
-        },
-        presentmentMoney: {
-            amount: { type: Number, default: 0 },
-            currency_code: { type: String, default: 'USD' }
-        }
-    }
-});
+// const orderItemSchema = new mongoose.Schema({
+//     productId: { type: String, required: true }, // Product ID as a string (e.g., from Shopify)
+//     name: { type: String, required: true }, // Product name
+//     quantity: { type: Number, required: true }, // Quantity of the product ordered
+//     price: { type: Number, required: true }, // Price of the product at the time of order
+//     sku: { type: String }, // SKU of the product
+//     requiresShipping: { type: Boolean, default: true }, // Whether the product requires shipping
+//     taxable: { type: Boolean, default: true }, // Whether the product is taxable
+//     totalDiscount: { type: Number, default: 0 }, // Total discount applied to the product
+//     grams: { type: Number }, // Weight of the product in grams
+//     properties: [{ type: String }], // Additional properties (if any)
+//     variantId: { type: Number }, // Variant ID (if applicable)
+//     giftCard: { type: Boolean, default: false }, // Whether this item is a gift card
+//     totalDiscountSet: {
+//         shopMoney: {
+//             amount: { type: Number, default: 0 },
+//             currency_code: { type: String, default: 'USD' }
+//         },
+//         presentmentMoney: {
+//             amount: { type: Number, default: 0 },
+//             currency_code: { type: String, default: 'USD' }
+//         }
+//     }
+// });
 
-const shippingLineSchema = new mongoose.Schema({
-    title: { type: String, required: true }, // Shipping method title
-    price: { type: Number, required: true }, // Shipping cost
-    discountedPrice: { type: Number }, // Discounted shipping price
-    discount: { type: Number, default: 0 }, // Discount on shipping
-    currentDiscountedPriceSet: {
-        shopMoney: {
-            amount: { type: Number, default: 0 },
-            currency_code: { type: String, default: 'USD' }
-        },
-        presentmentMoney: {
-            amount: { type: Number, default: 0 },
-            currency_code: { type: String, default: 'USD' }
-        }
-    },
-    isRemoved: { type: Boolean, default: false }, // Indicates if the shipping line is removed
-    carrierIdentifier: { type: String }, // Carrier identifier
-    code: { type: String } // Shipping method code
-});
+// const shippingLineSchema = new mongoose.Schema({
+//     title: { type: String, required: true }, // Shipping method title
+//     price: { type: Number, required: true }, // Shipping cost
+//     discountedPrice: { type: Number }, // Discounted shipping price
+//     discount: { type: Number, default: 0 }, // Discount on shipping
+//     currentDiscountedPriceSet: {
+//         shopMoney: {
+//             amount: { type: Number, default: 0 },
+//             currency_code: { type: String, default: 'USD' }
+//         },
+//         presentmentMoney: {
+//             amount: { type: Number, default: 0 },
+//             currency_code: { type: String, default: 'USD' }
+//         }
+//     },
+//     isRemoved: { type: Boolean, default: false }, // Indicates if the shipping line is removed
+//     carrierIdentifier: { type: String }, // Carrier identifier
+//     code: { type: String } // Shipping method code
+// });
 
-const shippingAddressSchema = new mongoose.Schema({
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    address1: { type: String, required: true },
-    address2: { type: String },
-    city: { type: String, required: true },
-    province: { type: String, required: true },
-    country: { type: String, required: true },
-    zip: { type: String, required: true },
-    phone: { type: String }, // Phone number
-    company: { type: String }, // Company name
-    latitude: { type: Number }, // Latitude (optional)
-    longitude: { type: Number }, // Longitude (optional)
-});
+// const shippingAddressSchema = new mongoose.Schema({
+//     firstName: { type: String, required: true },
+//     lastName: { type: String, required: true },
+//     address1: { type: String, required: true },
+//     address2: { type: String },
+//     city: { type: String, required: true },
+//     province: { type: String, required: true },
+//     country: { type: String, required: true },
+//     zip: { type: String, required: true },
+//     phone: { type: String }, // Phone number
+//     company: { type: String }, // Company name
+//     latitude: { type: Number }, // Latitude (optional)
+//     longitude: { type: Number }, // Longitude (optional)
+// });
 
+// const orderSchema = new mongoose.Schema({
+//     orderId: { type: String, required: true, unique: true }, // Unique order ID from Shopify
+//     customerEmail: { type: String, required: true }, // Customer's email address
+//     customerName: { type: String, required: true }, // Customer's name
+//     items: [orderItemSchema], // Array of order items
+//     totalAmount: { type: Number, required: true }, // Total amount for the order
+//     shippingAddress: shippingAddressSchema, // Shipping address details
+//     shippingLines: [shippingLineSchema], // Array of shipping methods
+//     createdAt: { type: Date, default: Date.now }, // Order creation date
+//     updatedAt: { type: Date }, // Last updated date
+//     financialStatus: { type: String }, // Financial status
+//     fulfillmentStatus: { type: String }, // Fulfillment status
+//     note: { type: String }, // Order notes
+//     tags: { type: String }, // Tags associated with the order
+//     totalPrice: { type: Number }, // Total price of the order
+//     totalDiscounts: { type: Number }, // Total discounts applied
+//     taxesIncluded: { type: Boolean, default: false }, // Are taxes included
+//     subscriptionEndDate: { type: Date } // Subscription end date (if applicable)
+// }, {
+//     timestamps: true // Automatically manages createdAt and updatedAt fields
+// });
+
+// // Create the model from the schema
+// export const orderModel = mongoose.model('orders', orderSchema);
+
+
+import mongoose from "mongoose";
 const orderSchema = new mongoose.Schema({
-    orderId: { type: String, required: true, unique: true }, // Unique order ID from Shopify
-    customerEmail: { type: String, required: true }, // Customer's email address
-    customerName: { type: String, required: true }, // Customer's name
-    items: [orderItemSchema], // Array of order items
-    totalAmount: { type: Number, required: true }, // Total amount for the order
-    shippingAddress: shippingAddressSchema, // Shipping address details
-    shippingLines: [shippingLineSchema], // Array of shipping methods
-    createdAt: { type: Date, default: Date.now }, // Order creation date
-    updatedAt: { type: Date }, // Last updated date
-    financialStatus: { type: String }, // Financial status
-    fulfillmentStatus: { type: String }, // Fulfillment status
-    note: { type: String }, // Order notes
-    tags: { type: String }, // Tags associated with the order
-    totalPrice: { type: Number }, // Total price of the order
-    totalDiscounts: { type: Number }, // Total discounts applied
-    taxesIncluded: { type: Boolean, default: false }, // Are taxes included
-    subscriptionEndDate: { type: Date } // Subscription end date (if applicable)
-}, {
-    timestamps: true // Automatically manages createdAt and updatedAt fields
-});
-
-// Create the model from the schema
-export const orderModel = mongoose.model('orders', orderSchema);
+    orderId: String,
+    customer: Object,
+    lineItems: Array,
+    createdAt: Date,
+  });
+export const orderModel=mongoose.model('orders',orderSchema)  

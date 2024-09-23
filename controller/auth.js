@@ -863,3 +863,69 @@ export const fetchUserData = async (req, res) => {
 //     res.status(500).send('Internal server error');
 //   }
 // };
+
+
+export const AdminSignIn = async (req, res) => {
+  try {
+    // Validate the request body
+    const { error } = loginSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { email, password } = req.body;
+
+    // Check if user exists in your database
+    const user = await authModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: 'User does not exist with this email' });
+    }
+
+    // Verify password
+    const isPasswordMatch = await user.comparePassword(password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ error: 'Password does not match' });
+    }
+
+    // Check Shopify credentials
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
+
+    const response = await fetch(shopifyUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.status !== 200 || !data.customers.length) {
+      return res.status(404).json({ error: 'User does not exist in Shopify' });
+    }
+
+    const shopifyCustomer = data.customers[0];
+
+    // Check if "isAdmin" tag is present
+    if (!shopifyCustomer.tags.split(',').includes('isAdmin')) {
+      return res.status(403).json({ error: 'You do not have admin access' });
+    }
+
+    // Create a JWT token for your application
+    const token = createToken({ _id: user._id });
+
+    res.json({
+      message: 'Successfully logged in as admin',
+      token,
+      data: user,
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
