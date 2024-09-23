@@ -182,7 +182,7 @@ export const createOrder=async(req,res)=>{
           expiresAt: expirationDate, // Add expiration date field
         });
 
-        const user = authModel.findOne({email:customer.email})
+        const user = await authModel.findOne({email:customer.email})
         user.subscription.quantity=+1
 
     
