@@ -145,17 +145,42 @@ import fetch from 'node-fetch';
 //     }
 // };
 
+async function checkProductExists(productId) {
+    const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_PASSWORD}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
+    
+    try {
+      const response = await fetch(url);
+      return response.data.product ? true : false;
+    } catch (error) {
+      console.error('Error checking product existence:', error);
+      return false; // Product doesn't exist or an error occurred
+    }
+  }
 
 export const createOrder=async(req,res)=>{
     try {
         const orderData = req.body;
+        const productId = orderData.line_items[0].product_id; // Assuming single product per order
+    
+        // Check if product exists in Shopify
+        const productExists = await checkProductExists(productId);
+    
+        if (!productExists) {
+          return res.status(404).send('Product does not exist');
+        }
+    
+        // Calculate expiration date based on quantity
+        const quantity = orderData.line_items[0].quantity;
+        const expirationDate = new Date();
+        expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
     
         // Save order to MongoDB
-        const order = new orderModel({
+        const order = new Order({
           orderId: orderData.id,
           customer: orderData.customer,
           lineItems: orderData.line_items,
           createdAt: orderData.created_at,
+          expiresAt: expirationDate, // Add expiration date field
         });
     
         await order.save();
