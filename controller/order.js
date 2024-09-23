@@ -7,7 +7,7 @@ export const createOrder = async (req, res) => {
     const orderData = req.body;
     console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
 
-    const { customer_email, customerName, line_items } = orderData;
+    const { customer_email, customerName, line_items, shipping_address, shipping_lines } = orderData;
 
     // Validate required fields
     if (!customerName || !customer_email || !Array.isArray(line_items) || line_items.length === 0 || !orderData.id) {
@@ -47,6 +47,10 @@ export const createOrder = async (req, res) => {
                             name: data.product.title, // Fetching product name
                             quantity: item.quantity,
                             price: parseFloat(item.price),
+                            sku: data.product.sku, // Assuming SKU is fetched
+                            requiresShipping: data.product.requires_shipping || true, // Default to true if not provided
+                            taxable: data.product.taxable || true, // Default to true if not provided
+                            totalDiscount: 0, // No discounts applied
                         });
                     }
                 } else {
@@ -67,8 +71,26 @@ export const createOrder = async (req, res) => {
             orderId: orderData.id.toString(),
             customerEmail: customer_email,
             customerName: customerName,
-            items: validItems, // validItems includes product names
+            items: validItems,
             totalAmount,
+            shippingAddress: {
+                firstName: shipping_address.first_name,
+                lastName: shipping_address.last_name,
+                address1: shipping_address.address1,
+                address2: shipping_address.address2 || null,
+                city: shipping_address.city,
+                province: shipping_address.province,
+                country: shipping_address.country,
+                zip: shipping_address.zip,
+                phone: shipping_address.phone,
+                company: shipping_address.company,
+            },
+            shippingLines: shipping_lines.map(line => ({
+                title: line.title,
+                price: parseFloat(line.price),
+                discountedPrice: parseFloat(line.discounted_price || line.price), // Handle discounted price if available
+                discount: parseFloat(line.discount || 0), // Discount on shipping
+            })),
         });
 
         // Calculate subscription end date based on item quantities
@@ -94,20 +116,23 @@ export const createOrder = async (req, res) => {
             }
         }
 
-        // Send response with order details including product names
+        // Send response with order details
         res.status(201).send({
             message: 'Order saved successfully',
             orderId: newOrder.orderId,
             createdAt: newOrder.createdAt,
             subscriptionEndDate: newOrder.subscriptionEndDate,
             totalAmount: totalAmount,
-            items: validItems, // This includes product names
+            items: validItems,
+            shippingAddress: newOrder.shippingAddress,
+            shippingLines: newOrder.shippingLines,
         });
     } catch (error) {
         console.error('Error saving order:', error);
         res.status(500).send({ message: 'Error saving order', error: error.message });
     }
 };
+
 
 
 
