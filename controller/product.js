@@ -664,11 +664,11 @@ export const addNewEquipments = async (req, res) => {
       shipping,
       description,
       userId,
-      status ,
+      
     } = req.body;
 
     const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
-
+    const status='inactive'
     // Validate required fields
     const brandValue = brand || 'medspa';
     if (!location) return res.status(400).json({ error: 'Location is required.' });
@@ -690,7 +690,7 @@ export const addNewEquipments = async (req, res) => {
         vendor: brandValue,
         product_type: 'New Equipment',
         variants: [{ price: salePriceValue.toFixed(2).toString() }],
-        status: status === 'inactive' ? 'draft' : 'active',
+        status: status ,
       },
     };
 
@@ -824,12 +824,11 @@ export const addNewBusiness = async (req, res) => {
       offeredServices,
       supportAndTraining,
       userId,
-      status,
     } = req.body;
 
     const image = req.file; // Handle file upload
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
-
+    const status='inactive'
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!businessDescription) return res.status(400).json({ error: 'Business description is required.' });
@@ -856,7 +855,8 @@ export const addNewBusiness = async (req, res) => {
         vendor: location,
         product_type: 'Business Listing',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        status: status === 'inactive' ? 'draft' : 'active',
+        //status: status === 'inactive' ? 'draft' : 'active',
+        status:status
       },
     };
 
@@ -991,12 +991,11 @@ export const addNewJobListing = async (req, res) => {
       availability,
       requestedYearlySalary,
       userId,
-      status,
     } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-
+    const status='inactive'
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
@@ -1013,7 +1012,7 @@ export const addNewJobListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Job Listing', // Use a specific type for job listings
         variants: [{ price: requestedYearlySalary.toString() }], // Salary should be a string
-        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
+       status:status
       },
     };
 
@@ -1122,12 +1121,11 @@ export const addNewProviderListing = async (req, res) => {
       offeredYearlySalary,
       offeredPositionDescription,
       userId,
-      status, 
-    } = req.body;
+             } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-
+const status='inactive'
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
@@ -1156,7 +1154,7 @@ export const addNewProviderListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Provider Search Listing', // Use a specific type for provider search listings
         variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
-        status: status === 'inactive' ? 'draft' : 'active', // Set Shopify status
+        status: status// Set Shopify status
       },
     };
 
@@ -1303,12 +1301,11 @@ export const addRoomListing = async (req, res) => {
       wifiAvailable,
       otherDetails,
       userId,
-      status, 
     } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-
+    const status='inactive'
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
@@ -1346,7 +1343,7 @@ export const addRoomListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Room Listing', // Use a specific type for room listings
         variants: [{ price: monthlyRent.toString() }], // Rent should be a string
-        status: status === 'inactive' ? 'draft' : 'active', 
+        status: status, 
       },
     };
 
