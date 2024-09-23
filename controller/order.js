@@ -1,7 +1,5 @@
 import { authModel } from "../Models/auth.js";
 import { orderModel } from "../Models/order.js";
-import { productModel } from "../Models/product.js";
-import fetch from 'node-fetch';
 import axios from 'axios'
 
 // export const createOrder = async (req, res) => {
@@ -183,6 +181,10 @@ export const createOrder=async(req,res)=>{
           createdAt: orderData.created_at,
           expiresAt: expirationDate, // Add expiration date field
         });
+
+        const user = authModel.findOne({email:customer.email})
+        user.subscription.quantity=+1
+
     
         await order.save();
     
@@ -192,7 +194,6 @@ export const createOrder=async(req,res)=>{
         res.status(500).send('Error saving order');
       }
 }
-
 
 export const getOrderById = async (req, res) => {
     const { email } = req.params; // Get the email from the request parameters
@@ -214,6 +215,3 @@ export const getOrderById = async (req, res) => {
         res.status(500).send({ message: 'Error fetching orders' });
     }
 };
-
-
-

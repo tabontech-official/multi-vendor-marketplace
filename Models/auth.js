@@ -59,6 +59,9 @@ const authSchema = new mongoose.Schema({
     endDate: {
       type: Date,
     },
+    quantity:{
+      type:Number
+    }
   },
 });
 authSchema.pre('save', async function (next) {

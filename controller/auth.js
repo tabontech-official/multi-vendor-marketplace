@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
 import mongoose from 'mongoose';
+import { error } from 'console';
 
 //storage for images storing
 const createToken = (payLoad) => {
@@ -768,52 +769,6 @@ export const editProfile = async (req, res) => {
   }
 };
 
-// export const editProfile = async (req, res) => {
-//   const { userId } = req.params; // Get userId from request parameters
-//   const { email, password, phone, address, zip, country, city } = req.body;
-//   const image = req.file; // Handle file upload
-
-//   try {
-//     if (!userId) {
-//       return res.status(400).json({ error: 'User ID is required.' });
-//     }
-
-//     // Find user by ID
-//     const user = await authModel.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found.' });
-//     }
-
-//     // Update fields
-//     if (email) user.email = email;
-//     if (password) user.password = await bcrypt.hash(password, 10);
-//     if (phone) user.phone = phone;
-//     if (address) user.address = address;
-//     if (zip) user.zip = zip;
-//     if (country) user.country = country;
-//     if (city) user.city = city;
-//     if (image) {
-//       // Remove old image if it exists
-//       if (user.avatar) {
-//         const oldImagePath = path.resolve('/tmp/uploads/', user.avatar);
-//         if (fs.existsSync(oldImagePath)) {
-//           fs.unlinkSync(oldImagePath);
-//         }
-//       }
-
-//       // Update user's avatar with the new image filename
-//       user.avatar = image.filename; // Store only the tore only the filename
-//     }
-//     // Save the updated user
-//     await user.save();
-
-//     res.status(200).json({ message: 'Profile updated successfully.' });
-//   } catch (error) {
-//     console.error('Error updating profile:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
-
 export const fetchUserData = async (req, res) => {
   try {
     const { id } = req.params;
@@ -864,7 +819,6 @@ export const fetchUserData = async (req, res) => {
 //   }
 // };
 
-
 export const AdminSignIn = async (req, res) => {
   try {
     // Validate the request body
@@ -878,7 +832,9 @@ export const AdminSignIn = async (req, res) => {
     // Check if user exists in your database
     const user = await authModel.findOne({ email });
     if (!user) {
-      return res.status(404).json({ error: 'User does not exist with this email' });
+      return res
+        .status(404)
+        .json({ error: 'User does not exist with this email' });
     }
 
     // Verify password
@@ -892,7 +848,9 @@ export const AdminSignIn = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
 
     const response = await fetch(shopifyUrl, {
@@ -927,5 +885,22 @@ export const AdminSignIn = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getUserData = async (req, res) => {
+  try {
+    const data = await authModel.find();
+
+    if (data.length > 0) {
+      res.status(200).send({
+        message: 'Successfully fetched',
+        data: data,
+      });
+    } else {
+      res.status(404).send({ message: 'No users found' });
+    }
+  } catch (error) {
+    res.status(500).send({ message: error.message });
   }
 };

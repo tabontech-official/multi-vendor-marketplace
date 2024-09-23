@@ -1568,10 +1568,9 @@ export const updateListing = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
-   
 
     // Check if the product has a Shopify ID
-    if (!product.id) {  // Use the correct field for Shopify ID
+    if (!product.id) {
       return res.status(400).json({ message: 'Shopify ID is not available for this product' });
     }
 
@@ -1584,13 +1583,13 @@ export const updateListing = async (req, res) => {
     // Prepare data for Shopify
     const shopifyData = {
       product: {
-        id: product.id, // Use the correct field and convert to string
-        ...req.body // Only include fields you want to update
+        id: product.id,
+        ...req.body, // Only include fields you want to update
       }
     };
 
     // Construct the Shopify URL
-    const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/products/${shopifyData.product.id}.json`;
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${shopifyData.product.id}.json`;
 
     // Log the request to Shopify for debugging
     console.log('Updating Shopify product with data:', shopifyData);
@@ -1609,6 +1608,9 @@ export const updateListing = async (req, res) => {
       return res.status(500).json({ message: 'Failed to update product in Shopify', details: await response.text() });
     }
 
+    // Log the updated product data
+    console.log('Updated Product Data:', updatedProduct);
+
     // Send successful response
     res.status(200).json({
       message: 'Product successfully updated in both MongoDB and Shopify',
@@ -1619,7 +1621,6 @@ export const updateListing = async (req, res) => {
     res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
-
 
 
 //delete product
@@ -1663,9 +1664,7 @@ export const deleteProduct = async (req, res) => {
   }
 };
 
-
 // webhook product deletion
-
 export const productDelete = async (req, res) => {
   const { id } = req.body;
 
