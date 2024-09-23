@@ -27,6 +27,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.17.1",
     "aws-sdk": "^2.1679.0",
+    "axios": "^1.7.7",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",

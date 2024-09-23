@@ -2,6 +2,7 @@ import { authModel } from "../Models/auth.js";
 import { orderModel } from "../Models/order.js";
 import { productModel } from "../Models/product.js";
 import fetch from 'node-fetch';
+import axios from 'axios'
 
 // export const createOrder = async (req, res) => {
 //     const orderData = req.body;
@@ -149,7 +150,7 @@ async function checkProductExists(productId) {
     const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
     
     try {
-      const response = await fetch(url);
+      const response = await axios.get(url);
       return response.data.product ? true : false;
     } catch (error) {
       console.error('Error checking product existence:', error);
@@ -194,34 +195,17 @@ export const createOrder=async(req,res)=>{
 
 
 export const getOrderById = async (req, res) => {
-    const { shopifyUserId } = req.params; // Get shopifyUserId from URL parameters
-
-    if (!shopifyUserId) {
-        return res.status(400).send({ message: 'Shopify User ID is required' });
-    }
-
     try {
-        // Fetch orders associated with the shopifyUserId
-        const orders = await orderModel.find({ customerEmail: shopifyUserId });
-
-        if (orders.length === 0) {
-            return res.status(404).send({ message: 'No subscriptions found for this Shopify user' });
-        }
-
-        // Filter orders to return only subscription-related information
-        const subscriptionData = orders.map(order => ({
-            orderId: order.orderId,
-            totalAmount: order.totalAmount,
-            subscriptionEndDate: order.subscriptionEndDate,
-            items: order.items,
-            createdAt: order.createdAt,
-        }));
-
-        res.status(200).send({ message: 'Subscriptions fetched successfully', subscriptions: subscriptionData });
-    } catch (error) {
-        console.error('Error fetching subscriptions:', error);
-        res.status(500).send({ message: 'Error fetching subscriptions', error: error.message });
-    }
+        const customerId = req.params.customerId;
+    
+        // Fetch orders for the specific customer
+        const orders = await orderModel.find({ 'customer.id': customerId });
+    
+        res.status(200).json(orders);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).send('Error fetching orders');
+      }
 };
 
 
