@@ -1526,9 +1526,6 @@ export const publishProduct = async (req, res) => {
 };
 
 
-
-
-
 export const newPublishProduct = async (req, res) => {
   try {
      // Get product ID from request parameters
