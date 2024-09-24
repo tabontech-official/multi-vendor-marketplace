@@ -650,7 +650,7 @@ export const addUsedEquipments = async (req, res) => {
 
 export const addNewEquipments = async (req, res) => {
   try {
-    // Extract equipment details from request body
+    // Extract equipment details and action from request body
     const {
       location,
       name,
@@ -664,6 +664,7 @@ export const addNewEquipments = async (req, res) => {
       shipping,
       description,
       userId,
+      status, // 'publish' or 'draft'
     } = req.body;
 
     // Validate required fields
@@ -672,9 +673,10 @@ export const addNewEquipments = async (req, res) => {
     const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
     if (isNaN(salePriceValue)) return res.status(400).json({ error: 'Sale price must be a number.' });
 
-    const status = 'draft';
+    // Determine product status based on action
+    const productStatus = status === 'publish' ? 'active' : 'draft';
     const brandValue = brand || 'medspa';
-    
+
     // Optional fields with defaults
     const equipmentTypeValue = equipment_type || 'Unknown';
     const certificationValue = certification || 'Not specified';
@@ -692,7 +694,7 @@ export const addNewEquipments = async (req, res) => {
         vendor: brandValue,
         product_type: 'New Equipment',
         variants: [{ price: salePriceValue.toFixed(2).toString() }],
-        status: status,
+        status: productStatus,
       },
     };
 
@@ -787,14 +789,27 @@ export const addNewEquipments = async (req, res) => {
         description: descriptionValue,
       },
       userId: userId,
-      status: status,
+      status: productStatus,
     });
 
     await newProduct.save();
 
+    // If the product is published, decrease user subscription quantity
+    if (productStatus === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) throw new Error('User not found');
+
+      if (user.subscription && user.subscription.quantity > 0) {
+        user.subscription.quantity -= 1; // Decrease subscription count
+        await user.save();
+      } else {
+        return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+      }
+    }
+
     // Send a successful response
     res.status(201).json({
-      message: 'Product successfully created and saved',
+      message: `Product successfully created and ${productStatus === 'active' ? 'published' : 'saved as draft'}`,
       product: newProduct,
     });
   } catch (error) {
@@ -802,6 +817,8 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 
 export const addNewBusiness = async (req, res) => {
@@ -1696,7 +1713,7 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check user's subscription quantity
-    if (!user.subscription || user.subscription.quantity < 1) {
+    if (!user.subscription || user.subscription.quantity <= 0) {
       console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
       return res.status(400).send('Insufficient quantity to publish product');
     }
@@ -1782,13 +1799,13 @@ export const deletAllProduct=async(req,res)=>{
 
 export const newPublishProduct = async (req, res) => {
   try {
-    const { productId } = req.params; // Get product ID from request parameters
-    const { userId } = req.body; // Get user ID from request body
+     // Get product ID from request parameters
+    const { userId } = req.params; // Get user ID from request body
 
     // Validate productId and userId
-    if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(userId)) {
-      console.error('Validation Error: Invalid product ID or user ID');
-      return res.status(400).send('Invalid product ID or user ID');
+    if ( !mongoose.isValidObjectId(userId)) {
+      console.error('Validation Error: Invalid  user ID');
+      return res.status(400).send('Invalid  user ID');
     }
 
     // Find the user by ID
@@ -1807,14 +1824,9 @@ export const newPublishProduct = async (req, res) => {
     }
 
     // Find the product in your database
-    const product = await productModel.findById(productId);
-    if (!product) {
-      console.error(`Product not found: ${productId}`);
-      return res.status(404).send('Product not found or missing required fields');
-    }
+  
 
     // Log product details
-    console.log('Found product:', product);
 
     // Get the Shopify ID from the product
     const id = product.id; // Ensure shopifyId is correctly stored in the product
