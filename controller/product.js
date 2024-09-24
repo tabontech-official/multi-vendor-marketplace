@@ -577,47 +577,34 @@ export const addNewBusiness = async (req, res) => {
     // Extract business listing details from request body
     const {
       name,
-      location,
-      businessDescription,
-      asking_price,
-      establishedYear,
-      numberOfEmployees,
-      locationMonthlyRent,
-      leaseExpirationDate,
-      locationSize,
-      grossYearlyRevenue,
-      cashFlow,
-      productsInventory,
-      equipmentValue,
-      reasonForSelling,
-      listOfDevices,
-      offeredServices,
-      supportAndTraining,
+      location = 'Not specified',
+      businessDescription = 'No description provided',
+      asking_price = 0.00,
+      establishedYear = new Date().getFullYear(),
+      numberOfEmployees = 1,
+      locationMonthlyRent = 0,
+      leaseExpirationDate = new Date().toISOString(),
+      locationSize = 0,
+      grossYearlyRevenue = 0,
+      cashFlow = 0,
+      productsInventory = 0,
+      equipmentValue = 0,
+      reasonForSelling = 'Not specified',
+      listOfDevices = '',
+      offeredServices = '',
+      supportAndTraining = 'No support provided',
       userId,
-      status,
+      status ,
     } = req.body;
 
     const image = req.file; // Handle file upload
-    const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
+    const askingPriceValue = parseFloat(asking_price);
     const productStatus = status === 'publish' ? 'active' : 'draft';
-
+   
     // Validate required fields
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
-    if (!businessDescription) return res.status(400).json({ error: 'Business description is required.' });
+    if (!name) return res.status(400).json({ error: 'Business name is required.' });
+
     if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number' });
-    if (!establishedYear) return res.status(400).json({ error: 'Established year is required.' });
-    if (!numberOfEmployees) return res.status(400).json({ error: 'Number of employees is required.' });
-    if (!locationMonthlyRent) return res.status(400).json({ error: 'Location monthly rent is required.' });
-    if (!leaseExpirationDate) return res.status(400).json({ error: 'Lease expiration date is required.' });
-    if (!locationSize) return res.status(400).json({ error: 'Location size is required.' });
-    if (!grossYearlyRevenue) return res.status(400).json({ error: 'Gross yearly revenue is required.' });
-    if (!cashFlow) return res.status(400).json({ error: 'Cash flow is required.' });
-    if (!productsInventory) return res.status(400).json({ error: 'Products inventory is required.' });
-    if (!equipmentValue) return res.status(400).json({ error: 'Equipment value is required.' });
-    if (!reasonForSelling) return res.status(400).json({ error: 'Reason for selling is required.' });
-    if (!listOfDevices) return res.status(400).json({ error: 'List of devices is required.' });
-    if (!offeredServices) return res.status(400).json({ error: 'Offered services are required.' });
-    if (!supportAndTraining) return res.status(400).json({ error: 'Support and training information is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -627,8 +614,7 @@ export const addNewBusiness = async (req, res) => {
         vendor: location,
         product_type: 'Business Listing',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        //status: status === 'inactive' ? 'draft' : 'active',
-        status:productStatus
+        status: productStatus,
       },
     };
 
@@ -663,7 +649,7 @@ export const addNewBusiness = async (req, res) => {
 
     // Step 3: Upload Image to Shopify if provided
     let imageId = null;
-    let imageResponse = null; // Initialize to null
+    let imageResponse = null;
 
     if (image) {
       const cloudinaryImageUrl = image.path;
@@ -767,7 +753,7 @@ export const addNewBusiness = async (req, res) => {
       expiresAt: null,
     });
   } catch (error) {
-    console.error('Error in addNewEquipments function:', error);
+    console.error('Error in addNewBusiness function:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -777,36 +763,32 @@ export const addNewJobListing = async (req, res) => {
   try {
     // Extract job listing details from request body
     const {
-      location,
+      location = 'Not specified',
       name,
-      qualification,
-      positionRequestedDescription,
-      availability,
-      requestedYearlySalary,
+      qualification = 'Not specified',
+      positionRequestedDescription = 'No description provided',
+      availability = 'Not specified',
+      requestedYearlySalary = 0,
       userId,
       status,
     } = req.body;
 
     // Handle file upload
-    const image = req.file; // Handle file upload
+    const image = req.file; 
     const productStatus = status === 'publish' ? 'active' : 'draft';
-    // Validate required fields
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
+
+    // Validate required field
     if (!name) return res.status(400).json({ error: 'Name is required.' });
-    if (!qualification) return res.status(400).json({ error: 'Qualification is required.' });
-    if (!positionRequestedDescription) return res.status(400).json({ error: 'Position description is required.' });
-    if (!availability) return res.status(400).json({ error: 'Availability is required.' });
-    if (!requestedYearlySalary) return res.status(400).json({ error: 'Requested yearly salary is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name, // Use job name as the title
-        body_html: positionRequestedDescription, // Use position description as body_html
-        vendor: location, // Use location as the vendor
-        product_type: 'Job Listing', // Use a specific type for job listings
-        variants: [{ price: requestedYearlySalary.toString() }], // Salary should be a string
-       status:productStatus
+        title: name,
+        body_html: positionRequestedDescription,
+        vendor: location,
+        product_type: 'Job Listing',
+        variants: [{ price: requestedYearlySalary.toString() }],
+        status: productStatus,
       },
     };
 
@@ -831,19 +813,11 @@ export const addNewJobListing = async (req, res) => {
 
     // Step 3: Upload Image to Shopify if provided
     let imageId = null;
-    let imageResponse = null;
-
     if (image) {
       const cloudinaryImageUrl = image.path; // Assuming image.path is the URL
-
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl, // Use the path to the image
-        },
-      };
-
+      const imagePayload = { image: { src: cloudinaryImageUrl } };
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
       imageId = imageResponse.image.id;
     }
 
@@ -865,15 +839,6 @@ export const addNewJobListing = async (req, res) => {
         height: imageResponse.image.height,
         src: imageResponse.image.src,
       }] : [],
-      image: imageId ? {
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        alt: 'Job Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      } : null,
       jobListings: [{
         location,
         name,
@@ -881,13 +846,15 @@ export const addNewJobListing = async (req, res) => {
         positionRequestedDescription,
         availability,
         requestedYearlySalary,
-        image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
+        image: imageId ? imageResponse.image.src : null,
       }],
-      userId: userId,
-      status: productStatus, // Save the status (active/inactive)
+      userId,
+      status: productStatus,
     });
 
     await newJobListing.save();
+
+    // Subscription management for active listings
     if (productStatus === 'active') {
       const user = await authModel.findById(userId);
       if (!user) throw new Error('User not found');
@@ -901,9 +868,9 @@ export const addNewJobListing = async (req, res) => {
         return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
       }
 
-      // Send a successful response
+      // Successful response for published job listing
       return res.status(201).json({
-        message: 'Product successfully created and published.',
+        message: 'Job listing successfully created and published.',
         product: newJobListing,
         expiresAt: expirationDate,
       });
@@ -911,12 +878,12 @@ export const addNewJobListing = async (req, res) => {
 
     // If saved as draft
     res.status(201).json({
-      message: 'Product successfully created and saved as draft.',
+      message: 'Job listing successfully created and saved as draft.',
       product: newJobListing,
       expiresAt: null,
     });
   } catch (error) {
-    console.error('Error in addNewEquipments function:', error);
+    console.error('Error in addNewJobListing function:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -930,36 +897,22 @@ export const addNewProviderListing = async (req, res) => {
     // Extract provider listing details from request body
     const {
       location,
-      qualificationRequested,
-      jobType,
-      typeOfJobOffered,
-      offeredYearlySalary,
-      offeredPositionDescription,
+      qualificationRequested = 'Not specified',
+      jobType = 'Not specified',
+      typeOfJobOffered = 'Not specified',
+      offeredYearlySalary = 0,
+      offeredPositionDescription = 'No description provided',
       userId,
-      status
-             } = req.body;
+      status ,
+    } = req.body;
 
     // Handle file upload
-    const image = req.file; // Handle file upload
+    const image = req.file;
     const productStatus = status === 'publish' ? 'active' : 'draft';
-    // Validate required fields
+
+    // Validate required field
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
-    }
-    if (!qualificationRequested) {
-      return res.status(400).json({ error: 'Qualification requested is required.' });
-    }
-    if (!jobType) {
-      return res.status(400).json({ error: 'Job type is required.' });
-    }
-    if (!typeOfJobOffered) {
-      return res.status(400).json({ error: 'Type of job offered is required.' });
-    }
-    if (!offeredYearlySalary) {
-      return res.status(400).json({ error: 'Offered yearly salary is required.' });
-    }
-    if (!offeredPositionDescription) {
-      return res.status(400).json({ error: 'Position description is required.' });
     }
 
     // Step 1: Create Product in Shopify
@@ -970,55 +923,22 @@ export const addNewProviderListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Provider Search Listing', // Use a specific type for provider search listings
         variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
-        status: productStatus// Set Shopify status
+        status: productStatus, // Set Shopify status
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-
-    console.log('Product Response:', productResponse);
-
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Provider Listing Details
     const metafieldsPayload = [
-      {
-        namespace: 'fold_tech',
-        key: 'location',
-        value: location,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'qualification_requested',
-        value: qualificationRequested,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'job_type',
-        value: jobType,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'type_of_job_offered',
-        value: typeOfJobOffered,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'offered_yearly_salary',
-        value: offeredYearlySalary.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'offered_position_description',
-        value: offeredPositionDescription,
-        type: 'single_line_text_field',
-      },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'qualification_requested', value: qualificationRequested, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'job_type', value: jobType, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'type_of_job_offered', value: typeOfJobOffered, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'offered_yearly_salary', value: offeredYearlySalary.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'offered_position_description', value: offeredPositionDescription, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1028,19 +948,17 @@ export const addNewProviderListing = async (req, res) => {
 
     // Step 3: Upload Image to Shopify if provided
     let imageId = null;
-    let imageResponse = null;
-
     if (image) {
       const cloudinaryImageUrl = image.path; // Use the path to the image
 
       const imagePayload = {
         image: {
-          src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
+          src: cloudinaryImageUrl,
         },
       };
 
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
       imageId = imageResponse.image.id;
     }
 
@@ -1064,17 +982,6 @@ export const addNewProviderListing = async (req, res) => {
         height: imageResponse.image.height,
         src: imageResponse.image.src,
       }] : [],
-      image: imageId ? {
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
-        alt: 'Provider Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      } : null,
       providerListings: [{
         location,
         qualificationRequested,
@@ -1082,46 +989,48 @@ export const addNewProviderListing = async (req, res) => {
         typeOfJobOffered,
         offeredYearlySalary,
         offeredPositionDescription,
-        image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
+        image: imageId ? imageResponse.image.src : null,
       }],
-      userId: userId,
-      status: productStatus, // Save the status (active/inactive)
+      userId,
+      status: productStatus,
     });
 
     await newProviderListing.save();
-  // If the product is published, decrease user subscription quantity
-  if (productStatus === 'active') {
-    const user = await authModel.findById(userId);
-    if (!user) throw new Error('User not found');
 
-    const expirationDate = user.subscription.expiresAt;
+    // If the product is published, decrease user subscription quantity
+    if (productStatus === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) throw new Error('User not found');
 
-    if (user.subscription && user.subscription.quantity > 0) {
-      user.subscription.quantity -= 1; // Decrease subscription count
-      await user.save();
-    } else {
-      return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+      const expirationDate = user.subscription.expiresAt;
+
+      if (user.subscription && user.subscription.quantity > 0) {
+        user.subscription.quantity -= 1; // Decrease subscription count
+        await user.save();
+      } else {
+        return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+      }
+
+      // Send a successful response
+      return res.status(201).json({
+        message: 'Product successfully created and published.',
+        product: newProviderListing,
+        expiresAt: expirationDate,
+      });
     }
 
-    // Send a successful response
-    return res.status(201).json({
-      message: 'Product successfully created and published.',
+    // If saved as draft
+    res.status(201).json({
+      message: 'Product successfully created and saved as draft.',
       product: newProviderListing,
-      expiresAt: expirationDate,
+      expiresAt: null,
     });
+  } catch (error) {
+    console.error('Error in addNewProviderListing function:', error);
+    res.status(500).json({ error: error.message });
   }
-
-  // If saved as draft
-  res.status(201).json({
-    message: 'Product successfully created and saved as draft.',
-    product: newProviderListing,
-    expiresAt: null,
-  });
-} catch (error) {
-  console.error('Error in addNewEquipments function:', error);
-  res.status(500).json({ error: error.message });
-}
 };
+
 
 
 // Add Room listing
@@ -1130,14 +1039,14 @@ export const addRoomListing = async (req, res) => {
     // Extract room listing details from request body
     const {
       location,
-      roomSize,
-      monthlyRent,
-      deposit,
-      minimumInsuranceRequested,
-      typeOfUseAllowed,
-      rentalTerms,
-      wifiAvailable,
-      otherDetails,
+      roomSize = 0,
+      monthlyRent = 0,
+      deposit = 0,
+      minimumInsuranceRequested = 0,
+      typeOfUseAllowed = 'Not specified',
+      rentalTerms = 'Not specified',
+      wifiAvailable = false,
+      otherDetails = 'No additional details provided',
       userId,
       status,
     } = req.body;
@@ -1149,30 +1058,7 @@ export const addRoomListing = async (req, res) => {
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
     }
-    if (!roomSize) {
-      return res.status(400).json({ error: 'Room size is required.' });
-    }
-    if (!monthlyRent) {
-      return res.status(400).json({ error: 'Monthly rent is required.' });
-    }
-    if (!deposit) {
-      return res.status(400).json({ error: 'Deposit is required.' });
-    }
-    if (!minimumInsuranceRequested) {
-      return res.status(400).json({ error: 'Minimum insurance requested is required.' });
-    }
-    if (!typeOfUseAllowed) {
-      return res.status(400).json({ error: 'Type of use allowed is required.' });
-    }
-    if (!rentalTerms) {
-      return res.status(400).json({ error: 'Rental terms are required.' });
-    }
-    if (typeof wifiAvailable === 'undefined') {
-      return res.status(400).json({ error: 'WiFi availability must be specified.' });
-    }
-    if (!otherDetails) {
-      return res.status(400).json({ error: 'Other details are required.' });
-    }
+   
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
