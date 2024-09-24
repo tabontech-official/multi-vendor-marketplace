@@ -60,7 +60,8 @@ const authSchema = new mongoose.Schema({
       type: Date,
     },
     quantity:{
-      type:Number
+      type:Number,
+      default:0
     }
   },
 });

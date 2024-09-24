@@ -1554,9 +1554,19 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check subscription quantity
-    if (!user.subscription || user.subscription.quantity <= 0) {
-      console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
-      return res.status(400).send('Insufficient quantity to publish product');
+    if (!user.subscription || typeof user.subscription.quantity !== 'number') {
+      console.error(`Invalid subscription data: ${user.subscription}`);
+      return res.status(400).send('Invalid subscription data');
+    }
+
+    console.log(`Current subscription quantity: ${user.subscription.quantity}`);
+
+    // Ensure quantity does not go below zero
+    if (user.subscription.quantity > 0) {
+      user.subscription.quantity -= 1; // Decrement only if quantity is greater than zero
+    } else {
+      console.error(`Insufficient quantity: ${user.subscription.quantity}`);
+      return res.status(400).send('Insufficient subscription credits to publish product');
     }
 
     // Find product
@@ -1593,10 +1603,11 @@ export const publishProduct = async (req, res) => {
       return res.status(response.status).send(`Failed to update in Shopify: ${errorText}`);
     }
 
+    // Update product status in local database
     product.status = 'active';
     await product.save();
 
-    user.subscription.quantity -= 1;
+    // Save user subscription
     await user.save();
 
     const expirationDate = user.subscription.expiresAt;
