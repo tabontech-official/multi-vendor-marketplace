@@ -389,265 +389,6 @@ export const addUsedEquipments = async (req, res) => {
 };
 
 
-// export const addUsedEquipments = async (req, res) => {
-//   try {
-//     // Extract equipment details from request body
-//     const {
-//       location,
-//       name,
-//       brand,
-//       asking_price,
-//       accept_offers,
-//       equipment_type,
-//       certification,
-//       year_purchased,
-//       warranty,
-//       reason_for_selling,
-//       shipping,
-//       description,
-//       userId,
-//     } = req.body;
-//     const image = req.file; // Handle file upload
-
-//     // Validate required fields
-//    if(!location){
-//     return res.status(400).json({error:'location is required'})
-//    }
-//    if(!name){
-//     return res.status(400).json({error:'Equipment Name is required'})
-//    }
-//    if(!brand){
-//     return res.status(400).json({error:'brand is required'})
-//    }
-//    if(!asking_price){
-//     return res.status(400).json({error:'asking_price is required'})
-//    }
-//    if(!accept_offers){
-//     return res.status(400).json({error:'accept_offers is required'})
-//    }
-//    if(!equipment_type){
-//     return res.status(400).json({error:'equipment_type is required'})
-//    }
-//    if(!certification){
-//     return res.status(400).json({error:'certification is required'})
-//    }
-//    if(!year_purchased){
-//     return res.status(400).json({error:'year_purchased is required'})
-//    }
-//    if(!warranty){
-//     return res.status(400).json({error:'warranty is required'})
-//    }
-//    if(!reason_for_selling){
-//     return res.status(400).json({error:'reason_for_selling is required'})
-//    }
-//    if(!shipping){
-//     return res.status(400).json({error:'shipping is required'})
-//    }
-//    if(!description){
-//     return res.status(400).json({error:'description is required'})
-//    }
-//    if(!image){
-//     return res.status(400).json({error:'image is required'})
-//    }
-   
- 
-
-
-//     // Step 1: Create Product in Shopify
-//     const shopifyPayload = {
-//       product: {
-//         title: name, // Use equipment name as the title
-//         body_html: description, // Leave body_html empty, as we'll use metafields for details
-//         vendor: brand, // Use brand as the vendor
-//         product_type: 'used equipments', // Use equipment type as the product type
-//         variants: [{ price: asking_price.toString() }], // Price should be a string
-//       },
-//     };
-
-//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-//     const productResponse = await shopifyRequest(
-//       shopifyUrl,
-//       'POST',
-//       shopifyPayload
-//     );
-
-//     console.log('Product Response:', productResponse);
-
-//     const productId = productResponse.product.id;
-
-//     // Step 2: Create Structured Metafields for the Equipment Details
-//     const metafieldsPayload = [
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'location',
-//           value: location,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'brand',
-//           value: brand,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'description',
-//           value: description,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'asking_price',
-//           value: asking_price.toString(),
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'accept_offers',
-//           value: accept_offers ? 'true' : 'false',
-//           type: 'boolean',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'equipment_type',
-//           value: equipment_type,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'certification',
-//           value: certification,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'year_purchased',
-//           value: year_purchased.toString(),
-//           type: 'number_integer',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'warranty',
-//           value: warranty,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'reason_for_selling',
-//           value: reason_for_selling,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'shipping',
-//           value: shipping,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//     ];
-
-//     for (const metafield of metafieldsPayload) {
-//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
-//     }
-
-//     // Step 3: Upload Image to Shopify
-//     const cloudinaryImageUrl = image.path;
-//     // 'https://res.cloudinary.com/djocrwprs/image/upload/v1726029463/uploads/cejpbbglmdniw5ot49c4.png'; // Replace with the actual Cloudinary URL
-
-//     const imagePayload = {
-//       image: {
-//         src: cloudinaryImageUrl, // Use Cloudinary URL here
-//       },
-//     };
-
-//     const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-//     const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-
-//     const imageId = imageResponse.image.id;
-
-//     // Step 4: Save Product to MongoDB
-//     const newProduct = new productModel({
-//       id: productId,
-//       title: name,
-//       body_html: '', // Empty body_html as we use metafields for details
-//       vendor: brand,
-//       product_type: equipment_type,
-//       created_at: new Date(),
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       approved: productResponse.product.approved,
-//       images: [
-//         {
-//           id: imageId,
-//           product_id: productId,
-//           position: imageResponse.image.position,
-//           alt: 'Equipment Image',
-//           width: imageResponse.image.width,
-//           height: imageResponse.image.height,
-//           src: imageResponse.image.src,
-//         },
-//       ],
-//       image: {
-//         id: imageId,
-//         product_id: productId,
-//         position: imageResponse.image.position,
-//         alt: 'Equipment Image',
-//         width: imageResponse.image.width,
-//         height: imageResponse.image.height,
-//         src: imageResponse.image.src,
-//       },
-//       equipment: {
-//         location,
-//         name,
-//         brand,
-//         asking_price,
-//         accept_offers,
-//         equipment_type,
-//         certification,
-//         year_purchased,
-//         warranty,
-//         reason_for_selling,
-//         shipping,
-//         description,
-//       },
-//       userId: userId,
-//     });
-
-//     await newProduct.save();
-
-//     // Send a successful response
-//     res.status(201).json({
-//       message: 'Product successfully created and saved',
-//       product: newProduct,
-//     });
-//   } catch (error) {
-//     console.error('Error in addUsedEquipments function:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
 export const addNewEquipments = async (req, res) => {
   try {
     // Extract equipment details and action from request body
@@ -793,6 +534,7 @@ export const addNewEquipments = async (req, res) => {
     });
 
     await newProduct.save();
+    const expirationDate = user.subscription.expiresAt;
 
     // If the product is published, decrease user subscription quantity
     if (productStatus === 'active') {
@@ -811,14 +553,13 @@ export const addNewEquipments = async (req, res) => {
     res.status(201).json({
       message: `Product successfully created and ${productStatus === 'active' ? 'published' : 'saved as draft'}`,
       product: newProduct,
+      expiresAt:expirationDate
     });
   } catch (error) {
     console.error('Error in addNewEquipments function:', error);
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 
 export const addNewBusiness = async (req, res) => {
@@ -843,11 +584,13 @@ export const addNewBusiness = async (req, res) => {
       offeredServices,
       supportAndTraining,
       userId,
+      status,
     } = req.body;
 
     const image = req.file; // Handle file upload
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
-    const status='draft'
+    const productStatus = status === 'publish' ? 'active' : 'draft';
+
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!businessDescription) return res.status(400).json({ error: 'Business description is required.' });
@@ -875,7 +618,7 @@ export const addNewBusiness = async (req, res) => {
         product_type: 'Business Listing',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
         //status: status === 'inactive' ? 'draft' : 'active',
-        status:status
+        status:productStatus
       },
     };
 
@@ -982,18 +725,32 @@ export const addNewBusiness = async (req, res) => {
         supportAndTraining,
       },
       userId: userId,
-      status: status,
+      status: productStatus,
     });
 
     await newProduct.save();
+    const expirationDate = user.subscription.expiresAt;
+
+    if (productStatus === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) throw new Error('User not found');
+
+      if (user.subscription && user.subscription.quantity > 0) {
+        user.subscription.quantity -= 1; // Decrease subscription count
+        await user.save();
+      } else {
+        return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+      }
+    }
 
     // Send a successful response
     res.status(201).json({
-      message: 'Business listing successfully created and saved',
+      message: `Product successfully created and ${productStatus === 'active' ? 'published' : 'saved as draft'}`,
       product: newProduct,
+      expiresAt:expirationDate,
     });
   } catch (error) {
-    console.error('Error in addNewBusiness function:', error);
+    console.error('Error in addNewEquipments function:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1010,11 +767,12 @@ export const addNewJobListing = async (req, res) => {
       availability,
       requestedYearlySalary,
       userId,
+      status,
     } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-    const status='draft'
+    const productStatus = status === 'publish' ? 'active' : 'draft';
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
@@ -1031,7 +789,7 @@ export const addNewJobListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Job Listing', // Use a specific type for job listings
         variants: [{ price: requestedYearlySalary.toString() }], // Salary should be a string
-       status:status
+       status:productStatus
       },
     };
 
@@ -1109,18 +867,32 @@ export const addNewJobListing = async (req, res) => {
         image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
       }],
       userId: userId,
-      status: status, // Save the status (active/inactive)
+      status: productStatus, // Save the status (active/inactive)
     });
 
     await newJobListing.save();
+    const expirationDate = user.subscription.expiresAt;
+    // If the product is published, decrease user subscription quantity
+    if (productStatus === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) throw new Error('User not found');
+
+      if (user.subscription && user.subscription.quantity > 0) {
+        user.subscription.quantity -= 1; // Decrease subscription count
+        await user.save();
+      } else {
+        return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+      }
+    }
 
     // Send a successful response
     res.status(201).json({
-      message: 'Job listing successfully created and saved',
+      message: `Product successfully created and ${productStatus === 'active' ? 'published' : 'saved as draft'}`,
       product: newJobListing,
+      expiresAt:expirationDate
     });
   } catch (error) {
-    console.error('Error in addNewJobListing function:', error);
+    console.error('Error in addNewEquipments function:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1140,11 +912,12 @@ export const addNewProviderListing = async (req, res) => {
       offeredYearlySalary,
       offeredPositionDescription,
       userId,
+      status
              } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-const status='draft'
+    const productStatus = status === 'publish' ? 'active' : 'draft';
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
@@ -1173,7 +946,7 @@ const status='draft'
         vendor: location, // Use location as the vendor
         product_type: 'Provider Search Listing', // Use a specific type for provider search listings
         variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
-        status: status// Set Shopify status
+        status: productStatus// Set Shopify status
       },
     };
 
@@ -1288,20 +1061,33 @@ const status='draft'
         image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
       }],
       userId: userId,
-      status: status, // Save the status (active/inactive)
+      status: productStatus, // Save the status (active/inactive)
     });
 
     await newProviderListing.save();
+  // If the product is published, decrease user subscription quantity
+  if (productStatus === 'active') {
+    const user = await authModel.findById(userId);
+    if (!user) throw new Error('User not found');
 
-    // Send a successful response
-    res.status(201).json({
-      message: 'Provider listing successfully created and saved',
-      product: newProviderListing,
-    });
-  } catch (error) {
-    console.error('Error in addNewProviderListing function:', error);
-    res.status(500).json({ error: error.message });
+    if (user.subscription && user.subscription.quantity > 0) {
+      user.subscription.quantity -= 1; // Decrease subscription count
+      await user.save();
+    } else {
+      return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+    }
   }
+  const expirationDate=user.subscription.expiresAt
+  // Send a successful response
+  res.status(201).json({
+    message: `Product successfully created and ${productStatus === 'active' ? 'published' : 'saved as draft'}`,
+    product: newProviderListing,
+    expiresAt:expirationDate
+  });
+} catch (error) {
+  console.error('Error in addNewEquipments function:', error);
+  res.status(500).json({ error: error.message });
+}
 };
 
 
@@ -1320,11 +1106,12 @@ export const addRoomListing = async (req, res) => {
       wifiAvailable,
       otherDetails,
       userId,
+      status,
     } = req.body;
 
     // Handle file upload
     const image = req.file; // Handle file upload
-    const status='draft'
+    const productStatus = status === 'publish' ? 'active' : 'draft';
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
@@ -1362,7 +1149,7 @@ export const addRoomListing = async (req, res) => {
         vendor: location, // Use location as the vendor
         product_type: 'Room Listing', // Use a specific type for room listings
         variants: [{ price: monthlyRent.toString() }], // Rent should be a string
-        status: status, 
+        status: productStatus, 
       },
     };
 
@@ -1494,20 +1281,34 @@ export const addRoomListing = async (req, res) => {
         image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
       }],
       userId: userId,
-      status: status,
+      status: productStatus,
     });
 
     await newRoomListing.save();
+const expirationDate=user.subscription.expiresAt
+  // If the product is published, decrease user subscription quantity
+  if (productStatus === 'active') {
+    const user = await authModel.findById(userId);
+    if (!user) throw new Error('User not found');
 
-    // Send a successful response
-    res.status(201).json({
-      message: 'Room listing successfully created and saved',
-      product: newRoomListing,
-    });
-  } catch (error) {
-    console.error('Error in addRoomListing function:', error);
-    res.status(500).json({ error: error.message });
+    if (user.subscription && user.subscription.quantity > 0) {
+      user.subscription.quantity -= 1; // Decrease subscription count
+      await user.save();
+    } else {
+      return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+    }
   }
+
+  // Send a successful response
+  res.status(201).json({
+    message: `Product successfully created and ${productStatus === 'active' ? 'published' : 'saved as draft'}`,
+    product: newRoomListing,
+    expiresAt:expirationDate
+  });
+} catch (error) {
+  console.error('Error in addNewEquipments function:', error);
+  res.status(500).json({ error: error.message });
+}
 };
 
 // get product of specific user
@@ -1713,7 +1514,7 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check user's subscription quantity
-    if (!user.subscription || user.subscription.quantity <= 0) {
+    if (!user.subscription || user.subscription.quantity < 0) {
       console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
       return res.status(400).send('Insufficient quantity to publish product');
     }
