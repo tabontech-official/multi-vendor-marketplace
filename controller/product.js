@@ -1421,115 +1421,54 @@ export const productDelete = async (req, res) => {
 };
 
 
+
+
+
+
 export const publishProduct = async (req, res) => {
+  const { productId } = req.params;
+
   try {
-    const { productId } = req.params; // Shopify product ID
-    const { userId } = req.body;
-
-    // Validate IDs
-    if (!mongoose.isValidObjectId(userId)) {
-      console.error('Validation Error: Invalid user ID');
-      return res.status(400).send('Invalid user ID');
-    }
-
-    // Find user
-    const user = await authModel.findById(userId);
-    if (!user) {
-      console.error(`User not found: ${userId}`);
-      return res.status(404).send('User not found');
-    }
-
-    // Check subscription quantity
-    if (!user.subscription || typeof user.subscription.quantity !== 'number') {
-      console.error(`Invalid subscription data: ${user.subscription}`);
-      return res.status(400).send('Invalid subscription data');
-    }
-
-    console.log(`Current subscription quantity: ${user.subscription.quantity}`);
-
-    // Ensure quantity does not go below zero
-    if (user.subscription.quantity <= 0) {
-      console.error(`Insufficient quantity: ${user.subscription.quantity}`);
-      return res.status(400).send('Insufficient subscription credits to publish product');
-    }
-
-    // Find the product in Shopify
-    const shopifyProductResponse = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
-      },
-    });
-
-    if (!shopifyProductResponse.ok) {
-      const errorText = await shopifyProductResponse.text();
-      console.error(`Shopify API error for product ID ${productId}: ${errorText}`);
-      return res.status(shopifyProductResponse.status).send(`Failed to retrieve product from Shopify: ${errorText}`);
-    }
-
-    const shopifyProductData = await shopifyProductResponse.json();
-    const product = shopifyProductData.product;
-
-    if (!product) {
-      console.error(`Product not found in Shopify: ${productId}`);
-      return res.status(404).send('Product not found in Shopify');
-    }
-
-    // Proceed with publishing the product
-    user.subscription.quantity -= 1; // Decrement the subscription quantity
-    await user.save();
-
-    const shopifyUpdateData = {
+    // Step 1: Update product status in Shopify
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+    const shopifyPayload = {
       product: {
-        id: product.id,
-        title: product.title,
-        status: 'active', // Set the status to 'active'
+        id: productId,
+        status: 'active', // Set status to draft
       },
     };
 
-    const updateResponse = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${product.id}.json`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
-      },
-      body: JSON.stringify(shopifyUpdateData),
-    });
-
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text();
-      console.error(`Shopify API error for product ID ${product.id}: ${errorText}`);
-      return res.status(updateResponse.status).send(`Failed to update in Shopify: ${errorText}`);
+    const shopifyResponse = await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+    if (!shopifyResponse.product) {
+      return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
     }
 
-    // Update product status in local MongoDB
-    const localProduct = await productModel.findOne({ shopifyId: product.id });
-    if (localProduct) {
-      console.log(`Found local product: ${localProduct}`);
-      localProduct.status = 'active'; // Update the status
-      try {
-        await localProduct.save();
-        console.log(`Successfully updated local product status for ID: ${localProduct._id}`);
-      } catch (saveError) {
-        console.error('Error saving local product:', saveError);
-        return res.status(500).send('Failed to update local product status');
-      }
-    } else {
-      console.error(`Local product not found for Shopify ID: ${product.id}`);
-      return res.status(404).send('Local product not found in MongoDB');
-    }
-    const expirationDate = user.subscription.expiresAt;
+    // Step 2: Update product status in MongoDB
+    const updatedProduct = await productModel.findOneAndUpdate(
+      { id: productId },
+      { status: 'active' },
+      { new: true }
+    );
 
-    res.status(200).json({
-      message: 'Product published successfully',
-      expiresAt: expirationDate,
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found in database.' });
+    }
+
+    // Step 3: Send response
+    return res.status(200).json({
+      message: 'Product successfully published.',
+      product: updatedProduct,
     });
   } catch (error) {
-    console.error('Unexpected error while publishing product:', error);
-    res.status(500).send(`Error publishing product: ${error.message}`);
+    console.error('Error in unpublishProduct function:', error);
+    return res.status(500).json({ error: error.message });
   }
 };
+
+
+
+
+
 
 
 
