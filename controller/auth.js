@@ -789,6 +789,29 @@ export const fetchUserData = async (req, res) => {
   }
 };
 
+export const getUserSubscriptionQuantity = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Fetch the user by userId
+    const user = await authModel.findById(userId);
+    
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Return the quantity from the user's subscription
+    return res.status(200).json({
+      quantity: user.subscription.quantity,
+    });
+  } catch (error) {
+    console.error('Error fetching user subscription quantity:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
 // export const checkSubscription = async (req, res) => {
 //   try {
 //     const { userId } = req.params;

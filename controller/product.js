@@ -1510,17 +1510,6 @@ export const publishProduct = async (req, res) => {
 
 
 
-export const deletAllProduct=async(req,res)=>{
-  try {
-    productModel.deleteMany().then(result=>{
-      if(result){
-        res.status(200).send('sucessfully deleted')
-      }
-    })
-  } catch (error) {
-    
-  }
-}
 
 
 export const newPublishProduct = async (req, res) => {
@@ -1610,4 +1599,55 @@ export const newPublishProduct = async (req, res) => {
   }
 };
 
+export const unpublishProduct = async (req, res) => {
+  const { productId } = req.params;
 
+  try {
+    // Step 1: Update product status in Shopify
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+    const shopifyPayload = {
+      product: {
+        id: productId,
+        status: 'draft', // Set status to draft
+      },
+    };
+
+    const shopifyResponse = await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+    if (!shopifyResponse.product) {
+      return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+    }
+
+    // Step 2: Update product status in MongoDB
+    const updatedProduct = await productModel.findOneAndUpdate(
+      { id: productId },
+      { status: 'draft' },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found in database.' });
+    }
+
+    // Step 3: Send response
+    return res.status(200).json({
+      message: 'Product successfully unpublished.',
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error('Error in unpublishProduct function:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const deletAllProduct=async(req,res)=>{
+  try {
+    productModel.deleteMany().then(result=>{
+      if(result){
+        res.status(200).send('sucessfully deleted')
+      }
+    })
+  } catch (error) {
+    
+  }
+}
