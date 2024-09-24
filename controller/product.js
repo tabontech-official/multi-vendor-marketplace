@@ -534,8 +534,7 @@ export const addNewEquipments = async (req, res) => {
     });
 
     await newProduct.save();
-    const expirationDate = user.subscription.expiresAt;
-
+    
     // If the product is published, decrease user subscription quantity
     if (productStatus === 'active') {
       const user = await authModel.findById(userId);
@@ -548,6 +547,7 @@ export const addNewEquipments = async (req, res) => {
         return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
       }
     }
+    const expirationDate = user.subscription.expiresAt;
 
     // Send a successful response
     res.status(201).json({
@@ -729,7 +729,6 @@ export const addNewBusiness = async (req, res) => {
     });
 
     await newProduct.save();
-    const expirationDate = user.subscription.expiresAt;
 
     if (productStatus === 'active') {
       const user = await authModel.findById(userId);
@@ -742,6 +741,7 @@ export const addNewBusiness = async (req, res) => {
         return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
       }
     }
+    const expirationDate = user.subscription.expiresAt;
 
     // Send a successful response
     res.status(201).json({
