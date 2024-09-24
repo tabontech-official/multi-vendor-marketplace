@@ -280,7 +280,7 @@ export const addUsedEquipments = async (req, res) => {
         title: name,
         body_html: description,
         vendor: brandValue,
-        product_type: 'used equipments',
+        product_type: 'Used Equipments',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
         status: status,
       },
@@ -433,7 +433,7 @@ export const addNewEquipments = async (req, res) => {
         title: name,
         body_html: descriptionValue,
         vendor: brandValue,
-        product_type: 'New Equipment',
+        product_type: 'New Equipments',
         variants: [{ price: salePriceValue.toFixed(2).toString() }],
         status: productStatus,
       },
@@ -612,7 +612,7 @@ export const addNewBusiness = async (req, res) => {
         title: name,
         body_html: businessDescription,
         vendor: location,
-        product_type: 'Business Listing',
+        product_type: 'Businesses To Purchased',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
         status: productStatus,
       },
@@ -786,7 +786,7 @@ export const addNewJobListing = async (req, res) => {
         title: name,
         body_html: positionRequestedDescription,
         vendor: location,
-        product_type: 'Job Listing',
+        product_type: 'Providers Available',
         variants: [{ price: requestedYearlySalary.toString() }],
         status: productStatus,
       },
@@ -813,12 +813,16 @@ export const addNewJobListing = async (req, res) => {
 
     // Step 3: Upload Image to Shopify if provided
     let imageId = null;
+    let imageSrc = null; // Variable to hold the image source
+    let imageResponse; // Declare here to use in later conditions
+
     if (image) {
       const cloudinaryImageUrl = image.path; // Assuming image.path is the URL
       const imagePayload = { image: { src: cloudinaryImageUrl } };
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload); // Assign response
       imageId = imageResponse.image.id;
+      imageSrc = imageResponse.image.src; // Store image source for later use
     }
 
     // Step 4: Save Product to MongoDB
@@ -833,11 +837,11 @@ export const addNewJobListing = async (req, res) => {
       images: imageId ? [{
         id: imageId,
         product_id: productId,
-        position: imageResponse.image.position,
+        position: imageResponse ? imageResponse.image.position : null,
         alt: 'Job Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
+        width: imageResponse ? imageResponse.image.width : null,
+        height: imageResponse ? imageResponse.image.height : null,
+        src: imageSrc,
       }] : [],
       jobListings: [{
         location,
@@ -846,7 +850,7 @@ export const addNewJobListing = async (req, res) => {
         positionRequestedDescription,
         availability,
         requestedYearlySalary,
-        image: imageId ? imageResponse.image.src : null,
+        image: imageSrc || null,
       }],
       userId,
       status: productStatus,
@@ -889,6 +893,9 @@ export const addNewJobListing = async (req, res) => {
 };
 
 
+
+
+
 export const addNewProviderListing = async (req, res) => {
   console.log('Request Body:', req.body);
   console.log('Uploaded File:', req.file);
@@ -921,7 +928,7 @@ export const addNewProviderListing = async (req, res) => {
         title: qualificationRequested, // Use qualification requested as the title
         body_html: offeredPositionDescription, // Use offered position description as body_html
         vendor: location, // Use location as the vendor
-        product_type: 'Provider Search Listing', // Use a specific type for provider search listings
+        product_type: 'Provider Needed', // Use a specific type for provider search listings
         variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
         status: productStatus, // Set Shopify status
       },
@@ -1066,7 +1073,7 @@ export const addRoomListing = async (req, res) => {
         title: location, // Use location as the title
         body_html: otherDetails, // Use other details as body_html
         vendor: location, // Use location as the vendor
-        product_type: 'Room Listing', // Use a specific type for room listings
+        product_type: 'Spa Room For Rent', // Use a specific type for room listings
         variants: [{ price: monthlyRent.toString() }], // Rent should be a string
         status: productStatus, 
       },

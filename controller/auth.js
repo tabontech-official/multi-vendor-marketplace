@@ -939,3 +939,24 @@ export const getUserData = async (req, res) => {
     res.status(500).send({ message: error.message });
   }
 };
+
+
+export const forgotPassword=async(req,res)=>{
+  try {
+    const customerData = req.body;
+
+    // Assuming you're storing customer emails or IDs in MongoDB
+    const customer = await authModel.findOne({ email: customerData.email });
+
+    if (customer) {
+      // Update your MongoDB record with the new password or any other details
+      customer.password = customerData.password; // Ensure you hash this password
+      await customer.save();
+    }
+
+    res.status(200).send('Webhook received');
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).send('Internal Server Error');
+  }
+}

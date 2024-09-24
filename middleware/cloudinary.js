@@ -13,7 +13,7 @@ cloudinary.v2.config({
     cloudinary: cloudinary.v2,
     params: {
       folder: 'uploads', // specify the folder where images will be uploaded
-      allowed_formats: ['jpg', 'png', 'jpeg'], // specify allowed formats
+      allowed_formats: ['jpg', 'png', 'jpeg','pdf'], // specify allowed formats
     },
   });
   

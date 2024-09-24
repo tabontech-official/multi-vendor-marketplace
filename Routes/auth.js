@@ -10,7 +10,8 @@ import {
   editProfile,
   fetchUserData,
   getUserData,
-  getUserSubscriptionQuantity
+  getUserSubscriptionQuantity,
+  forgotPassword
 } from '../controller/auth.js';
 import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -19,6 +20,7 @@ const authRouter = express.Router();
 
 authRouter.post('/signIn', signIn);
 authRouter.post('/signUp', signUp);
+authRouter.post('/forgot',forgotPassword)
 // authRouter.put('/update/:shopifyId',updateUser)
 authRouter.post('/logout/:userId', logout);
 authRouter.post('/newSignUp', newSignUp);
