@@ -1423,7 +1423,7 @@ export const productDelete = async (req, res) => {
 
 export const publishProduct = async (req, res) => {
   try {
-    const { productId } = req.params;
+    const { productId } = req.params; // Shopify product ID
     const { userId } = req.body;
 
     // Validate IDs
@@ -1484,7 +1484,7 @@ export const publishProduct = async (req, res) => {
       product: {
         id: product.id,
         title: product.title,
-        status: 'active',
+        status: 'active', // Set the status to 'active'
       },
     };
 
@@ -1506,13 +1506,19 @@ export const publishProduct = async (req, res) => {
     // Update product status in local MongoDB
     const localProduct = await productModel.findOne({ shopifyId: product.id });
     if (localProduct) {
+      console.log(`Found local product: ${localProduct}`);
       localProduct.status = 'active'; // Update the status
-      await localProduct.save();
+      try {
+        await localProduct.save();
+        console.log(`Successfully updated local product status for ID: ${localProduct._id}`);
+      } catch (saveError) {
+        console.error('Error saving local product:', saveError);
+        return res.status(500).send('Failed to update local product status');
+      }
     } else {
       console.error(`Local product not found for Shopify ID: ${product.id}`);
-      // Optionally handle the case where the local product is not found
+      return res.status(404).send('Local product not found in MongoDB');
     }
-
     const expirationDate = user.subscription.expiresAt;
 
     res.status(200).json({
@@ -1524,6 +1530,9 @@ export const publishProduct = async (req, res) => {
     res.status(500).send(`Error publishing product: ${error.message}`);
   }
 };
+
+
+
 
 
 export const newPublishProduct = async (req, res) => {

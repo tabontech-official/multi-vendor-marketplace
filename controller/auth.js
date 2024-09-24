@@ -792,6 +792,11 @@ export const fetchUserData = async (req, res) => {
 export const getUserSubscriptionQuantity = async (req, res) => {
   const { userId } = req.params;
 
+  // Validate userId format
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ error: 'Invalid user ID format.' });
+  }
+
   try {
     // Fetch the user by userId
     const user = await authModel.findById(userId);
@@ -801,15 +806,22 @@ export const getUserSubscriptionQuantity = async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Return the quantity from the user's subscription
+    // Check if subscription exists
+    if (!user.subscription || !user.subscription.quantity || !user.subscription.expiresAt) {
+      return res.status(400).json({ error: 'Subscription data is incomplete.' });
+    }
+
+    // Return the quantity and expiry date from the user's subscription
     return res.status(200).json({
       quantity: user.subscription.quantity,
+      expiresAt: user.subscription.expiresAt
     });
   } catch (error) {
     console.error('Error fetching user subscription quantity:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal server error. Please try again later.' });
   }
 };
+
 
 
 // export const checkSubscription = async (req, res) => {
