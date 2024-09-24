@@ -1514,7 +1514,7 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check user's subscription quantity
-    if (!user.subscription || user.subscription.quantity < 0) {
+    if (!user.subscription || user.subscription.quantity <= 1) {
       console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
       return res.status(400).send('Insufficient quantity to publish product');
     }
