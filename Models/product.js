@@ -192,7 +192,7 @@ const productSchema = new mongoose.Schema(
       enum: ['draft', 'active', 'inactive'],
 
     },
-    subscriptionEndDate: { type: Date },
+    expiresAt: { type: Date },
   },
   {
     timestamps: true,
