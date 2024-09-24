@@ -1429,12 +1429,35 @@ export const publishProduct = async (req, res) => {
   const { productId } = req.params;
 
   try {
-    // Step 1: Update product status in Shopify
+    // Step 1: Fetch the local product to get the associated userId
+    const localProduct = await productModel.findOne({ id: productId });
+    if (!localProduct) {
+      return res.status(404).json({ error: 'Product not found in database.' });
+    }
+
+    const { userId } = localProduct; // Assuming the product model has a userId field
+
+    // Step 2: Fetch user from MongoDB
+    const user = await authModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Step 3: Check subscription quantity
+    if (!user.subscription || user.subscription.quantity <= 0) {
+      return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+    }
+
+    // Step 4: Decrement the subscription quantity
+    user.subscription.quantity -= 1;
+    await user.save();
+
+    // Step 5: Update product status in Shopify
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
     const shopifyPayload = {
       product: {
         id: productId,
-        status: 'active', // Set status to draft
+        status: 'active', // Set status to active
       },
     };
 
@@ -1443,7 +1466,7 @@ export const publishProduct = async (req, res) => {
       return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
     }
 
-    // Step 2: Update product status in MongoDB
+    // Step 6: Update product status in MongoDB
     const updatedProduct = await productModel.findOneAndUpdate(
       { id: productId },
       { status: 'active' },
@@ -1454,13 +1477,14 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    // Step 3: Send response
+    // Step 7: Send response
     return res.status(200).json({
       message: 'Product successfully published.',
       product: updatedProduct,
+      expiresAt: user.subscription.expiresAt, // Optionally include the expiration date
     });
   } catch (error) {
-    console.error('Error in unpublishProduct function:', error);
+    console.error('Error in publishProduct function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
