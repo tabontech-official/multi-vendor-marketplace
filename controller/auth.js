@@ -808,7 +808,10 @@ export const getUserSubscriptionQuantity = async (req, res) => {
 
     // Check if subscription exists
     if (!user.subscription || !user.subscription.quantity || !user.subscription.expiresAt) {
-      return res.status(400).json({ error: 'Subscription data is incomplete.' });
+      return res.status(400).json({ 
+        message:'Insuffcient credits',
+       
+       });
     }
 
     // Return the quantity and expiry date from the user's subscription
