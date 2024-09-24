@@ -664,33 +664,35 @@ export const addNewEquipments = async (req, res) => {
       shipping,
       description,
       userId,
-      
     } = req.body;
 
-    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
-    const status='inactive'
     // Validate required fields
-    const brandValue = brand || 'medspa';
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Title is required.' });
+
+    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
     if (isNaN(salePriceValue)) return res.status(400).json({ error: 'Sale price must be a number.' });
-    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
-    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
-    if (!year_manufactured) return res.status(400).json({ error: 'Year manufactured is required.' });
-    if (!warranty) return res.status(400).json({ error: 'Warranty is required.' });
-    if (!training) return res.status(400).json({ error: 'Training is required.' });
-    if (!shipping) return res.status(400).json({ error: 'Shipping details are required.' });
-    if (!description) return res.status(400).json({ error: 'Description is required.' });
+
+    const status = 'draft';
+    const brandValue = brand || 'medspa';
+    
+    // Optional fields with defaults
+    const equipmentTypeValue = equipment_type || 'Unknown';
+    const certificationValue = certification || 'Not specified';
+    const yearManufacturedValue = year_manufactured ? parseInt(year_manufactured, 10) : 0; // Ensure this is an integer
+    const warrantyValue = warranty || 'Not specified';
+    const trainingValue = training || 'Not specified';
+    const shippingValue = shipping || 'Not specified';
+    const descriptionValue = description || 'No description provided.';
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
         title: name,
-        body_html: description,
+        body_html: descriptionValue,
         vendor: brandValue,
         product_type: 'New Equipment',
         variants: [{ price: salePriceValue.toFixed(2).toString() }],
-        status: status ,
+        status: status,
       },
     };
 
@@ -701,16 +703,16 @@ export const addNewEquipments = async (req, res) => {
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
       { metafield: { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'description', value: description, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'description', value: descriptionValue, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'location', value: location || 'Unknown', type: 'single_line_text_field' }},
       { metafield: { namespace: 'fold_tech', key: 'brand', value: brandValue, type: 'single_line_text_field' }},
       { metafield: { namespace: 'fold_tech', key: 'sale_price', value: salePriceValue.toFixed(2), type: 'number_integer' }},
-      { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipment_type, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'certification', value: certification, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'year_manufactured', value: year_manufactured.toString(), type: 'number_integer' }},
-      { metafield: { namespace: 'fold_tech', key: 'warranty', value: warranty, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'training', value: training, type: 'multi_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'shipping', value: shipping, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipmentTypeValue, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'certification', value: certificationValue, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'year_manufactured', value: yearManufacturedValue, type: 'number_integer' }},
+      { metafield: { namespace: 'fold_tech', key: 'warranty', value: warrantyValue, type: 'single_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'training', value: trainingValue, type: 'multi_line_text_field' }},
+      { metafield: { namespace: 'fold_tech', key: 'shipping', value: shippingValue, type: 'single_line_text_field' }},
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -720,7 +722,7 @@ export const addNewEquipments = async (req, res) => {
 
     // Step 3: Upload Image to Shopify if provided
     let imageId = null;
-    let imageResponse = null; // Define the variable here
+    let imageResponse = null;
 
     if (req.file) {
       const cloudinaryImageUrl = req.file.path; // Use the uploaded image URL or path here
@@ -772,17 +774,17 @@ export const addNewEquipments = async (req, res) => {
         src: imageResponse.image.src,
       } : null,
       equipment: {
-        location,
+        location: location || 'Unknown',
         name,
         brand: brandValue,
         sale_price: salePriceValue.toFixed(2),
-        equipment_type,
-        certification,
-        year_manufactured,
-        warranty,
-        training,
-        shipping,
-        description,
+        equipment_type: equipmentTypeValue,
+        certification: certificationValue,
+        year_manufactured: yearManufacturedValue,
+        warranty: warrantyValue,
+        training: trainingValue,
+        shipping: shippingValue,
+        description: descriptionValue,
       },
       userId: userId,
       status: status,
@@ -828,7 +830,7 @@ export const addNewBusiness = async (req, res) => {
 
     const image = req.file; // Handle file upload
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
-    const status='inactive'
+    const status='draft'
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!businessDescription) return res.status(400).json({ error: 'Business description is required.' });
@@ -995,7 +997,7 @@ export const addNewJobListing = async (req, res) => {
 
     // Handle file upload
     const image = req.file; // Handle file upload
-    const status='inactive'
+    const status='draft'
     // Validate required fields
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
@@ -1125,7 +1127,7 @@ export const addNewProviderListing = async (req, res) => {
 
     // Handle file upload
     const image = req.file; // Handle file upload
-const status='inactive'
+const status='draft'
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
@@ -1305,7 +1307,7 @@ export const addRoomListing = async (req, res) => {
 
     // Handle file upload
     const image = req.file; // Handle file upload
-    const status='inactive'
+    const status='draft'
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
@@ -1561,53 +1563,43 @@ export const updateListing = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Find product in MongoDB
+    // Find the document in MongoDB
     const product = await productModel.findById(id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
+    console.log('Shopify product ID:', product.id);
 
-    // Check if the product has a Shopify ID
-    if (!product.id) {
-      return res.status(400).json({ message: 'Shopify ID is not available for this product' });
-    }
+    // Prepare the update data for MongoDB
+    const updateData = req.body;
 
-    // Prepare data for MongoDB update
-    const updateData = { $set: req.body };
-
-    // Update in MongoDB
-    const updatedProduct = await productModel.findByIdAndUpdate(id, updateData, { new: true });
+    // Update the document in MongoDB
+    const updatedProduct = await productModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
 
     // Prepare data for Shopify
     const shopifyData = {
       product: {
-        id: product.id,
-        ...req.body, // Only include fields you want to update
-      }
+        id: product.id, // Assuming the Shopify ID is stored in product.id
+        ...updateData, // Include the fields to be updated
+      },
     };
 
     // Construct the Shopify URL
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${shopifyData.product.id}.json`;
-
-    // Log the request to Shopify for debugging
-    console.log('Updating Shopify product with data:', shopifyData);
-
-    // Update in Shopify using Authorization header
+    console.log('Shopify URL:', shopifyUrl);
+    // Update in Shopify
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
       headers: {
         'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(shopifyData)
+      body: JSON.stringify(shopifyData),
     });
 
     if (!response.ok) {
       return res.status(500).json({ message: 'Failed to update product in Shopify', details: await response.text() });
     }
-
-    // Log the updated product data
-    console.log('Updated Product Data:', updatedProduct);
 
     // Send successful response
     res.status(200).json({
@@ -1775,6 +1767,109 @@ export const publishProduct = async (req, res) => {
 };
 
 
+export const deletAllProduct=async(req,res)=>{
+  try {
+    productModel.deleteMany().then(result=>{
+      if(result){
+        res.status(200).send('sucessfully deleted')
+      }
+    })
+  } catch (error) {
+    
+  }
+}
 
+
+export const newPublishProduct = async (req, res) => {
+  try {
+    const { productId } = req.params; // Get product ID from request parameters
+    const { userId } = req.body; // Get user ID from request body
+
+    // Validate productId and userId
+    if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(userId)) {
+      console.error('Validation Error: Invalid product ID or user ID');
+      return res.status(400).send('Invalid product ID or user ID');
+    }
+
+    // Find the user by ID
+    const user = await authModel.findById(userId);
+    if (!user) {
+      console.error(`User not found: ${userId}`);
+      return res.status(404).send('User not found');
+    }
+
+    // Check user's subscription quantity
+    let productStatus = 'draft'; // Default to draft status
+    if (user.subscription && user.subscription.quantity > 0) {
+      productStatus = 'active'; // Set to active if quantity is greater than zero
+    } else {
+      console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
+    }
+
+    // Find the product in your database
+    const product = await productModel.findById(productId);
+    if (!product) {
+      console.error(`Product not found: ${productId}`);
+      return res.status(404).send('Product not found or missing required fields');
+    }
+
+    // Log product details
+    console.log('Found product:', product);
+
+    // Get the Shopify ID from the product
+    const id = product.id; // Ensure shopifyId is correctly stored in the product
+
+    // Prepare Shopify API request data
+    const shopifyUpdateData = {
+      product: {
+        id: id, // Use the correct shopifyId
+        title: product.title, // Ensure title is included
+        status: productStatus, // Use the determined status
+      },
+    };
+
+    console.log('Shopify Update Data:', shopifyUpdateData); // Debugging line
+
+    // Create Basic Auth header
+    const basicAuth = Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64');
+
+    // Update the product in Shopify
+    const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${id}.json`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${basicAuth}`,
+      },
+      body: JSON.stringify(shopifyUpdateData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Shopify API error for product ID ${id}: ${errorText}`); // Log detailed error
+      return res.status(response.status).send(`Failed to update in Shopify: ${errorText}`);
+    }
+
+    // Update product status in local database
+    product.status = productStatus;
+    await product.save();
+
+    // If the product is published with active status, decrease user subscription quantity
+    if (productStatus === 'active') {
+      user.subscription.quantity -= 1;
+      await user.save();
+    }
+
+    // Fetch the expiration date from the user's subscription
+    const expirationDate = user.subscription.expiresAt;
+
+    res.status(200).json({
+      message: 'Product published successfully in both database and Shopify',
+      expiresAt: expirationDate,
+    });
+  } catch (error) {
+    console.error('Unexpected error while publishing product:', error);
+    res.status(500).send('Error publishing product');
+  }
+};
 
 
