@@ -1537,58 +1537,48 @@ export const productDelete = async (req, res) => {
 
 export const publishProduct = async (req, res) => {
   try {
-    const { productId } = req.params; // Get product ID from request parameters
-    const { userId } = req.body; // Get user ID from request body
+    const { productId } = req.params;
+    const { userId } = req.body;
 
-    // Validate productId and userId
+    // Validate IDs
     if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(userId)) {
       console.error('Validation Error: Invalid product ID or user ID');
       return res.status(400).send('Invalid product ID or user ID');
     }
 
-    // Find the user by ID
+    // Find user
     const user = await authModel.findById(userId);
     if (!user) {
       console.error(`User not found: ${userId}`);
       return res.status(404).send('User not found');
     }
 
-    // Check user's subscription quantity
-    if (!user.subscription || user.subscription.quantity <= 1) {
+    // Check subscription quantity
+    if (!user.subscription || user.subscription.quantity <= 0) {
       console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
       return res.status(400).send('Insufficient quantity to publish product');
     }
 
-    // Find the product in your database
+    // Find product
     const product = await productModel.findById(productId);
     if (!product) {
       console.error(`Product not found: ${productId}`);
       return res.status(404).send('Product not found or missing required fields');
     }
 
-    // Log product details
-    console.log('Found product:', product);
+    const shopifyId = product.id;
 
-    // Get the Shopify ID from the product
-    const id=product.id; // Ensure shopifyId is correctly stored in the product
-    // Debugging line
-
-    // Prepare Shopify API request data
     const shopifyUpdateData = {
       product: {
-        id: id, // Use the correct shopifyId
-        title: product.title, // Ensure title is included
-        status: 'active', // Set status to active for publishing
+        id: shopifyId,
+        title: product.title,
+        status: 'active',
       },
     };
 
-    console.log('Shopify Update Data:', shopifyUpdateData); // Debugging line
-
-    // Create Basic Auth header
     const basicAuth = Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64');
 
-    // Update the product in Shopify
-    const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${id}.json`, {
+    const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${shopifyId}.json`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -1599,30 +1589,28 @@ export const publishProduct = async (req, res) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Shopify API error for product ID ${id}: ${errorText}`); // Log detailed error
+      console.error(`Shopify API error for product ID ${shopifyId}: ${errorText}`);
       return res.status(response.status).send(`Failed to update in Shopify: ${errorText}`);
     }
 
-    // Update product status to 'active' in local database after successful Shopify update
     product.status = 'active';
     await product.save();
 
-    // Decrease user subscription quantity
     user.subscription.quantity -= 1;
     await user.save();
 
-    // Fetch the expiration date from the user's subscription
     const expirationDate = user.subscription.expiresAt;
 
     res.status(200).json({
-      message: 'Product published successfully in both database and Shopify',
+      message: 'Product published successfully',
       expiresAt: expirationDate,
     });
   } catch (error) {
     console.error('Unexpected error while publishing product:', error);
-    res.status(500).send('Error publishing product');
+    res.status(500).send(`Error publishing product: ${error.message}`);
   }
 };
+
 
 
 export const deletAllProduct=async(req,res)=>{
