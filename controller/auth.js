@@ -954,7 +954,7 @@ export const forgotPassword=async(req,res)=>{
       await customer.save();
     }
 
-    res.status(200).send('Webhook received');
+    res.status(200).send('sucessfully updated data');
   } catch (error) {
     console.error('Error processing webhook:', error);
     res.status(500).send('Internal Server Error');
