@@ -524,25 +524,49 @@ export const addNewEquipments = async (req, res) => {
     await newProduct.save();
 
     // If the product is published, decrease user subscription quantity
-    if (productStatus === 'active') {
+    if (status === 'active') {
       const user = await authModel.findById(userId);
       if (!user) throw new Error('User not found');
 
-      if (user.subscription && user.subscription.quantity > 0) {
-        user.subscription.quantity -= 1; // Decrease subscription count
-        await user.save();
-      } else {
-        return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
+      // Check subscription quantity
+      if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
       }
 
-      // Fetch the expiration date
-      const expirationDate = user.subscription.expiresAt;
+      // Step 5: Decrement the subscription quantity
+      user.subscription.quantity -= 1;
+      await user.save();
+
+      // Step 6: Update product status in Shopify
+      const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+      const shopifyUpdatePayload = {
+        product: {
+          id: productId,
+          status: 'active', // Set status to active
+        },
+      };
+
+      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      if (!shopifyResponse.product) {
+        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+      }
+
+      // Step 7: Update product status in MongoDB
+      const updatedProduct = await productModel.findOneAndUpdate(
+        { id: productId },
+        { status: 'active', expiresAt: user.subscription.expiresAt },
+        { new: true }
+      );
+
+      if (!updatedProduct) {
+        return res.status(404).json({ error: 'Product not found in database.' });
+      }
 
       // Send a successful response
       return res.status(201).json({
         message: 'Product successfully created and published.',
-        product: newProduct,
-        expiresAt: expirationDate,
+        product: updatedProduct,
+        expiresAt: user.subscription.expiresAt,
       });
     }
 
@@ -558,6 +582,8 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+    // If the product is saved as draft
+  
 
 
 
