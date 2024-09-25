@@ -431,6 +431,7 @@ export const addNewEquipments = async (req, res) => {
         product_type: 'New Equipments',
         variants: [{ price: salePriceValue.toFixed(2).toString() }],
         status: productStatus,
+         published_scope: 'global',
       },
     };
 
@@ -543,7 +544,7 @@ export const addNewEquipments = async (req, res) => {
         product: {
           id: productId,
           status: 'active',
-          published_scope: 'web', // Set status to active
+           // Set status to active
         },
       };
 
