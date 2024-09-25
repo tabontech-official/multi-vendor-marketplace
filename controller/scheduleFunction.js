@@ -8,7 +8,7 @@ export const productSubscriptionExpiration = () => {
         // Update products with expired subscriptions
         const result = await productModel.updateMany(
           { expiresAt: { $lte: currentDate }, status: 'active' }, // Check for active products only
-          { $set: { status: 'inactive' } }
+          { $set: { status: 'draft' } }
         );
   
         console.log(`Updated ${result.modifiedCount} products to inactive status.`);
