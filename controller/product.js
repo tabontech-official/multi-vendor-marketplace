@@ -1539,6 +1539,9 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
+
+
+
 const verifyWebhook = (req) => {
   const hmac = req.headers['x-shopify-hmac-sha256'];
   const body = JSON.stringify(req.body);
@@ -1606,7 +1609,8 @@ export const publishProduct = async (req, res) => {
     const shopifyPayload = {
       product: {
         id: productId,
-        status: 'active', // Set status to active
+        status: 'active',
+        published_scope: 'global', // Set status to active
       },
     };
 
