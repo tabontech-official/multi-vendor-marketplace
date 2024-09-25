@@ -1542,7 +1542,7 @@ export const deleteProduct = async (req, res) => {
 const verifyWebhook = (req) => {
   const hmac = req.headers['x-shopify-hmac-sha256'];
   const body = JSON.stringify(req.body);
-  const digest = crypto.createHmac('sha256', process.env.SHOPIFY_API_SECRET)
+  const digest = crypto.createHmac('sha256', process.env.SHOPIFY_API_KEY)
     .update(body, 'utf8', 'hex')
     .digest('base64');
 
