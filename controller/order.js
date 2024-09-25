@@ -236,3 +236,12 @@ export const getOrderById = async (req, res) => {
         res.status(500).send({ message: 'Error fetching orders' });
     }
 };
+
+
+export const deleteUser=async(req,res)=>{
+  orderModel.deleteMany().then(result=>{
+    if(result){
+      res.status(200).send('delted')
+    }
+  })
+}

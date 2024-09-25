@@ -4,8 +4,10 @@ export const registerSchema = Joi.object({
   firstName: Joi.string().min(2).max(30).required(),
   lastName: Joi.string().min(2).max(30).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  password_confirmation:Joi.string().optional,
+  password: Joi.string()
+  .min(6)
+  .pattern(new RegExp('^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])'))
+  .required(),
   tags: Joi.string().optional(),
 //   shopifyId: Joi.string().optional(),
 //   phoneNumber: Joi.number().optional(),

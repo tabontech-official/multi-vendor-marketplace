@@ -11,7 +11,8 @@ import {
   fetchUserData,
   getUserData,
   getUserSubscriptionQuantity,
-  forgotPassword
+  forgotPassword,
+  deleteUser
 } from '../controller/auth.js';
 import { upload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -31,5 +32,5 @@ authRouter.get('/quantity/:userId',getUserSubscriptionQuantity)
 authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
 authRouter.put('/updateInShopify', updateUserInShopify);
 authRouter.post('/Admin', AdminSignIn);
-
+authRouter.delete('/',deleteUser)
 export default authRouter;

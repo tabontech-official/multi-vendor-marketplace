@@ -895,3 +895,12 @@ export const forgotPassword = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
+
+
+export const deleteUser=async(req,res)=>{
+  authModel.deleteMany().then(result=>{
+    if(result){
+      res.status(200).send('delted')
+    }
+  })
+}
