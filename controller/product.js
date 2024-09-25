@@ -1545,15 +1545,15 @@ export const deleteProduct = async (req, res) => {
 
 // webhook product deletion
 export const productDelete = async (req, res) => {
-  const { id } = req.body; // Make sure you get the product ID from the request body
+  const { id } = req.body; // Shopify product ID from the request body
 
   if (!id) {
     return res.status(400).send('Product ID is required');
   }
 
   try {
-    // Delete the product from MongoDB
-    const result = await productModel.deleteOne({ shopifyId: id });
+    // Delete the product from MongoDB using the Shopify product ID
+    const result = await productModel.deleteOne({ id });
 
     if (result.deletedCount === 0) {
       console.log(`Product with ID ${id} not found in MongoDB.`);
