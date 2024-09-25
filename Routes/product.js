@@ -16,7 +16,7 @@ import {
   deletAllProduct,
   unpublishProduct,
 } from '../controller/product.js';
-import { upload } from '../middleware/cloudinary.js';
+import { upload,cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
 
@@ -24,24 +24,24 @@ import express from 'express';
 const productRouter = express.Router();
 productRouter.get('/shopify', fetchAndStoreProducts);
 productRouter.post('/addProduct', upload.single('image'), addProduct);
-productRouter.post('/addEquipment', upload.single('image'), addUsedEquipments);
-productRouter.post('/addRoom', upload.single('image'), addRoomListing);
+productRouter.post('/addEquipment', cpUpload, addUsedEquipments);
+productRouter.post('/addRoom', cpUpload, addRoomListing);
 productRouter.post(
   '/addNewEquipments',
-  upload.single('image'),
+ cpUpload,
   addNewEquipments
 );
-productRouter.post('/addJob', upload.single('image'), addNewJobListing);
-productRouter.post('/addBusiness', upload.single('image'), addNewBusiness);
+productRouter.post('/addJob', cpUpload, addNewJobListing);
+productRouter.post('/addBusiness', cpUpload, addNewBusiness);
 productRouter.post(
   '/addProvider',
-  upload.single('image'),
+  cpUpload,
   addNewProviderListing
 );
 productRouter.post('/webhooks/delete',verifyShopifyWebhook,productDelete);
 productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
-productRouter.put('/updateListing/:id',updateListing)
+productRouter.put('/updateListing/:id',cpUpload,updateListing)
 productRouter.put('/publishedProduct/:productId',publishProduct)
 productRouter.put('/unpublished/:productId',unpublishProduct)
 productRouter.delete('/deleteProduct/:id', deleteProduct);

@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import { Console } from 'console';
 
 
+
+
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -254,19 +256,18 @@ export const addUsedEquipments = async (req, res) => {
       userId,
     } = req.body;
 
-    const image = req.file; // Handle file upload
-
     // Validate required field
     if (!name) return res.status(400).json({ error: 'Equipment Name is required' });
 
     // Set default values for optional fields
     const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
+    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number.' });
+
     const brandValue = brand || 'medspa';
     const status = 'active';
-
     const equipmentTypeValue = equipment_type || 'Unknown';
     const certificationValue = certification || 'Not specified';
-    const yearPurchasedValue = year_purchased ? parseInt(year_purchased, 10) : 0; // Ensure this is an integer
+    const yearPurchasedValue = year_purchased ? parseInt(year_purchased, 10) : 0;
     const warrantyValue = warranty || 'Not specified';
     const reasonForSellingValue = reason_for_selling || 'Not specified';
     const shippingValue = shipping || 'Not specified';
@@ -280,7 +281,7 @@ export const addUsedEquipments = async (req, res) => {
         vendor: brandValue,
         product_type: 'Used Equipments',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        status: status,
+        status,
       },
     };
 
@@ -308,19 +309,35 @@ export const addUsedEquipments = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
 
-    // Step 3: Upload Image to Shopify if provided
-    let imageId = null;
-    let imageResponse = null;
+    // Step 3: Upload Images to Shopify if provided
+    const images = req.files?.images || [];
+    const imagesData = [];
 
-    if (image) {
-      const cloudinaryImageUrl = image.path;
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+
       const imagePayload = {
-        image: { src: cloudinaryImageUrl },
+        image: {
+          src: cloudinaryImageUrl,
+        },
       };
 
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-      imageId = imageResponse.image.id;
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
     }
 
     // Step 4: Save Product to MongoDB
@@ -333,21 +350,13 @@ export const addUsedEquipments = async (req, res) => {
       created_at: new Date(),
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imageId ? [{
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        alt: 'Equipment Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      }] : [],
+      images: imagesData,
       equipment: {
         location: location || 'Not specified',
         name,
         brand: brandValue,
         asking_price: askingPriceValue.toFixed(2),
-        accept_offers: accept_offers ? true : false,
+        accept_offers: !!accept_offers,
         equipment_type: equipmentTypeValue,
         certification: certificationValue,
         year_purchased: yearPurchasedValue,
@@ -407,7 +416,7 @@ export const addNewEquipments = async (req, res) => {
     // Optional fields with defaults
     const equipmentTypeValue = equipment_type || 'Unknown';
     const certificationValue = certification || 'Not specified';
-    const yearManufacturedValue = year_manufactured ? parseInt(year_manufactured, 10) : 0; // Ensure this is an integer
+    const yearManufacturedValue = year_manufactured ? parseInt(year_manufactured, 10) : 0;
     const warrantyValue = warranty || 'Not specified';
     const trainingValue = training || 'Not specified';
     const shippingValue = shipping || 'Not specified';
@@ -438,7 +447,7 @@ export const addNewEquipments = async (req, res) => {
       { metafield: { namespace: 'fold_tech', key: 'sale_price', value: salePriceValue.toFixed(2), type: 'number_integer' }},
       { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipmentTypeValue, type: 'single_line_text_field' }},
       { metafield: { namespace: 'fold_tech', key: 'certification', value: certificationValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'year_manufactured', value: yearManufacturedValue, type: 'number_integer' }},
+      { metafield: { namespace: 'fold_tech', key: 'year_manufactured', value: yearManufacturedValue.toString(), type: 'number_integer' }},
       { metafield: { namespace: 'fold_tech', key: 'warranty', value: warrantyValue, type: 'single_line_text_field' }},
       { metafield: { namespace: 'fold_tech', key: 'training', value: trainingValue, type: 'multi_line_text_field' }},
       { metafield: { namespace: 'fold_tech', key: 'shipping', value: shippingValue, type: 'single_line_text_field' }},
@@ -449,12 +458,13 @@ export const addNewEquipments = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
 
-    // Step 3: Upload Image to Shopify if provided
-    let imageId = null;
-    let imageResponse = null;
+    // Step 3: Upload Images to Shopify if provided
+    const images = req.files?.images || [];
+    const imagesData = [];
 
-    if (req.file) {
-      const cloudinaryImageUrl = req.file.path; // Use the uploaded image URL or path here
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+
       const imagePayload = {
         image: {
           src: cloudinaryImageUrl,
@@ -462,8 +472,21 @@ export const addNewEquipments = async (req, res) => {
       };
 
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-      imageId = imageResponse.image.id;
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
     }
 
     // Step 4: Save Product to MongoDB
@@ -480,28 +503,7 @@ export const addNewEquipments = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imageId ? [{
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
-        alt: 'Equipment Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      }] : [],
-      image: imageId ? {
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
-        alt: 'Equipment Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      } : null,
+      images: imagesData,
       equipment: {
         location: location || 'Unknown',
         name,
@@ -515,7 +517,7 @@ export const addNewEquipments = async (req, res) => {
         shipping: shippingValue,
         description: descriptionValue,
       },
-      userId: userId,
+      userId,
       status: productStatus,
     });
 
@@ -538,24 +540,25 @@ export const addNewEquipments = async (req, res) => {
 
       // Send a successful response
       return res.status(201).json({
-        message: `Product successfully created and published.`,
+        message: 'Product successfully created and published.',
         product: newProduct,
-        expiresAt: expirationDate
+        expiresAt: expirationDate,
       });
     }
 
     // If the product is saved as draft
     res.status(201).json({
-      message: `Product successfully created and saved as draft.`,
+      message: 'Product successfully created and saved as draft.',
       product: newProduct,
-      expiresAt: null // No expiration date for draft
+      expiresAt: null, // No expiration date for draft
     });
-    
+
   } catch (error) {
     console.error('Error in addNewEquipments function:', error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 export const addNewBusiness = async (req, res) => {
@@ -580,16 +583,15 @@ export const addNewBusiness = async (req, res) => {
       offeredServices = '',
       supportAndTraining = 'No support provided',
       userId,
-      status ,
+      status,
     } = req.body;
 
-    const image = req.file; // Handle file upload
+    const images = req.files?.images || []; // Handle multiple file uploads
     const askingPriceValue = parseFloat(asking_price);
     const productStatus = status === 'publish' ? 'active' : 'draft';
-   
+
     // Validate required fields
     if (!name) return res.status(400).json({ error: 'Business name is required.' });
-
     if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number' });
 
     // Step 1: Create Product in Shopify
@@ -598,7 +600,7 @@ export const addNewBusiness = async (req, res) => {
         title: name,
         body_html: businessDescription,
         vendor: location,
-        product_type: 'Businesses To Purchased',
+        product_type: 'Businesses To Purchase',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
         status: productStatus,
       },
@@ -633,22 +635,35 @@ export const addNewBusiness = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify if provided
-    let imageId = null;
-    let imageResponse = null;
+    // Step 3: Upload Images to Shopify if provided
+    const imagesData = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (const image of images) {
+        const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-    if (image) {
-      const cloudinaryImageUrl = image.path;
+        const imagePayload = {
+          image: {
+            src: cloudinaryImageUrl,
+          },
+        };
 
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,
-        },
-      };
+        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-      imageId = imageResponse.image.id;
+        if (imageResponse && imageResponse.image) {
+          imagesData.push({
+            id: imageResponse.image.id,
+            product_id: productId,
+            position: imageResponse.image.position,
+            created_at: imageResponse.image.created_at,
+            updated_at: imageResponse.image.updated_at,
+            alt: 'Business Listing Image',
+            width: imageResponse.image.width,
+            height: imageResponse.image.height,
+            src: imageResponse.image.src,
+          });
+        }
+      }
     }
 
     // Step 4: Save Product to MongoDB
@@ -665,28 +680,7 @@ export const addNewBusiness = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imageId ? [{
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
-        alt: 'Business Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      }] : [],
-      image: imageId ? {
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
-        alt: 'Business Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      } : null,
+      images: imagesData,
       business: {
         name,
         location,
@@ -706,11 +700,13 @@ export const addNewBusiness = async (req, res) => {
         offeredServices,
         supportAndTraining,
       },
-      userId: userId,
+      userId,
       status: productStatus,
     });
 
     await newProduct.save();
+
+    // Subscription management for active listings
     if (productStatus === 'active') {
       const user = await authModel.findById(userId);
       if (!user) throw new Error('User not found');
@@ -724,7 +720,7 @@ export const addNewBusiness = async (req, res) => {
         return res.status(400).json({ error: 'Insufficient subscription quantity to publish.' });
       }
 
-      // Send a successful response
+      // Successful response for published product
       return res.status(201).json({
         message: 'Product successfully created and published.',
         product: newProduct,
@@ -745,8 +741,13 @@ export const addNewBusiness = async (req, res) => {
 };
 
 
+
 export const addNewJobListing = async (req, res) => {
   try {
+    // Log incoming request data
+    console.log('Request Body:', req.body);
+    console.log('Uploaded Files:', req.files);
+
     // Extract job listing details from request body
     const {
       location = 'Not specified',
@@ -760,7 +761,7 @@ export const addNewJobListing = async (req, res) => {
     } = req.body;
 
     // Handle file upload
-    const image = req.file; 
+    const images = req.files?.images || []; // Ensure we have an array of images
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
     // Validate required field
@@ -797,18 +798,33 @@ export const addNewJobListing = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify if provided
-    let imageId = null;
-    let imageSrc = null; // Variable to hold the image source
-    let imageResponse; // Declare here to use in later conditions
+    // Step 3: Upload Images to Shopify if provided
+    const imagesData = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (const image of images) {
+        const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
 
-    if (image) {
-      const cloudinaryImageUrl = image.path; // Assuming image.path is the URL
-      const imagePayload = { image: { src: cloudinaryImageUrl } };
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload); // Assign response
-      imageId = imageResponse.image.id;
-      imageSrc = imageResponse.image.src; // Store image source for later use
+        const imagePayload = {
+          image: {
+            src: cloudinaryImageUrl,
+          },
+        };
+
+        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+        if (imageResponse && imageResponse.image) {
+          imagesData.push({
+            id: imageResponse.image.id,
+            product_id: productId,
+            position: imageResponse.image.position,
+            alt: 'Job Listing Image',
+            width: imageResponse.image.width,
+            height: imageResponse.image.height,
+            src: imageResponse.image.src,
+          });
+        }
+      }
     }
 
     // Step 4: Save Product to MongoDB
@@ -820,15 +836,7 @@ export const addNewJobListing = async (req, res) => {
       product_type: 'Job Listing',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imageId ? [{
-        id: imageId,
-        product_id: productId,
-        position: imageResponse ? imageResponse.image.position : null,
-        alt: 'Job Listing Image',
-        width: imageResponse ? imageResponse.image.width : null,
-        height: imageResponse ? imageResponse.image.height : null,
-        src: imageSrc,
-      }] : [],
+      images: imagesData,
       jobListings: [{
         location,
         name,
@@ -836,7 +844,7 @@ export const addNewJobListing = async (req, res) => {
         positionRequestedDescription,
         availability,
         requestedYearlySalary,
-        image: imageSrc || null,
+        images: imagesData,
       }],
       userId,
       status: productStatus,
@@ -880,11 +888,9 @@ export const addNewJobListing = async (req, res) => {
 
 
 
-
-
 export const addNewProviderListing = async (req, res) => {
   console.log('Request Body:', req.body);
-  console.log('Uploaded File:', req.file);
+  console.log('Uploaded Files:', req.files);
 
   try {
     // Extract provider listing details from request body
@@ -896,11 +902,11 @@ export const addNewProviderListing = async (req, res) => {
       offeredYearlySalary = 0,
       offeredPositionDescription = 'No description provided',
       userId,
-      status ,
+      status,
     } = req.body;
 
     // Handle file upload
-    const image = req.file;
+    const images = req.files?.images || []; // Ensure we have an array of images
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
     // Validate required field
@@ -911,12 +917,12 @@ export const addNewProviderListing = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: qualificationRequested, // Use qualification requested as the title
-        body_html: offeredPositionDescription, // Use offered position description as body_html
-        vendor: location, // Use location as the vendor
-        product_type: 'Provider Needed', // Use a specific type for provider search listings
-        variants: [{ price: offeredYearlySalary.toString() }], // Salary should be a string
-        status: productStatus, // Set Shopify status
+        title: qualificationRequested,
+        body_html: offeredPositionDescription,
+        vendor: location,
+        product_type: 'Provider Needed',
+        variants: [{ price: offeredYearlySalary.toString() }],
+        status: productStatus,
       },
     };
 
@@ -939,20 +945,33 @@ export const addNewProviderListing = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify if provided
-    let imageId = null;
-    if (image) {
-      const cloudinaryImageUrl = image.path; // Use the path to the image
+    // Step 3: Upload Images to Shopify if provided
+    const imagesData = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (const image of images) {
+        const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
 
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,
-        },
-      };
+        const imagePayload = {
+          image: {
+            src: cloudinaryImageUrl,
+          },
+        };
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-      imageId = imageResponse.image.id;
+        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+        if (imageResponse && imageResponse.image) {
+          imagesData.push({
+            id: imageResponse.image.id,
+            product_id: productId,
+            position: imageResponse.image.position,
+            alt: 'Provider Search Listing',
+            width: imageResponse.image.width,
+            height: imageResponse.image.height,
+            src: imageResponse.image.src,
+          });
+        }
+      }
     }
 
     // Step 4: Save Provider Listing to MongoDB
@@ -964,17 +983,7 @@ export const addNewProviderListing = async (req, res) => {
       product_type: 'Provider Search Listing',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imageId ? [{
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        created_at: imageResponse.image.created_at,
-        updated_at: imageResponse.image.updated_at,
-        alt: 'Provider Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      }] : [],
+      images: imagesData,
       providerListings: [{
         location,
         qualificationRequested,
@@ -982,7 +991,7 @@ export const addNewProviderListing = async (req, res) => {
         typeOfJobOffered,
         offeredYearlySalary,
         offeredPositionDescription,
-        image: imageId ? imageResponse.image.src : null,
+        images: imagesData,
       }],
       userId,
       status: productStatus,
@@ -1026,6 +1035,7 @@ export const addNewProviderListing = async (req, res) => {
 
 
 
+
 // Add Room listing
 export const addRoomListing = async (req, res) => {
   try {
@@ -1044,90 +1054,46 @@ export const addRoomListing = async (req, res) => {
       status,
     } = req.body;
 
+    console.log(req.files);
+
     // Handle file upload
-    const image = req.file; // Handle file upload
+    const images = req.files.images; // Handle file upload
     const productStatus = status === 'publish' ? 'active' : 'draft';
+
     // Validate required fields
     if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
     }
-   
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: location, // Use location as the title
-        body_html: otherDetails, // Use other details as body_html
-        vendor: location, // Use location as the vendor
-        product_type: 'Spa Room For Rent', // Use a specific type for room listings
-        variants: [{ price: monthlyRent.toString() }], // Rent should be a string
-        status: productStatus, 
+        title: location,
+        body_html: otherDetails,
+        vendor: location,
+        product_type: 'Spa Room For Rent',
+        variants: [{ price: monthlyRent.toString() }],
+        status: productStatus,
       },
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-
     console.log('Product Response:', productResponse);
 
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Room Listing Details
     const metafieldsPayload = [
-      {
-        namespace: 'fold_tech',
-        key: 'location',
-        value: location,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'room_size',
-        value: roomSize.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'monthly_rent',
-        value: monthlyRent.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'deposit',
-        value: deposit.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'minimum_insurance_requested',
-        value: minimumInsuranceRequested.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'type_of_use_allowed',
-        value: typeOfUseAllowed,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'rental_terms',
-        value: rentalTerms,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'wifi_available',
-        value: wifiAvailable.toString(),
-        type: 'boolean',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'other_details',
-        value: otherDetails,
-        type: 'single_line_text_field',
-      },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
+      { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1135,22 +1101,33 @@ export const addRoomListing = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    // Step 3: Upload Image to Shopify if provided
-    let imageId = null;
-    let imageResponse = null;
+    // Step 3: Upload Images to Shopify if provided
+    const imagesData = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (let i = 0; i < images.length; i++) {
+        const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
 
-    if (image) {
-      const cloudinaryImageUrl = image.path; // Use the path to the image
+        const imagePayload = {
+          image: { // Corrected key from 'images' to 'image'
+            src: cloudinaryImageUrl,
+          },
+        };
 
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl, // Use the local file path here; should be replaced with Cloudinary URL if you are using Cloudinary
-        },
-      };
+        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-      imageId = imageResponse.image.id;
+        if (imageResponse && imageResponse.image) {
+          imagesData.push({
+            id: imageResponse.image.id,
+            product_id: productId,
+            position: imageResponse.image.position,
+            alt: 'Room Listing Image',
+            width: imageResponse.image.width,
+            height: imageResponse.image.height,
+            src: imageResponse.image.src,
+          });
+        }
+      }
     }
 
     // Step 4: Save Room Listing to MongoDB
@@ -1162,24 +1139,7 @@ export const addRoomListing = async (req, res) => {
       product_type: 'Room Listing',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imageId ? [{
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        alt: 'Room Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      }] : [],
-      image: imageId ? {
-        id: imageId,
-        product_id: productId,
-        position: imageResponse.image.position,
-        alt: 'Room Listing Image',
-        width: imageResponse.image.width,
-        height: imageResponse.image.height,
-        src: imageResponse.image.src,
-      } : null,
+      images: imagesData,
       roomListing: [{
         location,
         roomSize,
@@ -1190,13 +1150,14 @@ export const addRoomListing = async (req, res) => {
         rentalTerms,
         wifiAvailable,
         otherDetails,
-        image: imageResponse ? imageResponse.image.src : null, // Store the image URL if available
+        images: imagesData
       }],
       userId: userId,
       status: productStatus,
     });
 
     await newRoomListing.save();
+
     if (productStatus === 'active') {
       const user = await authModel.findById(userId);
       if (!user) throw new Error('User not found');
@@ -1224,11 +1185,12 @@ export const addRoomListing = async (req, res) => {
       product: newRoomListing,
       expiresAt: null,
     });
-} catch (error) {
-  console.error('Error in addNewEquipments function:', error);
-  res.status(500).json({ error: error.message });
-}
+  } catch (error) {
+    console.error('Error in addRoomListing function:', error);
+    res.status(500).json({ error: error.message });
+  }
 };
+
 
 // get product of specific user
 export const getProduct = async (req, res) => {
@@ -1300,30 +1262,49 @@ export const updateListing = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Find the document in MongoDB
     const product = await productModel.findById(id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
-    console.log('Shopify product ID:', product.id);
 
-    // Prepare the update data for MongoDB
+    // Prepare the update data
     const updateData = req.body;
 
-    // Update the document in MongoDB
-    const updatedProduct = await productModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    // Handle image uploads
+    const images = req.files.images; // Expecting multiple images
+    const imagesData = [];
+
+    if (Array.isArray(images) && images.length > 0) {
+      for (const image of images) {
+        // Create the image object
+        const newImage = {
+          id: image.filename, // Use the filename or a generated ID
+          product_id: product.id,
+          src: `http://localhost:3000/uploads/${image.filename}`, // Update to your base URL
+          alt: image.originalname, // Provide an alt text if needed
+        };
+
+        imagesData.push(newImage);
+      }
+
+      // Update the product's images array
+      product.images = imagesData; // Replace existing images
+    }
+
+    // Update the product in the database with new data
+    const updatedProduct = await productModel.findByIdAndUpdate(id, { $set: { ...updateData, images: product.images } }, { new: true });
 
     // Prepare data for Shopify
     const shopifyData = {
       product: {
-        id: product.id, // Assuming the Shopify ID is stored in product.id
-        ...updateData, // Include the fields to be updated
+        id: product.id,
+        ...updateData,
+        images: product.images, // Include the updated images
       },
     };
 
-    // Construct the Shopify URL
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${shopifyData.product.id}.json`;
-    console.log('Shopify URL:', shopifyUrl);
+
     // Update in Shopify
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
@@ -1338,7 +1319,7 @@ export const updateListing = async (req, res) => {
       return res.status(500).json({ message: 'Failed to update product in Shopify', details: await response.text() });
     }
 
-    // Send successful response
+    // Successful response
     res.status(200).json({
       message: 'Product successfully updated in both MongoDB and Shopify',
       data: updatedProduct,
@@ -1350,7 +1331,41 @@ export const updateListing = async (req, res) => {
 };
 
 
-//delete product
+
+// export const updateListing = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updateData = { ...req.body };
+
+//     // Logging the input data
+//     console.log('Request Body:', req.body);
+//     console.log('Uploaded File:', req.file);
+//     console.log(req.files)
+//     if (req.file) {
+//       updateData.imagePath = req.file.image; // Set image path if a new file is uploaded
+//     }
+
+//     // Check if required fields are present
+//     if (!updateData.title ) {
+//       return res.status(400).json({ message: 'Title and description are required' });
+//     }
+
+//     const updatedImageData = await productModel.findByIdAndUpdate(id, updateData, { new: true });
+
+//     // Check if document was found and updated
+//     if (!updatedImageData) {
+//       return res.status(404).json({ message: 'Data not found' });
+//     }
+
+//     res.json(updatedImageData);
+//   } catch (error) {
+//     console.error(error); // Log the error for debugging
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 

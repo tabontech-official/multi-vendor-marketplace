@@ -13,9 +13,11 @@ cloudinary.v2.config({
     cloudinary: cloudinary.v2,
     params: {
       folder: 'uploads', // specify the folder where images will be uploaded
-      allowed_formats: ['jpg', 'png', 'jpeg','pdf'], // specify allowed formats
+      allowed_formats: ['jpg', 'png', 'jpeg','pdf','doc','docx','ppt'], // specify allowed formats
     },
   });
   
   export const upload = multer({ storage })
   
+
+export  const cpUpload = upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 }])

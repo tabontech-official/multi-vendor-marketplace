@@ -79,32 +79,32 @@ const productSchema = new mongoose.Schema(
         src: { type: String },
       },
     ],
-    files: [
-      {
-        id: { type: Number, required: true },
-        product_id: { type: Number, required: true },
-        position: { type: Number },
-        created_at: { type: Date },
-        updated_at: { type: Date },
-        alt: { type: String },
-        width: { type: Number },
-        height: { type: Number },
-        src: { type: String },
-      },
-    ],
+    // files: [
+    //   {
+    //     id: { type: Number, required: true },
+    //     product_id: { type: Number, required: true },
+    //     position: { type: Number },
+    //     created_at: { type: Date },
+    //     updated_at: { type: Date },
+    //     alt: { type: String },
+    //     width: { type: Number },
+    //     height: { type: Number },
+    //     src: { type: String },
+    //   },
+    // ],
 
     // A single image object
-    image: {
-      id: { type: Number },
-      product_id: { type: Number },
-      position: { type: Number },
-      created_at: { type: Date },
-      updated_at: { type: Date },
-      alt: { type: String },
-      width: { type: Number },
-      height: { type: Number },
-      src: { type: String },
-    },
+    // image: {
+    //   id: { type: Number },
+    //   product_id: { type: Number },
+    //   position: { type: Number },
+    //   created_at: { type: Date },
+    //   updated_at: { type: Date },
+    //   alt: { type: String },
+    //   width: { type: Number },
+    //   height: { type: Number },
+    //   src: { type: String },
+    // },
 
     // Metafields as an array of objects
     metafields: [
