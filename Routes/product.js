@@ -38,7 +38,7 @@ productRouter.post(
   cpUpload,
   addNewProviderListing
 );
-productRouter.post('/webhooks/delete',verifyShopifyWebhook,productDelete);
+productRouter.post('/webhooks/delete',productDelete);
 productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
 productRouter.put('/updateListing/:id',cpUpload,updateListing)

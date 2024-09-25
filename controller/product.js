@@ -1543,23 +1543,24 @@ export const deleteProduct = async (req, res) => {
 
 // webhook product deletion
 export const productDelete = async (req, res) => {
-  const { id } = req.body;
-
-  if (!id) {
-      return res.status(400).json({ message: 'Product ID is required' });
-  }
-
   try {
-      const result = await productModel.deleteOne({ shopifyId: id });
-      
-      if (result.deletedCount === 0) {
-          return res.status(404).json({ message: 'Product not found in MongoDB' });
-      }
+    const { id } = req.body; // Shopify sends the product ID in the request body
 
-      res.status(200).json({ message: 'Product successfully deleted from MongoDB' });
+    if (!id) {
+      return res.status(400).json({ error: 'Product ID is required.' });
+    }
+
+    // Delete the product from MongoDB
+    const deletedProduct = await productModel.findOneAndDelete({ id });
+    if (!deletedProduct) {
+      return res.status(404).json({ error: 'Product not found in database.' });
+    }
+
+    // Respond to Shopify
+    res.status(200).json({ message: 'Product deleted successfully.' });
   } catch (error) {
-      console.error('Error in deleteProduct function:', error);
-      res.status(500).json({ error: error.message });
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
