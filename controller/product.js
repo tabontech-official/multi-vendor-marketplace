@@ -1542,37 +1542,29 @@ export const deleteProduct = async (req, res) => {
 
 
 
-const verifyWebhook = (req) => {
-  const hmac = req.headers['x-shopify-hmac-sha256'];
-  const body = JSON.stringify(req.body);
-  const digest = crypto.createHmac('sha256', process.env.SHOPIFY_ACCESS_TOKEN)
-    .update(body, 'utf8', 'hex')
-    .digest('base64');
 
-  return hmac === digest;}
 // webhook product deletion
 export const productDelete = async (req, res) => {
+  const { id } = req.body; // Make sure you get the product ID from the request body
+
+  if (!id) {
+    return res.status(400).send('Product ID is required');
+  }
+
   try {
-    if (!verifyWebhook(req)) {
-      return res.status(401).send('Unauthorized');
-    }
-    const { id } = req.body; // Shopify sends the product ID in the request body
-
-    if (!id) {
-      return res.status(400).json({ error: 'Product ID is required.' });
-    }
-
     // Delete the product from MongoDB
-    const deletedProduct = await productModel.findOneAndDelete({ id });
-    if (!deletedProduct) {
-      return res.status(404).json({ error: 'Product not found in database.' });
+    const result = await productModel.deleteOne({ shopifyId: id });
+
+    if (result.deletedCount === 0) {
+      console.log(`Product with ID ${id} not found in MongoDB.`);
+      return res.status(404).send('Product not found in MongoDB');
     }
 
-    // Respond to Shopify
-    res.status(200).json({ message: 'Product deleted successfully.' });
+    console.log(`Successfully deleted product with ID ${id} from MongoDB.`);
+    res.status(200).send('Product deleted successfully');
   } catch (error) {
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error deleting product from MongoDB:', error);
+    res.status(500).send('Internal Server Error');
   }
 };
 
