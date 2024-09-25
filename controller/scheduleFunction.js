@@ -1,11 +1,19 @@
 import { productModel } from "../Models/product.js"
 import cron from 'node-cron';
-export const  productSubscriptionExpiration=()=>{
-    cron.schedule('0 */2 * * *',  () => {
-        const currentDate=new Date()
-        productModel.updateMany({expiresAt:{
-            $lte:currentDate
-        }},{status:'inactive'})
-
-    })
-}
+export const productSubscriptionExpiration = () => {
+    cron.schedule('* * * * *', async () => {
+      try {
+        const currentDate = new Date();
+  
+        // Update products with expired subscriptions
+        const result = await productModel.updateMany(
+          { expiresAt: { $lte: currentDate }, status: 'active' }, // Check for active products only
+          { $set: { status: 'inactive' } }
+        );
+  
+        console.log(`Updated ${result.modifiedCount} products to inactive status.`);
+      } catch (error) {
+        console.error('Error updating product statuses:', error);
+      }
+    });
+  };

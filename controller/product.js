@@ -1477,7 +1477,7 @@ export const publishProduct = async (req, res) => {
     // Step 6: Update product status in MongoDB
     const updatedProduct = await productModel.findOneAndUpdate(
       { id: productId },
-      { status: 'active' },
+      { status: 'active',expiresAt: user.subscription.expiresAt },
       { new: true }
     );
 
