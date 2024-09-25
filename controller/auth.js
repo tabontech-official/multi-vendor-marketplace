@@ -944,22 +944,25 @@ export const getUserData = async (req, res) => {
 };
 
 
-export const forgotPassword=async(req,res)=>{
+export const forgotPassword = async (req, res) => {
   try {
     const customerData = req.body;
 
-    // Assuming you're storing customer emails or IDs in MongoDB
+    // Assuming you're storing customer emails in MongoDB
     const customer = await authModel.findOne({ email: customerData.email });
 
     if (customer) {
-      // Update your MongoDB record with the new password or any other details
-      customer.password = customerData.password; // Ensure you hash this password
+      // Hash the new password before saving
+      const saltRounds = 10; // You can adjust this number based on your security needs
+      const hashedPassword = await bcrypt.hash(customerData.password, saltRounds);
+      
+      customer.password = hashedPassword; // Set the hashed password
       await customer.save();
     }
 
-    res.status(200).send('sucessfully updated data');
+    res.status(200).send('Successfully updated data');
   } catch (error) {
     console.error('Error processing webhook:', error);
     res.status(500).send('Internal Server Error');
   }
-}
+};
