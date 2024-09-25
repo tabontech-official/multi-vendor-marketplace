@@ -542,7 +542,8 @@ export const addNewEquipments = async (req, res) => {
       const shopifyUpdatePayload = {
         product: {
           id: productId,
-          status: 'active', // Set status to active
+          status: 'active',
+          published_scope: 'web', // Set status to active
         },
       };
 
