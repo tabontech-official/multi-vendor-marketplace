@@ -2,8 +2,7 @@ import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
-import { Console } from 'console';
-
+import crypto from 'crypto'
 
 
 
@@ -1540,10 +1539,20 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
+const verifyWebhook = (req) => {
+  const hmac = req.headers['x-shopify-hmac-sha256'];
+  const body = JSON.stringify(req.body);
+  const digest = crypto.createHmac('sha256', process.env.SHOPIFY_API_SECRET)
+    .update(body, 'utf8', 'hex')
+    .digest('base64');
 
+  return hmac === digest;}
 // webhook product deletion
 export const productDelete = async (req, res) => {
   try {
+    if (!verifyWebhook(req)) {
+      return res.status(401).send('Unauthorized');
+    }
     const { id } = req.body; // Shopify sends the product ID in the request body
 
     if (!id) {
