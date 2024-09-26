@@ -1206,12 +1206,12 @@ export const addNewBusiness = async (req, res) => {
       offeredServices = '',
       supportAndTraining = 'No support provided',
       userId,
-      status,
+      status, // "draft" or "publish"
     } = req.body;
 
     const images = req.files?.images || []; // Handle multiple file uploads
     const askingPriceValue = parseFloat(asking_price);
-    const productStatus = status === 'publish' ? 'active' : 'draft';
+    const productStatus = status === 'publish' ? 'active' : 'draft'; // Determine product status
 
     // Validate required fields
     if (!name) return res.status(400).json({ error: 'Business name is required.' });
@@ -1225,7 +1225,7 @@ export const addNewBusiness = async (req, res) => {
         vendor: location,
         product_type: 'Businesses To Purchase',
         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-        status: productStatus,
+        status: productStatus, // Use determined status
       },
     };
 
@@ -1330,7 +1330,7 @@ export const addNewBusiness = async (req, res) => {
     await newProduct.save();
 
     // Subscription management for active listings
-    if (status === 'active') {
+    if (status === 'active') { // Only handle subscription for published products
       const user = await authModel.findById(userId);
       if (!user) throw new Error('User not found');
 
@@ -1348,7 +1348,7 @@ export const addNewBusiness = async (req, res) => {
       const shopifyUpdatePayload = {
         product: {
           id: productId,
-          status: 'active',
+          status: 'active', // Set status to active
         },
       };
 
@@ -1399,6 +1399,7 @@ export const addNewBusiness = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 
