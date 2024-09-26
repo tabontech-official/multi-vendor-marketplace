@@ -2462,7 +2462,29 @@ export const updateListing = async (req, res) => {
   }
 };
 
+export const productUpdate = async (req, res) => {
+  const { id, updateData } = req.body; // Shopify product ID and update data from the request body
 
+  if (!id || !updateData) {
+    return res.status(400).send('Product ID and update data are required');
+  }
+
+  try {
+    // Update the product in MongoDB using the Shopify product ID
+    const result = await productModel.updateOne({ id }, { $set: updateData });
+
+    if (result.nModified === 0) {
+      console.log(`Product with ID ${id} not found or data is the same in MongoDB.`);
+      return res.status(404).send('Product not found or no changes made in MongoDB');
+    }
+
+    console.log(`Successfully updated product with ID ${id} in MongoDB.`);
+    res.status(200).send('Product updated successfully');
+  } catch (error) {
+    console.error('Error updating product in MongoDB:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
 
 // export const updateListing = async (req, res) => {
 //   try {

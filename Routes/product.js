@@ -15,6 +15,7 @@ import {
   productDelete,
   deletAllProduct,
   unpublishProduct,
+  productUpdate,
 } from '../controller/product.js';
 import { upload,cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -39,6 +40,7 @@ productRouter.post(
   addNewProviderListing
 );
 productRouter.post('/webhooks/delete',productDelete);
+productRouter.post('/webhook/product/update',productUpdate)
 productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
 productRouter.put('/updateListing/:id',cpUpload,updateListing)
