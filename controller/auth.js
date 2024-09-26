@@ -901,7 +901,7 @@ export const updateCustomer=async(req,res)=>{
 
   // Update or create customer in MongoDB
   await authModel.findOneAndUpdate(
-      { id: customerData.id }, // Assuming `id` is the unique identifier
+      { shopifyId: customerData.id }, // Assuming `id` is the unique identifier
       customerData,
       { upsert: true, new: true }
   );
