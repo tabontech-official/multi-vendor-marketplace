@@ -898,9 +898,25 @@ export const forgotPassword = async (req, res) => {
 
 
 export const deleteUser=async(req,res)=>{
-  authModel.deleteMany().then(result=>{
-    if(result){
-      res.status(200).send('delted')
+  const { id } = req.body; // Shopify product ID from the request body
+
+  if (!id) {
+    return res.status(400).send('Product ID is required');
+  }
+
+  try {
+    // Delete the product from MongoDB using the Shopify product ID
+    const result = await productModel.deleteOne({ id });
+
+    if (result.deletedCount === 0) {
+      console.log(`Product with ID ${id} not found in MongoDB.`);
+      return res.status(404).send('Product not found in MongoDB');
     }
-  })
+
+    console.log(`Successfully deleted product with ID ${id} from MongoDB.`);
+    res.status(200).send('Product deleted successfully');
+  } catch (error) {
+    console.error('Error deleting product from MongoDB:', error);
+    res.status(500).send('Internal Server Error');
+  }
 }

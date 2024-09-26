@@ -283,7 +283,6 @@ export const addUsedEquipments = async (req, res) => {
         status,
       },
     };
-
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
     const productId = productResponse.product.id;
@@ -420,7 +419,6 @@ export const addNewEquipments = async (req, res) => {
     const trainingValue = training || 'Not specified';
     const shippingValue = shipping || 'Not specified';
     const descriptionValue = description || 'No description provided.';
-
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -543,7 +541,7 @@ export const addNewEquipments = async (req, res) => {
         product: {
           id: productId,
           status: 'active',
-           // Set status to active
+           published_scope:'global'
         },
       };
 
@@ -964,6 +962,11 @@ export const addNewJobListing = async (req, res) => {
   } catch (error) {
     console.error('Error in addNewEquipments function:', error);
     res.status(500).json({ error: error.message });
+     if (productId) {
+      const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+      await shopifyRequest(deleteShopifyUrl, 'DELETE');
+    }
+
   }
 };
 

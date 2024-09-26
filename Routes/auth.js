@@ -32,5 +32,5 @@ authRouter.get('/quantity/:userId',getUserSubscriptionQuantity)
 authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
 authRouter.put('/updateInShopify', updateUserInShopify);
 authRouter.post('/Admin', AdminSignIn);
-authRouter.delete('/',deleteUser)
+authRouter.post('/webHook/delete',deleteUser)
 export default authRouter;

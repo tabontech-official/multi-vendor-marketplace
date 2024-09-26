@@ -206,6 +206,7 @@ const productSchema = new mongoose.Schema(
 
     },
     expiresAt: { type: Date },
+    
   },
   {
     timestamps: true,
