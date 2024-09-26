@@ -795,6 +795,7 @@ export const addNewBusiness = async (req, res) => {
 
 
 export const addNewJobListing = async (req, res) => {
+  let productId; // Declare productId outside try block for access in catch
   try {
     // Log incoming request data
     console.log('Request Body:', req.body);
@@ -833,7 +834,7 @@ export const addNewJobListing = async (req, res) => {
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-    const productId = productResponse.product.id;
+    productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
@@ -924,7 +925,6 @@ export const addNewJobListing = async (req, res) => {
         product: {
           id: productId,
           status: 'active',
-           // Set status to active
         },
       };
 
@@ -955,18 +955,24 @@ export const addNewJobListing = async (req, res) => {
     // If the product is saved as draft
     res.status(201).json({
       message: 'Product successfully created and saved as draft.',
-      product: newProduct,
+      product: newJobListing,
       expiresAt: null, // No expiration date for draft
     });
 
   } catch (error) {
-    console.error('Error in addNewEquipments function:', error);
-    res.status(500).json({ error: error.message });
-     if (productId) {
-      const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-      await shopifyRequest(deleteShopifyUrl, 'DELETE');
+    console.error('Error in addNewJobListing function:', error);
+
+    // Attempt to delete the product from Shopify if it was created
+    if (productId) {
+      try {
+        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+        await shopifyRequest(deleteShopifyUrl, 'DELETE');
+      } catch (deleteError) {
+        console.error('Error deleting product from Shopify:', deleteError);
+      }
     }
 
+    res.status(500).json({ error: error.message });
   }
 };
 
