@@ -896,6 +896,19 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+export const updateCustomer=async(req,res)=>{
+  const customerData = req.body;
+
+  // Update or create customer in MongoDB
+  await authModel.findOneAndUpdate(
+      { id: customerData.id }, // Assuming `id` is the unique identifier
+      customerData,
+      { upsert: true, new: true }
+  );
+
+  res.sendStatus(200);
+}
+
 
 export const deleteUser=async(req,res)=>{
   const customerId = req.body.id; // Get the customer ID from the webhook data
