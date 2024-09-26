@@ -798,214 +798,7 @@ export const addUsedEquipments = async (req, res) => {
     
 
 
-// export const addNewBusiness = async (req, res) => {
-//   try {
-//     // Extract business listing details from request body
-//     const {
-//       name,
-//       location = 'Not specified',
-//       businessDescription = 'No description provided',
-//       asking_price = 0.00,
-//       establishedYear = new Date().getFullYear(),
-//       numberOfEmployees = 1,
-//       locationMonthlyRent = 0,
-//       leaseExpirationDate = new Date().toISOString(),
-//       locationSize = 0,
-//       grossYearlyRevenue = 0,
-//       cashFlow = 0,
-//       productsInventory = 0,
-//       equipmentValue = 0,
-//       reasonForSelling = 'Not specified',
-//       listOfDevices = '',
-//       offeredServices = '',
-//       supportAndTraining = 'No support provided',
-//       userId,
-//       status,
-//     } = req.body;
-
-//     const images = req.files?.images || []; // Handle multiple file uploads
-//     const askingPriceValue = parseFloat(asking_price);
-//     const productStatus = status === 'publish' ? 'active' : 'draft';
-
-//     // Validate required fields
-//     if (!name) return res.status(400).json({ error: 'Business name is required.' });
-//     if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number' });
-
-//     // Step 1: Create Product in Shopify
-//     const shopifyPayload = {
-//       product: {
-//         title: name,
-//         body_html: businessDescription,
-//         vendor: location,
-//         product_type: 'Businesses To Purchase',
-//         variants: [{ price: askingPriceValue.toFixed(2).toString() }],
-//         status: productStatus,
-//       },
-//     };
-
-//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-//     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-//     const productId = productResponse.product.id;
-
-//     // Step 2: Create Structured Metafields for the Business Listing Details
-//     const metafieldsPayload = [
-//       { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'business_description', value: businessDescription, type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'asking_price', value: askingPriceValue.toString(), type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'established_year', value: establishedYear.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'number_of_employees', value: numberOfEmployees.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'location_monthly_rent', value: locationMonthlyRent.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'lease_expiration_date', value: new Date(leaseExpirationDate).toISOString(), type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'location_size', value: locationSize.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'gross_yearly_revenue', value: grossYearlyRevenue.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'cash_flow', value: cashFlow.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'products_inventory', value: productsInventory.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'equipment_value', value: equipmentValue.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'reason_for_selling', value: reasonForSelling, type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'list_of_devices', value: JSON.stringify(listOfDevices), type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'offered_services', value: JSON.stringify(offeredServices), type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'support_and_training', value: supportAndTraining, type: 'single_line_text_field' },
-//     ];
-
-//     for (const metafield of metafieldsPayload) {
-//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-//       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
-//     }
-
-//     // Step 3: Upload Images to Shopify if provided
-//     const imagesData = [];
-//     if (Array.isArray(images) && images.length > 0) {
-//       for (const image of images) {
-//         const cloudinaryImageUrl = image.path; // Ensure we use the correct path
-
-//         const imagePayload = {
-//           image: {
-//             src: cloudinaryImageUrl,
-//           },
-//         };
-
-//         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-//         const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-
-//         if (imageResponse && imageResponse.image) {
-//           imagesData.push({
-//             id: imageResponse.image.id,
-//             product_id: productId,
-//             position: imageResponse.image.position,
-//             created_at: imageResponse.image.created_at,
-//             updated_at: imageResponse.image.updated_at,
-//             alt: 'Business Listing Image',
-//             width: imageResponse.image.width,
-//             height: imageResponse.image.height,
-//             src: imageResponse.image.src,
-//           });
-//         }
-//       }
-//     }
-
-//     // Step 4: Save Product to MongoDB
-//     const newProduct = new productModel({
-//       id: productId,
-//       title: name,
-//       body_html: businessDescription,
-//       vendor: location,
-//       product_type: 'Business Listing',
-//       created_at: new Date(),
-//       handle: productResponse.product.handle,
-//       updated_at: new Date(),
-//       published_at: productResponse.product.published_at,
-//       template_suffix: productResponse.product.template_suffix,
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       images: imagesData,
-//       business: {
-//         name,
-//         location,
-//         businessDescription,
-//         asking_price: askingPriceValue,
-//         establishedYear,
-//         numberOfEmployees,
-//         locationMonthlyRent,
-//         leaseExpirationDate: new Date(leaseExpirationDate),
-//         locationSize,
-//         grossYearlyRevenue,
-//         cashFlow,
-//         productsInventory,
-//         equipmentValue,
-//         reasonForSelling,
-//         listOfDevices,
-//         offeredServices,
-//         supportAndTraining,
-//       },
-//       userId,
-//       status: productStatus,
-//     });
-
-//     await newProduct.save();
-
-//     // Subscription management for active listings
-//     if (status === 'active') {
-//       const user = await authModel.findById(userId);
-//       if (!user) throw new Error('User not found');
-
-//       // Check subscription quantity
-//       if (!user.subscription || user.subscription.quantity <= 0) {
-//         return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-//       }
-
-//       // Step 5: Decrement the subscription quantity
-//       user.subscription.quantity -= 1;
-//       await user.save();
-
-//       // Step 6: Update product status in Shopify
-//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-//       const shopifyUpdatePayload = {
-//         product: {
-//           id: productId,
-//           status: 'active',
-//            // Set status to active
-//         },
-//       };
-
-//       const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
-//       if (!shopifyResponse.product) {
-//         return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
-//       }
-
-//       // Step 7: Update product status in MongoDB
-//       const updatedProduct = await productModel.findOneAndUpdate(
-//         { id: productId },
-//         { status: 'active', expiresAt: user.subscription.expiresAt },
-//         { new: true }
-//       );
-
-//       if (!updatedProduct) {
-//         return res.status(404).json({ error: 'Product not found in database.' });
-//       }
-
-//       // Send a successful response
-//       return res.status(201).json({
-//         message: 'Product successfully created and published.',
-//         product: updatedProduct,
-//         expiresAt: user.subscription.expiresAt,
-//       });
-//     }
-
-//     // If the product is saved as draft
-//     res.status(201).json({
-//       message: 'Product successfully created and saved as draft.',
-//       product: newProduct,
-//       expiresAt: null, // No expiration date for draft
-//     });
-
-//   } catch (error) {
-//     console.error('Error in addNewEquipments function:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
 export const addNewBusiness = async (req, res) => {
-  let productId; // Declare productId outside try block for access in catch
   try {
     // Extract business listing details from request body
     const {
@@ -1052,7 +845,7 @@ export const addNewBusiness = async (req, res) => {
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-    productId = productResponse.product.id; // Assign productId
+    const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Business Listing Details
     const metafieldsPayload = [
@@ -1170,6 +963,7 @@ export const addNewBusiness = async (req, res) => {
         product: {
           id: productId,
           status: 'active',
+           // Set status to active
         },
       };
 
@@ -1205,18 +999,7 @@ export const addNewBusiness = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in addNewBusiness function:', error);
-
-    // Attempt to delete the product from Shopify if it was created
-    if (productId) {
-      try {
-        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-        await shopifyRequest(deleteShopifyUrl, 'DELETE');
-      } catch (deleteError) {
-        console.error('Error deleting product from Shopify:', deleteError);
-      }
-    }
-
+    console.error('Error in addNewEquipments function:', error);
     res.status(500).json({ error: error.message });
   }
 };
