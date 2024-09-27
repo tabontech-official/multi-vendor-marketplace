@@ -2,10 +2,7 @@ import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
-import crypto from 'crypto'
-
-
-
+import { scheduleUnpublish } from './scheduleFunction.js';
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -69,7 +66,6 @@ export const fetchAndStoreProducts = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 // helper function to add images
 const shopifyRequest = async (url, method, body) => {
@@ -256,17 +252,21 @@ export const addUsedEquipments = async (req, res) => {
     } = req.body;
 
     // Validate required field
-    if (!name) return res.status(400).json({ error: 'Equipment Name is required' });
+    if (!name)
+      return res.status(400).json({ error: 'Equipment Name is required' });
 
     // Set default values for optional fields
-    const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.00;
-    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number.' });
+    const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.0;
+    if (isNaN(askingPriceValue))
+      return res.status(400).json({ error: 'Asking price must be a number.' });
 
     const brandValue = brand || 'medspa';
     const status = 'active';
     const equipmentTypeValue = equipment_type || 'Unknown';
     const certificationValue = certification || 'Not specified';
-    const yearPurchasedValue = year_purchased ? parseInt(year_purchased, 10) : 0;
+    const yearPurchasedValue = year_purchased
+      ? parseInt(year_purchased, 10)
+      : 0;
     const warrantyValue = warranty || 'Not specified';
     const reasonForSellingValue = reason_for_selling || 'Not specified';
     const shippingValue = shipping || 'Not specified';
@@ -284,22 +284,103 @@ export const addUsedEquipments = async (req, res) => {
       },
     };
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
-      { metafield: { namespace: 'fold_tech', key: 'location', value: location || 'Not specified', type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'brand', value: brandValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'description', value: descriptionValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'asking_price', value: askingPriceValue.toFixed(2), type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'accept_offers', value: accept_offers ? 'true' : 'false', type: 'boolean' }},
-      { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipmentTypeValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'certification', value: certificationValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'year_purchased', value: yearPurchasedValue.toString(), type: 'number_integer' }},
-      { metafield: { namespace: 'fold_tech', key: 'warranty', value: warrantyValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'reason_for_selling', value: reasonForSellingValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'shipping', value: shippingValue, type: 'single_line_text_field' }},
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'location',
+          value: location || 'Not specified',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'brand',
+          value: brandValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'description',
+          value: descriptionValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'asking_price',
+          value: askingPriceValue.toFixed(2),
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'accept_offers',
+          value: accept_offers ? 'true' : 'false',
+          type: 'boolean',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'equipment_type',
+          value: equipmentTypeValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'certification',
+          value: certificationValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'year_purchased',
+          value: yearPurchasedValue.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'warranty',
+          value: warrantyValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'reason_for_selling',
+          value: reasonForSellingValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'shipping',
+          value: shippingValue,
+          type: 'single_line_text_field',
+        },
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -321,7 +402,11 @@ export const addUsedEquipments = async (req, res) => {
       };
 
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
 
       if (imageResponse && imageResponse.image) {
         imagesData.push({
@@ -379,8 +464,6 @@ export const addUsedEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 // export const addNewEquipments = async (req, res) => {
 //   try {
@@ -582,7 +665,7 @@ export const addUsedEquipments = async (req, res) => {
 //   }
 // };
 //     // If the product is saved as draft
-  
+
 export const addNewEquipments = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -606,8 +689,9 @@ export const addNewEquipments = async (req, res) => {
     // Validate required fields
     if (!name) return res.status(400).json({ error: 'Title is required.' });
 
-    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.00;
-    if (isNaN(salePriceValue)) return res.status(400).json({ error: 'Sale price must be a number.' });
+    const salePriceValue = sale_price ? parseFloat(sale_price) : 0.0;
+    if (isNaN(salePriceValue))
+      return res.status(400).json({ error: 'Sale price must be a number.' });
 
     // Determine product status based on action
     const productStatus = status === 'publish' ? 'active' : 'draft';
@@ -616,7 +700,9 @@ export const addNewEquipments = async (req, res) => {
     // Optional fields with defaults
     const equipmentTypeValue = equipment_type || 'Unknown';
     const certificationValue = certification || 'Not specified';
-    const yearManufacturedValue = year_manufactured ? parseInt(year_manufactured, 10) : 0;
+    const yearManufacturedValue = year_manufactured
+      ? parseInt(year_manufactured, 10)
+      : 0;
     const warrantyValue = warranty || 'Not specified';
     const trainingValue = training || 'Not specified';
     const shippingValue = shipping || 'Not specified';
@@ -636,22 +722,103 @@ export const addNewEquipments = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
-      { metafield: { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'description', value: descriptionValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'location', value: location || 'Unknown', type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'brand', value: brandValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'sale_price', value: salePriceValue.toFixed(2), type: 'number_integer' }},
-      { metafield: { namespace: 'fold_tech', key: 'equipment_type', value: equipmentTypeValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'certification', value: certificationValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'year_manufactured', value: yearManufacturedValue.toString(), type: 'number_integer' }},
-      { metafield: { namespace: 'fold_tech', key: 'warranty', value: warrantyValue, type: 'single_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'training', value: trainingValue, type: 'multi_line_text_field' }},
-      { metafield: { namespace: 'fold_tech', key: 'shipping', value: shippingValue, type: 'single_line_text_field' }},
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'name',
+          value: name,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'description',
+          value: descriptionValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'location',
+          value: location || 'Unknown',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'brand',
+          value: brandValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'sale_price',
+          value: salePriceValue.toFixed(2),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'equipment_type',
+          value: equipmentTypeValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'certification',
+          value: certificationValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'year_manufactured',
+          value: yearManufacturedValue.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'warranty',
+          value: warrantyValue,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'training',
+          value: trainingValue,
+          type: 'multi_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'shipping',
+          value: shippingValue,
+          type: 'single_line_text_field',
+        },
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -673,7 +840,11 @@ export const addNewEquipments = async (req, res) => {
       };
 
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
 
       if (imageResponse && imageResponse.image) {
         imagesData.push({
@@ -731,7 +902,11 @@ export const addNewEquipments = async (req, res) => {
 
       // Check subscription quantity
       if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+        return res
+          .status(400)
+          .json({
+            error: 'Insufficient subscription credits to publish product.',
+          });
       }
 
       // Step 5: Decrement the subscription quantity
@@ -748,9 +923,15 @@ export const addNewEquipments = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -761,7 +942,9 @@ export const addNewEquipments = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Send a successful response
@@ -778,7 +961,6 @@ export const addNewEquipments = async (req, res) => {
       product: newProduct,
       expiresAt: null, // No expiration date for draft
     });
-
   } catch (error) {
     console.error('Error in addNewEquipments function:', error);
 
@@ -795,8 +977,6 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 // export const addNewBusiness = async (req, res) => {
 //   try {
@@ -1004,8 +1184,6 @@ export const addNewEquipments = async (req, res) => {
 //   }
 // };
 
-
-
 // export const addNewJobListing = async (req, res) => {
 //   try {
 //     // Log incoming request data
@@ -1182,7 +1360,6 @@ export const addNewEquipments = async (req, res) => {
 //   }
 // };
 
-
 export const addNewBusiness = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -1191,7 +1368,7 @@ export const addNewBusiness = async (req, res) => {
       name,
       location = 'Not specified',
       businessDescription = 'No description provided',
-      asking_price = 0.00,
+      asking_price = 0.0,
       establishedYear = new Date().getFullYear(),
       numberOfEmployees = 1,
       locationMonthlyRent = 0,
@@ -1214,8 +1391,10 @@ export const addNewBusiness = async (req, res) => {
     const productStatus = status === 'publish' ? 'active' : 'draft'; // Determine product status
 
     // Validate required fields
-    if (!name) return res.status(400).json({ error: 'Business name is required.' });
-    if (isNaN(askingPriceValue)) return res.status(400).json({ error: 'Asking price must be a number' });
+    if (!name)
+      return res.status(400).json({ error: 'Business name is required.' });
+    if (isNaN(askingPriceValue))
+      return res.status(400).json({ error: 'Asking price must be a number' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1230,27 +1409,111 @@ export const addNewBusiness = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Business Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'business_description', value: businessDescription, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'asking_price', value: askingPriceValue.toString(), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'established_year', value: establishedYear.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'number_of_employees', value: numberOfEmployees.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'location_monthly_rent', value: locationMonthlyRent.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'lease_expiration_date', value: new Date(leaseExpirationDate).toISOString(), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'location_size', value: locationSize.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'gross_yearly_revenue', value: grossYearlyRevenue.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'cash_flow', value: cashFlow.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'products_inventory', value: productsInventory.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'equipment_value', value: equipmentValue.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'reason_for_selling', value: reasonForSelling, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'list_of_devices', value: JSON.stringify(listOfDevices), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'offered_services', value: JSON.stringify(offeredServices), type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'support_and_training', value: supportAndTraining, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'business_description',
+        value: businessDescription,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'asking_price',
+        value: askingPriceValue.toString(),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'established_year',
+        value: establishedYear.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'number_of_employees',
+        value: numberOfEmployees.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'location_monthly_rent',
+        value: locationMonthlyRent.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'lease_expiration_date',
+        value: new Date(leaseExpirationDate).toISOString(),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'location_size',
+        value: locationSize.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'gross_yearly_revenue',
+        value: grossYearlyRevenue.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'cash_flow',
+        value: cashFlow.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'products_inventory',
+        value: productsInventory.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'equipment_value',
+        value: equipmentValue.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'reason_for_selling',
+        value: reasonForSelling,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'list_of_devices',
+        value: JSON.stringify(listOfDevices),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'offered_services',
+        value: JSON.stringify(offeredServices),
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'support_and_training',
+        value: supportAndTraining,
+        type: 'single_line_text_field',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1271,7 +1534,11 @@ export const addNewBusiness = async (req, res) => {
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -1330,13 +1597,18 @@ export const addNewBusiness = async (req, res) => {
     await newProduct.save();
 
     // Subscription management for active listings
-    if (status === 'active') { // Only handle subscription for published products
+    if (status === 'active') {
+      // Only handle subscription for published products
       const user = await authModel.findById(userId);
       if (!user) throw new Error('User not found');
 
       // Check subscription quantity
       if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+        return res
+          .status(400)
+          .json({
+            error: 'Insufficient subscription credits to publish product.',
+          });
       }
 
       // Step 5: Decrement the subscription quantity
@@ -1352,9 +1624,15 @@ export const addNewBusiness = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1365,7 +1643,9 @@ export const addNewBusiness = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Send a successful response
@@ -1382,7 +1662,6 @@ export const addNewBusiness = async (req, res) => {
       product: newProduct,
       expiresAt: null, // No expiration date for draft
     });
-
   } catch (error) {
     console.error('Error in addNewBusiness function:', error);
 
@@ -1399,9 +1678,6 @@ export const addNewBusiness = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
-
 
 export const addNewJobListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
@@ -1442,17 +1718,51 @@ export const addNewJobListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'name', value: name, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'qualification', value: qualification, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'position_requested_description', value: positionRequestedDescription, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'availability', value: availability, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'requested_yearly_salary', value: requestedYearlySalary.toString(), type: 'number_decimal' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'name',
+        value: name,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'qualification',
+        value: qualification,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'position_requested_description',
+        value: positionRequestedDescription,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'availability',
+        value: availability,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'requested_yearly_salary',
+        value: requestedYearlySalary.toString(),
+        type: 'number_decimal',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1473,7 +1783,11 @@ export const addNewJobListing = async (req, res) => {
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -1499,15 +1813,17 @@ export const addNewJobListing = async (req, res) => {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: imagesData,
-      jobListings: [{
-        location,
-        name,
-        qualification,
-        positionRequestedDescription,
-        availability,
-        requestedYearlySalary,
-        images: imagesData,
-      }],
+      jobListings: [
+        {
+          location,
+          name,
+          qualification,
+          positionRequestedDescription,
+          availability,
+          requestedYearlySalary,
+          images: imagesData,
+        },
+      ],
       userId,
       status: productStatus,
     });
@@ -1521,7 +1837,11 @@ export const addNewJobListing = async (req, res) => {
 
       // Check subscription quantity
       if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+        return res
+          .status(400)
+          .json({
+            error: 'Insufficient subscription credits to publish product.',
+          });
       }
 
       // Step 5: Decrement the subscription quantity
@@ -1537,9 +1857,15 @@ export const addNewJobListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1550,7 +1876,9 @@ export const addNewJobListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Send a successful response
@@ -1567,7 +1895,6 @@ export const addNewJobListing = async (req, res) => {
       product: newJobListing,
       expiresAt: null, // No expiration date for draft
     });
-
   } catch (error) {
     console.error('Error in addNewJobListing function:', error);
 
@@ -1584,7 +1911,6 @@ export const addNewJobListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // export const addNewProviderListing = async (req, res) => {
 //   console.log('Request Body:', req.body);
@@ -1757,9 +2083,6 @@ export const addNewJobListing = async (req, res) => {
 //   }
 // };
 
-
-
-
 // Add Room listing
 
 export const addNewProviderListing = async (req, res) => {
@@ -1802,17 +2125,51 @@ export const addNewProviderListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Provider Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'qualification_requested', value: qualificationRequested, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'job_type', value: jobType, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'type_of_job_offered', value: typeOfJobOffered, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'offered_yearly_salary', value: offeredYearlySalary.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'offered_position_description', value: offeredPositionDescription, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'qualification_requested',
+        value: qualificationRequested,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'job_type',
+        value: jobType,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'type_of_job_offered',
+        value: typeOfJobOffered,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'offered_yearly_salary',
+        value: offeredYearlySalary.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'offered_position_description',
+        value: offeredPositionDescription,
+        type: 'single_line_text_field',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1833,7 +2190,11 @@ export const addNewProviderListing = async (req, res) => {
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -1859,15 +2220,17 @@ export const addNewProviderListing = async (req, res) => {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: imagesData,
-      providerListings: [{
-        location,
-        qualificationRequested,
-        jobType,
-        typeOfJobOffered,
-        offeredYearlySalary,
-        offeredPositionDescription,
-        images: imagesData,
-      }],
+      providerListings: [
+        {
+          location,
+          qualificationRequested,
+          jobType,
+          typeOfJobOffered,
+          offeredYearlySalary,
+          offeredPositionDescription,
+          images: imagesData,
+        },
+      ],
       userId,
       status: productStatus,
     });
@@ -1881,7 +2244,11 @@ export const addNewProviderListing = async (req, res) => {
 
       // Check subscription quantity
       if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+        return res
+          .status(400)
+          .json({
+            error: 'Insufficient subscription credits to publish product.',
+          });
       }
 
       // Step 5: Decrement the subscription quantity
@@ -1897,9 +2264,15 @@ export const addNewProviderListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1910,7 +2283,9 @@ export const addNewProviderListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Send a successful response
@@ -1927,7 +2302,6 @@ export const addNewProviderListing = async (req, res) => {
       product: newProviderListing,
       expiresAt: null, // No expiration date for draft
     });
-
   } catch (error) {
     console.error('Error in addNewProviderListing function:', error);
 
@@ -1944,7 +2318,6 @@ export const addNewProviderListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // export const addRoomListing = async (req, res) => {
 //   try {
@@ -2127,9 +2500,7 @@ export const addNewProviderListing = async (req, res) => {
 //   }
 // };
 
-
 // get product of specific user
-
 
 export const addRoomListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
@@ -2173,22 +2544,71 @@ export const addRoomListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     console.log('Product Response:', productResponse);
 
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Room Listing Details
     const metafieldsPayload = [
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
-      { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'room_size',
+        value: roomSize.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'monthly_rent',
+        value: monthlyRent.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'deposit',
+        value: deposit.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'minimum_insurance_requested',
+        value: minimumInsuranceRequested.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'type_of_use_allowed',
+        value: typeOfUseAllowed,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'rental_terms',
+        value: rentalTerms,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'wifi_available',
+        value: wifiAvailable.toString(),
+        type: 'boolean',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'other_details',
+        value: otherDetails,
+        type: 'single_line_text_field',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -2203,13 +2623,18 @@ export const addRoomListing = async (req, res) => {
         const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
 
         const imagePayload = {
-          image: { // Corrected key from 'images' to 'image'
+          image: {
+            // Corrected key from 'images' to 'image'
             src: cloudinaryImageUrl,
           },
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -2235,18 +2660,20 @@ export const addRoomListing = async (req, res) => {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: imagesData,
-      roomListing: [{
-        location,
-        roomSize,
-        monthlyRent,
-        deposit,
-        minimumInsuranceRequested,
-        typeOfUseAllowed,
-        rentalTerms,
-        wifiAvailable,
-        otherDetails,
-        images: imagesData,
-      }],
+      roomListing: [
+        {
+          location,
+          roomSize,
+          monthlyRent,
+          deposit,
+          minimumInsuranceRequested,
+          typeOfUseAllowed,
+          rentalTerms,
+          wifiAvailable,
+          otherDetails,
+          images: imagesData,
+        },
+      ],
       userId,
       status: productStatus,
     });
@@ -2260,7 +2687,11 @@ export const addRoomListing = async (req, res) => {
 
       // Check subscription quantity
       if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+        return res
+          .status(400)
+          .json({
+            error: 'Insufficient subscription credits to publish product.',
+          });
       }
 
       // Step 5: Decrement the subscription quantity
@@ -2276,9 +2707,15 @@ export const addRoomListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -2289,7 +2726,9 @@ export const addRoomListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Send a successful response
@@ -2306,7 +2745,6 @@ export const addRoomListing = async (req, res) => {
       product: newRoomListing,
       expiresAt: null, // No expiration date for draft
     });
-
   } catch (error) {
     console.error('Error in addRoomListing function:', error);
 
@@ -2323,7 +2761,6 @@ export const addRoomListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const getProduct = async (req, res) => {
   try {
@@ -2424,7 +2861,11 @@ export const updateListing = async (req, res) => {
     }
 
     // Update the product in the database with new data
-    const updatedProduct = await productModel.findByIdAndUpdate(id, { $set: { ...updateData, images: product.images } }, { new: true });
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      id,
+      { $set: { ...updateData, images: product.images } },
+      { new: true }
+    );
 
     // Prepare data for Shopify
     const shopifyData = {
@@ -2441,14 +2882,19 @@ export const updateListing = async (req, res) => {
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
+        Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(shopifyData),
     });
 
     if (!response.ok) {
-      return res.status(500).json({ message: 'Failed to update product in Shopify', details: await response.text() });
+      return res
+        .status(500)
+        .json({
+          message: 'Failed to update product in Shopify',
+          details: await response.text(),
+        });
     }
 
     // Successful response
@@ -2458,7 +2904,9 @@ export const updateListing = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'An error occurred', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'An error occurred', error: error.message });
   }
 };
 
@@ -2474,8 +2922,12 @@ export const productUpdate = async (req, res) => {
     const result = await productModel.updateOne({ id }, { $set: updateData });
 
     if (result.nModified === 0) {
-      console.log(`Product with ID ${id} not found or data is the same in MongoDB.`);
-      return res.status(404).send('Product not found or no changes made in MongoDB');
+      console.log(
+        `Product with ID ${id} not found or data is the same in MongoDB.`
+      );
+      return res
+        .status(404)
+        .send('Product not found or no changes made in MongoDB');
     }
 
     console.log(`Successfully updated product with ID ${id} in MongoDB.`);
@@ -2518,8 +2970,6 @@ export const productUpdate = async (req, res) => {
 //   }
 // };
 
-
-
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 
@@ -2531,8 +2981,11 @@ export const deleteProduct = async (req, res) => {
     }
 
     // Check if shopifyId is defined
-    if (!product.id) {  // Use the correct field name
-      return res.status(400).json({ message: 'Shopify ID is not available for this product' });
+    if (!product.id) {
+      // Use the correct field name
+      return res
+        .status(400)
+        .json({ message: 'Shopify ID is not available for this product' });
     }
 
     // Construct the Shopify URL
@@ -2542,12 +2995,17 @@ export const deleteProduct = async (req, res) => {
     const response = await fetch(shopifyUrl, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`
-      }
+        Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
+      },
     });
 
     if (!response.ok) {
-      return res.status(500).json({ message: 'Failed to delete product from Shopify', details: await response.text() });
+      return res
+        .status(500)
+        .json({
+          message: 'Failed to delete product from Shopify',
+          details: await response.text(),
+        });
     }
 
     // Delete from MongoDB
@@ -2556,12 +3014,11 @@ export const deleteProduct = async (req, res) => {
     res.status(200).json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'An error occurred', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'An error occurred', error: error.message });
   }
 };
-
-
-
 
 // webhook product deletion
 export const productDelete = async (req, res) => {
@@ -2589,40 +3046,118 @@ export const productDelete = async (req, res) => {
 };
 
 
+//FOR CONVERTING UNPUBLISH TO PUBLISH
+// export const publishProduct = async (req, res) => {
+//   const { productId } = req.params;
+
+//   try {
+//     // Step 1: Fetch the local product to get the associated userId
+//     const localProduct = await productModel.findOne({ id: productId });
+//     if (!localProduct) {
+//       return res.status(404).json({ error: 'Product not found in database.' });
+//     }
+
+//     const { userId } = localProduct; // Assuming the product model has a userId field
+
+//     // Step 2: Fetch user from MongoDB
+//     const user = await authModel.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found.' });
+//     }
+
+//     // Step 3: Check subscription quantity
+//     if (!user.subscription || user.subscription.quantity <= 0) {
+//       return res
+//         .status(400)
+//         .json({
+//           error: 'Insufficient subscription credits to publish product.',
+//         });
+//     }
+
+//     // Step 4: Decrement the subscription quantity
+//     user.subscription.quantity -= 1;
+//     await user.save();
+
+//     // Step 5: Update product status in Shopify
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//     const shopifyPayload = {
+//       product: {
+//         id: productId,
+//         status: 'active',
+//         published_scope: 'global', // Set status to active
+//       },
+//     };
+
+//     const shopifyResponse = await shopifyRequest(
+//       shopifyUrl,
+//       'PUT',
+//       shopifyPayload
+//     );
+//     if (!shopifyResponse.product) {
+//       return res
+//         .status(400)
+//         .json({ error: 'Failed to update product status in Shopify.' });
+//     }
+
+//     // Step 6: Update product status in MongoDB
+//     const updatedProduct = await productModel.findOneAndUpdate(
+//       { id: productId },
+//       { status: 'active', expiresAt: user.subscription.expiresAt },
+//       { new: true }
+//     );
+
+//     if (!updatedProduct) {
+//       return res.status(404).json({ error: 'Product not found in database.' });
+//     }
+
+//     // Step 7: Send response
+//     return res.status(200).json({
+//       message: 'Product successfully published.',
+//       product: updatedProduct,
+//       expiresAt: user.subscription.expiresAt, // Optionally include the expiration date
+//     });
+//   } catch (error) {
+//     console.error('Error in publishProduct function:', error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const publishProduct = async (req, res) => {
   const { productId } = req.params;
 
   try {
-    // Step 1: Fetch the local product to get the associated userId
+    // Fetch the local product
     const localProduct = await productModel.findOne({ id: productId });
     if (!localProduct) {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    const { userId } = localProduct; // Assuming the product model has a userId field
+    const { userId } = localProduct;
 
-    // Step 2: Fetch user from MongoDB
+    // Fetch user from MongoDB
     const user = await authModel.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Step 3: Check subscription quantity
+    // Check subscription quantity
     if (!user.subscription || user.subscription.quantity <= 0) {
-      return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      return res.status(400).json({
+        error: 'Insufficient subscription credits to publish product.',
+      });
     }
 
-    // Step 4: Decrement the subscription quantity
+    // Decrement the subscription quantity
     user.subscription.quantity -= 1;
     await user.save();
 
-    // Step 5: Update product status in Shopify
+    // Update product status in Shopify
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
     const shopifyPayload = {
       product: {
         id: productId,
         status: 'active',
-        published_scope: 'global', // Set status to active
+        published_scope: 'global',
       },
     };
 
@@ -2631,10 +3166,10 @@ export const publishProduct = async (req, res) => {
       return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
     }
 
-    // Step 6: Update product status in MongoDB
+    // Update product status in MongoDB
     const updatedProduct = await productModel.findOneAndUpdate(
       { id: productId },
-      { status: 'active',expiresAt: user.subscription.expiresAt },
+      { status: 'active', expiresAt: user.subscription.expiresAt },
       { new: true }
     );
 
@@ -2642,11 +3177,14 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    // Step 7: Send response
+    // Schedule the unpublish task
+    scheduleUnpublish(productId, userId);
+
+    // Send response
     return res.status(200).json({
       message: 'Product successfully published.',
       product: updatedProduct,
-      expiresAt: user.subscription.expiresAt, // Optionally include the expiration date
+      expiresAt: user.subscription.expiresAt,
     });
   } catch (error) {
     console.error('Error in publishProduct function:', error);
@@ -2654,15 +3192,13 @@ export const publishProduct = async (req, res) => {
   }
 };
 
-
-
 export const newPublishProduct = async (req, res) => {
   try {
-     // Get product ID from request parameters
+    // Get product ID from request parameters
     const { userId } = req.params; // Get user ID from request body
 
     // Validate productId and userId
-    if ( !mongoose.isValidObjectId(userId)) {
+    if (!mongoose.isValidObjectId(userId)) {
       console.error('Validation Error: Invalid  user ID');
       return res.status(400).send('Invalid  user ID');
     }
@@ -2679,11 +3215,12 @@ export const newPublishProduct = async (req, res) => {
     if (user.subscription && user.subscription.quantity > 0) {
       productStatus = 'active'; // Set to active if quantity is greater than zero
     } else {
-      console.error(`Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`);
+      console.error(
+        `Insufficient quantity: User ID ${userId}, Quantity: ${user.subscription ? user.subscription.quantity : 'undefined'}`
+      );
     }
 
     // Find the product in your database
-  
 
     // Log product details
 
@@ -2702,22 +3239,29 @@ export const newPublishProduct = async (req, res) => {
     console.log('Shopify Update Data:', shopifyUpdateData); // Debugging line
 
     // Create Basic Auth header
-    const basicAuth = Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64');
+    const basicAuth = Buffer.from(
+      `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`
+    ).toString('base64');
 
     // Update the product in Shopify
-    const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${id}.json`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${basicAuth}`,
-      },
-      body: JSON.stringify(shopifyUpdateData),
-    });
+    const response = await fetch(
+      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${id}.json`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${basicAuth}`,
+        },
+        body: JSON.stringify(shopifyUpdateData),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Shopify API error for product ID ${id}: ${errorText}`); // Log detailed error
-      return res.status(response.status).send(`Failed to update in Shopify: ${errorText}`);
+      return res
+        .status(response.status)
+        .send(`Failed to update in Shopify: ${errorText}`);
     }
 
     // Update product status in local database
@@ -2756,9 +3300,15 @@ export const unpublishProduct = async (req, res) => {
       },
     };
 
-    const shopifyResponse = await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+    const shopifyResponse = await shopifyRequest(
+      shopifyUrl,
+      'PUT',
+      shopifyPayload
+    );
     if (!shopifyResponse.product) {
-      return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+      return res
+        .status(400)
+        .json({ error: 'Failed to update product status in Shopify.' });
     }
 
     // Step 2: Update product status in MongoDB
@@ -2783,15 +3333,12 @@ export const unpublishProduct = async (req, res) => {
   }
 };
 
-
-export const deletAllProduct=async(req,res)=>{
+export const deletAllProduct = async (req, res) => {
   try {
-    productModel.deleteMany().then(result=>{
-      if(result){
-        res.status(200).send('sucessfully deleted')
+    productModel.deleteMany().then((result) => {
+      if (result) {
+        res.status(200).send('sucessfully deleted');
       }
-    })
-  } catch (error) {
-    
-  }
-}
+    });
+  } catch (error) {}
+};

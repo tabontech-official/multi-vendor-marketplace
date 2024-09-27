@@ -7,7 +7,6 @@ import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
 import mongoose from 'mongoose';
-import { error } from 'console';
 
 //storage for images storing
 const createToken = (payLoad) => {
