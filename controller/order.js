@@ -168,7 +168,7 @@ async function checkProductExists(productId) {
       }
   
       // Calculate expiration date based on quantity
-      // const quantity = orderData.line_items[0].quantity;
+       const quantity = orderData.line_items[0].quantity;
       // const expirationDate = new Date();
       // expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
   

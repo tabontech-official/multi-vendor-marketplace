@@ -21,21 +21,45 @@
 import cron from 'node-cron';
 import { productModel } from '../Models/product.js';
 // Schedule unpublishing task
-export const scheduleUnpublish = (productId, userId, expiresAt) => {
-  const task = cron.schedule('* * * * *', async () => { // Run every minute for testing, change as needed
-    const currentDate = new Date();
-    if (currentDate >= expiresAt) {
-      const product = await productModel.findOne({ id: productId });
-      if (product) {
-        // Update product status to inactive
-        await productModel.findOneAndUpdate(
-          { id: productId },
-          { status: 'inactive' }
-        );
-
-        // Stop the task after unpublishing
-        task.stop();
+export const scheduleUnpublish = () => {
+  cron.schedule('* * * * *', async () => { // Change frequency as needed
+    try {
+      const products = await productModel.find({ status: 'active' });
+      const currentDate = new Date();
+      
+      for (const product of products) {
+        const expiresAt = product.expiresAt;
+        if (currentDate >= expiresAt) {
+          await productModel.findOneAndUpdate(
+            { id: product.id },
+            { status: 'draft' }
+          );
+          console.log(`Product ${product.id} status updated to draft.`);
+        }
       }
+    } catch (error) {
+      console.error(`Error in scheduled unpublish: ${error.message}`);
     }
   });
 };
+
+const testUnpublishProduct = async (productId) => {
+  const product = await productModel.findOne({ id: productId });
+  const currentDate = new Date();
+  const expiresAt = product.expiresAt;
+
+  console.log(`Current Date: ${currentDate}, Expires At: ${expiresAt}`);
+  
+  if (currentDate >= expiresAt) {
+    await productModel.findOneAndUpdate(
+      { id: productId },
+      { status: 'draft' }
+    );
+    console.log(`Product ${productId} status updated to draft.`);
+  } else {
+    console.log(`Product ${productId} not yet expired.`);
+  }
+};
+
+// Call this function for testing
+testUnpublishProduct('8721557422333');
