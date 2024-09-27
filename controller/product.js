@@ -3122,6 +3122,7 @@ export const productDelete = async (req, res) => {
 //   }
 // };
 
+
 export const publishProduct = async (req, res) => {
   const { productId } = req.params;
 
@@ -3166,10 +3167,13 @@ export const publishProduct = async (req, res) => {
       return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
     }
 
+    // Set expiration date to 30 days from now
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     // Update product status in MongoDB
     const updatedProduct = await productModel.findOneAndUpdate(
       { id: productId },
-      { status: 'active', expiresAt: user.subscription.expiresAt },
+      { status: 'active', expiresAt },
       { new: true }
     );
 
@@ -3178,19 +3182,23 @@ export const publishProduct = async (req, res) => {
     }
 
     // Schedule the unpublish task
-    scheduleUnpublish(productId, userId);
+    scheduleUnpublish(productId, userId, expiresAt);
 
     // Send response
     return res.status(200).json({
       message: 'Product successfully published.',
       product: updatedProduct,
-      expiresAt: user.subscription.expiresAt,
+      expiresAt: expiresAt,
     });
   } catch (error) {
     console.error('Error in publishProduct function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
+
+// Schedule unpublishing task
+
+
 
 export const newPublishProduct = async (req, res) => {
   try {

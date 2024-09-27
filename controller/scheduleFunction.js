@@ -21,20 +21,21 @@
 import cron from 'node-cron';
 import { productModel } from '../Models/product.js';
 // Schedule unpublishing task
-export const scheduleUnpublish = (productId, userId) => {
-  const task = cron.schedule('0 0 * * *', async () => { // Run once a day at midnight
-    const product = await productModel.findOne({ id: productId });
-    const user = await authModel.findById(userId);
+export const scheduleUnpublish = (productId, userId, expiresAt) => {
+  const task = cron.schedule('* * * * *', async () => { // Run every minute for testing, change as needed
+    const currentDate = new Date();
+    if (currentDate >= expiresAt) {
+      const product = await productModel.findOne({ id: productId });
+      if (product) {
+        // Update product status to inactive
+        await productModel.findOneAndUpdate(
+          { id: productId },
+          { status: 'inactive' }
+        );
 
-    if (product && user && user.subscription.expiresAt <= new Date()) {
-      // Update product status to inactive
-      await productModel.findOneAndUpdate(
-        { id: productId },
-        { status: 'inactive' }
-      );
-
-      // Optionally, stop the task if you don't need it anymore
-      task.stop();
+        // Stop the task after unpublishing
+        task.stop();
+      }
     }
   });
 };

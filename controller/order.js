@@ -168,9 +168,9 @@ async function checkProductExists(productId) {
       }
   
       // Calculate expiration date based on quantity
-      const quantity = orderData.line_items[0].quantity;
-      const expirationDate = new Date();
-      expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
+      // const quantity = orderData.line_items[0].quantity;
+      // const expirationDate = new Date();
+      // expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
   
       // Save order to MongoDB
       const order = new orderModel({
@@ -178,7 +178,7 @@ async function checkProductExists(productId) {
         customer: orderData.customer,
         lineItems: orderData.line_items,
         createdAt: orderData.created_at,
-        expiresAt: expirationDate, // Add expiration date field
+       // expiresAt: expirationDate, // Add expiration date field
       });
   
       await order.save();
@@ -192,11 +192,11 @@ async function checkProductExists(productId) {
       // Update user's subscription
       if (user.subscription) {
         user.subscription.quantity = (user.subscription.quantity || 0) + quantity; // Add to existing quantity
-        user.subscription.expiresAt = expirationDate; // Update the expiration date
+        //user.subscription.expiresAt = expirationDate; // Update the expiration date
       } else {
         user.subscription = {
           quantity,
-          expiresAt: expirationDate, // Set expiration date if subscription doesn't exist
+         // expiresAt: expirationDate, // Set expiration date if subscription doesn't exist
         };
       }
   
@@ -205,7 +205,7 @@ async function checkProductExists(productId) {
       // Respond with order details including expiresAt
       res.status(200).json({
         message: 'Order saved and user updated',
-        expiresAt: expirationDate,
+        //expiresAt: expirationDate,
         orderId: orderData.id
       });
     } catch (error) {
