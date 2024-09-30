@@ -252,34 +252,29 @@ export const addUsedEquipments = async (req, res) => {
     } = req.body;
 
     // Validate required field
-    if (!name)
-      return res.status(400).json({ error: 'Equipment Name is required' });
-
-    // Set default values for optional fields
-    const askingPriceValue = asking_price ? parseFloat(asking_price) : 0.0;
-    if (isNaN(askingPriceValue))
-      return res.status(400).json({ error: 'Asking price must be a number.' });
-
-    const brandValue = brand || 'medspa';
     const status = 'active';
-    const equipmentTypeValue = equipment_type || 'Unknown';
-    const certificationValue = certification || 'Not specified';
-    const yearPurchasedValue = year_purchased
-      ? parseInt(year_purchased, 10)
-      : 0;
-    const warrantyValue = warranty || 'Not specified';
-    const reasonForSellingValue = reason_for_selling || 'Not specified';
-    const shippingValue = shipping || 'Not specified';
-    const descriptionValue = description || 'No description provided.';
+  
+
+    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    if (!brand) return res.status(400).json({ error: 'Brand is required.' });
+    if (asking_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
+    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
+    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
+    if (year_purchased === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
+    if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
+    if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
+    if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
+    if (!description) return res.status(400).json({ error: 'Description is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
         title: name,
-        body_html: descriptionValue,
-        vendor: brandValue,
+        body_html: description,
+        vendor: brand,
         product_type: 'Used Equipments',
-        variants: [{ price: askingPriceValue.toFixed(2).toString() }],
+        variants: [{ price: asking_price.toFixed(2).toString() }],
         status,
       },
     };
@@ -305,7 +300,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'brand',
-          value: brandValue,
+          value: brand,
           type: 'single_line_text_field',
         },
       },
@@ -313,7 +308,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'description',
-          value: descriptionValue,
+          value: description,
           type: 'single_line_text_field',
         },
       },
@@ -321,7 +316,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'asking_price',
-          value: askingPriceValue.toFixed(2),
+          value: asking_price.toFixed(2),
           type: 'single_line_text_field',
         },
       },
@@ -337,7 +332,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'equipment_type',
-          value: equipmentTypeValue,
+          value: equipment_type,
           type: 'single_line_text_field',
         },
       },
@@ -353,7 +348,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'year_purchased',
-          value: yearPurchasedValue.toString(),
+          value: year_purchased.toString(),
           type: 'number_integer',
         },
       },
@@ -361,7 +356,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'warranty',
-          value: warrantyValue,
+          value: warranty,
           type: 'single_line_text_field',
         },
       },
@@ -369,7 +364,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'reason_for_selling',
-          value: reasonForSellingValue,
+          value: reason_for_selling,
           type: 'single_line_text_field',
         },
       },
@@ -377,7 +372,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'shipping',
-          value: shippingValue,
+          value: shipping,
           type: 'single_line_text_field',
         },
       },
@@ -427,7 +422,7 @@ export const addUsedEquipments = async (req, res) => {
     const newProduct = new productModel({
       id: productId,
       title: name,
-      body_html: descriptionValue,
+      body_html: description,
       vendor: brandValue,
       product_type: 'Used Equipment',
       created_at: new Date(),
@@ -437,16 +432,16 @@ export const addUsedEquipments = async (req, res) => {
       equipment: {
         location: location || 'Not specified',
         name,
-        brand: brandValue,
-        asking_price: askingPriceValue.toFixed(2),
+        brand: brand,
+        asking_price: asking_price.toFixed(2),
         accept_offers: !!accept_offers,
-        equipment_type: equipmentTypeValue,
-        certification: certificationValue,
-        year_purchased: yearPurchasedValue,
-        warranty: warrantyValue,
-        reason_for_selling: reasonForSellingValue,
-        shipping: shippingValue,
-        description: descriptionValue,
+        equipment_type: equipment_type,
+        certification: certification,
+        year_purchased: year_purchased,
+        warranty: warranty,
+        reason_for_selling: reason_for_selling,
+        shipping: shipping,
+        description: description,
       },
       userId,
       status,
