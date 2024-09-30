@@ -2422,191 +2422,7 @@ export const addNewProviderListing = async (req, res) => {
   }
 };
 
-// export const addRoomListing = async (req, res) => {
-//   try {
-//     // Extract room listing details from request body
-//     const {
-//       location,
-//       roomSize = 0,
-//       monthlyRent = 0,
-//       deposit = 0,
-//       minimumInsuranceRequested = 0,
-//       typeOfUseAllowed = 'Not specified',
-//       rentalTerms = 'Not specified',
-//       wifiAvailable = false,
-//       otherDetails = 'No additional details provided',
-//       userId,
-//       status,
-//     } = req.body;
-
-//     console.log(req.files);
-
-//     // Handle file upload
-//     const images = req.files.images; // Handle file upload
-//     const productStatus = status === 'publish' ? 'active' : 'draft';
-
-//     // Validate required fields
-//     if (!location) {
-//       return res.status(400).json({ error: 'Location is required.' });
-//     }
-
-//     // Step 1: Create Product in Shopify
-//     const shopifyPayload = {
-//       product: {
-//         title: location,
-//         body_html: otherDetails,
-//         vendor: location,
-//         product_type: 'Spa Room For Rent',
-//         variants: [{ price: monthlyRent.toString() }],
-//         status: productStatus,
-//       },
-//     };
-
-//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-//     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-//     console.log('Product Response:', productResponse);
-
-//     const productId = productResponse.product.id;
-
-//     // Step 2: Create Structured Metafields for the Room Listing Details
-//     const metafieldsPayload = [
-//       { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
-//       { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
-//       { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
-//       { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
-//     ];
-
-//     for (const metafield of metafieldsPayload) {
-//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-//       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
-//     }
-
-//     // Step 3: Upload Images to Shopify if provided
-//     const imagesData = [];
-//     if (Array.isArray(images) && images.length > 0) {
-//       for (let i = 0; i < images.length; i++) {
-//         const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
-
-//         const imagePayload = {
-//           image: { // Corrected key from 'images' to 'image'
-//             src: cloudinaryImageUrl,
-//           },
-//         };
-
-//         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-//         const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-
-//         if (imageResponse && imageResponse.image) {
-//           imagesData.push({
-//             id: imageResponse.image.id,
-//             product_id: productId,
-//             position: imageResponse.image.position,
-//             alt: 'Room Listing Image',
-//             width: imageResponse.image.width,
-//             height: imageResponse.image.height,
-//             src: imageResponse.image.src,
-//           });
-//         }
-//       }
-//     }
-
-//     // Step 4: Save Room Listing to MongoDB
-//     const newRoomListing = new productModel({
-//       id: productId,
-//       title: location,
-//       body_html: otherDetails,
-//       vendor: location,
-//       product_type: 'Room Listing',
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       images: imagesData,
-//       roomListing: [{
-//         location,
-//         roomSize,
-//         monthlyRent,
-//         deposit,
-//         minimumInsuranceRequested,
-//         typeOfUseAllowed,
-//         rentalTerms,
-//         wifiAvailable,
-//         otherDetails,
-//         images: imagesData
-//       }],
-//       userId: userId,
-//       status: productStatus,
-//     });
-
-//     await newRoomListing.save();
-
-//     if (status === 'active') {
-//       const user = await authModel.findById(userId);
-//       if (!user) throw new Error('User not found');
-
-//       // Check subscription quantity
-//       if (!user.subscription || user.subscription.quantity <= 0) {
-//         return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-//       }
-
-//       // Step 5: Decrement the subscription quantity
-//       user.subscription.quantity -= 1;
-//       await user.save();
-
-//       // Step 6: Update product status in Shopify
-//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-//       const shopifyUpdatePayload = {
-//         product: {
-//           id: productId,
-//           status: 'active',
-//            // Set status to active
-//         },
-//       };
-
-//       const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
-//       if (!shopifyResponse.product) {
-//         return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
-//       }
-
-//       // Step 7: Update product status in MongoDB
-//       const updatedProduct = await productModel.findOneAndUpdate(
-//         { id: productId },
-//         { status: 'active', expiresAt: user.subscription.expiresAt },
-//         { new: true }
-//       );
-
-//       if (!updatedProduct) {
-//         return res.status(404).json({ error: 'Product not found in database.' });
-//       }
-
-//       // Send a successful response
-//       return res.status(201).json({
-//         message: 'Product successfully created and published.',
-//         product: updatedProduct,
-//         expiresAt: user.subscription.expiresAt,
-//       });
-//     }
-
-//     // If the product is saved as draft
-//     res.status(201).json({
-//       message: 'Product successfully created and saved as draft.',
-//       product: newProduct,
-//       expiresAt: null, // No expiration date for draft
-//     });
-
-//   } catch (error) {
-//     console.error('Error in addNewEquipments function:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
-// get product of specific user
-
 export const addRoomListing = async (req, res) => {
-  let productId; // Declare productId outside try block for access in catch
   try {
     // Extract room listing details from request body
     const {
@@ -2618,7 +2434,7 @@ export const addRoomListing = async (req, res) => {
       typeOfUseAllowed ,
       rentalTerms ,
       wifiAvailable ,
-      otherDetails ,
+      otherDetails,
       userId,
       status,
     } = req.body;
@@ -2626,49 +2442,48 @@ export const addRoomListing = async (req, res) => {
     console.log(req.files);
 
     // Handle file upload
-    const images = req.files.images || []; // Ensure it's an array
+    const images = req.files.images; // Handle file upload
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
     // Validate required fields
-    
+       
   if (!location) {
-      return res.status(400).json({ error: 'Location is required.' });
-  }
-  
-  if (!roomSize) {
-      return res.status(400).json({ error: 'Room size is required.' });
-  }
-  
-  if (!monthlyRent) {
-      return res.status(400).json({ error: 'Monthly rent is required.' });
-  }
-  
-  if (!deposit) {
-      return res.status(400).json({ error: 'Deposit is required.' });
-  }
-  
-  if (!minimumInsuranceRequested) {
-      return res.status(400).json({ error: 'Minimum insurance requested is required.' });
-  }
-  
-  if (!typeOfUseAllowed) {
-      return res.status(400).json({ error: 'Type of use allowed is required.' });
-  }
-  
-  if (!rentalTerms) {
-      return res.status(400).json({ error: 'Rental terms are required.' });
-  }
-  
-  if (wifiAvailable === undefined) { // Check if this field can be a boolean
-      return res.status(400).json({ error: 'WiFi availability is required.' });
-  }
-  
-  if (!otherDetails) {
-      return res.status(400).json({ error: 'Other details are required.' });
-  }
-  
-  // Continue with any additional field validations as needed
-  
+    return res.status(400).json({ error: 'Location is required.' });
+}
+
+if (!roomSize) {
+    return res.status(400).json({ error: 'Room size is required.' });
+}
+
+if (!monthlyRent) {
+    return res.status(400).json({ error: 'Monthly rent is required.' });
+}
+
+if (!deposit) {
+    return res.status(400).json({ error: 'Deposit is required.' });
+}
+
+if (!minimumInsuranceRequested) {
+    return res.status(400).json({ error: 'Minimum insurance requested is required.' });
+}
+
+if (!typeOfUseAllowed) {
+    return res.status(400).json({ error: 'Type of use allowed is required.' });
+}
+
+if (!rentalTerms) {
+    return res.status(400).json({ error: 'Rental terms are required.' });
+}
+
+if (wifiAvailable === undefined) { // Check if this field can be a boolean
+    return res.status(400).json({ error: 'WiFi availability is required.' });
+}
+
+if (!otherDetails) {
+    return res.status(400).json({ error: 'Other details are required.' });
+}
+
+
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -2682,71 +2497,22 @@ export const addRoomListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
     console.log('Product Response:', productResponse);
 
-    productId = productResponse.product.id; // Assign productId
+    const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Room Listing Details
     const metafieldsPayload = [
-      {
-        namespace: 'fold_tech',
-        key: 'location',
-        value: location,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'room_size',
-        value: roomSize.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'monthly_rent',
-        value: monthlyRent.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'deposit',
-        value: deposit.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'minimum_insurance_requested',
-        value: minimumInsuranceRequested.toString(),
-        type: 'number_integer',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'type_of_use_allowed',
-        value: typeOfUseAllowed,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'rental_terms',
-        value: rentalTerms,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'wifi_available',
-        value: wifiAvailable.toString(),
-        type: 'boolean',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'other_details',
-        value: otherDetails,
-        type: 'single_line_text_field',
-      },
+      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
+      { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
+      { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -2761,18 +2527,13 @@ export const addRoomListing = async (req, res) => {
         const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
 
         const imagePayload = {
-          image: {
-            // Corrected key from 'images' to 'image'
+          image: { // Corrected key from 'images' to 'image'
             src: cloudinaryImageUrl,
           },
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -2798,103 +2559,399 @@ export const addRoomListing = async (req, res) => {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: imagesData,
-      roomListing: [
-        {
-          location,
-          roomSize,
-          monthlyRent,
-          deposit,
-          minimumInsuranceRequested,
-          typeOfUseAllowed,
-          rentalTerms,
-          wifiAvailable,
-          otherDetails,
-          images: imagesData,
-        },
-      ],
-      userId,
+      roomListing: [{
+        location,
+        roomSize,
+        monthlyRent,
+        deposit,
+        minimumInsuranceRequested,
+        typeOfUseAllowed,
+        rentalTerms,
+        wifiAvailable,
+        otherDetails,
+        images: imagesData
+      }],
+      userId: userId,
       status: productStatus,
     });
 
     await newRoomListing.save();
 
-    if (status === 'active') {
-      const user = await authModel.findById(userId);
-      if (!user) return res.status(404).json({ error: 'User not found.' });
+if (status === 'active') {
+  const user = await authModel.findById(userId);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
 
-      // Check subscription quantity
-      if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
-        });
-      }
-
-      // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
-      await user.save();
-
-      // Set expiration date to 30 days from now
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-      // Step 6: Update product status in Shopify
-      const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-      const shopifyUpdatePayload = {
-        product: {
-          id: productId,
-          status: 'active',
-          published_scope: 'global',
-        },
-      };
-
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
-      if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
-      }
-
-      // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
-        { id: productId },
-        { status: 'active', expiresAt },
-        { new: true }
-      );
-
-      if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
-      }
-
-      // Schedule the unpublish task
-      scheduleUnpublish(productId, userId, expiresAt);
-
-      // Send a successful response
-      return res.status(201).json({
-        message: 'Product successfully created and published.',
-        product: updatedProduct,
-        expiresAt,
-      });
-    }
-
-    // If the product is saved as draft
-    res.status(201).json({
-      message: 'Product successfully created and saved as draft.',
-      product: newRoomListing,
-      expiresAt: null, // No expiration date for draft
+  // Check subscription quantity
+  if (!user.subscription || user.subscription.quantity <= 0) {
+    return res.status(400).json({
+      error: 'Insufficient subscription credits to publish product.',
     });
-  } catch (error) {
-    console.error('Error in addNewEquipments function:', error);
-
-    // Attempt to delete the product from Shopify if it was created
-    if (productId) {
-      try {
-        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-        await shopifyRequest(deleteShopifyUrl, 'DELETE');
-      } catch (deleteError) {
-        console.error('Error deleting product from Shopify:', deleteError);
-      }
-    }
-
-    res.status(500).json({ error: error.message });
   }
+
+  // Decrement the subscription quantity
+  user.subscription.quantity -= 1;
+  await user.save();
+
+  // Set expiration date to 30 days from now
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  // Step 6: Update product status in Shopify
+  const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+  const shopifyUpdatePayload = {
+    product: {
+      id: productId,
+      status: 'active',
+      published_scope: 'global',
+    },
+  };
+
+  const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+  if (!shopifyResponse.product) {
+    return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+  }
+
+  // Step 7: Update product status in MongoDB
+  const updatedProduct = await productModel.findOneAndUpdate(
+    { id: productId },
+    { status: 'active', expiresAt },
+    { new: true }
+  );
+
+  if (!updatedProduct) {
+    return res.status(404).json({ error: 'Product not found in database.' });
+  }
+
+  // Schedule the unpublish task
+  scheduleUnpublish(productId, userId, expiresAt);
+
+  // Send a successful response
+  return res.status(201).json({
+    message: 'Product successfully created and published.',
+    product: updatedProduct,
+    expiresAt,
+  });
+}
+
+// If the product is saved as draft
+res.status(201).json({
+  message: 'Product successfully created and saved as draft.',
+  product: newRoomListing,
+  expiresAt: null, // No expiration date for draft
+});
+} catch (error) {
+console.error('Error in addNewEquipments function:', error);
+
+// Attempt to delete the product from Shopify if it was created
+if (productId) {
+  try {
+    const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+    await shopifyRequest(deleteShopifyUrl, 'DELETE');
+  } catch (deleteError) {
+    console.error('Error deleting product from Shopify:', deleteError);
+  }
+}
+
+res.status(500).json({ error: error.message });
+}
 };
+
+
+
+
+
+
+// export const addRoomListing = async (req, res) => {
+//   let productId; // Declare productId outside try block for access in catch
+//   try {
+//     // Extract room listing details from request body
+//     const {
+//       location,
+//       roomSize ,
+//       monthlyRent ,
+//       deposit ,
+//       minimumInsuranceRequested ,
+//       typeOfUseAllowed ,
+//       rentalTerms ,
+//       wifiAvailable ,
+//       otherDetails ,
+//       userId,
+//       status,
+//     } = req.body;
+
+//     console.log(req.files);
+
+//     // Handle file upload
+//     const images = req.files.images || []; // Ensure it's an array
+//     const productStatus = status === 'publish' ? 'active' : 'draft';
+
+//     // Validate required fields
+    
+//   if (!location) {
+//       return res.status(400).json({ error: 'Location is required.' });
+//   }
+  
+//   if (!roomSize) {
+//       return res.status(400).json({ error: 'Room size is required.' });
+//   }
+  
+//   if (!monthlyRent) {
+//       return res.status(400).json({ error: 'Monthly rent is required.' });
+//   }
+  
+//   if (!deposit) {
+//       return res.status(400).json({ error: 'Deposit is required.' });
+//   }
+  
+//   if (!minimumInsuranceRequested) {
+//       return res.status(400).json({ error: 'Minimum insurance requested is required.' });
+//   }
+  
+//   if (!typeOfUseAllowed) {
+//       return res.status(400).json({ error: 'Type of use allowed is required.' });
+//   }
+  
+//   if (!rentalTerms) {
+//       return res.status(400).json({ error: 'Rental terms are required.' });
+//   }
+  
+//   if (wifiAvailable === undefined) { // Check if this field can be a boolean
+//       return res.status(400).json({ error: 'WiFi availability is required.' });
+//   }
+  
+//   if (!otherDetails) {
+//       return res.status(400).json({ error: 'Other details are required.' });
+//   }
+  
+//   // Continue with any additional field validations as needed
+  
+//     // Step 1: Create Product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: location,
+//         body_html: otherDetails,
+//         vendor: location,
+//         product_type: 'Spa Room For Rent',
+//         variants: [{ price: monthlyRent.toString() }],
+//         status: productStatus,
+//       },
+//     };
+
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+//     const productResponse = await shopifyRequest(
+//       shopifyUrl,
+//       'POST',
+//       shopifyPayload
+//     );
+//     console.log('Product Response:', productResponse);
+
+//     productId = productResponse.product.id; // Assign productId
+
+//     // Step 2: Create Structured Metafields for the Room Listing Details
+//     const metafieldsPayload = [
+//       {
+//         namespace: 'fold_tech',
+//         key: 'location',
+//         value: location,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'room_size',
+//         value: roomSize.toString(),
+//         type: 'number_integer',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'monthly_rent',
+//         value: monthlyRent.toString(),
+//         type: 'number_integer',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'deposit',
+//         value: deposit.toString(),
+//         type: 'number_integer',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'minimum_insurance_requested',
+//         value: minimumInsuranceRequested.toString(),
+//         type: 'number_integer',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'type_of_use_allowed',
+//         value: typeOfUseAllowed,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'rental_terms',
+//         value: rentalTerms,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'wifi_available',
+//         value: wifiAvailable.toString(),
+//         type: 'boolean',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'other_details',
+//         value: otherDetails,
+//         type: 'single_line_text_field',
+//       },
+//     ];
+
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
+//     }
+
+//     // Step 3: Upload Images to Shopify if provided
+//     const imagesData = [];
+//     if (Array.isArray(images) && images.length > 0) {
+//       for (let i = 0; i < images.length; i++) {
+//         const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
+
+//         const imagePayload = {
+//           image: {
+//             // Corrected key from 'images' to 'image'
+//             src: cloudinaryImageUrl,
+//           },
+//         };
+
+//         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+//         const imageResponse = await shopifyRequest(
+//           imageUrl,
+//           'POST',
+//           imagePayload
+//         );
+
+//         if (imageResponse && imageResponse.image) {
+//           imagesData.push({
+//             id: imageResponse.image.id,
+//             product_id: productId,
+//             position: imageResponse.image.position,
+//             alt: 'Room Listing Image',
+//             width: imageResponse.image.width,
+//             height: imageResponse.image.height,
+//             src: imageResponse.image.src,
+//           });
+//         }
+//       }
+//     }
+
+//     // Step 4: Save Room Listing to MongoDB
+//     const newRoomListing = new productModel({
+//       id: productId,
+//       title: location,
+//       body_html: otherDetails,
+//       vendor: location,
+//       product_type: 'Room Listing',
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       images: imagesData,
+//       roomListing: [
+//         {
+//           location,
+//           roomSize,
+//           monthlyRent,
+//           deposit,
+//           minimumInsuranceRequested,
+//           typeOfUseAllowed,
+//           rentalTerms,
+//           wifiAvailable,
+//           otherDetails,
+//           images: imagesData,
+//         },
+//       ],
+//       userId,
+//       status: productStatus,
+//     });
+
+//     await newRoomListing.save();
+
+//     if (status === 'active') {
+//       const user = await authModel.findById(userId);
+//       if (!user) return res.status(404).json({ error: 'User not found.' });
+
+//       // Check subscription quantity
+//       if (!user.subscription || user.subscription.quantity <= 0) {
+//         return res.status(400).json({
+//           error: 'Insufficient subscription credits to publish product.',
+//         });
+//       }
+
+//       // Decrement the subscription quantity
+//       user.subscription.quantity -= 1;
+//       await user.save();
+
+//       // Set expiration date to 30 days from now
+//       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+//       // Step 6: Update product status in Shopify
+//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//       const shopifyUpdatePayload = {
+//         product: {
+//           id: productId,
+//           status: 'active',
+//           published_scope: 'global',
+//         },
+//       };
+
+//       const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+//       if (!shopifyResponse.product) {
+//         return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+//       }
+
+//       // Step 7: Update product status in MongoDB
+//       const updatedProduct = await productModel.findOneAndUpdate(
+//         { id: productId },
+//         { status: 'active', expiresAt },
+//         { new: true }
+//       );
+
+//       if (!updatedProduct) {
+//         return res.status(404).json({ error: 'Product not found in database.' });
+//       }
+
+//       // Schedule the unpublish task
+//       scheduleUnpublish(productId, userId, expiresAt);
+
+//       // Send a successful response
+//       return res.status(201).json({
+//         message: 'Product successfully created and published.',
+//         product: updatedProduct,
+//         expiresAt,
+//       });
+//     }
+
+//     // If the product is saved as draft
+//     res.status(201).json({
+//       message: 'Product successfully created and saved as draft.',
+//       product: newRoomListing,
+//       expiresAt: null, // No expiration date for draft
+//     });
+//   } catch (error) {
+//     console.error('Error in addNewEquipments function:', error);
+
+//     // Attempt to delete the product from Shopify if it was created
+//     if (productId) {
+//       try {
+//         const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//         await shopifyRequest(deleteShopifyUrl, 'DELETE');
+//       } catch (deleteError) {
+//         console.error('Error deleting product from Shopify:', deleteError);
+//       }
+//     }
+
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
