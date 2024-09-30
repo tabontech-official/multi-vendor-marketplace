@@ -423,7 +423,7 @@ export const addUsedEquipments = async (req, res) => {
       id: productId,
       title: name,
       body_html: description,
-      vendor: brandValue,
+      vendor: brand,
       product_type: 'Used Equipment',
       created_at: new Date(),
       tags: productResponse.product.tags,
