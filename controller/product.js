@@ -433,7 +433,7 @@ export const addUsedEquipments = async (req, res) => {
         location: location || 'Not specified',
         name,
         brand: brand,
-        asking_price: asking_price.toFixed(2),
+        asking_price: asking_price,
         accept_offers: !!accept_offers,
         equipment_type: equipment_type,
         certification: certification,
