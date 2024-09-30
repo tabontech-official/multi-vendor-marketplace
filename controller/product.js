@@ -274,7 +274,7 @@ export const addUsedEquipments = async (req, res) => {
         body_html: description,
         vendor: brand,
         product_type: 'Used Equipments',
-        variants: [{ price: asking_price.toFixed(2).toString() }],
+        variants: [{ price: asking_price.toString() }],
         status,
       },
     };
@@ -316,7 +316,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'asking_price',
-          value: asking_price.toFixed(2),
+          value: asking_price.toString(),
           type: 'single_line_text_field',
         },
       },
