@@ -1634,7 +1634,7 @@ export const addNewBusiness = async (req, res) => {
         name,
         location,
         businessDescription,
-        asking_price: asking_price,
+        asking_price,
         establishedYear,
         numberOfEmployees,
         locationMonthlyRent,
