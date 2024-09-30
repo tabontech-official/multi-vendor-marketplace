@@ -3213,7 +3213,7 @@ export const updateListing = async (req, res) => {
 
     // Successful response
     res.status(200).json({
-      message: 'Product successfully updated in both MongoDB and Shopify',
+      message: 'Product successfully updated',
       data: updatedProduct,
     });
   } catch (error) {
