@@ -3510,9 +3510,6 @@ export const publishProduct = async (req, res) => {
   }
 };
 
-// Schedule unpublishing task
-
-
 
 export const newPublishProduct = async (req, res) => {
   try {
@@ -3609,6 +3606,7 @@ export const newPublishProduct = async (req, res) => {
   }
 };
 
+//FOR CONVERTING PUBLISH TO UNPUBLISH
 export const unpublishProduct = async (req, res) => {
   const { productId } = req.params;
 
