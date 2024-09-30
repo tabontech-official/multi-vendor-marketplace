@@ -340,7 +340,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'certification',
-          value: certificationValue,
+          value: certification,
           type: 'single_line_text_field',
         },
       },
