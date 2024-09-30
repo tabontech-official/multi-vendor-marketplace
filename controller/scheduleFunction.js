@@ -22,7 +22,7 @@ import cron from 'node-cron';
 import { productModel } from '../Models/product.js';
 // Schedule unpublishing task
 export const scheduleUnpublish = () => {
-  cron.schedule('0 */2 * * *', async () => { // Change frequency as needed
+  cron.schedule('* * * * *', async () => { // Change frequency as needed
     try {
       const products = await productModel.find({ status: 'active' });
       const currentDate = new Date();
