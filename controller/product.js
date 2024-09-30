@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
 import { scheduleUnpublish } from './scheduleFunction.js';
+
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -1634,7 +1635,7 @@ export const addNewBusiness = async (req, res) => {
         name,
         location,
         businessDescription,
-        asking_price,
+        asking_price: asking_price,
         establishedYear,
         numberOfEmployees,
         locationMonthlyRent,
@@ -3042,6 +3043,90 @@ export const getSearchProduct = async (req, res) => {
   }
 };
 
+// export const updateListing = async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     const product = await productModel.findById(id);
+//     if (!product) {
+//       return res.status(404).json({ message: 'Product not found' });
+//     }
+
+//     // Prepare the update data
+//     const updateData = req.body;
+
+//     // Handle image uploads
+//     const images = req.files.images; // Expecting multiple images
+//     const imagesData = [];
+
+//     if (Array.isArray(images) && images.length > 0) {
+//       for (const image of images) {
+//         // Create the image object
+//         const newImage = {
+//           id: image.filename, // Use the filename or a generated ID
+//           product_id: product.id,
+//           src: `http://localhost:3000/uploads/${image.filename}`, // Update to your base URL
+//           alt: image.originalname, // Provide an alt text if needed
+//         };
+
+//         imagesData.push(newImage);
+//       }
+
+//       // Update the product's images array
+//       product.images = imagesData; // Replace existing images
+//     }
+
+//     // Update the product in the database with new data
+//     const updatedProduct = await productModel.findByIdAndUpdate(
+//       id,
+//       { $set: { ...updateData, images: product.images } },
+//       { new: true }
+//     );
+
+//     // Prepare data for Shopify
+//     const shopifyData = {
+//       product: {
+//         id: product.id,
+//         ...updateData,
+//         images: product.images, // Include the updated images
+//       },
+//     };
+
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${shopifyData.product.id}.json`;
+
+//     // Update in Shopify
+//     const response = await fetch(shopifyUrl, {
+//       method: 'PUT',
+//       headers: {
+//         Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(shopifyData),
+//     });
+
+//     if (!response.ok) {
+//       return res
+//         .status(500)
+//         .json({
+//           message: 'Failed to update product in Shopify',
+//           details: await response.text(),
+//         });
+//     }
+
+//     // Successful response
+//     res.status(200).json({
+//       message: 'Product successfully updated in both MongoDB and Shopify',
+//       data: updatedProduct,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res
+//       .status(500)
+//       .json({ message: 'An error occurred', error: error.message });
+//   }
+// };
+
+
 export const updateListing = async (req, res) => {
   const { id } = req.params;
 
@@ -3060,18 +3145,34 @@ export const updateListing = async (req, res) => {
 
     if (Array.isArray(images) && images.length > 0) {
       for (const image of images) {
-        // Create the image object
-        const newImage = {
-          id: image.filename, // Use the filename or a generated ID
-          product_id: product.id,
-          src: `http://localhost:3000/uploads/${image.filename}`, // Update to your base URL
-          alt: image.originalname, // Provide an alt text if needed
+        const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
+
+        const imagePayload = {
+          image: {
+            src: cloudinaryImageUrl,
+          },
         };
 
-        imagesData.push(newImage);
+        // Construct the image URL for Shopify
+        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
+        
+        // Make the request to upload the image to Shopify
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+        if (imageResponse && imageResponse.image) {
+          imagesData.push({
+            id: imageResponse.image.id,
+            product_id: product.id,
+            position: imageResponse.image.position,
+            alt: 'Provider Search Listing',
+            width: imageResponse.image.width,
+            height: imageResponse.image.height,
+            src: imageResponse.image.src,
+          });
+        }
       }
 
-      // Update the product's images array
+      // Update the product's images array with the new images
       product.images = imagesData; // Replace existing images
     }
 
@@ -3091,7 +3192,7 @@ export const updateListing = async (req, res) => {
       },
     };
 
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${shopifyData.product.id}.json`;
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyData.product.id}.json`;
 
     // Update in Shopify
     const response = await fetch(shopifyUrl, {
@@ -3104,12 +3205,10 @@ export const updateListing = async (req, res) => {
     });
 
     if (!response.ok) {
-      return res
-        .status(500)
-        .json({
-          message: 'Failed to update product in Shopify',
-          details: await response.text(),
-        });
+      return res.status(500).json({
+        message: 'Failed to update product in Shopify',
+        details: await response.text(),
+      });
     }
 
     // Successful response
@@ -3119,11 +3218,11 @@ export const updateListing = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: 'An error occurred', error: error.message });
+    res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
+
+
 
 export const productUpdate = async (req, res) => {
   const { id, updateData } = req.body; // Shopify product ID and update data from the request body
