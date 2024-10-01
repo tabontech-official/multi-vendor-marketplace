@@ -702,7 +702,7 @@ export const fetchUserData = async (req, res) => {
     const { id } = req.params;
     const response = await authModel.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-      { $project: { email: 1, password: 1 } },
+      { $project: { email: 1, password: 1, phone:1, address:1, zip:1, country:1, city:1 } },
     ]);
     if (response.length > 0) {
       res.status(200).json(response[0]);
