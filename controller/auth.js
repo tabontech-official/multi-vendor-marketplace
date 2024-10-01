@@ -616,7 +616,7 @@ export const webHook = async (req, res) => {
 
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
-  const { email, password, phone, address, zip, country, city } = req.body;
+  const { email, password, phoneNumber, address, zip, country, city } = req.body;
   const image = req.file; // Handle file upload
 
   try {
@@ -633,7 +633,7 @@ export const editProfile = async (req, res) => {
     // Update fields
     if (email) user.email = email;
     if (password) user.password = await bcrypt.hash(password, 10);
-    if (phone) user.phone = phone;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
     if (address) user.address = address;
     if (zip) user.zip = zip;
     if (country) user.country = country;
@@ -665,7 +665,7 @@ export const editProfile = async (req, res) => {
         customer: {
           id: user.shopifyId, // Make sure to have this ID in your user model
           email: user.email,
-          phone: user.phone,
+          phoneNumber: user.phoneNumber,
           addresses: [
             {
               address1: user.address,
@@ -702,7 +702,7 @@ export const fetchUserData = async (req, res) => {
     const { id } = req.params;
     const response = await authModel.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-      { $project: { email: 1, password: 1, phone:1, address:1, zip:1, country:1, city:1 } },
+      { $project: { email: 1, password: 1, phoneNumber:1, address:1, zip:1, country:1, city:1 } },
     ]);
     if (response.length > 0) {
       res.status(200).json(response[0]);
