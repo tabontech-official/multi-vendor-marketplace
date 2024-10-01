@@ -123,6 +123,7 @@ const productSchema = new mongoose.Schema(
     ],
     equipment: {
       location: { type: String },
+      zip:{type:Number},
       name: { type: String },
       brand: { type: String },
       asking_price: { type: Number },
@@ -141,6 +142,7 @@ const productSchema = new mongoose.Schema(
     business: {
       name: String,
       location: String,
+      zip:{type:Number},
       businessDescription: String,
       askingPrice: Number,
       establishedYear: Number,
@@ -160,6 +162,8 @@ const productSchema = new mongoose.Schema(
     jobListings: [
       {
         location: { type: String },
+        zip:{type:Number},
+
         name: { type: String },
         qualification: { type: String },
         positionRequestedDescription: { type: String },
@@ -172,6 +176,7 @@ const productSchema = new mongoose.Schema(
     providerListings: [
       {
         location: { type: String },
+        zip:{type:Number},
         qualificationRequested: { type: String },
         jobType: { type: String },
         typeOfJobOffered: { type: String },
@@ -183,6 +188,7 @@ const productSchema = new mongoose.Schema(
     roomListing: [
       {
         location: { type: String, required: true },
+        zip:{type:Number},
         roomSize: { type: Number, required: true }, // Square feet
         monthlyRent: { type: Number, required: true },
         deposit: { type: Number, required: true },

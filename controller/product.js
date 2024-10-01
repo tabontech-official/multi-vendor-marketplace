@@ -238,6 +238,7 @@ export const addUsedEquipments = async (req, res) => {
     // Extract equipment details from request body
     const {
       location,
+      zip,
       name, // Required field
       brand,
       asking_price,
@@ -255,7 +256,7 @@ export const addUsedEquipments = async (req, res) => {
     // Validate required field
     const status = 'active';
   
-
+    if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
@@ -289,6 +290,14 @@ export const addUsedEquipments = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'zip', // Added zipcode metafield
+          value: zip || 'Not specified',
+          type: 'single_line_text_field',
+        },
+      },
       {
         metafield: {
           namespace: 'fold_tech',
@@ -432,6 +441,7 @@ export const addUsedEquipments = async (req, res) => {
       images: imagesData,
       equipment: {
         location: location || 'Not specified',
+        zip,
         name,
         brand: brand,
         asking_price: asking_price,
