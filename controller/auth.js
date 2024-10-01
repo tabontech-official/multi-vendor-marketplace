@@ -621,7 +621,14 @@ export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
   const { email, password, phoneNumber, address, zip, country, city,firstName, lastName  } = req.body;
   const image = req.file; // Handle file upload
+  const requiredFields = [email, password, phoneNumber, address, zip, country, city, firstName, lastName];
+  const fieldNames = ['email', 'password', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
 
+  for (let i = 0; i < requiredFields.length; i++) {
+    if (!requiredFields[i]) {
+      return res.status(400).json({ error: `${fieldNames[i]} is required.` });
+    }
+  }
   try {
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required.' });
@@ -703,6 +710,7 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 
 
