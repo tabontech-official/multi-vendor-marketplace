@@ -350,7 +350,7 @@ export const addUsedEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'year_purchased',
           value: year_purchased.toString(),
-          type: 'single_line_text_field',
+          type: 'number_integer',
         },
       },
       {
