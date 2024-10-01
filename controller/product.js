@@ -681,6 +681,7 @@ export const addNewEquipments = async (req, res) => {
     // Extract equipment details and action from request body
     const {
       location,
+      zip,
       name,
       brand,
       sale_price,
@@ -696,6 +697,7 @@ export const addNewEquipments = async (req, res) => {
     } = req.body;
 
     // Validate required fields
+    if (!zip) return res.status(400).json({ error: 'ZipCode is required.' });
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
@@ -744,6 +746,14 @@ export const addNewEquipments = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Equipment Details
     const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'zip',
+          value: zip  || 'Not specified',
+          type: 'single_line_text_field',
+        },
+      },
       {
         metafield: {
           namespace: 'fold_tech',
@@ -887,6 +897,7 @@ export const addNewEquipments = async (req, res) => {
       images: imagesData,
       equipment: {
         location,
+        zip,
         name,
         brand,
         sale_price,
@@ -1373,6 +1384,7 @@ export const addNewBusiness = async (req, res) => {
     const {
       name,
       location ,
+      zip,
       businessDescription ,
       asking_price ,
       establishedYear ,
@@ -1397,6 +1409,9 @@ export const addNewBusiness = async (req, res) => {
     const productStatus = status === 'publish' ? 'active' : 'draft'; // Determine product status
 
     // Validate required fields
+    if (!zip) {
+      return res.status(400).json({ error: 'Zipcode is required.' });
+  }
     if (!name) {
       return res.status(400).json({ error: 'Business name is required.' });
   }
@@ -1488,6 +1503,12 @@ export const addNewBusiness = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Business Listing Details
     const metafieldsPayload = [
+      {
+        namespace: 'fold_tech',
+        key: 'zip',
+        value: zip || 'Not specified',
+        type: 'single_line_text_field',
+      },
       {
         namespace: 'fold_tech',
         key: 'location',
@@ -1644,6 +1665,7 @@ export const addNewBusiness = async (req, res) => {
       business: {
         name,
         location,
+        zip,
         businessDescription,
         asking_price: asking_price,
         establishedYear,
@@ -1756,6 +1778,7 @@ export const addNewJobListing = async (req, res) => {
     // Extract job listing details from request body
     const {
       location ,
+      zip,
       name,
       qualification ,
       positionRequestedDescription ,
@@ -1770,6 +1793,10 @@ export const addNewJobListing = async (req, res) => {
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
     // Validate required field
+    if (!zip) {
+      return res.status(400).json({ error: 'Zipcode is required.' });
+  }
+  
     if (!name) {
       return res.status(400).json({ error: 'Business name is required.' });
   }
@@ -1819,6 +1846,12 @@ export const addNewJobListing = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Job Listing Details
     const metafieldsPayload = [
+      {
+        namespace: 'fold_tech',
+        key: 'zip',
+        value: zip || 'Not specified',
+        type: 'single_line_text_field',
+      },
       {
         namespace: 'fold_tech',
         key: 'location',
@@ -1908,6 +1941,7 @@ export const addNewJobListing = async (req, res) => {
       jobListings: [
         {
           location,
+          zip,
           name,
           qualification,
           positionRequestedDescription,
@@ -2183,6 +2217,7 @@ export const addNewProviderListing = async (req, res) => {
     // Extract provider listing details from request body
     const {
       location,
+      zip,
       qualificationRequested ,
       jobType ,
       typeOfJobOffered ,
@@ -2196,7 +2231,9 @@ export const addNewProviderListing = async (req, res) => {
     const images = req.files?.images || []; // Ensure we have an array of images
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
-    
+    if (!zip) {
+      return res.status(400).json({ error: 'Zipcode is required.' });
+  }
   if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
   }
@@ -2246,6 +2283,12 @@ export const addNewProviderListing = async (req, res) => {
 
     // Step 2: Create Structured Metafields for the Provider Listing Details
     const metafieldsPayload = [
+      {
+        namespace: 'fold_tech',
+        key: 'zip',
+        value: zip || 'Not specified',
+        type: 'single_line_text_field',
+      },
       {
         namespace: 'fold_tech',
         key: 'location',
@@ -2335,6 +2378,7 @@ export const addNewProviderListing = async (req, res) => {
       providerListings: [
         {
           location,
+          zip,
           qualificationRequested,
           jobType,
           typeOfJobOffered,
@@ -2433,6 +2477,7 @@ export const addRoomListing = async (req, res) => {
     // Extract room listing details from request body
     const {
       location,
+      zip,
       roomSize ,
       monthlyRent ,
       deposit ,
@@ -2452,7 +2497,9 @@ export const addRoomListing = async (req, res) => {
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
     // Validate required fields
-       
+    if (!zip) {
+      return res.status(400).json({ error: 'Zipcode is required.' });
+  }
   if (!location) {
     return res.status(400).json({ error: 'Location is required.' });
 }
@@ -2510,6 +2557,7 @@ if (!otherDetails) {
 
     // Step 2: Create Structured Metafields for the Room Listing Details
     const metafieldsPayload = [
+      { namespace: 'fold_tech', key: 'zip', value: zip, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
       { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
@@ -2600,6 +2648,7 @@ if (!otherDetails) {
       images: imagesData,
       roomListing: [{
         location,
+        zip,
         roomSize,
         monthlyRent,
         deposit,

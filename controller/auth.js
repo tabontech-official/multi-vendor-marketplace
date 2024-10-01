@@ -614,10 +614,94 @@ export const webHook = async (req, res) => {
   }
 };
 
+// export const editProfile = async (req, res) => {
+//   const { userId } = req.params; // Get userId from request parameters
+//   const { email, password, phoneNumber, address, zip, country, city } = req.body;
+//   const image = req.file; // Handle file upload
+
+//   try {
+//     if (!userId) {
+//       return res.status(400).json({ error: 'User ID is required.' });
+//     }
+
+//     // Find user by ID
+//     const user = await authModel.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found.' });
+//     }
+
+//     // Update fields
+//     if (email) user.email = email;
+//     if (password) user.password = await bcrypt.hash(password, 10);
+//     if (phoneNumber) user.phoneNumber = phoneNumber;
+//     if (address) user.address = address;
+//     if (zip) user.zip = zip;
+//     if (country) user.country = country;
+//     if (city) user.city = city;
+//     if (image) {
+//       // Remove old image if it exists
+//       if (user.avatar) {
+//         const oldImagePath = path.resolve('/tmp/uploads/', user.avatar);
+//         if (fs.existsSync(oldImagePath)) {
+//           fs.unlinkSync(oldImagePath);
+//         }
+//       }
+//       // Update user's avatar with the new image filename
+//       user.avatar = image.filename; // Store only the filename
+//     }
+
+//     // Save the updated user
+//     await user.save();
+
+//     // Update user data in Shopify
+//     const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/customers/${user.shopifyId}.json`;
+//     const shopifyResponse = await fetch(shopifyUrl, {
+//       method: 'PUT',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
+//       },
+//       body: JSON.stringify({
+//         customer: {
+//           id: user.shopifyId, // Make sure to have this ID in your user model
+//           email: user.email,
+//           phoneNumber: user.phoneNumber,
+//           addresses: [
+//             {
+//               address1: user.address,
+//               city: user.city,
+//               province: user.state, // Assuming you have a state field
+//               country: user.country,
+//               zip: user.zip,
+//             },
+//           ],
+//           // Include other fields as necessary
+//         },
+//       }),
+//     });
+
+//     if (!shopifyResponse.ok) {
+//       console.error(
+//         'Failed to update user in Shopify:',
+//         await shopifyResponse.text()
+//       );
+//       return res
+//         .status(500)
+//         .json({ error: 'Failed to update user in Shopify' });
+//     }
+
+//     res.status(200).json({ message: 'Profile updated successfully.' });
+//   } catch (error) {
+//     console.error('Error updating profile:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
+
+
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
   const { email, password, phoneNumber, address, zip, country, city } = req.body;
-  const image = req.file; // Handle file upload
+  const images = req.files?.images || []; // Handle multiple file uploads
 
   try {
     if (!userId) {
@@ -638,23 +722,46 @@ export const editProfile = async (req, res) => {
     if (zip) user.zip = zip;
     if (country) user.country = country;
     if (city) user.city = city;
-    if (image) {
-      // Remove old image if it exists
-      if (user.avatar) {
-        const oldImagePath = path.resolve('/tmp/uploads/', user.avatar);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
+
+    // Handle image uploads
+    const imagesData = [];
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
+
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${user.shopifyId}/images.json`; // Use customer endpoint for images
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          customer_id: user.shopifyId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'User Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
       }
-      // Update user's avatar with the new image filename
-      user.avatar = image.filename; // Store only the filename
+    }
+
+    // If there are new images, you might want to save them to user model
+    if (imagesData.length > 0) {
+      user.images = imagesData; // Assuming you have an images field in your user model
     }
 
     // Save the updated user
     await user.save();
 
     // Update user data in Shopify
-    const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/customers/${user.shopifyId}.json`;
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers/${user.shopifyId}.json`;
     const shopifyResponse = await fetch(shopifyUrl, {
       method: 'PUT',
       headers: {
@@ -681,13 +788,8 @@ export const editProfile = async (req, res) => {
     });
 
     if (!shopifyResponse.ok) {
-      console.error(
-        'Failed to update user in Shopify:',
-        await shopifyResponse.text()
-      );
-      return res
-        .status(500)
-        .json({ error: 'Failed to update user in Shopify' });
+      console.error('Failed to update user in Shopify:', await shopifyResponse.text());
+      return res.status(500).json({ error: 'Failed to update user in Shopify' });
     }
 
     res.status(200).json({ message: 'Profile updated successfully.' });
@@ -696,6 +798,7 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 export const fetchUserData = async (req, res) => {
   try {
