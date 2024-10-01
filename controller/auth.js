@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
 import mongoose from 'mongoose';
+import cloudinary from 'cloudinary'
 
 //storage for images storing
 const createToken = (payLoad) => {
@@ -15,8 +16,6 @@ const createToken = (payLoad) => {
   });
   return token;
 };
-
-
 
 export const signUp = async (req, res) => {
   try {
@@ -29,7 +28,9 @@ export const signUp = async (req, res) => {
     // Check if the user already exists
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
     // Hash the password before sending to Shopify and saving to DB
@@ -53,7 +54,9 @@ export const signUp = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     // Save user to Shopify
@@ -69,7 +72,9 @@ export const signUp = async (req, res) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Error saving user to Shopify:', errorData);
-      return res.status(500).json({ error: 'Failed to register user with Shopify' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to register user with Shopify' });
     }
 
     // Extract Shopify ID from the response
@@ -103,10 +108,6 @@ export const signUp = async (req, res) => {
   }
 };
 
-
-
-
-
 export const signIn = async (req, res) => {
   try {
     // Validate input data
@@ -120,7 +121,9 @@ export const signIn = async (req, res) => {
     // Check if user exists in the database
     const user = await authModel.findOne({ email });
     if (!user) {
-      return res.status(404).json({ error: 'User does not exist with this email' });
+      return res
+        .status(404)
+        .json({ error: 'User does not exist with this email' });
     }
 
     // Verify password
@@ -134,7 +137,9 @@ export const signIn = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
 
     // Check Shopify credentials
@@ -173,8 +178,6 @@ export const signIn = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-
 
 const hashPassword = async (password) => {
   if (password) {
@@ -616,7 +619,7 @@ export const webHook = async (req, res) => {
 
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
-  const { email, password, phoneNumber, address, zip, country, city } = req.body;
+  const { email, password, phoneNumber, address, zip, country, city,firstName, lastName  } = req.body;
   const image = req.file; // Handle file upload
 
   try {
@@ -638,6 +641,8 @@ export const editProfile = async (req, res) => {
     if (zip) user.zip = zip;
     if (country) user.country = country;
     if (city) user.city = city;
+    if (firstName) user.firstName = firstName; // Update first name
+    if (lastName) user.lastName = lastName; // Upda
     if (image) {
       // Remove old image if it exists
       if (user.avatar) {
@@ -666,6 +671,8 @@ export const editProfile = async (req, res) => {
           id: user.shopifyId, // Make sure to have this ID in your user model
           email: user.email,
           phoneNumber: user.phoneNumber,
+          first_name: user.firstName, // Send first name to Shopify
+          last_name: user.lastName, // Send last name to Shopify
           addresses: [
             {
               address1: user.address,
@@ -698,12 +705,27 @@ export const editProfile = async (req, res) => {
 };
 
 
+
+
 export const fetchUserData = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await authModel.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-      { $project: { email: 1, password: 1, phoneNumber:1, address:1, zip:1, country:1, city:1,avatar:1,firstName:1,lastName:1} },
+      {
+        $project: {
+          email: 1,
+          password: 1,
+          phoneNumber: 1,
+          address: 1,
+          zip: 1,
+          country: 1,
+          city: 1,
+          avatar: 1,
+          firstName: 1,
+          lastName: 1,
+        },
+      },
     ]);
     if (response.length > 0) {
       res.status(200).json(response[0]);
@@ -729,32 +751,35 @@ export const getUserSubscriptionQuantity = async (req, res) => {
   try {
     // Fetch the user by userId
     const user = await authModel.findById(userId);
-    
+
     // Check if user exists
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
     // Check if subscription exists
-    if (!user.subscription || !user.subscription.quantity || !user.subscription.expiresAt) {
-      return res.status(400).json({ 
-        message:'Insuffcient credits',
-       
-       });
+    if (
+      !user.subscription ||
+      !user.subscription.quantity ||
+      !user.subscription.expiresAt
+    ) {
+      return res.status(400).json({
+        message: 'Insuffcient credits',
+      });
     }
 
     // Return the quantity and expiry date from the user's subscription
     return res.status(200).json({
       quantity: user.subscription.quantity,
-      expiresAt: user.subscription.expiresAt
+      expiresAt: user.subscription.expiresAt,
     });
   } catch (error) {
     console.error('Error fetching user subscription quantity:', error);
-    return res.status(500).json({ error: 'Internal server error. Please try again later.' });
+    return res
+      .status(500)
+      .json({ error: 'Internal server error. Please try again later.' });
   }
 };
-
-
 
 // export const checkSubscription = async (req, res) => {
 //   try {
@@ -872,7 +897,6 @@ export const getUserData = async (req, res) => {
   }
 };
 
-
 export const forgotPassword = async (req, res) => {
   try {
     const customerData = req.body;
@@ -883,8 +907,11 @@ export const forgotPassword = async (req, res) => {
     if (customer) {
       // Hash the new password before saving
       const saltRounds = 10; // You can adjust this number based on your security needs
-      const hashedPassword = await bcrypt.hash(customerData.password, saltRounds);
-      
+      const hashedPassword = await bcrypt.hash(
+        customerData.password,
+        saltRounds
+      );
+
       customer.password = hashedPassword; // Set the hashed password
       await customer.save();
     }
@@ -896,29 +923,30 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-export const updateCustomer=async(req,res)=>{
+export const updateCustomer = async (req, res) => {
   const customerData = req.body;
 
   // Update or create customer in MongoDB
   await authModel.findOneAndUpdate(
-      { shopifyId: customerData.id }, // Assuming `id` is the unique identifier
-      customerData,
-      { upsert: true, new: true }
+    { shopifyId: customerData.id }, // Assuming `id` is the unique identifier
+    customerData,
+    { upsert: true, new: true }
   );
 
   res.sendStatus(200);
-}
+};
 
-
-export const deleteUser=async(req,res)=>{
+export const deleteUser = async (req, res) => {
   const customerId = req.body.id; // Get the customer ID from the webhook data
 
   try {
-      // Delete from MongoDB
-      await authModel.deleteOne({ shopifyId: customerId });
-      res.status(200).send('Customer deleted successfully.');
+    // Delete from MongoDB
+    await authModel.deleteOne({ shopifyId: customerId });
+    res.status(200).send('Customer deleted successfully.');
   } catch (error) {
-      console.error('Error deleting customer from MongoDB:', error);
-      res.status(500).send('Error deleting customer.');
+    console.error('Error deleting customer from MongoDB:', error);
+    res.status(500).send('Error deleting customer.');
   }
-}
+};
+
+
