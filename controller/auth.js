@@ -781,7 +781,7 @@ export const getUserSubscriptionQuantity = async (req, res) => {
   }
 };
 
-// export const checkSubscription = async (req, res) => {
+
 //   try {
 //     const { userId } = req.params;
 
