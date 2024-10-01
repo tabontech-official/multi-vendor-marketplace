@@ -1502,7 +1502,7 @@ export const addNewBusiness = async (req, res) => {
       }
 
       // Schedule the unpublish task
-      scheduleUnpublish(productId, userId, expiresAt);
+     
 
       // Send a successful response
       return res.status(201).json({
@@ -1770,7 +1770,6 @@ export const addNewJobListing = async (req, res) => {
       }
 
       // Schedule the unpublish task
-      scheduleUnpublish(productId, userId, expiresAt);
 
       // Send a successful response
       return res.status(201).json({
@@ -2035,7 +2034,6 @@ export const addNewProviderListing = async (req, res) => {
       }
 
       // Schedule the unpublish task
-      scheduleUnpublish(productId, userId, expiresAt);
 
       // Send a successful response
       return res.status(201).json({
@@ -2306,8 +2304,6 @@ if (status === 'active') {
   }
 
   // Schedule the unpublish task
-  scheduleUnpublish(productId, userId, expiresAt);
-
   // Send a successful response
   return res.status(201).json({
     message: 'Product successfully created and published.',
