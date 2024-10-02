@@ -623,62 +623,6 @@ export const webHook = async (req, res) => {
 
 
 
-// export const editProfile = async (req, res) => {
-//   const { userId } = req.params; // Get userId from request parameters
-//   const { email, phoneNumber, address, zip, country, city, firstName, lastName } = req.body;
-//   const images = req.files?.images || []; // Handle multiple file uploads
-//   const requiredFields = [email, phoneNumber, address, zip, country, city, firstName, lastName];
-//   const fieldNames = ['email', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
-
-//   for (let i = 0; i < requiredFields.length; i++) {
-//     if (!requiredFields[i]) {
-//       return res.status(400).json({ error: `${fieldNames[i]} is required.` });
-//     }
-//   }
-
-//   try {
-//     if (!userId) {
-//       return res.status(400).json({ error: 'User ID is required.' });
-//     }
-
-//     // Find user by ID
-//     const user = await authModel.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found.' });
-//     }
-
-//     // Update fields
-//     if (email) user.email = email;
-//     if (phoneNumber) user.phoneNumber = phoneNumber;
-//     if (address) user.address = address;
-//     if (zip) user.zip = zip;
-//     if (country) user.country = country;
-//     if (city) user.city = city;
-//     if (firstName) user.firstName = firstName;
-//     if (lastName) user.lastName = lastName;
-
-//     // Handle image upload
-//     const imagesData = [];
-//     if (Array.isArray(images) && images.length > 0) {
-//       for (const image of images) {
-//         const imageUrl = image.path; // Replace with your actual domain
-//         imagesData.push(imageUrl); // Store the full URL
-//       }
-
-//       // Update the user's avatar URLs
-//       user.avatar = imagesData; // Assuming `avatar` is an array of image URLs
-//     }
-
-//     // Save the updated user
-//     await user.save();
-
-//     res.status(200).json({ message: 'Profile updated successfully.', user });
-//   } catch (error) {
-//     console.error('Error updating profile:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
-
 
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
@@ -762,6 +706,11 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+
+
+
 const shopifyRequest = async (url, method, body) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
