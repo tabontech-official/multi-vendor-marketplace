@@ -38,7 +38,7 @@ const authSchema = new mongoose.Schema({
   city: {
     type: String,
   },
-  avatar: { type: [String], default: [] }, 
+   avatar: { type: [String], default: [] }, 
   token: String,
   shopifyAccessToken: String,
   hasPaidSubscription: {

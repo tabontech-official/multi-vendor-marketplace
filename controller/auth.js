@@ -2,6 +2,7 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import axios from 'axios';
 import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
@@ -677,9 +678,6 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
-
-
-
 
 
 
