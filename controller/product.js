@@ -219,7 +219,10 @@ export const addUsedEquipments = async (req, res) => {
 
     // Validate required field
     const status = 'active';
-  
+    const user = await authModel.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
@@ -242,6 +245,7 @@ export const addUsedEquipments = async (req, res) => {
         product_type: 'Used Equipments',
         variants: [{ price: asking_price.toString() }],
         status,
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
@@ -347,6 +351,14 @@ export const addUsedEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'shipping',
           value: shipping,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'username',
+          value: username,
           type: 'single_line_text_field',
         },
       },
@@ -1201,7 +1213,7 @@ export const addNewEquipments = async (req, res) => {
         variants: [{ price: sale_price.toString() }],
         status: productStatus,
         published_scope: 'global',
-        tags: [`zip_${zip}`, `location_${location}`],
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
 
@@ -1584,7 +1596,7 @@ export const addNewBusiness = async (req, res) => {
         product_type: 'Businesses To Purchase',
         variants: [{ price: asking_price.toString() }],
         status: productStatus, // Use determined status
-        tags: [`zip_${zip}`, `location_${location}`],
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
 
@@ -1938,7 +1950,7 @@ export const addNewJobListing = async (req, res) => {
         product_type: 'Providers Available',
         variants: [{ price: requestedYearlySalary.toString() }],
         status: productStatus,
-        tags: [`zip_${zip}`, `location_${location}`],
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
 
@@ -2212,7 +2224,7 @@ export const addNewProviderListing = async (req, res) => {
         product_type: 'Provider Needed',
         variants: [{ price: offeredYearlySalary.toString() }],
         status: productStatus,
-        tags: [`zip_${zip}`, `location_${location}`],
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
 
@@ -2498,7 +2510,7 @@ if (!otherDetails) {
         product_type: 'Spa Room For Rent',
         variants: [{ price: monthlyRent.toString() }],
         status: productStatus,
-        tags: [`zip_${zip}`, `location_${location}`],
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
 
