@@ -8,7 +8,7 @@ cloudinary.v2.config({
     api_key: '433555789235653', // replace with your Cloudinary API key
     api_secret: 'YuzeR8ryVZNJ2jPowPxPb3YXWvY', // replace with your Cloudinary API secret
   });
-  
+ 
   const storage = new CloudinaryStorage({
     cloudinary: cloudinary.v2,
     params: {

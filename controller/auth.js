@@ -28,24 +28,29 @@ export const signUp = async (req, res) => {
     // Check if the user already exists
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
-      return res
-        .status(400)
-        .json({ error: 'User already exists with this email' });
+      return res.status(400).json({ error: 'User already exists with this email' });
     }
-
-    // Hash the password before sending to Shopify and saving to DB
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
-    // Prepare Shopify request payload
+    const userExistByUsername = await authModel.findOne({ userName: req.body.userName });
+    if (userExistByUsername) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+    // Create Shopify request payload
     const shopifyPayload = {
       customer: {
         first_name: req.body.firstName,
         last_name: req.body.lastName,
         email: req.body.email,
-        password: req.body.password,
+        password: req.body.password, // Use plain password; it will be hashed in the model
         password_confirmation: req.body.password,
-        tags: 'Trade User',
+        tags: `Trade User, trade_${req.body.userName}`, // Use trade_ prefix
+        metafields: [
+          {
+            namespace: 'custom',
+            key: 'username',
+            value: req.body.userName,
+            type: 'single_line_text_field',
+          },
+        ],
       },
     };
 
@@ -54,9 +59,7 @@ export const signUp = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     // Save user to Shopify
@@ -72,9 +75,7 @@ export const signUp = async (req, res) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Error saving user to Shopify:', errorData);
-      return res
-        .status(500)
-        .json({ error: 'Failed to register user with Shopify' });
+      return res.status(500).json({ error: 'Failed to register user with Shopify' });
     }
 
     // Extract Shopify ID from the response
@@ -85,10 +86,11 @@ export const signUp = async (req, res) => {
     const newUser = new authModel({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
+      userName: req.body.userName,
       email: req.body.email,
-      password: hashedPassword, // Store the hashed password
-      shopifyId: shopifyId, // Save the Shopify ID in MongoDB
-      tags: 'Trade User',
+      password: req.body.password, // Store the plain password; it will be hashed in the pre-save hook
+      shopifyId: shopifyId,
+      tags: `Trade User, trade_${req.body.userName}`, // Consistent tagging with prefix
     });
 
     const savedUser = await newUser.save();
@@ -107,6 +109,7 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 export const signIn = async (req, res) => {
   try {
@@ -617,18 +620,21 @@ export const webHook = async (req, res) => {
   }
 };
 
+
+
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
-  const { email, password, phoneNumber, address, zip, country, city,firstName, lastName  } = req.body;
-  const image = req.file; // Handle file upload
-  const requiredFields = [email, password, phoneNumber, address, zip, country, city, firstName, lastName];
-  const fieldNames = ['email', 'password', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
+  const { email, phoneNumber, address, zip, country, city, firstName, lastName } = req.body;
+  const images = req.files?.images || []; // Handle multiple file uploads
+  const requiredFields = [email, phoneNumber, address, zip, country, city, firstName, lastName];
+  const fieldNames = ['email', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
 
   for (let i = 0; i < requiredFields.length; i++) {
     if (!requiredFields[i]) {
       return res.status(400).json({ error: `${fieldNames[i]} is required.` });
     }
   }
+
   try {
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required.' });
@@ -642,74 +648,37 @@ export const editProfile = async (req, res) => {
 
     // Update fields
     if (email) user.email = email;
-    if (password) user.password = await bcrypt.hash(password, 10);
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (address) user.address = address;
     if (zip) user.zip = zip;
     if (country) user.country = country;
     if (city) user.city = city;
-    if (firstName) user.firstName = firstName; // Update first name
-    if (lastName) user.lastName = lastName; // Upda
-    if (image) {
-      // Remove old image if it exists
-      if (user.avatar) {
-        const oldImagePath = path.resolve('/tmp/uploads/', user.avatar);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+
+    // Handle image upload
+    const imagesData = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (const image of images) {
+        const imageUrl = image.path; // Replace with your actual domain
+        imagesData.push(imageUrl); // Store the full URL
       }
-      // Update user's avatar with the new image filename
-      user.avatar = image.filename; // Store only the filename
+
+      // Update the user's avatar URLs
+      user.avatar = imagesData; // Assuming `avatar` is an array of image URLs
     }
 
     // Save the updated user
     await user.save();
 
-    // Update user data in Shopify
-    const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/customers/${user.shopifyId}.json`;
-    const shopifyResponse = await fetch(shopifyUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
-      },
-      body: JSON.stringify({
-        customer: {
-          id: user.shopifyId, // Make sure to have this ID in your user model
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          first_name: user.firstName, // Send first name to Shopify
-          last_name: user.lastName, // Send last name to Shopify
-          addresses: [
-            {
-              address1: user.address,
-              city: user.city,
-              province: user.state, // Assuming you have a state field
-              country: user.country,
-              zip: user.zip,
-            },
-          ],
-          // Include other fields as necessary
-        },
-      }),
-    });
-
-    if (!shopifyResponse.ok) {
-      console.error(
-        'Failed to update user in Shopify:',
-        await shopifyResponse.text()
-      );
-      return res
-        .status(500)
-        .json({ error: 'Failed to update user in Shopify' });
-    }
-
-    res.status(200).json({ message: 'Profile updated successfully.' });
+    res.status(200).json({ message: 'Profile updated successfully.', user });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
 
 
 
@@ -789,35 +758,6 @@ export const getUserSubscriptionQuantity = async (req, res) => {
   }
 };
 
-
-//   try {
-//     const { userId } = req.params;
-
-//     // Check if userId is provided
-//     if (!userId) {
-//       return res.status(400).send('User ID is required');
-//     }
-
-//     // Find the user
-//     const user = await Auth.findById(userId);
-//     if (!user) {
-//       return res.status(404).send('User not found');
-//     }
-
-//     const currentDate = new Date();
-//     const hasValidSubscription = user.subscription.status === 'active' &&
-//       user.subscription.endDate > currentDate;
-
-//     if (!user.hasPaidSubscription || !hasValidSubscription) {
-//       return res.status(403).send('User does not have an active paid subscription');
-//     }
-
-//     res.status(200).send(user.subscription);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Internal server error');
-//   }
-// };
 
 export const AdminSignIn = async (req, res) => {
   try {
@@ -956,5 +896,8 @@ export const deleteUser = async (req, res) => {
     res.status(500).send('Error deleting customer.');
   }
 };
+
+
+
 
 

@@ -7,6 +7,9 @@ const authSchema = new mongoose.Schema({
   lastName: {
     type: String,
   },
+  userName:{
+    type:String
+  },
   email: {
     type: String, 
   },
@@ -35,9 +38,7 @@ const authSchema = new mongoose.Schema({
   city: {
     type: String,
   },
-  avatar: {
-    type: String,
-  },
+  avatar: { type: [String], default: [] }, 
   token: String,
   shopifyAccessToken: String,
   hasPaidSubscription: {

@@ -1,7 +1,7 @@
 import { productModel } from "../Models/product.js"
 import cron from 'node-cron';
 export const productSubscriptionExpiration = () => {
-    cron.schedule('* * * * *', async () => {
+    cron.schedule('0 */2 * * *', async () => {
       try {
         const currentDate = new Date();
   

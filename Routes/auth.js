@@ -17,7 +17,6 @@ import {
 } from '../controller/auth.js';
 import { upload ,cpUpload} from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
-
 const authRouter = express.Router();
 
 authRouter.post('/signIn', signIn);
@@ -31,7 +30,7 @@ authRouter.get('/user/:id', fetchUserData);
 authRouter.get('/', getUserData);
 authRouter.get('/quantity/:userId',getUserSubscriptionQuantity)
 authRouter.post('/webhook/update',updateCustomer)
-authRouter.put('/editProfile/:userId', upload.single('avatar'), editProfile);
+authRouter.put('/editProfile/:userId', cpUpload, editProfile);
 authRouter.put('/updateInShopify', updateUserInShopify);
 authRouter.post('/Admin', AdminSignIn);
 authRouter.post('/webHook/delete',deleteUser)
