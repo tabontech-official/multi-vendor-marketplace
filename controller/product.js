@@ -2051,37 +2051,28 @@ export const addNewBusiness = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'city',
-          value: city,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'city',
+        value: city,
+        type: 'single_line_text_field',
       },
       {
-
-  metafield: {
-          namespace: 'fold_tech',
-          key: 'country',
-          value: country,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'state',
+        value: state,
+        type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'phonenumber',
-          value: phoneNumber,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'country',
+        value: country,
+        type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'state',
-          value: state,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'phonenumber',
+        value: phoneNumber,
+        type: 'single_line_text_field',
       },
       
     ];
@@ -2383,37 +2374,28 @@ export const addNewJobListing = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'city',
-          value: city,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'city',
+        value: city,
+        type: 'single_line_text_field',
       },
       {
-
-  metafield: {
-          namespace: 'fold_tech',
-          key: 'country',
-          value: country,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'country',
+        value: country,
+        type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'phonenumber',
-          value: phoneNumber,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'phonenumber',
+        value: phoneNumber,
+        type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'state',
-          value: state,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'state',
+        value: state,
+        type: 'single_line_text_field',
       },
     ];
 
@@ -2695,37 +2677,28 @@ export const addNewProviderListing = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'city',
-          value: city,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'country',
+        value: country,
+        type: 'single_line_text_field',
       },
       {
-
-  metafield: {
-          namespace: 'fold_tech',
-          key: 'country',
-          value: country,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'phonenumber',
+        value: phoneNumber,
+        type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'phonenumber',
-          value: phoneNumber,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'city',
+        value: city,
+        type: 'single_line_text_field',
       },
       {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'state',
-          value: state,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'state',
+        value: state,
+        type: 'single_line_text_field',
       },
     ];
 
@@ -2979,39 +2952,10 @@ if (!otherDetails) {
       { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
       { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'username', value: username, type: 'single_line_text_field' },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'city',
-          value: city,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-
-  metafield: {
-          namespace: 'fold_tech',
-          key: 'country',
-          value: country,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'phonenumber',
-          value: phoneNumber,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'state',
-          value: state,
-          type: 'single_line_text_field',
-        },
-      },
+      { namespace: 'fold_tech', key: 'city', value: city, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'state', value: state, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'country', value: country, type: 'single_line_text_field' },
+      { namespace: 'fold_tech', key: 'phonenumber', value: phoneNumber, type: 'single_line_text_field' },
     ];
 
     for (const metafield of metafieldsPayload) {
