@@ -196,260 +196,259 @@ export const addProduct = async (req, res) => {
   }
 };
 
+// export const addUsedEquipments = async (req, res) => {
+//   try {
+//     // Extract equipment details from request body
+//     const {
+//       location,
+//       zip,
+//       name, // Required field
+//       brand,
+//       asking_price,
+//       accept_offers,
+//       equipment_type,
+//       certification,
+//       year_purchased,
+//       warranty,
+//       reason_for_selling,
+//       shipping,
+//       description,
+//       userId,
+//     } = req.body;
 
-export const addUsedEquipments = async (req, res) => {
-  try {
-    // Extract equipment details from request body
-    const {
-      location,
-      zip,
-      name, // Required field
-      brand,
-      asking_price,
-      accept_offers,
-      equipment_type,
-      certification,
-      year_purchased,
-      warranty,
-      reason_for_selling,
-      shipping,
-      description,
-      userId,
-    } = req.body;
+//     // Validate required field
+//     const status = 'active';
+//     const user = await authModel.findById(userId);
+//     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    // Validate required field
-    const status = 'active';
-    const user = await authModel.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+//     const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
+//     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
+//     if (!location) return res.status(400).json({ error: 'Location is required.' });
+//     if (!name) return res.status(400).json({ error: 'Name is required.' });
+//     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
+//     if (asking_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
+//     if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
+//     if (!certification) return res.status(400).json({ error: 'Certification is required.' });
+//     if (year_purchased === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
+//     if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
+//     if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
+//     if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
+//     if (!description) return res.status(400).json({ error: 'Description is required.' });
 
-    const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
-    if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
-    if (!name) return res.status(400).json({ error: 'Name is required.' });
-    if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-    if (asking_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
-    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
-    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
-    if (year_purchased === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
-    if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
-    if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
-    if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
-    if (!description) return res.status(400).json({ error: 'Description is required.' });
+//     // Step 1: Create Product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: name,
+//         body_html: description,
+//         vendor: brand,
+//         product_type: 'Used Equipments',
+//         variants: [{ price: asking_price.toString() }],
+//         status,
+//         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
+//       },
+//     };
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+//     const productResponse = await shopifyRequest(
+//       shopifyUrl,
+//       'POST',
+//       shopifyPayload
+//     );
+//     const productId = productResponse.product.id;
 
-    // Step 1: Create Product in Shopify
-    const shopifyPayload = {
-      product: {
-        title: name,
-        body_html: description,
-        vendor: brand,
-        product_type: 'Used Equipments',
-        variants: [{ price: asking_price.toString() }],
-        status,
-        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
-      },
-    };
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
-    const productId = productResponse.product.id;
+//     // Step 2: Create Structured Metafields for the Equipment Details
+//     const metafieldsPayload = [
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'zip', // Added zipcode metafield
+//           value: zip || 'Not specified',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'location',
+//           value: location || 'Not specified',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'brand',
+//           value: brand,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'description',
+//           value: description,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'asking_price',
+//           value: asking_price.toString(),
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'accept_offers',
+//           value: accept_offers ? 'true' : 'false',
+//           type: 'boolean',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'equipment_type',
+//           value: equipment_type,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'certification',
+//           value: certification,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'year_purchased',
+//           value: year_purchased.toString(),
+//           type: 'number_integer',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'warranty',
+//           value: warranty,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'reason_for_selling',
+//           value: reason_for_selling,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'shipping',
+//           value: shipping,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'username',
+//           value: username,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//     ];
 
-    // Step 2: Create Structured Metafields for the Equipment Details
-    const metafieldsPayload = [
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'zip', // Added zipcode metafield
-          value: zip || 'Not specified',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'location',
-          value: location || 'Not specified',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'brand',
-          value: brand,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'description',
-          value: description,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'asking_price',
-          value: asking_price.toString(),
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'accept_offers',
-          value: accept_offers ? 'true' : 'false',
-          type: 'boolean',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'equipment_type',
-          value: equipment_type,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'certification',
-          value: certification,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'year_purchased',
-          value: year_purchased.toString(),
-          type: 'number_integer',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'warranty',
-          value: warranty,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'reason_for_selling',
-          value: reason_for_selling,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'shipping',
-          value: shipping,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'username',
-          value: username,
-          type: 'single_line_text_field',
-        },
-      },
-    ];
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
+//     }
 
-    for (const metafield of metafieldsPayload) {
-      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-      await shopifyRequest(metafieldsUrl, 'POST', metafield);
-    }
+//     // Step 3: Upload Images to Shopify if provided
+//     const images = req.files?.images || [];
+//     const imagesData = [];
 
-    // Step 3: Upload Images to Shopify if provided
-    const images = req.files?.images || [];
-    const imagesData = [];
+//     for (const image of images) {
+//       const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-    for (const image of images) {
-      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+//       const imagePayload = {
+//         image: {
+//           src: cloudinaryImageUrl,
+//         },
+//       };
 
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,
-        },
-      };
+//       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+//       const imageResponse = await shopifyRequest(
+//         imageUrl,
+//         'POST',
+//         imagePayload
+//       );
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(
-        imageUrl,
-        'POST',
-        imagePayload
-      );
+//       if (imageResponse && imageResponse.image) {
+//         imagesData.push({
+//           id: imageResponse.image.id,
+//           product_id: productId,
+//           position: imageResponse.image.position,
+//           created_at: imageResponse.image.created_at,
+//           updated_at: imageResponse.image.updated_at,
+//           alt: 'Equipment Image',
+//           width: imageResponse.image.width,
+//           height: imageResponse.image.height,
+//           src: imageResponse.image.src,
+//         });
+//       }
+//     }
 
-      if (imageResponse && imageResponse.image) {
-        imagesData.push({
-          id: imageResponse.image.id,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Equipment Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        });
-      }
-    }
+//     const createdAt = new Date();
+//     const expirationDate = new Date(createdAt);
+//     expirationDate.setMonth(expirationDate.getMonth() + 6);
+//     // Step 4: Save Product to MongoDB
+//     const newProduct = new productModel({
+//       id: productId,
+//       title: name,
+//       body_html: description,
+//       vendor: brand,
+//       product_type: 'Used Equipment',
+//       created_at: new Date(),
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       images: imagesData,
+//       equipment: {
+//         location: location || 'Not specified',
+//         zip,
+//         name,
+//         brand: brand,
+//         asking_price: asking_price,
+//         accept_offers: !!accept_offers,
+//         equipment_type: equipment_type,
+//         certification: certification,
+//         year_purchased: year_purchased,
+//         warranty: warranty,
+//         reason_for_selling: reason_for_selling,
+//         shipping: shipping,
+//         description: description,
+//       },
+//       userId,
+//       status,
+//       expiresAt:expirationDate,
+//     });
 
-    const createdAt = new Date();
-    const expirationDate = new Date(createdAt);
-    expirationDate.setMonth(expirationDate.getMonth() + 6);
-    // Step 4: Save Product to MongoDB
-    const newProduct = new productModel({
-      id: productId,
-      title: name,
-      body_html: description,
-      vendor: brand,
-      product_type: 'Used Equipment',
-      created_at: new Date(),
-      tags: productResponse.product.tags,
-      variants: productResponse.product.variants,
-      images: imagesData,
-      equipment: {
-        location: location || 'Not specified',
-        zip,
-        name,
-        brand: brand,
-        asking_price: asking_price,
-        accept_offers: !!accept_offers,
-        equipment_type: equipment_type,
-        certification: certification,
-        year_purchased: year_purchased,
-        warranty: warranty,
-        reason_for_selling: reason_for_selling,
-        shipping: shipping,
-        description: description,
-      },
-      userId,
-      status,
-      expiresAt:expirationDate,
-    });
+//     await newProduct.save();
 
-    await newProduct.save();
-
-    // Send a successful response
-    res.status(201).json({
-      message: 'Product successfully created and saved',
-      product: newProduct,
-    });
-  } catch (error) {
-    console.error('Error in addUsedEquipments function:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
+//     // Send a successful response
+//     res.status(201).json({
+//       message: 'Product successfully created and saved',
+//       product: newProduct,
+//     });
+//   } catch (error) {
+//     console.error('Error in addUsedEquipments function:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 
 // export const addNewEquipments = async (req, res) => {
@@ -1157,6 +1156,299 @@ export const addUsedEquipments = async (req, res) => {
 //   }
 // };
 
+
+export const addUsedEquipments = async (req, res) => {
+  try {
+    // Extract equipment details from request body
+    const {
+      location,
+      zip,
+      name, // Required field
+      brand,
+      asking_price,
+      accept_offers,
+      equipment_type,
+      certification,
+      year_purchased,
+      warranty,
+      reason_for_selling,
+      shipping,
+      description,
+      userId,
+    } = req.body;
+
+    // Validate required field
+    const status = 'active';
+    const user = await authModel.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
+    const state=user.state
+    const phoneNumber=user.phoneNumber
+    const country=user.country
+    const city=user.city
+
+    if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
+    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    if (!brand) return res.status(400).json({ error: 'Brand is required.' });
+    if (asking_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
+    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
+    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
+    if (year_purchased === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
+    if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
+    if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
+    if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
+    if (!description) return res.status(400).json({ error: 'Description is required.' });
+
+    // Step 1: Create Product in Shopify
+    const shopifyPayload = {
+      product: {
+        title: name,
+        body_html: description,
+        vendor: brand,
+        product_type: 'Used Equipments',
+        variants: [{ price: asking_price.toString() }],
+        status,
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
+      },
+    };
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
+    const productId = productResponse.product.id;
+
+    // Step 2: Create Structured Metafields for the Equipment Details
+    const metafieldsPayload = [
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'zip', // Added zipcode metafield
+          value: zip || 'Not specified',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'location',
+          value: location || 'Not specified',
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'brand',
+          value: brand,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'description',
+          value: description,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'asking_price',
+          value: asking_price.toString(),
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'accept_offers',
+          value: accept_offers ? 'true' : 'false',
+          type: 'boolean',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'equipment_type',
+          value: equipment_type,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'certification',
+          value: certification,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'year_purchased',
+          value: year_purchased.toString(),
+          type: 'number_integer',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'warranty',
+          value: warranty,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'reason_for_selling',
+          value: reason_for_selling,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'shipping',
+          value: shipping,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'username',
+          value: username,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'city',
+          value: city,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'country',
+          value: country,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'phonenumber',
+          value: phoneNumber,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'state',
+          value: state,
+          type: 'single_line_text_field',
+        },
+      },
+
+    ];
+
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+    }
+
+    // Step 3: Upload Images to Shopify if provided
+    const images = req.files?.images || [];
+    const imagesData = [];
+
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
+
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
+
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
+    }
+
+    const createdAt = new Date();
+    const expirationDate = new Date(createdAt);
+    expirationDate.setMonth(expirationDate.getMonth() + 6);
+    // Step 4: Save Product to MongoDB
+    const newProduct = new productModel({
+      id: productId,
+      title: name,
+      body_html: description,
+      vendor: brand,
+      product_type: 'Used Equipment',
+      created_at: new Date(),
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: imagesData,
+      equipment: {
+        location: location || 'Not specified',
+        zip,
+        name,
+        brand: brand,
+        asking_price: asking_price,
+        accept_offers: !!accept_offers,
+        equipment_type: equipment_type,
+        certification: certification,
+        year_purchased: year_purchased,
+        warranty: warranty,
+        reason_for_selling: reason_for_selling,
+        shipping: shipping,
+        description: description,
+      },
+      userId,
+      status,
+      expiresAt:expirationDate,
+    });
+
+    await newProduct.save();
+
+    // Send a successful response
+    res.status(201).json({
+      message: 'Product successfully created and saved',
+      product: newProduct,
+    });
+  } catch (error) {
+    console.error('Error in addUsedEquipments function:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const addNewEquipments = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -1202,7 +1494,10 @@ export const addNewEquipments = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
-
+    const state=user.state
+    const phoneNumber=user.phoneNumber
+    const country=user.country
+    const city=user.city
     // Step 2: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1327,6 +1622,38 @@ export const addNewEquipments = async (req, res) => {
           type: 'single_line_text_field',
         },
       },
+      {
+        metafield: {
+        namespace: 'fold_tech',
+        key: 'country',
+        value: country,
+        type: 'single_line_text_field',
+      },
+    },
+    {
+      metafield: {
+        namespace: 'fold_tech',
+        key: 'phonenumber',
+        value: phoneNumber,
+        type: 'single_line_text_field',
+      },
+    },
+    {
+      metafield: {
+        namespace: 'fold_tech',
+        key: 'state',
+        value: state,
+        type: 'single_line_text_field',
+      },
+    },
+    {
+      metafield: {
+        namespace: 'fold_tech',
+        key: 'city',
+        value: city,
+        type: 'single_line_text_field',
+      },
+    },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -1515,6 +1842,11 @@ export const addNewBusiness = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; 
+    const state=user.state
+    const phoneNumber=user.phoneNumber
+    const country=user.country
+    const city=user.city       
+    
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
   }
@@ -1718,6 +2050,39 @@ export const addNewBusiness = async (req, res) => {
         value: username,
         type: 'single_line_text_field',
       },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'city',
+          value: city,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+
+  metafield: {
+          namespace: 'fold_tech',
+          key: 'country',
+          value: country,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'phonenumber',
+          value: phoneNumber,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'state',
+          value: state,
+          type: 'single_line_text_field',
+        },
+      },
       
     ];
 
@@ -1909,6 +2274,11 @@ export const addNewJobListing = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown';
+    const state=user.state
+    const phoneNumber=user.phoneNumber
+    const country=user.country
+    const city=user.city       
+   
     // Validate required field
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -2011,6 +2381,39 @@ export const addNewJobListing = async (req, res) => {
         key: 'username',
         value: username,
         type: 'single_line_text_field',
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'city',
+          value: city,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+
+  metafield: {
+          namespace: 'fold_tech',
+          key: 'country',
+          value: country,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'phonenumber',
+          value: phoneNumber,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'state',
+          value: state,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -2185,6 +2588,11 @@ export const addNewProviderListing = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; 
+    const state=user.state
+    const phoneNumber=user.phoneNumber
+    const country=user.country
+    const city=user.city      
+    
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
   }
@@ -2285,6 +2693,39 @@ export const addNewProviderListing = async (req, res) => {
         key: 'username',
         value: username,
         type: 'single_line_text_field',
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'city',
+          value: city,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+
+  metafield: {
+          namespace: 'fold_tech',
+          key: 'country',
+          value: country,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'phonenumber',
+          value: phoneNumber,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'state',
+          value: state,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -2460,6 +2901,10 @@ export const addRoomListing = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; 
+    const state=user.state
+    const phoneNumber=user.phoneNumber
+    const country=user.country
+    const city=user.city   
     // Validate required fields
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -2534,7 +2979,39 @@ if (!otherDetails) {
       { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
       { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'username', value: username, type: 'single_line_text_field' },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'city',
+          value: city,
+          type: 'single_line_text_field',
+        },
+      },
+      {
 
+  metafield: {
+          namespace: 'fold_tech',
+          key: 'country',
+          value: country,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'phonenumber',
+          value: phoneNumber,
+          type: 'single_line_text_field',
+        },
+      },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'state',
+          value: state,
+          type: 'single_line_text_field',
+        },
+      },
     ];
 
     for (const metafield of metafieldsPayload) {

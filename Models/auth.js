@@ -44,7 +44,6 @@ const authSchema = new mongoose.Schema({
 
    avatar: { type: [String], default: [] }, 
   token: String,
-  shopifyAccessToken: String,
   hasPaidSubscription: {
     type: Boolean,
     default: false,

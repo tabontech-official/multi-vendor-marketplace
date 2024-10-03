@@ -11,11 +11,13 @@ export const registerSchema = Joi.object({
   .required(),
   tags: Joi.string().optional(),
 //   shopifyId: Joi.string().optional(),
-//   phoneNumber: Joi.number().optional(),
+   phoneNumber: Joi.number().required(),
 //   address: Joi.string().optional(),
-//   zip: Joi.number().optional(),
-//   country: Joi.string().optional(),
-//   city: Joi.string().optional(),
+  zip: Joi.number().required(),
+  country: Joi.string().required(), 
+  city: Joi.string().required(),
+  state: Joi.string().required(),
+
 //   profileImage: Joi.string().optional(),
 });
 

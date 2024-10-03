@@ -2,14 +2,12 @@ import { authModel } from '../Models/auth.js';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import axios from 'axios';
-import path from 'path';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
-import fs from 'fs';
 import mongoose from 'mongoose';
-import FormData from 'form-data';
-//storage for images storing
+import nodemailer from 'nodemailer'
+
+
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
     expiresIn: '1d',
@@ -145,6 +143,36 @@ export const signUp = async (req, res) => {
             value: req.body.userName,
             type: 'single_line_text_field',
           },
+          {
+            namespace: 'custom',
+            key: 'phoneNumber',
+            value: req.body.phoneNumber,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'city',
+            value: req.body.city,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'state',
+            value: req.body.state,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'zip',
+            value: req.body.zip,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'country',
+            value: req.body.country,
+            type: 'single_line_text_field',
+          },
         ],
       },
     };
@@ -186,8 +214,12 @@ export const signUp = async (req, res) => {
       password: req.body.password, // This will be hashed in the pre-save hook
       shopifyId: shopifyId,
       tags: `Trade User, trade_${req.body.userName}`,
+      phoneNumber: req.body.phoneNumber, // Add phone number
+      city: req.body.city, // Add city
+      state: req.body.state, // Add state
+      zip: req.body.zip, // Add zip
+      country: req.body.country // Add country
     });
-
     const savedUser = await newUser.save(); // This will trigger the pre-save hook
 
     // Create token
@@ -204,7 +236,6 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 
 export const signIn = async (req, res) => {
@@ -277,6 +308,7 @@ export const signIn = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
 
 const hashPassword = async (password) => {
   if (password) {
@@ -1084,32 +1116,32 @@ export const getUserData = async (req, res) => {
 };
 
 
-export const forgotPassword = async (req, res) => {
-  try {
-    const customerData = req.body;
+// export const forgotPassword = async (req, res) => {
+//   try {
+//     const customerData = req.body;
 
-    // Ensure both email and password are provided
-    // if (!customerData.email || !customerData.password) {
-    //   return res.status(400).json({ error: 'Email and password are required.' });
-    // }
+//     // Ensure both email and password are provided
+//     // if (!customerData.email || !customerData.password) {
+//     //   return res.status(400).json({ error: 'Email and password are required.' });
+//     // }
 
-    // Find the customer by email
-    const customer = await authModel.findOne({ email: customerData.email });
+//     // Find the customer by email
+//     const customer = await authModel.findOne({ email: customerData.email });
 
-    if (!customer) {
-      return res.status(404).json({ error: 'Customer not found.' });
-    }
+//     if (!customer) {
+//       return res.status(404).json({ error: 'Customer not found.' });
+//     }
 
-    // Update the customer's password
-     customer.password = customerData.password; // Set the new password (it will be hashed in the pre-save hook)
-    await customer.save(); // This will trigger the pre-save hook
-    // console.log('New Password (after change):', customer.password);
-    res.status(200).json({ message: 'Successfully updated password.', customer });
-  } catch (error) {
-    console.error('Error processing forgotPassword:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
+//     // Update the customer's password
+//      customer.password = customerData.password; // Set the new password (it will be hashed in the pre-save hook)
+//     await customer.save(); // This will trigger the pre-save hook
+//     // console.log('New Password (after change):', customer.password);
+//     res.status(200).json({ message: 'Successfully updated password.', customer });
+//   } catch (error) {
+//     console.error('Error processing forgotPassword:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
 
 
 export const updateCustomer = async (req, res) => {
@@ -1138,7 +1170,63 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // Use your email provider
+  auth: {
+    user: process.env.EMAIL_USER, // Your email address
+    pass: process.env.EMAIL_PASS, // Your email password or app password
+  },
+});
 
 
+export const forgotPassword=async(req,res)=>{
+  const { email } = req.body;
 
+  try {
+    const user = await authModel.findOne({ email });
 
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate a reset token
+    const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
+      expiresIn: '1h', // Token valid for 1 hour
+    });
+
+    // Send the email
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    await transporter.sendMail({
+      to: email,
+      subject: 'Password Reset',
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+    });
+
+    res.status(200).json({ message: 'Reset link sent to your email' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending reset email', error });
+  }
+}
+
+export const resetPassword=async(req,res)=>{
+  const { token, newPassword } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const user = await authModel.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    await user.save();
+
+    res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error resetting password', error });
+  }
+}
