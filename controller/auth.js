@@ -6,7 +6,7 @@ import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer'
-
+import axios from 'axios';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -1171,15 +1171,19 @@ export const deleteUser = async (req, res) => {
 };
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use your email provider
+  service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // Your email address
-    pass: process.env.EMAIL_PASS, // Your email password or app password
+    user: 'medsparecovery@gmail.com',
+    pass: 'vfqm uxah oapw qnka',
+  },
+  secure: false, // Use true if using 465 port and secure connection
+  tls: {
+    rejectUnauthorized: false, // This might help with some connection issues
   },
 });
 
 
-export const forgotPassword=async(req,res)=>{
+export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -1189,44 +1193,110 @@ export const forgotPassword=async(req,res)=>{
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Generate a reset token
-    const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
-      expiresIn: '1h', // Token valid for 1 hour
-    });
+    // Generate a reset token using the createToken function
+    const token = createToken(user._id);
+
+    // Create the reset link
+    const resetLink = `${'https://medspa-frntend.vercel.app'}/reset-password?token=${token}`;
 
     // Send the email
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
     await transporter.sendMail({
       to: email,
       subject: 'Password Reset',
       html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
     });
 
-    res.status(200).json({ message: 'Reset link sent to your email' });
+    res.status(200).json({ message: 'Reset link sent to your email',token });
   } catch (error) {
+    console.error('Error sending reset email:', error);
     res.status(500).json({ message: 'Error sending reset email', error });
   }
-}
+};
 
-export const resetPassword=async(req,res)=>{
+// export const resetPassword=async(req,res)=>{
+//   const { token, newPassword } = req.body;
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.SECRET_KEY);
+//     const user = await authModel.findById(decoded.id);
+
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     // Hash the new password
+//     const salt = await bcrypt.genSalt(10);
+//     user.password = await bcrypt.hash(newPassword, salt);
+
+//     await user.save();
+
+//     res.status(200).json({ message: 'Password has been reset successfully' });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error resetting password', error });
+//   }
+// }
+
+
+
+export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
   try {
+    // Verify the token and decode the user ID
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const user = await authModel.findById(decoded.id);
+    const userId = decoded.payLoad; // Accessing payLoad instead of id
+    console.log("Decoded token:", decoded);
+
+    const user = await authModel.findById(userId); // Find user by userId
+    console.log("User fetched from database:", user);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // Set the new password directly (will be hashed in the pre-save hook)
+    user.password = newPassword;
 
+    // Update the user in MongoDB (this will trigger the pre-save hook)
     await user.save();
+
+    // Update the password in Shopify
+    await updateShopifyPassword(user.shopifyId, newPassword);
 
     res.status(200).json({ message: 'Password has been reset successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error resetting password', error });
+    console.error('Error resetting password:', error);
+    res.status(500).json({ message: 'Error resetting password', error: error.message });
   }
-}
+};
+
+// Function to update password in Shopify
+const updateShopifyPassword = async (shopifyId, newPassword) => {
+  const shopifyDomain = 'med-spa-trader.myshopify.com'; 
+  const apiKey = process.env.SHOPIFY_API_KEY; 
+  const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+
+  const url = `https://${apiKey}:${apiPassword}@${shopifyDomain}/admin/api/2023-04/customers/${shopifyId}.json`;
+
+  console.log(`Requesting Shopify URL: ${url}`);
+
+  try {
+    const response = await axios.put(url, {
+      customer: {
+        id: shopifyId,
+        password: newPassword,
+        password_confirmation: newPassword
+      },
+    });
+
+    console.log('Shopify response:', response.status, response.data);
+
+    if (response.status !== 200) {
+      throw new Error('Failed to update password in Shopify');
+    }
+  } catch (error) {
+    console.error('Error updating Shopify password:', error.response ? error.response.data : error.message);
+    throw new Error('Failed to update password in Shopify');
+  }
+};
+

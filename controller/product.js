@@ -2878,7 +2878,6 @@ export const addRoomListing = async (req, res) => {
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city   
-    // Validate required fields
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
   }
@@ -2957,7 +2956,6 @@ if (!otherDetails) {
       { namespace: 'fold_tech', key: 'country', value: country, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'phonenumber', value: phoneNumber, type: 'single_line_text_field' },
     ];
-
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
