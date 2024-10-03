@@ -17,6 +17,99 @@ const createToken = (payLoad) => {
   return token;
 };
 
+// export const signUp = async (req, res) => {
+//   try {
+//     // Validate input data
+//     const { error } = registerSchema.validate(req.body);
+//     if (error) {
+//       return res.status(400).json({ error: error.details[0].message });
+//     }
+
+//     // Check if the user already exists
+//     const userExist = await authModel.findOne({ email: req.body.email });
+//     if (userExist) {
+//       return res.status(400).json({ error: 'User already exists with this email' });
+//     }
+//     const userExistByUsername = await authModel.findOne({ userName: req.body.userName });
+//     if (userExistByUsername) {
+//       return res.status(400).json({ error: 'Username already exists' });
+//     }
+//     // Create Shopify request payload
+//     const shopifyPayload = {
+//       customer: {
+//         first_name: req.body.firstName,
+//         last_name: req.body.lastName,
+//         email: req.body.email,
+//         password: req.body.password, // Use plain password; it will be hashed in the model
+//         password_confirmation: req.body.password,
+//         tags: `Trade User, trade_${req.body.userName}`, // Use trade_ prefix
+//         metafields: [
+//           {
+//             namespace: 'custom',
+//             key: 'username',
+//             value: req.body.userName,
+//             type: 'single_line_text_field',
+//           },
+//         ],
+//       },
+//     };
+
+//     // Basic Auth credentials
+//     const apiKey = process.env.SHOPIFY_API_KEY;
+//     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+//     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+
+//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+//     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
+
+//     // Save user to Shopify
+//     const response = await fetch(shopifyUrl, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         Authorization: `Basic ${base64Credentials}`,
+//       },
+//       body: JSON.stringify(shopifyPayload),
+//     });
+
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       console.error('Error saving user to Shopify:', errorData);
+//       return res.status(500).json({ error: 'Failed to register user with Shopify' });
+//     }
+
+//     // Extract Shopify ID from the response
+//     const shopifyResponse = await response.json();
+//     const shopifyId = shopifyResponse.customer.id;
+
+//     // Create and save new user in MongoDB with hashed password and Shopify ID
+//     const newUser = new authModel({
+//       firstName: req.body.firstName,
+//       lastName: req.body.lastName,
+//       userName: req.body.userName,
+//       email: req.body.email,
+//       password: req.body.password, // Store the plain password; it will be hashed in the pre-save hook
+//       shopifyId: shopifyId,
+//       tags: `Trade User, trade_${req.body.userName}`, // Consistent tagging with prefix
+//     });
+
+//     const savedUser = await newUser.save();
+
+//     // Create token
+//     const token = createToken({ _id: savedUser._id });
+
+//     // Send response
+//     res.status(201).send({
+//       message: 'Successfully registered',
+//       token,
+//       data: savedUser,
+//     });
+//   } catch (error) {
+//     console.error('Error in signUp function:', error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const signUp = async (req, res) => {
   try {
     // Validate input data
@@ -30,10 +123,12 @@ export const signUp = async (req, res) => {
     if (userExist) {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
+    
     const userExistByUsername = await authModel.findOne({ userName: req.body.userName });
     if (userExistByUsername) {
       return res.status(400).json({ error: 'Username already exists' });
     }
+
     // Create Shopify request payload
     const shopifyPayload = {
       customer: {
@@ -42,7 +137,7 @@ export const signUp = async (req, res) => {
         email: req.body.email,
         password: req.body.password, // Use plain password; it will be hashed in the model
         password_confirmation: req.body.password,
-        tags: `Trade User, trade_${req.body.userName}`, // Use trade_ prefix
+        tags: `Trade User, trade_${req.body.userName}`,
         metafields: [
           {
             namespace: 'custom',
@@ -88,12 +183,12 @@ export const signUp = async (req, res) => {
       lastName: req.body.lastName,
       userName: req.body.userName,
       email: req.body.email,
-      password: req.body.password, // Store the plain password; it will be hashed in the pre-save hook
+      password: req.body.password, // This will be hashed in the pre-save hook
       shopifyId: shopifyId,
-      tags: `Trade User, trade_${req.body.userName}`, // Consistent tagging with prefix
+      tags: `Trade User, trade_${req.body.userName}`,
     });
 
-    const savedUser = await newUser.save();
+    const savedUser = await newUser.save(); // This will trigger the pre-save hook
 
     // Create token
     const token = createToken({ _id: savedUser._id });
@@ -109,6 +204,7 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 
 export const signIn = async (req, res) => {

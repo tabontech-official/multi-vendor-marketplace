@@ -67,16 +67,13 @@ const authSchema = new mongoose.Schema({
   },
 });
 authSchema.pre('save', async function (next) {
-  const user = this;
-  if (!user.isModified('password')) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(user.password, salt);
-    next();
-  } catch (err) {
-    return next(err);
-  }
+  if (!this.isModified('password')) return next(); // Only hash the password if it's new or modified
+  
+  const salt = await bcrypt.genSalt(10); // Generate salt
+  this.password = await bcrypt.hash(this.password, salt); // Hash the password
+  next(); // Proceed to save
 });
+
 authSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
