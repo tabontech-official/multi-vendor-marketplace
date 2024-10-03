@@ -1089,9 +1089,9 @@ export const forgotPassword = async (req, res) => {
     const customerData = req.body;
 
     // Ensure both email and password are provided
-    if (!customerData.email || !customerData.password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
+    // if (!customerData.email || !customerData.password) {
+    //   return res.status(400).json({ error: 'Email and password are required.' });
+    // }
 
     // Find the customer by email
     const customer = await authModel.findOne({ email: customerData.email });
