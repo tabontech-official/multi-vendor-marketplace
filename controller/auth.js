@@ -1197,7 +1197,7 @@ export const forgotPassword = async (req, res) => {
     const token = createToken(user._id);
 
     // Create the reset link
-    const resetLink = `${'https://medspa-frntend.vercel.app'}/reset-password?token=${token}`;
+    const resetLink = 'https://medspa-frntend.vercel.app/Reset';
 
     // Send the email
     await transporter.sendMail({
