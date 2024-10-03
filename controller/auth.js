@@ -1083,31 +1083,34 @@ export const getUserData = async (req, res) => {
   }
 };
 
+
 export const forgotPassword = async (req, res) => {
   try {
     const customerData = req.body;
 
-    // Assuming you're storing customer emails in MongoDB
-    const customer = await authModel.findOne({ email: customerData.email });
-
-    if (customer) {
-      // Hash the new password before saving
-      const saltRounds = 10; // You can adjust this number based on your security needs
-      const hashedPassword = await bcrypt.hash(
-        customerData.password,
-        saltRounds
-      );
-
-      customer.password = hashedPassword; // Set the hashed password
-      await customer.save();
+    // Ensure both email and password are provided
+    if (!customerData.email || !customerData.password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    res.status(200).send('Successfully updated data');
+    // Find the customer by email
+    const customer = await authModel.findOne({ email: customerData.email });
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found.' });
+    }
+
+    // Update the customer's password
+     customer.password = customerData.password; // Set the new password (it will be hashed in the pre-save hook)
+    await customer.save(); // This will trigger the pre-save hook
+    console.log('New Password (after change):', customer.password);
+    res.status(200).json({ message: 'Successfully updated password.', customer });
   } catch (error) {
-    console.error('Error processing webhook:', error);
-    res.status(500).send('Internal Server Error');
+    console.error('Error processing forgotPassword:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
 
 export const updateCustomer = async (req, res) => {
   const customerData = req.body;
