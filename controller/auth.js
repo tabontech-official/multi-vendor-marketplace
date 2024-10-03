@@ -1103,7 +1103,7 @@ export const forgotPassword = async (req, res) => {
     // Update the customer's password
      customer.password = customerData.password; // Set the new password (it will be hashed in the pre-save hook)
     await customer.save(); // This will trigger the pre-save hook
-    console.log('New Password (after change):', customer.password);
+    // console.log('New Password (after change):', customer.password);
     res.status(200).json({ message: 'Successfully updated password.', customer });
   } catch (error) {
     console.error('Error processing forgotPassword:', error);
