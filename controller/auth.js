@@ -8,8 +8,7 @@ import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import fs from 'fs';
 import mongoose from 'mongoose';
-import cloudinary from 'cloudinary'
-
+import FormData from 'form-data';
 //storage for images storing
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -621,7 +620,88 @@ export const webHook = async (req, res) => {
   }
 };
 
+// export const editProfile = async (req, res) => {
+//   const { userId } = req.params; // Get userId from request parameters
+//   const { email, phoneNumber, address, zip, country, city, firstName, lastName } = req.body;
+//   const images = req.files?.images || []; // Handle multiple file uploads
+//   const requiredFields = [email, phoneNumber, address, zip, country, city, firstName, lastName];
+//   const fieldNames = ['email', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
 
+//   for (let i = 0; i < requiredFields.length; i++) {
+//     if (!requiredFields[i]) {
+//       return res.status(400).json({ error: `${fieldNames[i]} is required.` });
+//     }
+//   }
+
+//   try {
+//     if (!userId) {
+//       return res.status(400).json({ error: 'User ID is required.' });
+//     }
+
+//     // Find user by ID
+//     const user = await authModel.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found.' });
+//     }
+
+//     // Update fields
+//     if (email) user.email = email;
+//     if (phoneNumber) user.phoneNumber = phoneNumber;
+//     if (address) user.address = address;
+//     if (zip) user.zip = zip;
+//     if (country) user.country = country;
+//     if (city) user.city = city;
+//     if (firstName) user.firstName = firstName;
+//     if (lastName) user.lastName = lastName;
+
+//     // Handle image upload
+//     const imagesData = [];
+//     if (Array.isArray(images) && images.length > 0) {
+//       for (const image of images) {
+//         const imageUrl = image.path; // Replace with your actual domain
+//         imagesData.push(imageUrl); // Store the full URL
+//       }
+
+//       // Update the user's avatar URLs
+//       user.avatar = imagesData; // Assuming `avatar` is an array of image URLs
+//     }
+
+//     // Save the updated user
+//     await user.save();
+
+//     // Step to update Shopify user (if applicable)
+//     const shopifyCustomerId = user.shopifyId; // Assuming you store the Shopify customer ID in the user record
+//     if (shopifyCustomerId) {
+//       const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
+//       const shopifyPayload = {
+//         customer: {
+//           id: shopifyCustomerId,
+//           first_name: firstName,
+//           last_name: lastName,
+//           email: email,
+//           phone: phoneNumber,
+//           addresses: [
+//             {
+//               address1: address,
+//               city: city,
+//               province: country, // Adjust if necessary
+//               zip: zip,
+//               country: country,
+//             },
+//           ],
+//         },
+//       };
+
+//       // Update Shopify customer
+//       await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+//     }
+
+//     res.status(200).json({ message: 'Profile updated successfully.', user });
+//   } catch (error) {
+//     console.error('Error updating profile:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
 
 
 export const editProfile = async (req, res) => {
@@ -631,6 +711,7 @@ export const editProfile = async (req, res) => {
   const requiredFields = [email, phoneNumber, address, zip, country, city, firstName, lastName];
   const fieldNames = ['email', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
 
+  // Validate required fields
   for (let i = 0; i < requiredFields.length; i++) {
     if (!requiredFields[i]) {
       return res.status(400).json({ error: `${fieldNames[i]} is required.` });
@@ -648,34 +729,33 @@ export const editProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Update fields
-    if (email) user.email = email;
-    if (phoneNumber) user.phoneNumber = phoneNumber;
-    if (address) user.address = address;
-    if (zip) user.zip = zip;
-    if (country) user.country = country;
-    if (city) user.city = city;
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
+    // Update user fields
+    user.email = email;
+    user.phoneNumber = phoneNumber;
+    user.address = address;
+    user.zip = zip;
+    user.country = country;
+    user.city = city;
+    user.firstName = firstName;
+    user.lastName = lastName;
 
     // Handle image upload
     const imagesData = [];
     if (Array.isArray(images) && images.length > 0) {
       for (const image of images) {
-        const imageUrl = image.path; // Replace with your actual domain
+        const imageUrl = image.path; // Assuming image.path is the URL
         imagesData.push(imageUrl); // Store the full URL
       }
-
-      // Update the user's avatar URLs
       user.avatar = imagesData; // Assuming `avatar` is an array of image URLs
     }
 
     // Save the updated user
     await user.save();
 
-    // Step to update Shopify user (if applicable)
+    // Update Shopify user (if applicable)
     const shopifyCustomerId = user.shopifyId; // Assuming you store the Shopify customer ID in the user record
     if (shopifyCustomerId) {
+      // Update Shopify user details
       const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
       const shopifyPayload = {
         customer: {
@@ -698,6 +778,20 @@ export const editProfile = async (req, res) => {
 
       // Update Shopify customer
       await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+
+      // Now, handle the metafield for images
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
+      const metafieldsPayload = {
+        metafield: {
+          namespace: "custom",
+          key: "profileimages",
+          value: imagesData.join(','), // Store images as JSON
+          type: "single_line_text_field", // Store as JSON string
+        },
+      };
+
+      // Create or update the metafield
+      await shopifyRequest(metafieldsUrl, 'POST', metafieldsPayload);
     }
 
     res.status(200).json({ message: 'Profile updated successfully.', user });
@@ -707,16 +801,11 @@ export const editProfile = async (req, res) => {
   }
 };
 
-
-
-
-
+// Function to make Shopify API request
 const shopifyRequest = async (url, method, body) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-    'base64'
-  );
+  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
 
   const response = await fetch(url, {
     method,
@@ -734,6 +823,8 @@ const shopifyRequest = async (url, method, body) => {
 
   return response.json();
 };
+
+
 
 export const fetchUserData = async (req, res) => {
   try {
