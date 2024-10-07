@@ -1456,7 +1456,7 @@ export const addNewEquipments = async (req, res) => {
 
     // Extract equipment details and action from request body
     const {
-      location,
+      
       zip,
       name,
       brand,
@@ -1474,7 +1474,6 @@ export const addNewEquipments = async (req, res) => {
 
     // Validate required fields
     if (!zip) return res.status(400).json({ error: 'ZipCode is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
     if (sale_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
@@ -1508,7 +1507,7 @@ export const addNewEquipments = async (req, res) => {
         variants: [{ price: sale_price.toString() }],
         status: productStatus,
         published_scope: 'global',
-        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
+        tags: [`zip_${zip}`, `country_${country}`, `username_${username}`], // Include username in tags
       },
     };
 
@@ -1539,14 +1538,6 @@ export const addNewEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'description',
           value: description,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'location',
-          value: location || 'Unknown',
           type: 'single_line_text_field',
         },
       },
