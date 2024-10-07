@@ -2881,7 +2881,7 @@ if (!otherDetails) {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${location} | ${country}, ${zip}`,
+        title: `${country} | ${location}, ${zip}`,
         body_html: otherDetails,
         vendor: location,
         product_type: 'Spa Room For Rent',
