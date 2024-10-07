@@ -115,18 +115,19 @@ export const signUp = async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-
+    const username = req.body.email.split("@")[0];
     // Check if the user already exists
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
     
-    const userExistByUsername = await authModel.findOne({ userName: req.body.userName });
+    const userExistByUsername = await authModel.findOne({ userName: username });
     if (userExistByUsername) {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
+    
     // Create Shopify request payload
     const shopifyPayload = {
       customer: {
@@ -140,7 +141,7 @@ export const signUp = async (req, res) => {
           {
             namespace: 'custom',
             key: 'username',
-            value: req.body.userName,
+            value: username,
             type: 'single_line_text_field',
           },
           {
@@ -209,7 +210,7 @@ export const signUp = async (req, res) => {
     const newUser = new authModel({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      userName: req.body.userName,
+      userName: username,
       email: req.body.email,
       password: req.body.password, // This will be hashed in the pre-save hook
       shopifyId: shopifyId,
@@ -656,75 +657,6 @@ export const logout = async (req, res) => {
     res.status(500).json({ error: 'An error occurred' });
   }
 };
-
-// export const logout = async (req res) => {
-
-//   try {
-//     // Validate request parameters
-//     const { id } = req.params; // This should be the Shopify customer ID
-//     if (!id) {
-//       return res.status(400).json({ error: 'Shopify Customer ID is required' });
-//     }
-
-//     // Find the user by Shopify customer ID
-//     const user = await authModel.findOne({ shopifyId: id });
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found' });
-//     }
-
-//     // Clear session or token in MongoDB
-//     // Assuming 'shopifyAccessToken' is the field storing the token
-//     await authModel.findOneAndUpdate({ shopifyId: id }, { shopifyAccessToken: null });
-
-//     // Basic Auth credentials for Shopify
-//     const apiKey = process.env.SHOPIFY_API_KEY;
-//     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-//     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-
-//     // Prepare Shopify request URL (replace with the correct endpoint if needed)
-//     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${id}.json`;
-
-//     // Revoke or delete user in Shopify (this example assumes a delete request)
-//     const response = await fetch(shopifyUrl, {
-//       method: 'DELETE',
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'Authorization': `Basic ${base64Credentials}`,
-//         'Accept': 'application/json',
-//       },
-//     });
-
-//     // Handle Shopify response
-//     if (!response.ok) {
-//       let errorMessage = 'Failed to revoke token from Shopify';
-//       let responseBody = '';
-
-//       try {
-//         responseBody = await response.text(); // Read response as text
-//         if (responseBody) {
-//           const errorData = JSON.parse(responseBody);
-//           console.error('Error revoking token in Shopify:', errorData);
-//           errorMessage = errorData.message || errorMessage;
-//         } else {
-//           console.error('Shopify response is empty');
-//         }
-//       } catch (parseError) {
-//         console.error('Error parsing Shopify error response:', parseError);
-//       }
-
-//       return res.status(response.status).json({ error: errorMessage });
-//     }
-
-//     // Send success response
-//     res.status(200).json({
-//       message: 'Logged out successfully',
-//     });
-//   } catch (error) {
-//     console.error('Error during logout:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 export const webHook = async (req, res) => {
   const { shopifyId } = req.body;
