@@ -1199,7 +1199,9 @@ export const addUsedEquipments = async (req, res) => {
     if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
     if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
     if (!description) return res.status(400).json({ error: 'Description is required.' });
-
+    if (!req.files?.images || req.files.images.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1476,7 +1478,9 @@ export const addNewEquipments = async (req, res) => {
     if (!training) return res.status(400).json({ error: 'Training details are required.' });
     if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
     if (!description) return res.status(400).json({ error: 'Description is required.' });
-
+    if (!req.files?.images || req.files.images.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
     // Determine product status based on action
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
@@ -1898,7 +1902,9 @@ export const addNewBusiness = async (req, res) => {
   if (!supportAndTraining) {
       return res.status(400).json({ error: 'Support and training information is required.' });
   }
-  
+  if (!req.files?.images || req.files.images.length === 0) {
+    return res.status(400).json({ error: 'At least one image is required.' });
+  }
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -2272,7 +2278,9 @@ export const addNewJobListing = async (req, res) => {
   if (!requestedYearlySalary) {
       return res.status(400).json({ error: 'Requested yearly salary is required.' });
   }
-  
+  if (!req.files?.images || req.files.images.length === 0) {
+    return res.status(400).json({ error: 'At least one image is required.' });
+  }
   // Continue with any additional field validations as needed
   
 
@@ -2568,7 +2576,9 @@ export const addNewProviderListing = async (req, res) => {
   if (!offeredPositionDescription) {
       return res.status(400).json({ error: 'Offered position description is required.' });
   }
-  
+  if (!req.files?.images || req.files.images.length === 0) {
+    return res.status(400).json({ error: 'At least one image is required.' });
+  }
   // Continue with any additional field validations as needed
   
 
@@ -2877,7 +2887,9 @@ if (!otherDetails) {
     return res.status(400).json({ error: 'Other details are required.' });
 }
 
-
+if (!req.files?.images || req.files.images.length === 0) {
+  return res.status(400).json({ error: 'At least one image is required.' });
+}
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {

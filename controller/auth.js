@@ -7,6 +7,7 @@ import { registerSchema, loginSchema } from '../validation/auth.js';
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer'
 import axios from 'axios';
+import { Console } from 'console';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -307,84 +308,6 @@ export const signIn = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-
-// export const signIn = async (req, res) => {
-//   try {
-//     // Validate input data
-//     const { error } = loginSchema.validate(req.body);
-//     if (error) {
-//       return res.status(400).json({ error: error.details[0].message });
-//     }
-
-//     const { email, password } = req.body;
-
-//     // Check if user exists in your app's database
-//     const user = await authModel.findOne({ email });
-//     if (!user) {
-//       return res.status(404).json({ error: 'User does not exist with this email' });
-//     }
-
-//     // Verify password
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) {
-//       return res.status(401).json({ error: 'Invalid password' });
-//     }
-
-//     // Basic Auth credentials for Shopify
-//     const apiKey = process.env.SHOPIFY_API_KEY;
-//     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-//     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-
-//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-//     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
-
-//     // Check Shopify credentials
-//     const response = await fetch(shopifyUrl, {
-//       method: 'GET',
-//       headers: {
-//         'Content-Type': 'application/json',
-//         Authorization: `Basic ${base64Credentials}`,
-//       },
-//     });
-
-//     const shopifyData = await response.json();
-
-//     if (response.status !== 200 || !shopifyData.customers.length) {
-//       return res.status(404).json({ error: 'User does not exist in Shopify' });
-//     }
-
-//     const shopifyCustomer = shopifyData.customers[0];
-
-//     // Optional: Log Shopify Customer ID
-//     console.log('Shopify Customer ID:', shopifyCustomer.id);
-
-//     // Create a JWT token for your application
-//     const token = createToken({ _id: user._id });
-
-//     // Now, log the user into Shopify automatically
-//     // Use the Shopify customer login URL with a redirect
-//     const shopifyLoginUrl = 'https://www.medspatrader.com/account/login';
-
-//     res.json({
-//       message: 'Successfully logged in',
-//       token,
-//       data: {
-//         user,
-//         shopifyCustomer, // Include Shopify customer data if needed
-//       },
-//       redirectUrl: shopifyLoginUrl, // Optionally redirect to Shopify login page
-//     });
-
-//     // Redirect to Shopify with customer information (if Shopify Plus / Multipass is available)
-//     // res.redirect(shopifyLoginUrl); 
-
-//   } catch (error) {
-//     console.error('Login error:', error.message || error);
-//     return res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// };
-
 
 
 const hashPassword = async (password) => {
@@ -1036,20 +959,7 @@ export const fetchUserData = async (req, res) => {
     const { id } = req.params;
     const response = await authModel.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-      {
-        $project: {
-          email: 1,
-          password: 1,
-          phoneNumber: 1,
-          address: 1,
-          zip: 1,
-          country: 1,
-          city: 1,
-          avatar: 1,
-          firstName: 1,
-          lastName: 1,
-        },
-      },
+     
     ]);
     if (response.length > 0) {
       res.status(200).json(response[0]);
