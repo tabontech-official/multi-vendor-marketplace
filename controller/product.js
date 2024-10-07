@@ -1323,35 +1323,12 @@ export const addUsedEquipments = async (req, res) => {
       {
         metafield: {
           namespace: 'fold_tech',
-          key: 'username',
-          value: username,
+          key: 'userinformation',
+          value: `${username} | ${country} | ${city} | ${phoneNumber}`,
           type: 'single_line_text_field',
         },
       },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'city',
-          value: city,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'country',
-          value: country,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'phonenumber',
-          value: phoneNumber,
-          type: 'single_line_text_field',
-        },
-      },
+      
 
     ];
 
@@ -1611,35 +1588,12 @@ export const addNewEquipments = async (req, res) => {
       {
         metafield: {
           namespace: 'fold_tech',
-          key: 'username', // Add username metafield
-          value: username,
+          key: 'userinformation',
+          value: `${username} | ${country} | ${city} | ${phoneNumber}`,
           type: 'single_line_text_field',
         },
       },
-      {
-        metafield: {
-        namespace: 'fold_tech',
-        key: 'country',
-        value: country,
-        type: 'single_line_text_field',
-      },
-    },
-    {
-      metafield: {
-        namespace: 'fold_tech',
-        key: 'phonenumber',
-        value: phoneNumber,
-        type: 'single_line_text_field',
-      },
-    },
-    {
-      metafield: {
-        namespace: 'fold_tech',
-        key: 'city',
-        value: city,
-        type: 'single_line_text_field',
-      },
-    },
+      
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -2032,30 +1986,13 @@ export const addNewBusiness = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        namespace: 'fold_tech',
-        key: 'username',
-        value: username,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${username} | ${country} | ${city} | ${phoneNumber}`,
+          type: 'single_line_text_field',
+        },
       },
-      {
-        namespace: 'fold_tech',
-        key: 'city',
-        value: city,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'country',
-        value: country,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'phonenumber',
-        value: phoneNumber,
-        type: 'single_line_text_field',
-      },
-      
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -2350,28 +2287,12 @@ export const addNewJobListing = async (req, res) => {
         type: 'number_decimal',
       },
       {
-        namespace: 'fold_tech',
-        key: 'username',
-        value: username,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'city',
-        value: city,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'country',
-        value: country,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'phonenumber',
-        value: phoneNumber,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${username} | ${country} | ${city} | ${phoneNumber}`,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -2648,28 +2569,12 @@ export const addNewProviderListing = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        namespace: 'fold_tech',
-        key: 'username',
-        value: username,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'country',
-        value: country,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'phonenumber',
-        value: phoneNumber,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'city',
-        value: city,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${username} | ${country} | ${city} | ${phoneNumber}`,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -2922,10 +2827,14 @@ if (!req.files?.images || req.files.images.length === 0) {
       { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
       { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'username', value: username, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'city', value: city, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'country', value: country, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'phonenumber', value: phoneNumber, type: 'single_line_text_field' },
+      {
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${username} | ${country} | ${city} | ${phoneNumber}`,
+          type: 'single_line_text_field',
+        },
+      },
     ];
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
