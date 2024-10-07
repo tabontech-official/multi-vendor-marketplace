@@ -1501,7 +1501,7 @@ export const addNewEquipments = async (req, res) => {
     // Step 2: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${name} | ${country} , ${state} , ${zip}`,
+        title: `${name} | ${country},${state},${zip}`,
         body_html: description,
         vendor: brand,
         product_type: 'New Equipments',
@@ -1610,7 +1610,7 @@ export const addNewEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'shipping',
-          value: shipping,
+          value: shipping || 'Not specified',
           type: 'single_line_text_field',
         },
       },
