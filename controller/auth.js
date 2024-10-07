@@ -1198,7 +1198,7 @@ export const forgotPassword = async (req, res) => {
 
     // Create the reset link
     const resetLink = `${'https://medspa-frntend.vercel.app/Reset'}?token=${token}`;
-
+    console.log(resetLink)
     // Send the email
     await transporter.sendMail({
       to: email,
@@ -1206,35 +1206,12 @@ export const forgotPassword = async (req, res) => {
       html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
     });
 
-    res.status(200).json({ message: 'Reset link sent to your email',token });
+    res.status(200).json({ message: 'Reset link sent to your email' });
   } catch (error) {
     console.error('Error sending reset email:', error);
     res.status(500).json({ message: 'Error sending reset email', error });
   }
 };
-
-// export const resetPassword=async(req,res)=>{
-//   const { token, newPassword } = req.body;
-
-//   try {
-//     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-//     const user = await authModel.findById(decoded.id);
-
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-
-//     // Hash the new password
-//     const salt = await bcrypt.genSalt(10);
-//     user.password = await bcrypt.hash(newPassword, salt);
-
-//     await user.save();
-
-//     res.status(200).json({ message: 'Password has been reset successfully' });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error resetting password', error });
-//   }
-// }
 
 
 
@@ -1270,7 +1247,11 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// Function to update password in Shopify
+
+
+
+
+
 const updateShopifyPassword = async (shopifyId, newPassword) => {
   const shopifyDomain = 'med-spa-trader.myshopify.com'; 
   const apiKey = process.env.SHOPIFY_API_KEY; 

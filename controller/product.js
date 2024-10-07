@@ -1204,7 +1204,7 @@ export const addUsedEquipments = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name,
+        title: `${name} | ${country} , ${state} , ${zip}`,
         body_html: description,
         vendor: brand,
         product_type: 'Used Equipments',
@@ -1501,7 +1501,7 @@ export const addNewEquipments = async (req, res) => {
     // Step 2: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name,
+        title: `${name} | ${country} , ${state} , ${zip}`,
         body_html: description,
         vendor: brand,
         product_type: 'New Equipments',
@@ -1922,7 +1922,7 @@ export const addNewBusiness = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name,
+        title: `${name} | ${country} , ${state} , ${zip}`,
         body_html: businessDescription,
         vendor: location,
         product_type: 'Businesses To Purchase',
@@ -2305,7 +2305,7 @@ export const addNewJobListing = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: name,
+        title: `${name} | ${country} , ${state} , ${zip}`,
         body_html: positionRequestedDescription,
         vendor: location,
         product_type: 'Providers Available',
@@ -2608,7 +2608,7 @@ export const addNewProviderListing = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: qualificationRequested,
+        title: `${qualificationRequested} | ${country} , ${state} , ${zip}`,
         body_html: offeredPositionDescription,
         vendor: location,
         product_type: 'Provider Needed',
@@ -2921,7 +2921,7 @@ if (!otherDetails) {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: location,
+        title: `${location} | ${state} , ${zip}`,
         body_html: otherDetails,
         vendor: location,
         product_type: 'Spa Room For Rent',
