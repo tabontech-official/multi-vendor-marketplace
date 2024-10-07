@@ -1182,7 +1182,7 @@ export const addUsedEquipments = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
+    const username = user.userName  // Fetch username, default to 'Unknown' if not found
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city
@@ -1465,7 +1465,7 @@ export const addNewEquipments = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
+    const username = user.userName // Fetch username, default to 'Unknown' if not found
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city
@@ -2182,7 +2182,7 @@ export const addNewJobListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName || 'Unknown';
+    const username = user.userName
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city       
@@ -2465,7 +2465,7 @@ export const addNewProviderListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName || 'Unknown'; 
+    const username = user.userName
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city      
@@ -2747,7 +2747,7 @@ export const addRoomListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName || 'Unknown'; 
+    const username = user.userName
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city   
