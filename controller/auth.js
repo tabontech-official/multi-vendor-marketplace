@@ -7,7 +7,6 @@ import { registerSchema, loginSchema } from '../validation/auth.js';
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer'
 import axios from 'axios';
-import { Console } from 'console';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
