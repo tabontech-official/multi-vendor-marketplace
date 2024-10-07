@@ -1183,7 +1183,6 @@ export const addUsedEquipments = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; // Fetch username, default to 'Unknown' if not found
-    const state=user.state
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city
@@ -1204,7 +1203,7 @@ export const addUsedEquipments = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${name} | ${country} , ${state} , ${zip}`,
+        title: `${name} | ${country} , ${location} , ${zip}`,
         body_html: description,
         vendor: brand,
         product_type: 'Used Equipments',
@@ -1348,14 +1347,6 @@ export const addUsedEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'phonenumber',
           value: phoneNumber,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'state',
-          value: state,
           type: 'single_line_text_field',
         },
       },
@@ -1833,7 +1824,6 @@ export const addNewBusiness = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; 
-    const state=user.state
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city       
@@ -1913,7 +1903,7 @@ export const addNewBusiness = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${name} | ${country} , ${state} , ${zip}`,
+        title: `${name} | ${country} , ${location} , ${zip}`,
         body_html: businessDescription,
         vendor: location,
         product_type: 'Businesses To Purchase',
@@ -2045,12 +2035,6 @@ export const addNewBusiness = async (req, res) => {
         namespace: 'fold_tech',
         key: 'city',
         value: city,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'state',
-        value: state,
         type: 'single_line_text_field',
       },
       {
@@ -2256,7 +2240,6 @@ export const addNewJobListing = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown';
-    const state=user.state
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city       
@@ -2296,7 +2279,7 @@ export const addNewJobListing = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${name} | ${country} , ${state} , ${zip}`,
+        title: `${name} | ${country} , ${location} , ${zip}`,
         body_html: positionRequestedDescription,
         vendor: location,
         product_type: 'Providers Available',
@@ -2380,12 +2363,6 @@ export const addNewJobListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'phonenumber',
         value: phoneNumber,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'state',
-        value: state,
         type: 'single_line_text_field',
       },
     ];
@@ -2561,7 +2538,6 @@ export const addNewProviderListing = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; 
-    const state=user.state
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city      
@@ -2599,7 +2575,7 @@ export const addNewProviderListing = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${qualificationRequested} | ${country} , ${state} , ${zip}`,
+        title: `${qualificationRequested} | ${country} , ${location} , ${zip}`,
         body_html: offeredPositionDescription,
         vendor: location,
         product_type: 'Provider Needed',
@@ -2683,12 +2659,6 @@ export const addNewProviderListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'city',
         value: city,
-        type: 'single_line_text_field',
-      },
-      {
-        namespace: 'fold_tech',
-        key: 'state',
-        value: state,
         type: 'single_line_text_field',
       },
     ];
@@ -2865,7 +2835,6 @@ export const addRoomListing = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const username = user.userName || 'Unknown'; 
-    const state=user.state
     const phoneNumber=user.phoneNumber
     const country=user.country
     const city=user.city   
@@ -2912,7 +2881,7 @@ if (!otherDetails) {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${location} | ${state} , ${zip}`,
+        title: `${location} | ${country}, ${zip}`,
         body_html: otherDetails,
         vendor: location,
         product_type: 'Spa Room For Rent',
@@ -2943,7 +2912,6 @@ if (!otherDetails) {
       { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'username', value: username, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'city', value: city, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'state', value: state, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'country', value: country, type: 'single_line_text_field' },
       { namespace: 'fold_tech', key: 'phonenumber', value: phoneNumber, type: 'single_line_text_field' },
     ];
