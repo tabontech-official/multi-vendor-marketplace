@@ -136,7 +136,7 @@ export const signUp = async (req, res) => {
         email: req.body.email,
         password: req.body.password, // Use plain password; it will be hashed in the model
         password_confirmation: req.body.password,
-        tags: `Trade User, trade_${req.body.userName}`,
+        tags: `Trade User, trade_${username}`,
         metafields: [
           {
             namespace: 'custom',
