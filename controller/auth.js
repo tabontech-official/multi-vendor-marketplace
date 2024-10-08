@@ -15,6 +15,7 @@ const createToken = (payLoad) => {
   return token;
 };
 
+
 // export const signUp = async (req, res) => {
 //   try {
 //     // Validate input data
@@ -22,16 +23,19 @@ const createToken = (payLoad) => {
 //     if (error) {
 //       return res.status(400).json({ error: error.details[0].message });
 //     }
-
+//     const username = req.body.email.split("@")[0];
 //     // Check if the user already exists
 //     const userExist = await authModel.findOne({ email: req.body.email });
 //     if (userExist) {
 //       return res.status(400).json({ error: 'User already exists with this email' });
 //     }
-//     const userExistByUsername = await authModel.findOne({ userName: req.body.userName });
+    
+//     const userExistByUsername = await authModel.findOne({ userName: username });
 //     if (userExistByUsername) {
 //       return res.status(400).json({ error: 'Username already exists' });
 //     }
+
+    
 //     // Create Shopify request payload
 //     const shopifyPayload = {
 //       customer: {
@@ -40,12 +44,42 @@ const createToken = (payLoad) => {
 //         email: req.body.email,
 //         password: req.body.password, // Use plain password; it will be hashed in the model
 //         password_confirmation: req.body.password,
-//         tags: `Trade User, trade_${req.body.userName}`, // Use trade_ prefix
+//         tags: `Trade User, trade_${username}`,
 //         metafields: [
 //           {
 //             namespace: 'custom',
 //             key: 'username',
-//             value: req.body.userName,
+//             value: username,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'phoneNumber',
+//             value: req.body.phoneNumber,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'city',
+//             value: req.body.city,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'state',
+//             value: req.body.state,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'zip',
+//             value: req.body.zip,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'country',
+//             value: req.body.country,
 //             type: 'single_line_text_field',
 //           },
 //         ],
@@ -84,14 +118,18 @@ const createToken = (payLoad) => {
 //     const newUser = new authModel({
 //       firstName: req.body.firstName,
 //       lastName: req.body.lastName,
-//       userName: req.body.userName,
+//       userName: username,
 //       email: req.body.email,
-//       password: req.body.password, // Store the plain password; it will be hashed in the pre-save hook
+//       password: req.body.password, // This will be hashed in the pre-save hook
 //       shopifyId: shopifyId,
-//       tags: `Trade User, trade_${req.body.userName}`, // Consistent tagging with prefix
+//       tags: `Trade User, trade_${req.body.userName}`,
+//       phoneNumber: req.body.phoneNumber, // Add phone number
+//       city: req.body.city, // Add city
+//       state: req.body.state, // Add state
+//       zip: req.body.zip, // Add zip
+//       country: req.body.country // Add country
 //     });
-
-//     const savedUser = await newUser.save();
+//     const savedUser = await newUser.save(); // This will trigger the pre-save hook
 
 //     // Create token
 //     const token = createToken({ _id: savedUser._id });
@@ -115,19 +153,28 @@ export const signUp = async (req, res) => {
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const username = req.body.email.split("@")[0];
-    // Check if the user already exists
+
+    // Extract and normalize the username
+    const baseUsername = req.body.email.split("@")[0].toLowerCase().replace(/[.-\s]/g, '');
+    let username = baseUsername;
+    let counter = 1;
+
+    // Check if the user already exists by email
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
-    
-    const userExistByUsername = await authModel.findOne({ userName: username });
-    if (userExistByUsername) {
-      return res.status(400).json({ error: 'Username already exists' });
+
+    // Check for existing username and create a unique one if needed
+    const usernameExists = async (username) => {
+      return await authModel.findOne({ userName: username });
+    };
+
+    while (await usernameExists(username)) {
+      username = `${baseUsername}${counter}`; // Append the counter to the base username
+      counter++;
     }
 
-    
     // Create Shopify request payload
     const shopifyPayload = {
       customer: {
@@ -210,16 +257,16 @@ export const signUp = async (req, res) => {
     const newUser = new authModel({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      userName: username,
+      userName: username, // Use the unique username
       email: req.body.email,
       password: req.body.password, // This will be hashed in the pre-save hook
       shopifyId: shopifyId,
-      tags: `Trade User, trade_${req.body.userName}`,
-      phoneNumber: req.body.phoneNumber, // Add phone number
-      city: req.body.city, // Add city
-      state: req.body.state, // Add state
-      zip: req.body.zip, // Add zip
-      country: req.body.country // Add country
+      tags: `Trade User, trade_${username}`, // Adjusted to use the unique username
+      phoneNumber: req.body.phoneNumber,
+      city: req.body.city,
+      state: req.body.state,
+      zip: req.body.zip,
+      country: req.body.country,
     });
     const savedUser = await newUser.save(); // This will trigger the pre-save hook
 
@@ -237,6 +284,8 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+
 
 export const signIn = async (req, res) => {
   try {
