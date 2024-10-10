@@ -746,6 +746,9 @@ export const addNewEquipments = async (req, res) => {
 
       // Decrement the subscription quantity
       user.subscription.quantity -= 5;
+      if (user.subscription.quantity < 0) {
+        user.subscription.quantity = 0;
+      }
       await user.save();
 
       // Set expiration date to 30 days from now
