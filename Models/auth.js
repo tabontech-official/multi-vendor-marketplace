@@ -68,6 +68,9 @@ const authSchema = new mongoose.Schema({
       default:0
     }
   },
+  isAdmin:{
+    type:Boolean
+  }
 });
 authSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next(); // Only hash the password if it's new or modified

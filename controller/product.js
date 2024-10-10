@@ -465,6 +465,360 @@ export const addUsedEquipments = async (req, res) => {
   }
 };
 
+// export const addNewEquipments = async (req, res) => {
+//   let productId; // Declare productId outside try block for access in catch
+//   try {
+//     // Validate input data
+
+//     // Extract equipment details and action from request body
+//     const {
+//       location,
+//       zip,
+//       name,
+//       brand,
+//       sale_price,
+//       equipment_type,
+//       certification,
+//       year_manufactured,
+//       warranty,
+//       training,
+//       shipping,
+//       description,
+//       userId,
+//       status, // 'publish' or 'draft'
+//     } = req.body;
+
+//     // Validate required fields
+//     if (!zip) return res.status(400).json({ error: 'ZipCode is required.' });
+//     if (!location)
+//       return res.status(400).json({ error: 'Location is required.' });
+//     if (!name) return res.status(400).json({ error: 'Name is required.' });
+//     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
+//     if (sale_price === undefined)
+//       return res.status(400).json({ error: 'Sale price is required.' });
+//     if (!equipment_type)
+//       return res.status(400).json({ error: 'Equipment type is required.' });
+//     if (!certification)
+//       return res.status(400).json({ error: 'Certification is required.' });
+//     if (year_manufactured === undefined)
+//       return res.status(400).json({ error: 'Year manufactured is required.' });
+//     if (warranty === undefined)
+//       return res.status(400).json({ error: 'Warranty is required.' });
+//     if (!training)
+//       return res.status(400).json({ error: 'Training details are required.' });
+//     if (!shipping)
+//       return res
+//         .status(400)
+//         .json({ error: 'Shipping information is required.' });
+//     if (!description)
+//       return res.status(400).json({ error: 'Description is required.' });
+//     if (!req.files?.images || req.files.images.length === 0) {
+//       return res.status(400).json({ error: 'At least one image is required.' });
+//     }
+//     // Determine product status based on action
+//     const productStatus = status === 'publish' ? 'active' : 'draft';
+
+//     // Step 1: Fetch user to get the username
+//     const user = await authModel.findById(userId);
+//     if (!user) return res.status(404).json({ error: 'User not found.' });
+
+//     const username = user.userName; // Fetch username, default to 'Unknown' if not found
+//     const phoneNumber = user.phoneNumber;
+//     const country = user.country;
+//     const city = user.city;
+//     const email = user.email;
+//     // Step 2: Create Product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: `${name} | ${country},${location},${zip}`,
+//         body_html: description,
+//         vendor: brand,
+//         product_type: 'New Equipments',
+//         variants: [{ price: sale_price.toString() }],
+//         status: productStatus,
+//         published_scope: 'global',
+//         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
+//       },
+//     };
+
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+//     const productResponse = await shopifyRequest(
+//       shopifyUrl,
+//       'POST',
+//       shopifyPayload
+//     );
+//     productId = productResponse.product.id; // Assign productId
+
+//     // Step 3: Create Structured Metafields for the Equipment Details
+//     const metafieldsPayload = [
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'zip',
+//           value: zip || 'Not specified',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'name',
+//           value: name,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'description',
+//           value: description,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'location',
+//           value: location || 'Unknown',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'brand',
+//           value: brand,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'sale_price',
+//           value: sale_price.toString(),
+//           type: 'number_integer',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'equipment_type',
+//           value: equipment_type,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'certification',
+//           value: certification,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'year_manufactured',
+//           value: year_manufactured.toString(),
+//           type: 'number_integer',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'warranty',
+//           value: warranty,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'training',
+//           value: training,
+//           type: 'multi_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'shipping',
+//           value: shipping || 'Not specified',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'userinformation',
+//           value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//     ];
+
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
+//     }
+
+//     // Step 4: Upload Images to Shopify if provided
+//     const images = req.files?.images || [];
+//     const imagesData = [];
+
+//     for (const image of images) {
+//       const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+
+//       const imagePayload = {
+//         image: {
+//           src: cloudinaryImageUrl,
+//         },
+//       };
+
+//       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+//       const imageResponse = await shopifyRequest(
+//         imageUrl,
+//         'POST',
+//         imagePayload
+//       );
+
+//       if (imageResponse && imageResponse.image) {
+//         imagesData.push({
+//           id: imageResponse.image.id,
+//           product_id: productId,
+//           position: imageResponse.image.position,
+//           created_at: imageResponse.image.created_at,
+//           updated_at: imageResponse.image.updated_at,
+//           alt: 'Equipment Image',
+//           width: imageResponse.image.width,
+//           height: imageResponse.image.height,
+//           src: imageResponse.image.src,
+//         });
+//       }
+//     }
+
+//     // Step 5: Save Product to MongoDB
+//     const newProduct = new productModel({
+//       id: productId,
+//       title: name,
+//       body_html: '', // Empty body_html as we use metafields for details
+//       vendor: brand,
+//       product_type: 'New Equipments',
+//       created_at: new Date(),
+//       handle: productResponse.product.handle,
+//       updated_at: new Date(),
+//       published_at: productResponse.product.published_at,
+//       template_suffix: productResponse.product.template_suffix,
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       images: imagesData,
+//       equipment: {
+//         location,
+//         zip,
+//         name,
+//         brand,
+//         sale_price,
+//         equipment_type,
+//         certification,
+//         year_manufactured,
+//         warranty,
+//         training,
+//         shipping,
+//         description,
+//       },
+//       userId,
+//       status: productStatus,
+//     });
+
+//     await newProduct.save();
+
+//     // If the product is published, decrease user subscription quantity
+//     if (status === 'active') {
+//       const user = await authModel.findById(userId);
+//       if (!user) return res.status(404).json({ error: 'User not found.' });
+
+//       // Check subscription quantity
+//       if (!user.subscription || user.subscription.quantity <= 0) {
+//         return res.status(400).json({
+//           error: 'Insufficient subscription credits to publish product.',
+//         });
+//       }
+
+//       // Decrement the subscription quantity
+//       user.subscription.quantity -= 1;
+//       await user.save();
+
+//       // Set expiration date to 30 days from now
+//       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+//       // Step 6: Update product status in Shopify
+//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//       const shopifyUpdatePayload = {
+//         product: {
+//           id: productId,
+//           status: 'active',
+//           published_scope: 'global',
+//         },
+//       };
+
+//       const shopifyResponse = await shopifyRequest(
+//         updateShopifyUrl,
+//         'PUT',
+//         shopifyUpdatePayload
+//       );
+//       if (!shopifyResponse.product) {
+//         return res
+//           .status(400)
+//           .json({ error: 'Failed to update product status in Shopify.' });
+//       }
+
+//       // Step 7: Update product status in MongoDB
+//       const updatedProduct = await productModel.findOneAndUpdate(
+//         { id: productId },
+//         { status: 'active', expiresAt },
+//         { new: true }
+//       );
+
+//       if (!updatedProduct) {
+//         return res
+//           .status(404)
+//           .json({ error: 'Product not found in database.' });
+//       }
+
+//       // Schedule the unpublish task
+//       //scheduleUnpublish(productId, userId, expiresAt);
+
+//       // Send a successful response
+//       return res.status(201).json({
+//         message: 'Product successfully created and published.',
+//         product: updatedProduct,
+//         expiresAt,
+//       });
+//     }
+
+//     // If the product is saved as draft
+//     res.status(201).json({
+//       message: 'Product successfully created and saved as draft.',
+//       product: newProduct,
+//       expiresAt: null, // No expiration date for draft
+//     });
+//   } catch (error) {
+//     console.error('Error in addNewEquipments function:', error);
+
+//     // Attempt to delete the product from Shopify if it was created
+//     if (productId) {
+//       try {
+//         const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//         await shopifyRequest(deleteShopifyUrl, 'DELETE');
+//       } catch (deleteError) {
+//         console.error('Error deleting product from Shopify:', deleteError);
+//       }
+//     }
+
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const addNewEquipments = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -738,14 +1092,23 @@ export const addNewEquipments = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      if (!user.subscription || user.subscription.quantity < 5) {
+      const productConfig = await productModel.findOne({ product_type: 'New Equipments' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
+      if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product. You need at least 5 credits.',
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 5;
+      user.subscription.quantity -= productConfig.credit_required;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -818,6 +1181,8 @@ export const addNewEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 export const addNewBusiness = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
@@ -1165,14 +1530,14 @@ export const addNewBusiness = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      if (!user.subscription || user.subscription.quantity < 2) {
+      if (!user.subscription || user.subscription.quantity <= 0) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product. You need at least 2 credits',
+          error: 'Insufficient subscription credits to publish product.',
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 2;
+      user.subscription.quantity -= 1;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -3280,3 +3645,29 @@ export const deletAllProduct = async (req, res) => {
     });
   } catch (error) {}
 };
+
+export const updateCredits=async(req,res)=>{
+  const { productType } = req.params;
+  const { newCredit } = req.body;
+
+  // Validate input
+  if (typeof newCredit !== 'number' || newCredit < 0) {
+    return res.status(400).json({ message: 'Invalid credit value. It must be a non-negative number.' });
+  }
+
+  try {
+      await productModel.updateMany(
+      { product_type: productType },
+      { credit_required: newCredit }
+    );
+
+    // Send a response
+    res.json({
+      message: `Updated credit config for '${productType}' to require ${newCredit} credits.`,
+      
+    });
+  } catch (error) {
+    console.error('Error updating credit requirement:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}

@@ -859,7 +859,7 @@ export const AdminSignIn = async (req, res) => {
     const { email, password } = req.body;
 
     // Check if user exists in your database
-    const user = await authModel.findOne({ email });
+    let user = await authModel.findOne({ email });
     if (!user) {
       return res
         .status(404)
@@ -903,8 +903,13 @@ export const AdminSignIn = async (req, res) => {
       return res.status(403).json({ error: 'You do not have admin access' });
     }
 
-    // Create a JWT token for your application
-    const token = createToken({ _id: user._id });
+    // Update MongoDB to set isAdmin to true
+    user.isAdmin = true;
+    user.shopifyId = shopifyCustomer.id; // Save Shopify ID for reference
+    await user.save();
+
+    // Create a JWT token for your application, including isAdmin flag
+    const token = createToken({ _id: user._id, isAdmin: true });
 
     res.json({
       message: 'Successfully logged in as admin',
@@ -916,6 +921,7 @@ export const AdminSignIn = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 export const getUserData = async (req, res) => {
   try {

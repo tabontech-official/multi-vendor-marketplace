@@ -16,6 +16,7 @@ import {
   deletAllProduct,
   unpublishProduct,
   productUpdate,
+  updateCredits
 } from '../controller/product.js';
 import { upload, cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -39,6 +40,7 @@ productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.delete('/', deletAllProduct);
+productRouter.put('/credits/:productType',updateCredits)
 export default productRouter;
 
 // export const updateListing = async (req, res) => {
