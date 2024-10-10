@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import { Buffer } from 'buffer';
 import { registerSchema, loginSchema } from '../validation/auth.js';
 import mongoose from 'mongoose';
-import nodemailer from 'nodemailer'
+import nodemailer from 'nodemailer';
 import axios from 'axios';
 
 const createToken = (payLoad) => {
@@ -14,137 +14,6 @@ const createToken = (payLoad) => {
   });
   return token;
 };
-
-
-// export const signUp = async (req, res) => {
-//   try {
-//     // Validate input data
-//     const { error } = registerSchema.validate(req.body);
-//     if (error) {
-//       return res.status(400).json({ error: error.details[0].message });
-//     }
-//     const username = req.body.email.split("@")[0];
-//     // Check if the user already exists
-//     const userExist = await authModel.findOne({ email: req.body.email });
-//     if (userExist) {
-//       return res.status(400).json({ error: 'User already exists with this email' });
-//     }
-    
-//     const userExistByUsername = await authModel.findOne({ userName: username });
-//     if (userExistByUsername) {
-//       return res.status(400).json({ error: 'Username already exists' });
-//     }
-
-    
-//     // Create Shopify request payload
-//     const shopifyPayload = {
-//       customer: {
-//         first_name: req.body.firstName,
-//         last_name: req.body.lastName,
-//         email: req.body.email,
-//         password: req.body.password, // Use plain password; it will be hashed in the model
-//         password_confirmation: req.body.password,
-//         tags: `Trade User, trade_${username}`,
-//         metafields: [
-//           {
-//             namespace: 'custom',
-//             key: 'username',
-//             value: username,
-//             type: 'single_line_text_field',
-//           },
-//           {
-//             namespace: 'custom',
-//             key: 'phoneNumber',
-//             value: req.body.phoneNumber,
-//             type: 'single_line_text_field',
-//           },
-//           {
-//             namespace: 'custom',
-//             key: 'city',
-//             value: req.body.city,
-//             type: 'single_line_text_field',
-//           },
-//           {
-//             namespace: 'custom',
-//             key: 'state',
-//             value: req.body.state,
-//             type: 'single_line_text_field',
-//           },
-//           {
-//             namespace: 'custom',
-//             key: 'zip',
-//             value: req.body.zip,
-//             type: 'single_line_text_field',
-//           },
-//           {
-//             namespace: 'custom',
-//             key: 'country',
-//             value: req.body.country,
-//             type: 'single_line_text_field',
-//           },
-//         ],
-//       },
-//     };
-
-//     // Basic Auth credentials
-//     const apiKey = process.env.SHOPIFY_API_KEY;
-//     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-//     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-
-//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-//     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
-
-//     // Save user to Shopify
-//     const response = await fetch(shopifyUrl, {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//         Authorization: `Basic ${base64Credentials}`,
-//       },
-//       body: JSON.stringify(shopifyPayload),
-//     });
-
-//     if (!response.ok) {
-//       const errorData = await response.json();
-//       console.error('Error saving user to Shopify:', errorData);
-//       return res.status(500).json({ error: 'Failed to register user with Shopify' });
-//     }
-
-//     // Extract Shopify ID from the response
-//     const shopifyResponse = await response.json();
-//     const shopifyId = shopifyResponse.customer.id;
-
-//     // Create and save new user in MongoDB with hashed password and Shopify ID
-//     const newUser = new authModel({
-//       firstName: req.body.firstName,
-//       lastName: req.body.lastName,
-//       userName: username,
-//       email: req.body.email,
-//       password: req.body.password, // This will be hashed in the pre-save hook
-//       shopifyId: shopifyId,
-//       tags: `Trade User, trade_${req.body.userName}`,
-//       phoneNumber: req.body.phoneNumber, // Add phone number
-//       city: req.body.city, // Add city
-//       state: req.body.state, // Add state
-//       zip: req.body.zip, // Add zip
-//       country: req.body.country // Add country
-//     });
-//     const savedUser = await newUser.save(); // This will trigger the pre-save hook
-
-//     // Create token
-//     const token = createToken({ _id: savedUser._id });
-
-//     // Send response
-//     res.status(201).send({
-//       message: 'Successfully registered',
-//       token,
-//       data: savedUser,
-//     });
-//   } catch (error) {
-//     console.error('Error in signUp function:', error);
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
 
 export const signUp = async (req, res) => {
   try {
@@ -155,14 +24,19 @@ export const signUp = async (req, res) => {
     }
 
     // Extract and normalize the username
-    const baseUsername = req.body.email.split("@")[0].toLowerCase().replace(/[.-\s]/g, '');
+    const baseUsername = req.body.email
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[.-\s]/g, '');
     let username = baseUsername;
     let counter = 1;
 
     // Check if the user already exists by email
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
     // Check for existing username and create a unique one if needed
@@ -230,7 +104,9 @@ export const signUp = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     // Save user to Shopify
@@ -246,7 +122,9 @@ export const signUp = async (req, res) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Error saving user to Shopify:', errorData);
-      return res.status(500).json({ error: 'Failed to register user with Shopify' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to register user with Shopify' });
     }
 
     // Extract Shopify ID from the response
@@ -284,8 +162,6 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-
 
 export const signIn = async (req, res) => {
   try {
@@ -357,7 +233,6 @@ export const signIn = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
 
 const hashPassword = async (password) => {
   if (password) {
@@ -728,96 +603,39 @@ export const webHook = async (req, res) => {
   }
 };
 
-// export const editProfile = async (req, res) => {
-//   const { userId } = req.params; // Get userId from request parameters
-//   const { email, phoneNumber, address, zip, country, city, firstName, lastName } = req.body;
-//   const images = req.files?.images || []; // Handle multiple file uploads
-//   const requiredFields = [email, phoneNumber, address, zip, country, city, firstName, lastName];
-//   const fieldNames = ['email', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
-
-//   for (let i = 0; i < requiredFields.length; i++) {
-//     if (!requiredFields[i]) {
-//       return res.status(400).json({ error: `${fieldNames[i]} is required.` });
-//     }
-//   }
-
-//   try {
-//     if (!userId) {
-//       return res.status(400).json({ error: 'User ID is required.' });
-//     }
-
-//     // Find user by ID
-//     const user = await authModel.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found.' });
-//     }
-
-//     // Update fields
-//     if (email) user.email = email;
-//     if (phoneNumber) user.phoneNumber = phoneNumber;
-//     if (address) user.address = address;
-//     if (zip) user.zip = zip;
-//     if (country) user.country = country;
-//     if (city) user.city = city;
-//     if (firstName) user.firstName = firstName;
-//     if (lastName) user.lastName = lastName;
-
-//     // Handle image upload
-//     const imagesData = [];
-//     if (Array.isArray(images) && images.length > 0) {
-//       for (const image of images) {
-//         const imageUrl = image.path; // Replace with your actual domain
-//         imagesData.push(imageUrl); // Store the full URL
-//       }
-
-//       // Update the user's avatar URLs
-//       user.avatar = imagesData; // Assuming `avatar` is an array of image URLs
-//     }
-
-//     // Save the updated user
-//     await user.save();
-
-//     // Step to update Shopify user (if applicable)
-//     const shopifyCustomerId = user.shopifyId; // Assuming you store the Shopify customer ID in the user record
-//     if (shopifyCustomerId) {
-//       const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
-//       const shopifyPayload = {
-//         customer: {
-//           id: shopifyCustomerId,
-//           first_name: firstName,
-//           last_name: lastName,
-//           email: email,
-//           phone: phoneNumber,
-//           addresses: [
-//             {
-//               address1: address,
-//               city: city,
-//               province: country, // Adjust if necessary
-//               zip: zip,
-//               country: country,
-//             },
-//           ],
-//         },
-//       };
-
-//       // Update Shopify customer
-//       await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
-//     }
-
-//     res.status(200).json({ message: 'Profile updated successfully.', user });
-//   } catch (error) {
-//     console.error('Error updating profile:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
-
-
 export const editProfile = async (req, res) => {
   const { userId } = req.params; // Get userId from request parameters
-  const { email, phoneNumber, address, zip, country, city, firstName, lastName } = req.body;
+  const {
+    email,
+    phoneNumber,
+    address,
+    zip,
+    country,
+    city,
+    firstName,
+    lastName,
+  } = req.body;
   const images = req.files?.images || []; // Handle multiple file uploads
-  const requiredFields = [email, phoneNumber, address, zip, country, city, firstName, lastName];
-  const fieldNames = ['email', 'phoneNumber', 'address', 'zip', 'country', 'city', 'firstName', 'lastName'];
+  const requiredFields = [
+    email,
+    phoneNumber,
+    address,
+    zip,
+    country,
+    city,
+    firstName,
+    lastName,
+  ];
+  const fieldNames = [
+    'email',
+    'phoneNumber',
+    'address',
+    'zip',
+    'country',
+    'city',
+    'firstName',
+    'lastName',
+  ];
 
   // Validate required fields
   for (let i = 0; i < requiredFields.length; i++) {
@@ -891,10 +709,10 @@ export const editProfile = async (req, res) => {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
       const metafieldsPayload = {
         metafield: {
-          namespace: "custom",
-          key: "profileimages",
+          namespace: 'custom',
+          key: 'profileimages',
           value: imagesData.join(','), // Store images as JSON
-          type: "single_line_text_field", // Store as JSON string
+          type: 'single_line_text_field', // Store as JSON string
         },
       };
 
@@ -913,7 +731,9 @@ export const editProfile = async (req, res) => {
 const shopifyRequest = async (url, method, body) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+    'base64'
+  );
 
   const response = await fetch(url, {
     method,
@@ -932,14 +752,11 @@ const shopifyRequest = async (url, method, body) => {
   return response.json();
 };
 
-
-
 export const fetchUserData = async (req, res) => {
   try {
     const { id } = req.params;
     const response = await authModel.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
-     
     ]);
     if (response.length > 0) {
       res.status(200).json(response[0]);
@@ -954,17 +771,55 @@ export const fetchUserData = async (req, res) => {
   }
 };
 
+// export const getUserSubscriptionQuantity = async (req, res) => {
+//   const { userId } = req.params;
+
+//   // Validate userId format
+//   if (!mongoose.isValidObjectId(userId)) {
+//     return res.status(400).json({ error: 'Invalid user ID format.' });
+//   }
+
+//   try {
+//     // Fetch the user by userId
+//     const user = await authModel.findById(userId);
+
+//     // Check if user exists
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found.' });
+//     }
+
+//     // Check if subscription exists
+//     if (
+//       !user.subscription ||
+//       !user.subscription.quantity ||
+//       !user.subscription.expiresAt
+//     ) {
+//       return res.status(400).json({
+//         message: 'Insuffcient credits',
+//       });
+//     }
+
+//     // Return the quantity and expiry date from the user's subscription
+//     return res.status(200).json({
+//       quantity: user.subscription.quantity,
+//       expiresAt: user.subscription.expiresAt,
+//     });
+//   } catch (error) {
+//     console.error('Error fetching user subscription quantity:', error);
+//     return res
+//       .status(500)
+//       .json({ error: 'Internal server error. Please try again later.' });
+//   }
+// };
+
 export const getUserSubscriptionQuantity = async (req, res) => {
-  const { userId } = req.params;
+  const { id } = req.params;
 
   // Validate userId format
-  if (!mongoose.isValidObjectId(userId)) {
-    return res.status(400).json({ error: 'Invalid user ID format.' });
-  }
-
+  
   try {
     // Fetch the user by userId
-    const user = await authModel.findById(userId);
+    const user = await authModel.findById(id);
 
     // Check if user exists
     if (!user) {
@@ -973,9 +828,7 @@ export const getUserSubscriptionQuantity = async (req, res) => {
 
     // Check if subscription exists
     if (
-      !user.subscription ||
-      !user.subscription.quantity ||
-      !user.subscription.expiresAt
+      !user.subscription.quantity
     ) {
       return res.status(400).json({
         message: 'Insuffcient credits',
@@ -985,7 +838,7 @@ export const getUserSubscriptionQuantity = async (req, res) => {
     // Return the quantity and expiry date from the user's subscription
     return res.status(200).json({
       quantity: user.subscription.quantity,
-      expiresAt: user.subscription.expiresAt,
+      // expiresAt: user.subscription.expiresAt,
     });
   } catch (error) {
     console.error('Error fetching user subscription quantity:', error);
@@ -994,7 +847,6 @@ export const getUserSubscriptionQuantity = async (req, res) => {
       .json({ error: 'Internal server error. Please try again later.' });
   }
 };
-
 
 export const AdminSignIn = async (req, res) => {
   try {
@@ -1082,35 +934,6 @@ export const getUserData = async (req, res) => {
   }
 };
 
-
-// export const forgotPassword = async (req, res) => {
-//   try {
-//     const customerData = req.body;
-
-//     // Ensure both email and password are provided
-//     // if (!customerData.email || !customerData.password) {
-//     //   return res.status(400).json({ error: 'Email and password are required.' });
-//     // }
-
-//     // Find the customer by email
-//     const customer = await authModel.findOne({ email: customerData.email });
-
-//     if (!customer) {
-//       return res.status(404).json({ error: 'Customer not found.' });
-//     }
-
-//     // Update the customer's password
-//      customer.password = customerData.password; // Set the new password (it will be hashed in the pre-save hook)
-//     await customer.save(); // This will trigger the pre-save hook
-//     // console.log('New Password (after change):', customer.password);
-//     res.status(200).json({ message: 'Successfully updated password.', customer });
-//   } catch (error) {
-//     console.error('Error processing forgotPassword:', error);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// };
-
-
 export const updateCustomer = async (req, res) => {
   const customerData = req.body;
 
@@ -1149,7 +972,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -1165,7 +987,7 @@ export const forgotPassword = async (req, res) => {
 
     // Create the reset link
     const resetLink = `${'https://medspa-frntend.vercel.app/Reset'}?token=${token}`;
-    console.log(resetLink)
+    console.log(resetLink);
     // Send the email
     await transporter.sendMail({
       to: email,
@@ -1180,8 +1002,6 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-
-
 export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
@@ -1189,10 +1009,10 @@ export const resetPassword = async (req, res) => {
     // Verify the token and decode the user ID
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     const userId = decoded.payLoad; // Accessing payLoad instead of id
-    console.log("Decoded token:", decoded);
+    console.log('Decoded token:', decoded);
 
     const user = await authModel.findById(userId); // Find user by userId
-    console.log("User fetched from database:", user);
+    console.log('User fetched from database:', user);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -1210,18 +1030,15 @@ export const resetPassword = async (req, res) => {
     res.status(200).json({ message: 'Password has been reset successfully' });
   } catch (error) {
     console.error('Error resetting password:', error);
-    res.status(500).json({ message: 'Error resetting password', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error resetting password', error: error.message });
   }
 };
 
-
-
-
-
-
 const updateShopifyPassword = async (shopifyId, newPassword) => {
-  const shopifyDomain = 'med-spa-trader.myshopify.com'; 
-  const apiKey = process.env.SHOPIFY_API_KEY; 
+  const shopifyDomain = 'med-spa-trader.myshopify.com';
+  const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
 
   const url = `https://${apiKey}:${apiPassword}@${shopifyDomain}/admin/api/2023-04/customers/${shopifyId}.json`;
@@ -1233,7 +1050,7 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
       customer: {
         id: shopifyId,
         password: newPassword,
-        password_confirmation: newPassword
+        password_confirmation: newPassword,
       },
     });
 
@@ -1243,8 +1060,10 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
       throw new Error('Failed to update password in Shopify');
     }
   } catch (error) {
-    console.error('Error updating Shopify password:', error.response ? error.response.data : error.message);
+    console.error(
+      'Error updating Shopify password:',
+      error.response ? error.response.data : error.message
+    );
     throw new Error('Failed to update password in Shopify');
   }
 };
-

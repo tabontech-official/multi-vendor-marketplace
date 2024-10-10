@@ -17,41 +17,29 @@ import {
   unpublishProduct,
   productUpdate,
 } from '../controller/product.js';
-import { upload,cpUpload } from '../middleware/cloudinary.js';
+import { upload, cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
-
 
 const productRouter = express.Router();
 productRouter.get('/shopify', fetchAndStoreProducts);
 productRouter.post('/addProduct', upload.single('image'), addProduct);
 productRouter.post('/addEquipment', cpUpload, addUsedEquipments);
 productRouter.post('/addRoom', cpUpload, addRoomListing);
-productRouter.post(
-  '/addNewEquipments',
- cpUpload,
-  addNewEquipments
-);
+productRouter.post('/addNewEquipments', cpUpload, addNewEquipments);
 productRouter.post('/addJob', cpUpload, addNewJobListing);
 productRouter.post('/addBusiness', cpUpload, addNewBusiness);
-productRouter.post(
-  '/addProvider',
-  cpUpload,
-  addNewProviderListing
-);
-productRouter.post('/webhooks/delete',productDelete);
-productRouter.post('/webhook/product/update',productUpdate)
-productRouter.get('/search/:userId',verifyShopifyWebhook, getSearchProduct);
+productRouter.post('/addProvider', cpUpload, addNewProviderListing);
+productRouter.post('/webhooks/delete', productDelete);
+productRouter.post('/webhook/product/update', productUpdate);
+productRouter.get('/search/:userId', verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
-productRouter.put('/updateListing/:id',cpUpload,updateListing)
-productRouter.put('/publishedProduct/:productId',publishProduct)
-productRouter.put('/unpublished/:productId',unpublishProduct)
+productRouter.put('/updateListing/:id', cpUpload, updateListing);
+productRouter.put('/publishedProduct/:productId', publishProduct);
+productRouter.put('/unpublished/:productId', unpublishProduct);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
-productRouter.delete('/',deletAllProduct)
+productRouter.delete('/', deletAllProduct);
 export default productRouter;
-
-
-
 
 // export const updateListing = async (req, res) => {
 //   const { id } = req.params; // Product ID from URL
@@ -92,7 +80,7 @@ export default productRouter;
 
 //         // Construct the image URL for Shopify
 //         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
-        
+
 //         // Make the request to upload the image to Shopify
 //         const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
@@ -115,8 +103,8 @@ export default productRouter;
 
 //     // Prepare updated data for product
 //     const updatedProductData = {
-//       ...updateData, 
-//       images: product.images, 
+//       ...updateData,
+//       images: product.images,
 //     };
 //     console.log("Updating product:", id, updatedProductData);
 //     // Ensure the title is set to the equipment name if it exists
@@ -177,15 +165,6 @@ export default productRouter;
 //   }
 // };
 
-
-
-
-
-
-
-
-
-
 export const updatesListing = async (req, res) => {
   const { id } = req.params; // MongoDB ID
   const { userId } = req.body; // User ID from body
@@ -207,7 +186,7 @@ export const updatesListing = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    console.log("Existing Product before update:", product);
+    console.log('Existing Product before update:', product);
 
     // Handle image uploads if images exist in the request
     if (Array.isArray(images) && images.length > 0) {
@@ -225,7 +204,11 @@ export const updatesListing = async (req, res) => {
         const imageUrl = `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/products/${product.id}/images.json`;
 
         // Upload image to Shopify
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -254,7 +237,11 @@ export const updatesListing = async (req, res) => {
         product_type: 'Used Equipments',
         variants: [{ price: updateData.asking_price.toString() }],
         status: updateData.status,
-        tags: [`zip_${updateData.zip}`, `location_${updateData.location}`, `username_${username}`], // Include username in tags
+        tags: [
+          `zip_${updateData.zip}`,
+          `location_${updateData.location}`,
+          `username_${username}`,
+        ], // Include username in tags
         images: product.images, // Attach updated images
       },
     };
@@ -283,7 +270,9 @@ export const updatesListing = async (req, res) => {
     // Update product in MongoDB
     await productModel.findByIdAndUpdate(id, updateData, { new: true });
 
-    return res.status(200).json({ message: 'Product updated successfully', product: updateData });
+    return res
+      .status(200)
+      .json({ message: 'Product updated successfully', product: updateData });
   } catch (error) {
     console.error('Error updating product:', error);
     return res.status(500).json({ message: 'An error occurred', error });

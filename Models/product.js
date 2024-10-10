@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema(
     published_at: { type: Date },
     template_suffix: { type: String },
     tags: { type: String },
-    
+
     // Variants as an array of objects
     variants: [
       {
@@ -79,7 +79,7 @@ const productSchema = new mongoose.Schema(
         src: { type: String },
       },
     ],
-  
+
     metafields: [
       {
         id: { type: Number, required: true },
@@ -96,7 +96,7 @@ const productSchema = new mongoose.Schema(
     ],
     equipment: {
       location: { type: String },
-      zip:{type:Number},
+      zip: { type: Number },
       name: { type: String },
       brand: { type: String },
       asking_price: { type: Number },
@@ -111,12 +111,12 @@ const productSchema = new mongoose.Schema(
       year_manufactured: { type: String },
       training: { type: String },
       description: { type: String },
-      shopifyId:String
+      shopifyId: String,
     },
     business: {
       name: String,
       location: String,
-      zip:{type:Number},
+      zip: { type: Number },
       businessDescription: String,
       askingPrice: Number,
       establishedYear: Number,
@@ -129,14 +129,14 @@ const productSchema = new mongoose.Schema(
       productsInventory: Number,
       equipmentValue: Number,
       reasonForSelling: String,
-      listOfDevices: {type:String,default:''},
-      offeredServices: {type:String,default:''}, // Array of strings for services
+      listOfDevices: { type: String, default: '' },
+      offeredServices: { type: String, default: '' }, // Array of strings for services
       supportAndTraining: String, // Description of support and training offered
     },
     jobListings: [
       {
         location: { type: String },
-        zip:{type:Number},
+        zip: { type: Number },
 
         name: { type: String },
         qualification: { type: String },
@@ -150,7 +150,7 @@ const productSchema = new mongoose.Schema(
     providerListings: [
       {
         location: { type: String },
-        zip:{type:Number},
+        zip: { type: Number },
         qualificationRequested: { type: String },
         jobType: { type: String },
         typeOfJobOffered: { type: String },
@@ -162,7 +162,7 @@ const productSchema = new mongoose.Schema(
     roomListing: [
       {
         location: { type: String, required: true },
-        zip:{type:Number},
+        zip: { type: Number },
         roomSize: { type: Number, required: true }, // Square feet
         monthlyRent: { type: Number, required: true },
         deposit: { type: Number, required: true },
@@ -183,10 +183,8 @@ const productSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['draft', 'active', 'inactive'],
-
     },
     expiresAt: { type: Date },
-    
   },
   {
     timestamps: true,

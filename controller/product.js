@@ -1,8 +1,7 @@
 import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
-import mongoose from 'mongoose'
-import axios from 'axios';
+import mongoose from 'mongoose';
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -92,7 +91,6 @@ const shopifyRequest = async (url, method, body) => {
 
   return response.json();
 };
-
 
 export const addProduct = async (req, res) => {
   try {
@@ -196,7 +194,6 @@ export const addProduct = async (req, res) => {
   }
 };
 
-
 export const addUsedEquipments = async (req, res) => {
   try {
     // Extract equipment details from request body
@@ -222,23 +219,34 @@ export const addUsedEquipments = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName  // Fetch username, default to 'Unknown' if not found
-    const phoneNumber=user.phoneNumber
-    const country=user.country
-    const city=user.city
-    const email=user.email
+    const username = user.userName; // Fetch username, default to 'Unknown' if not found
+    const phoneNumber = user.phoneNumber;
+    const country = user.country;
+    const city = user.city;
+    const email = user.email;
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!location)
+      return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-    if (asking_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
-    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
-    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
-    if (year_purchased === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
-    if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
-    if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
-    if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
-    if (!description) return res.status(400).json({ error: 'Description is required.' });
+    if (asking_price === undefined)
+      return res.status(400).json({ error: 'Sale price is required.' });
+    if (!equipment_type)
+      return res.status(400).json({ error: 'Equipment type is required.' });
+    if (!certification)
+      return res.status(400).json({ error: 'Certification is required.' });
+    if (year_purchased === undefined)
+      return res.status(400).json({ error: 'Year manufactured is required.' });
+    if (warranty === undefined)
+      return res.status(400).json({ error: 'Warranty is required.' });
+    if (!reason_for_selling)
+      return res.status(400).json({ error: 'Training details are required.' });
+    if (!shipping)
+      return res
+        .status(400)
+        .json({ error: 'Shipping information is required.' });
+    if (!description)
+      return res.status(400).json({ error: 'Description is required.' });
     if (!req.files?.images || req.files.images.length === 0) {
       return res.status(400).json({ error: 'At least one image is required.' });
     }
@@ -368,8 +376,6 @@ export const addUsedEquipments = async (req, res) => {
           type: 'single_line_text_field',
         },
       },
-      
-
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -443,7 +449,7 @@ export const addUsedEquipments = async (req, res) => {
       },
       userId,
       status,
-      expiresAt:expirationDate,
+      expiresAt: expirationDate,
     });
 
     await newProduct.save();
@@ -484,17 +490,28 @@ export const addNewEquipments = async (req, res) => {
 
     // Validate required fields
     if (!zip) return res.status(400).json({ error: 'ZipCode is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!location)
+      return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-    if (sale_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
-    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
-    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
-    if (year_manufactured === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
-    if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
-    if (!training) return res.status(400).json({ error: 'Training details are required.' });
-    if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
-    if (!description) return res.status(400).json({ error: 'Description is required.' });
+    if (sale_price === undefined)
+      return res.status(400).json({ error: 'Sale price is required.' });
+    if (!equipment_type)
+      return res.status(400).json({ error: 'Equipment type is required.' });
+    if (!certification)
+      return res.status(400).json({ error: 'Certification is required.' });
+    if (year_manufactured === undefined)
+      return res.status(400).json({ error: 'Year manufactured is required.' });
+    if (warranty === undefined)
+      return res.status(400).json({ error: 'Warranty is required.' });
+    if (!training)
+      return res.status(400).json({ error: 'Training details are required.' });
+    if (!shipping)
+      return res
+        .status(400)
+        .json({ error: 'Shipping information is required.' });
+    if (!description)
+      return res.status(400).json({ error: 'Description is required.' });
     if (!req.files?.images || req.files.images.length === 0) {
       return res.status(400).json({ error: 'At least one image is required.' });
     }
@@ -505,11 +522,11 @@ export const addNewEquipments = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName // Fetch username, default to 'Unknown' if not found
-    const phoneNumber=user.phoneNumber
-    const country=user.country
-    const city=user.city
-    const email=user.email
+    const username = user.userName; // Fetch username, default to 'Unknown' if not found
+    const phoneNumber = user.phoneNumber;
+    const country = user.country;
+    const city = user.city;
+    const email = user.email;
     // Step 2: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -525,7 +542,11 @@ export const addNewEquipments = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 3: Create Structured Metafields for the Equipment Details
@@ -634,7 +655,6 @@ export const addNewEquipments = async (req, res) => {
           type: 'single_line_text_field',
         },
       },
-      
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -656,7 +676,11 @@ export const addNewEquipments = async (req, res) => {
       };
 
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
 
       if (imageResponse && imageResponse.image) {
         imagesData.push({
@@ -714,14 +738,14 @@ export const addNewEquipments = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      if (!user.subscription || user.subscription.quantity <= 0) {
+      if (!user.subscription || user.subscription.quantity >= 5) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
+          error: 'Insufficient subscription credits to publish product. You need at least 5 credits.',
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
+      user.subscription.quantity -= 5;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -737,9 +761,15 @@ export const addNewEquipments = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -750,7 +780,9 @@ export const addNewEquipments = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Schedule the unpublish task
@@ -787,30 +819,29 @@ export const addNewEquipments = async (req, res) => {
   }
 };
 
-
 export const addNewBusiness = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
     // Extract business listing details from request body
     const {
       name,
-      location ,
+      location,
       zip,
-      businessDescription ,
-      asking_price ,
-      establishedYear ,
-      numberOfEmployees ,
-      locationMonthlyRent ,
-      leaseExpirationDate ,
-      locationSize ,
-      grossYearlyRevenue ,
-      cashFlow ,
-      productsInventory ,
-      equipmentValue ,
-      reasonForSelling ,
-      listOfDevices ,
-      offeredServices ,
-      supportAndTraining ,
+      businessDescription,
+      asking_price,
+      establishedYear,
+      numberOfEmployees,
+      locationMonthlyRent,
+      leaseExpirationDate,
+      locationSize,
+      grossYearlyRevenue,
+      cashFlow,
+      productsInventory,
+      equipmentValue,
+      reasonForSelling,
+      listOfDevices,
+      offeredServices,
+      supportAndTraining,
       userId,
       status, // "draft" or "publish"
     } = req.body;
@@ -822,85 +853,97 @@ export const addNewBusiness = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName 
-    const phoneNumber=user.phoneNumber
-    const country=user.country
-    const city=user.city     
-    const email=user.email  
-    
+    const username = user.userName;
+    const phoneNumber = user.phoneNumber;
+    const country = user.country;
+    const city = user.city;
+    const email = user.email;
+
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
-  }
+    }
     if (!name) {
       return res.status(400).json({ error: 'Business name is required.' });
-  }
-  
-  if (!location) {
+    }
+
+    if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
-  }
-  
-  if (!businessDescription) {
-      return res.status(400).json({ error: 'Business description is required.' });
-  }
-  
-  if (!asking_price) {
+    }
+
+    if (!businessDescription) {
+      return res
+        .status(400)
+        .json({ error: 'Business description is required.' });
+    }
+
+    if (!asking_price) {
       return res.status(400).json({ error: 'Asking price is required.' });
-  }
-  
-  if (!establishedYear) {
+    }
+
+    if (!establishedYear) {
       return res.status(400).json({ error: 'Established year is required.' });
-  }
-  
-  if (!numberOfEmployees) {
-      return res.status(400).json({ error: 'Number of employees is required.' });
-  }
-  
-  if (!locationMonthlyRent) {
-      return res.status(400).json({ error: 'Location monthly rent is required.' });
-  }
-  
-  if (!leaseExpirationDate) {
-      return res.status(400).json({ error: 'Lease expiration date is required.' });
-  }
-  
-  if (!locationSize) {
+    }
+
+    if (!numberOfEmployees) {
+      return res
+        .status(400)
+        .json({ error: 'Number of employees is required.' });
+    }
+
+    if (!locationMonthlyRent) {
+      return res
+        .status(400)
+        .json({ error: 'Location monthly rent is required.' });
+    }
+
+    if (!leaseExpirationDate) {
+      return res
+        .status(400)
+        .json({ error: 'Lease expiration date is required.' });
+    }
+
+    if (!locationSize) {
       return res.status(400).json({ error: 'Location size is required.' });
-  }
-  
-  if (!grossYearlyRevenue) {
-      return res.status(400).json({ error: 'Gross yearly revenue is required.' });
-  }
-  
-  if (!cashFlow) {
+    }
+
+    if (!grossYearlyRevenue) {
+      return res
+        .status(400)
+        .json({ error: 'Gross yearly revenue is required.' });
+    }
+
+    if (!cashFlow) {
       return res.status(400).json({ error: 'Cash flow is required.' });
-  }
-  
-  if (!productsInventory) {
+    }
+
+    if (!productsInventory) {
       return res.status(400).json({ error: 'Products inventory is required.' });
-  }
-  
-  if (!equipmentValue) {
+    }
+
+    if (!equipmentValue) {
       return res.status(400).json({ error: 'Equipment value is required.' });
-  }
-  
-  if (!reasonForSelling) {
+    }
+
+    if (!reasonForSelling) {
       return res.status(400).json({ error: 'Reason for selling is required.' });
-  }
-  
-  if (!listOfDevices) {
+    }
+
+    if (!listOfDevices) {
       return res.status(400).json({ error: 'List of devices is required.' });
-  }
-  
-  if (!offeredServices) {
+    }
+
+    if (!offeredServices) {
       return res.status(400).json({ error: 'Offered services are required.' });
-  }
-  
-  if (!supportAndTraining) {
-      return res.status(400).json({ error: 'Support and training information is required.' });
-  }
-  if (!req.files?.images || req.files.images.length === 0) {
-    return res.status(400).json({ error: 'At least one image is required.' });
-  }
+    }
+
+    if (!supportAndTraining) {
+      return res
+        .status(400)
+        .json({ error: 'Support and training information is required.' });
+    }
+    if (!req.files?.images || req.files.images.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1129,7 +1172,7 @@ export const addNewBusiness = async (req, res) => {
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
+      user.subscription.quantity -= 2;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -1145,9 +1188,15 @@ export const addNewBusiness = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1158,11 +1207,12 @@ export const addNewBusiness = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Schedule the unpublish task
-     
 
       // Send a successful response
       return res.status(201).json({
@@ -1195,7 +1245,6 @@ export const addNewBusiness = async (req, res) => {
   }
 };
 
-
 export const addNewJobListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -1205,13 +1254,13 @@ export const addNewJobListing = async (req, res) => {
 
     // Extract job listing details from request body
     const {
-      location ,
+      location,
       zip,
       name,
-      qualification ,
-      positionRequestedDescription ,
-      availability ,
-      requestedYearlySalary ,
+      qualification,
+      positionRequestedDescription,
+      availability,
+      requestedYearlySalary,
       userId,
       status,
     } = req.body;
@@ -1222,45 +1271,48 @@ export const addNewJobListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName
-    const phoneNumber=user.phoneNumber
-    const country=user.country
-    const city=user.city       
-    const email=user.email
-   
+    const username = user.userName;
+    const phoneNumber = user.phoneNumber;
+    const country = user.country;
+    const city = user.city;
+    const email = user.email;
+
     // Validate required field
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
-  }
-  
+    }
+
     if (!name) {
       return res.status(400).json({ error: 'Business name is required.' });
-  }
-  
-  if (!location) {
+    }
+
+    if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
-  }
-  
-  if (!qualification) {
+    }
+
+    if (!qualification) {
       return res.status(400).json({ error: 'Qualification is required.' });
-  }
-  
-  if (!positionRequestedDescription) {
-      return res.status(400).json({ error: 'Position requested description is required.' });
-  }
-  
-  if (!availability) {
+    }
+
+    if (!positionRequestedDescription) {
+      return res
+        .status(400)
+        .json({ error: 'Position requested description is required.' });
+    }
+
+    if (!availability) {
       return res.status(400).json({ error: 'Availability is required.' });
-  }
-  
-  if (!requestedYearlySalary) {
-      return res.status(400).json({ error: 'Requested yearly salary is required.' });
-  }
-  if (!req.files?.images || req.files.images.length === 0) {
-    return res.status(400).json({ error: 'At least one image is required.' });
-  }
-  // Continue with any additional field validations as needed
-  
+    }
+
+    if (!requestedYearlySalary) {
+      return res
+        .status(400)
+        .json({ error: 'Requested yearly salary is required.' });
+    }
+    if (!req.files?.images || req.files.images.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
+    // Continue with any additional field validations as needed
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1430,9 +1482,15 @@ export const addNewJobListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1443,7 +1501,9 @@ export const addNewJobListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Schedule the unpublish task
@@ -1479,7 +1539,6 @@ export const addNewJobListing = async (req, res) => {
   }
 };
 
-
 export const addNewProviderListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -1490,11 +1549,11 @@ export const addNewProviderListing = async (req, res) => {
     const {
       location,
       zip,
-      qualificationRequested ,
-      jobType ,
-      typeOfJobOffered ,
-      offeredYearlySalary ,
-      offeredPositionDescription ,
+      qualificationRequested,
+      jobType,
+      typeOfJobOffered,
+      offeredYearlySalary,
+      offeredPositionDescription,
       userId,
       status,
     } = req.body;
@@ -1505,43 +1564,50 @@ export const addNewProviderListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName
-    const phoneNumber=user.phoneNumber
-    const country=user.country
-    const city=user.city      
-    const email=user.email
-    
+    const username = user.userName;
+    const phoneNumber = user.phoneNumber;
+    const country = user.country;
+    const city = user.city;
+    const email = user.email;
+
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
-  }
-  if (!location) {
+    }
+    if (!location) {
       return res.status(400).json({ error: 'Location is required.' });
-  }
-  
-  if (!qualificationRequested) {
-      return res.status(400).json({ error: 'Qualification requested is required.' });
-  }
-  
-  if (!jobType) {
+    }
+
+    if (!qualificationRequested) {
+      return res
+        .status(400)
+        .json({ error: 'Qualification requested is required.' });
+    }
+
+    if (!jobType) {
       return res.status(400).json({ error: 'Job type is required.' });
-  }
-  
-  if (!typeOfJobOffered) {
-      return res.status(400).json({ error: 'Type of job offered is required.' });
-  }
-  
-  if (!offeredYearlySalary) {
-      return res.status(400).json({ error: 'Offered yearly salary is required.' });
-  }
-  
-  if (!offeredPositionDescription) {
-      return res.status(400).json({ error: 'Offered position description is required.' });
-  }
-  if (!req.files?.images || req.files.images.length === 0) {
-    return res.status(400).json({ error: 'At least one image is required.' });
-  }
-  // Continue with any additional field validations as needed
-  
+    }
+
+    if (!typeOfJobOffered) {
+      return res
+        .status(400)
+        .json({ error: 'Type of job offered is required.' });
+    }
+
+    if (!offeredYearlySalary) {
+      return res
+        .status(400)
+        .json({ error: 'Offered yearly salary is required.' });
+    }
+
+    if (!offeredPositionDescription) {
+      return res
+        .status(400)
+        .json({ error: 'Offered position description is required.' });
+    }
+    if (!req.files?.images || req.files.images.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
+    // Continue with any additional field validations as needed
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1711,9 +1777,15 @@ export const addNewProviderListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1724,7 +1796,9 @@ export const addNewProviderListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Schedule the unpublish task
@@ -1767,13 +1841,13 @@ export const addRoomListing = async (req, res) => {
     const {
       location,
       zip,
-      roomSize ,
-      monthlyRent ,
-      deposit ,
-      minimumInsuranceRequested ,
-      typeOfUseAllowed ,
-      rentalTerms ,
-      wifiAvailable ,
+      roomSize,
+      monthlyRent,
+      deposit,
+      minimumInsuranceRequested,
+      typeOfUseAllowed,
+      rentalTerms,
+      wifiAvailable,
       otherDetails,
       userId,
       status,
@@ -1787,54 +1861,59 @@ export const addRoomListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName
-    const phoneNumber=user.phoneNumber
-    const country=user.country
-    const city=user.city   
-    const email=user.email
+    const username = user.userName;
+    const phoneNumber = user.phoneNumber;
+    const country = user.country;
+    const city = user.city;
+    const email = user.email;
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
-  }
-  if (!location) {
-    return res.status(400).json({ error: 'Location is required.' });
-}
+    }
+    if (!location) {
+      return res.status(400).json({ error: 'Location is required.' });
+    }
 
-if (!roomSize) {
-    return res.status(400).json({ error: 'Room size is required.' });
-}
+    if (!roomSize) {
+      return res.status(400).json({ error: 'Room size is required.' });
+    }
 
-if (!monthlyRent) {
-    return res.status(400).json({ error: 'Monthly rent is required.' });
-}
+    if (!monthlyRent) {
+      return res.status(400).json({ error: 'Monthly rent is required.' });
+    }
 
-if (!deposit) {
-    return res.status(400).json({ error: 'Deposit is required.' });
-}
+    if (!deposit) {
+      return res.status(400).json({ error: 'Deposit is required.' });
+    }
 
-if (!minimumInsuranceRequested) {
-    return res.status(400).json({ error: 'Minimum insurance requested is required.' });
-}
+    if (!minimumInsuranceRequested) {
+      return res
+        .status(400)
+        .json({ error: 'Minimum insurance requested is required.' });
+    }
 
-if (!typeOfUseAllowed) {
-    return res.status(400).json({ error: 'Type of use allowed is required.' });
-}
+    if (!typeOfUseAllowed) {
+      return res
+        .status(400)
+        .json({ error: 'Type of use allowed is required.' });
+    }
 
-if (!rentalTerms) {
-    return res.status(400).json({ error: 'Rental terms are required.' });
-}
+    if (!rentalTerms) {
+      return res.status(400).json({ error: 'Rental terms are required.' });
+    }
 
-if (wifiAvailable === undefined) { // Check if this field can be a boolean
-    return res.status(400).json({ error: 'WiFi availability is required.' });
-}
+    if (wifiAvailable === undefined) {
+      // Check if this field can be a boolean
+      return res.status(400).json({ error: 'WiFi availability is required.' });
+    }
 
-if (!otherDetails) {
-    return res.status(400).json({ error: 'Other details are required.' });
-}
+    if (!otherDetails) {
+      return res.status(400).json({ error: 'Other details are required.' });
+    }
 
-if (!req.files?.images || req.files.images.length === 0) {
-  return res.status(400).json({ error: 'At least one image is required.' });
-}
+    if (!req.files?.images || req.files.images.length === 0) {
+      return res.status(400).json({ error: 'At least one image is required.' });
+    }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -1849,26 +1928,83 @@ if (!req.files?.images || req.files.images.length === 0) {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     console.log('Product Response:', productResponse);
 
     const productId = productResponse.product.id;
 
     // Step 2: Create Structured Metafields for the Room Listing Details
     const metafieldsPayload = [
-     
-      { namespace: 'fold_tech', key: 'zip', value: zip, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'location', value: location, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'room_size', value: roomSize.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'monthly_rent', value: monthlyRent.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'deposit', value: deposit.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'minimum_insurance_requested', value: minimumInsuranceRequested.toString(), type: 'number_integer' },
-      { namespace: 'fold_tech', key: 'type_of_use_allowed', value: typeOfUseAllowed, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'rental_terms', value: rentalTerms, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'wifi_available', value: wifiAvailable.toString(), type: 'boolean' },
-      { namespace: 'fold_tech', key: 'other_details', value: otherDetails, type: 'single_line_text_field' },
-      { namespace: 'fold_tech', key: 'userinformation', value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`, type: 'single_line_text_field' },
-
+      {
+        namespace: 'fold_tech',
+        key: 'zip',
+        value: zip,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'location',
+        value: location,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'room_size',
+        value: roomSize.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'monthly_rent',
+        value: monthlyRent.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'deposit',
+        value: deposit.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'minimum_insurance_requested',
+        value: minimumInsuranceRequested.toString(),
+        type: 'number_integer',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'type_of_use_allowed',
+        value: typeOfUseAllowed,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'rental_terms',
+        value: rentalTerms,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'wifi_available',
+        value: wifiAvailable.toString(),
+        type: 'boolean',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'other_details',
+        value: otherDetails,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'userinformation',
+        value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        type: 'single_line_text_field',
+      },
     ];
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
@@ -1947,101 +2083,110 @@ if (!req.files?.images || req.files.images.length === 0) {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: imagesData,
-      roomListing: [{
-        location,
-        zip,
-        roomSize,
-        monthlyRent,
-        deposit,
-        minimumInsuranceRequested,
-        typeOfUseAllowed,
-        rentalTerms,
-        wifiAvailable,
-        otherDetails,
-        images: imagesData
-      }],
+      roomListing: [
+        {
+          location,
+          zip,
+          roomSize,
+          monthlyRent,
+          deposit,
+          minimumInsuranceRequested,
+          typeOfUseAllowed,
+          rentalTerms,
+          wifiAvailable,
+          otherDetails,
+          images: imagesData,
+        },
+      ],
       userId: userId,
       status: productStatus,
     });
 
     await newRoomListing.save();
 
-if (status === 'active') {
-  const user = await authModel.findById(userId);
-  if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (status === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) return res.status(404).json({ error: 'User not found.' });
 
-  // Check subscription quantity
-  if (!user.subscription || user.subscription.quantity <= 0) {
-    return res.status(400).json({
-      error: 'Insufficient subscription credits to publish product.',
+      // Check subscription quantity
+      if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({
+          error: 'Insufficient subscription credits to publish product.',
+        });
+      }
+
+      // Decrement the subscription quantity
+      user.subscription.quantity -= 1;
+      await user.save();
+
+      // Set expiration date to 30 days from now
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      // Step 6: Update product status in Shopify
+      const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+      const shopifyUpdatePayload = {
+        product: {
+          id: productId,
+          status: 'active',
+          published_scope: 'global',
+        },
+      };
+
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
+      if (!shopifyResponse.product) {
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
+      }
+
+      // Step 7: Update product status in MongoDB
+      const updatedProduct = await productModel.findOneAndUpdate(
+        { id: productId },
+        { status: 'active', expiresAt },
+        { new: true }
+      );
+
+      if (!updatedProduct) {
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
+      }
+
+      // Schedule the unpublish task
+      // Send a successful response
+      return res.status(201).json({
+        message: 'Product successfully created and published.',
+        product: updatedProduct,
+        expiresAt,
+      });
+    }
+
+    // If the product is saved as draft
+    res.status(201).json({
+      message: 'Product successfully created and saved as draft.',
+      product: newRoomListing,
+      expiresAt: null, // No expiration date for draft
     });
+  } catch (error) {
+    console.error('Error in addNewEquipments function:', error);
+
+    // Attempt to delete the product from Shopify if it was created
+    if (productId) {
+      try {
+        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+        await shopifyRequest(deleteShopifyUrl, 'DELETE');
+      } catch (deleteError) {
+        console.error('Error deleting product from Shopify:', deleteError);
+      }
+    }
+
+    res.status(500).json({ error: error.message });
   }
-
-  // Decrement the subscription quantity
-  user.subscription.quantity -= 1;
-  await user.save();
-
-  // Set expiration date to 30 days from now
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-  // Step 6: Update product status in Shopify
-  const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-  const shopifyUpdatePayload = {
-    product: {
-      id: productId,
-      status: 'active',
-      published_scope: 'global',
-    },
-  };
-
-  const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
-  if (!shopifyResponse.product) {
-    return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
-  }
-
-  // Step 7: Update product status in MongoDB
-  const updatedProduct = await productModel.findOneAndUpdate(
-    { id: productId },
-    { status: 'active', expiresAt },
-    { new: true }
-  );
-
-  if (!updatedProduct) {
-    return res.status(404).json({ error: 'Product not found in database.' });
-  }
-
-  // Schedule the unpublish task
-  // Send a successful response
-  return res.status(201).json({
-    message: 'Product successfully created and published.',
-    product: updatedProduct,
-    expiresAt,
-  });
-}
-
-// If the product is saved as draft
-res.status(201).json({
-  message: 'Product successfully created and saved as draft.',
-  product: newRoomListing,
-  expiresAt: null, // No expiration date for draft
-});
-} catch (error) {
-console.error('Error in addNewEquipments function:', error);
-
-// Attempt to delete the product from Shopify if it was created
-if (productId) {
-  try {
-    const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-    await shopifyRequest(deleteShopifyUrl, 'DELETE');
-  } catch (deleteError) {
-    console.error('Error deleting product from Shopify:', deleteError);
-  }
-}
-
-res.status(500).json({ error: error.message });
-}
 };
-
 
 export const getProduct = async (req, res) => {
   try {
@@ -2069,7 +2214,6 @@ export const getProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // get product by search
 export const getSearchProduct = async (req, res) => {
@@ -2110,102 +2254,6 @@ export const getSearchProduct = async (req, res) => {
 };
 
 
-// export const updateListing = async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const product = await productModel.findById(id);
-//     if (!product) {
-//       return res.status(404).json({ message: 'Product not found' });
-//     }
-
-//     // Prepare the update data
-//     const updateData = req.body;
-
-//     // Handle image uploads
-//     const images = req.files.images; // Expecting multiple images
-//     const imagesData = [];
-
-//     if (Array.isArray(images) && images.length > 0) {
-//       for (const image of images) {
-//         const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
-
-//         const imagePayload = {
-//           image: {
-//             src: cloudinaryImageUrl,
-//           },
-//         };
-
-//         // Construct the image URL for Shopify
-//         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
-        
-//         // Make the request to upload the image to Shopify
-//         const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-
-//         if (imageResponse && imageResponse.image) {
-//           imagesData.push({
-//             id: imageResponse.image.id,
-//             product_id: product.id,
-//             position: imageResponse.image.position,
-//             alt: 'Provider Search Listing',
-//             width: imageResponse.image.width,
-//             height: imageResponse.image.height,
-//             src: imageResponse.image.src,
-//           });
-//         }
-//       }
-
-//       // Update the product's images array with the new images
-//       product.images = imagesData; // Replace existing images
-//     }
-    
-//     // Update the product in the database with new data
-//     const updatedProduct = await productModel.findByIdAndUpdate(
-//       id,
-//       { $set: { ...updateData, images: product.images,equipment:product.equipment } },
-//       { new: true }
-//     );
-
-//     // Prepare data for Shopify
-//     const shopifyData = {
-//       product: {
-//         id: product.id,
-//         ...updateData,
-//         images: product.images, // Include the updated images
-//       },
-//     };
-
-//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyData.product.id}.json`;
-
-//     // Update in Shopify
-//     const response = await fetch(shopifyUrl, {
-//       method: 'PUT',
-//       headers: {
-//         Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify(shopifyData),
-//     });
-
-//     if (!response.ok) {
-//       return res.status(500).json({
-//         message: 'Failed to update product in Shopify',
-//         details: await response.text(),
-//       });
-//     }
-
-//     // Successful response
-//     res.status(200).json({
-//       message: 'Product successfully updated',
-//       data: updatedProduct,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'An error occurred', error: error.message });
-//   }
-// };
-
-
 export const updateListing = async (req, res) => {
   const { id } = req.params; // MongoDB ID
   const { userId } = req.body; // User ID from body
@@ -2218,19 +2266,17 @@ export const updateListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName || 'Unknown'; // Fallback to 'Unknown' if not available
+    const username = user.userName ; // Fallback to 'Unknown' if not available
     const country = user.country;
-    const email = user.email;
-    const phoneNumber = user.phoneNumber;
-    const city = user.city;
+   
 
     // Find the product by MongoDB ID
-    const product = await productModel.findOne({id});
+    const product = await productModel.findOne({ id });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    console.log("Existing Product before update:", product);
+    console.log('Existing Product before update:', product);
 
     // Validate that the product_type matches the data being updated
     const { product_type } = product;
@@ -2251,7 +2297,11 @@ export const updateListing = async (req, res) => {
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
 
         // Upload image to Shopify
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -2528,7 +2578,7 @@ export const updateListing = async (req, res) => {
           },
         },
       ];
-    }else if (product_type === 'Providers Available') {
+    } else if (product_type === 'Providers Available') {
       metafieldsPayload = [
         {
           metafield: {
@@ -2566,7 +2616,10 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'requested_yearly_salary',
-            value: updateData.requestedYearlySalary !== undefined ? updateData.requestedYearlySalary.toString() : 'Not specified',
+            value:
+              updateData.requestedYearlySalary !== undefined
+                ? updateData.requestedYearlySalary.toString()
+                : 'Not specified',
             type: 'number_decimal',
           },
         },
@@ -2595,8 +2648,6 @@ export const updateListing = async (req, res) => {
           },
         },
       ];
-    
-    
     } else if (product_type === 'Provider Needed') {
       metafieldsPayload = [
         {
@@ -2648,7 +2699,7 @@ export const updateListing = async (req, res) => {
           },
         },
       ];
-    }else if (product_type === 'Spa Room For Rent') {
+    } else if (product_type === 'Spa Room For Rent') {
       metafieldsPayload = [
         {
           metafield: {
@@ -2739,7 +2790,7 @@ export const updateListing = async (req, res) => {
           },
         },
       ];
-    }else if (product_type === 'New Equipments') {
+    } else if (product_type === 'New Equipments') {
       metafieldsPayload = [
         {
           metafield: {
@@ -2845,14 +2896,13 @@ export const updateListing = async (req, res) => {
             type: 'single_line_text_field',
           },
         },
-      ]
+      ];
     }
 
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/metafields.json`;
-      await shopifyRequest(metafieldsUrl, 'POST',  metafield );
-      console.log(metafieldsUrl)
-
+      await shopifyRequest(metafieldsUrl, 'POST', metafield);
+      console.log(metafieldsUrl);
     }
     // Prepare Shopify payload, including user info
     const shopifyPayload = {
@@ -2887,15 +2937,16 @@ export const updateListing = async (req, res) => {
     }
 
     // Update product in MongoDB
-    await productModel.updateOne({id}, updateData, { new: true });
+    await productModel.updateOne({ id }, updateData, { new: true });
 
-    return res.status(200).json({ message: 'Product updated successfully', product: updateData });
+    return res
+      .status(200)
+      .json({ message: 'Product updated successfully', product: updateData });
   } catch (error) {
     console.error('Error updating product:', error);
     return res.status(500).json({ message: 'An error occurred', error });
   }
 };
-
 
 export const productUpdate = async (req, res) => {
   const { id, updateData } = req.body; // Shopify product ID and update data from the request body
@@ -2924,7 +2975,6 @@ export const productUpdate = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
-
 
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -2956,12 +3006,10 @@ export const deleteProduct = async (req, res) => {
     });
 
     if (!response.ok) {
-      return res
-        .status(500)
-        .json({
-          message: 'Failed to delete product from Shopify',
-          details: await response.text(),
-        });
+      return res.status(500).json({
+        message: 'Failed to delete product from Shopify',
+        details: await response.text(),
+      });
     }
 
     // Delete from MongoDB
@@ -2975,7 +3023,6 @@ export const deleteProduct = async (req, res) => {
       .json({ message: 'An error occurred', error: error.message });
   }
 };
-
 
 // webhook product deletion
 export const productDelete = async (req, res) => {
@@ -3001,7 +3048,6 @@ export const productDelete = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
-
 
 //FOR CONVERTING UNPUBLISH TO PUBLISH
 export const publishProduct = async (req, res) => {
@@ -3043,9 +3089,15 @@ export const publishProduct = async (req, res) => {
       },
     };
 
-    const shopifyResponse = await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+    const shopifyResponse = await shopifyRequest(
+      shopifyUrl,
+      'PUT',
+      shopifyPayload
+    );
     if (!shopifyResponse.product) {
-      return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+      return res
+        .status(400)
+        .json({ error: 'Failed to update product status in Shopify.' });
     }
 
     // Set expiration date to 30 days from now
@@ -3076,7 +3128,6 @@ export const publishProduct = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 export const newPublishProduct = async (req, res) => {
   try {
@@ -3229,4 +3280,3 @@ export const deletAllProduct = async (req, res) => {
     });
   } catch (error) {}
 };
-

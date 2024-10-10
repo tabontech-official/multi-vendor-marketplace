@@ -29,7 +29,7 @@ authRouter.post('/newSignUp', newSignUp);
 authRouter.post('/webHook', verifyShopifyWebhook, webHook);
 authRouter.get('/user/:id', fetchUserData);
 authRouter.get('/', getUserData);
-authRouter.get('/quantity/:userId',getUserSubscriptionQuantity)
+authRouter.get('/quantity/:id',getUserSubscriptionQuantity)
 authRouter.post('/webhook/update',updateCustomer)
 authRouter.put('/editProfile/:userId', cpUpload, editProfile);
 authRouter.put('/updateInShopify', updateUserInShopify);
