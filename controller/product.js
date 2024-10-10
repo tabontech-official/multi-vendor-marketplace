@@ -716,7 +716,7 @@ export const addUsedEquipments = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'New Equipments' });
+      const productConfig = await productModel.findOne({ product_type: 'Used Equipments' });
       if (!productConfig) {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
