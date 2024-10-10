@@ -684,7 +684,7 @@ export const addUsedEquipments = async (req, res) => {
     expirationDate.setMonth(expirationDate.getMonth() + 6);
 
     // Step 4: Check subscription and update status
-    if (status === 'publish') {
+    if (status === 'active') {
       if (!user.subscription || user.subscription.quantity <= 0) {
         return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
       }
