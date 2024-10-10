@@ -1530,14 +1530,23 @@ export const addNewBusiness = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
+      const productConfig = await productModel.findOne({ product_type: 'Businesses To Purchase' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
       if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
+      user.subscription.quantity -= productConfig.credit_required;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -1824,14 +1833,23 @@ export const addNewJobListing = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
+      const productConfig = await productModel.findOne({ product_type: 'Providers Available' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
       if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
+      user.subscription.quantity -= productConfig.credit_required;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -2119,14 +2137,23 @@ export const addNewProviderListing = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
+      const productConfig = await productModel.findOne({ product_type: 'Provider Needed' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
       if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
+      user.subscription.quantity -= productConfig.credit_required;
       await user.save();
 
       // Set expiration date to 30 days from now
@@ -2474,14 +2501,23 @@ export const addRoomListing = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
+      const productConfig = await productModel.findOne({ product_type: 'Spa Room For Rent' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
       if (!user.subscription || user.subscription.quantity <= 0) {
+        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
         });
       }
 
       // Decrement the subscription quantity
-      user.subscription.quantity -= 1;
+      user.subscription.quantity -= productConfig.credit_required;
       await user.save();
 
       // Set expiration date to 30 days from now
