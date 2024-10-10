@@ -738,7 +738,7 @@ export const addNewEquipments = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      if (!user.subscription || user.subscription.quantity >= 5) {
+      if (!user.subscription || user.subscription.quantity < 5) {
         return res.status(400).json({
           error: 'Insufficient subscription credits to publish product. You need at least 5 credits.',
         });
@@ -746,9 +746,6 @@ export const addNewEquipments = async (req, res) => {
 
       // Decrement the subscription quantity
       user.subscription.quantity -= 5;
-      if (user.subscription.quantity < 0) {
-        user.subscription.quantity = 0;
-      }
       await user.save();
 
       // Set expiration date to 30 days from now
