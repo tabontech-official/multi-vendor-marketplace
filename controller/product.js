@@ -1165,9 +1165,9 @@ export const addNewBusiness = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      if (!user.subscription || user.subscription.quantity <= 0) {
+      if (!user.subscription || user.subscription.quantity < 2) {
         return res.status(400).json({
-          error: 'Insufficient subscription credits to publish product.',
+          error: 'Insufficient subscription credits to publish product. You need at least 2 credits',
         });
       }
 
