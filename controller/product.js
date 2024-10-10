@@ -712,6 +712,29 @@ export const addUsedEquipments = async (req, res) => {
     await newProduct.save();
 
     if (status === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) return res.status(404).json({ error: 'User not found.' });
+
+      // Check subscription quantity
+      const productConfig = await productModel.findOne({ product_type: 'New Equipments' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
+        return res.status(400).json({
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
+        });
+      }
+
+      // Decrement the subscription quantity
+      user.subscription.quantity -= productConfig.credit_required;
+      await user.save();
+
       // Set expiration date to 30 days from now
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
