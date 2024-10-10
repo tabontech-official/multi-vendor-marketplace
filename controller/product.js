@@ -522,7 +522,7 @@ export const addUsedEquipments = async (req, res) => {
         vendor: brand,
         product_type: 'Used Equipments',
         variants: [{ price: asking_price.toString() }],
-        status: productStatus === 'active' ? 'active' : 'draft',
+        status: productStatus,
         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
