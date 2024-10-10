@@ -685,6 +685,11 @@ export const addUsedEquipments = async (req, res) => {
 
     // Step 4: Check subscription and update status
     if (status === 'active') {
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
+      const user = await authModel.findById(userId);
+      if (!user) return res.status(404).json({ error: 'User not found.' });
       const productConfig = await productModel.findOne({ product_type: 'Used Equipments' });
       if (!productConfig) {
         return res.status(404).json({ error: 'Product configuration not found.' });
