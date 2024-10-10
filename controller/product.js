@@ -1139,8 +1139,6 @@ export const addNewEquipments = async (req, res) => {
   }
 };
 
-
-
 export const addNewBusiness = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -1492,9 +1490,9 @@ export const addNewBusiness = async (req, res) => {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
 
-      if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-      }
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
 
       if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
@@ -1795,9 +1793,9 @@ export const addNewJobListing = async (req, res) => {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
 
-      if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-      }
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
 
       if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
@@ -2099,9 +2097,9 @@ export const addNewProviderListing = async (req, res) => {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
 
-      if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-      }
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
 
       if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
@@ -2463,9 +2461,9 @@ export const addRoomListing = async (req, res) => {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
 
-      if (!user.subscription || user.subscription.quantity <= 0) {
-        return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-      }
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
 
       if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
