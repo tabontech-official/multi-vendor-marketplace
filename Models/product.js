@@ -185,7 +185,7 @@ const productSchema = new mongoose.Schema(
       enum: ['draft', 'active', 'inactive'],
     },
     expiresAt: { type: Date },
-    credit_required: { type: Number, default: 1 },
+    credit_required: { type: Number },
   },
   {
     timestamps: true,
