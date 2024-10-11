@@ -3624,3 +3624,29 @@ export const updateNewPrice = async (req, res) => {
       res.status(500).json({ message: 'An error occurred', error: error.message }); // Handle errors
   }
 };
+
+export const fetchPricePerCredit = async (req, res) => {
+  try {
+      // Use `await` to wait for the aggregation to finish
+      const credit = await BuyCreditModel.aggregate([
+          {
+              $project: {
+                _id:0,
+                price: 1, // Only project the `price` field
+              }
+          }
+      ]);
+
+      if (credit && credit.length > 0) {
+          // If data is found, send it
+          res.status(200).json(credit);
+      } else {
+          // If no data found, return a 404
+          res.status(404).json({ message: 'No data found' });
+      }
+  } catch (error) {
+      // Handle errors gracefully
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred', error: error.message });
+  }
+};

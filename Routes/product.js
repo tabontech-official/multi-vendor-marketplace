@@ -18,7 +18,8 @@ import {
   productUpdate,
   updateCredits,
   updateProductPrice,
-  updateNewPrice
+  updateNewPrice,
+  fetchPricePerCredit
 } from '../controller/product.js';
 import { upload, cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -42,6 +43,7 @@ productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
 productRouter.put('/updatePrice',updateProductPrice)
 productRouter.put('/updateId/:id',updateNewPrice)
+productRouter.get('/getPrice',fetchPricePerCredit)
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.delete('/', deletAllProduct);
 productRouter.put('/credits/:productType', updateCredits);
