@@ -285,8 +285,6 @@ export const signIn = async (req, res) => {
 
     // Check for the 'isAdmin' tag in Shopify (not MongoDB)
     const isAdmin = shopifyCustomer.tags.split(',').includes('isAdmin');
-    console.log('Is Admin from Shopify:', isAdmin); // Check if isAdmin is detected correctly from Shopify
-
     // Update MongoDB user record with Shopify-admin status
     user.isAdmin = isAdmin;
     user.shopifyId = shopifyCustomer.id; // Save Shopify ID for future reference
