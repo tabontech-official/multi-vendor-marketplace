@@ -2,6 +2,7 @@ import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
+import { BuyCreditModel } from '../Models/buyCredit.js';
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -3582,3 +3583,44 @@ export const updateCredits=async(req,res)=>{
   }
 }
 
+
+export const updateProductPrice = async (req, res) => {
+  const { creditId, price } = req.body; // Extract id and price from the request body
+
+  try {
+      // Use findOneAndUpdate to insert if it doesn't exist, or update if it does
+      const updatedProduct = await BuyCreditModel.findOneAndUpdate(
+          { creditId: creditId }, // Find by id
+          { price: price }, // Update price
+          { new: true, upsert: true } // new: return the updated document; upsert: create if not found
+      );
+
+      res.status(200).json(updatedProduct);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred', error: error.message });
+  }
+};
+
+export const updateNewPrice = async (req, res) => {
+  const { id } = req.params; // Get the product ID from the request parameters
+  const { price, creditId } = req.body; // Get the new price and creditId from the request body
+
+  try {
+      // Find the document by ID and update it with the new price and creditId
+      const updatedProduct = await BuyCreditModel.findByIdAndUpdate(
+          id,
+          { price, creditId }, // Update fields
+          { new: true, runValidators: true } // Return the updated document and run validators
+      );
+
+      if (!updatedProduct) {
+          return res.status(404).json({ message: 'Product not found' }); // Handle not found case
+      }
+
+      res.status(200).json(updatedProduct); // Return the updated document
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred', error: error.message }); // Handle errors
+  }
+};

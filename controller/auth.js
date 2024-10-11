@@ -1148,3 +1148,34 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
     throw new Error('Failed to update password in Shopify');
   }
 };
+
+
+export const updateSubscriptionQuantity = async (req, res) => {
+  const { email, quantity } = req.body; // Get email and new quantity from the request body
+
+  // Validate the quantity
+  if (typeof quantity !== 'number' || quantity < 0) {
+    return res.status(400).json({ error: 'Quantity must be a non-negative number.' });
+  }
+
+  try {
+    // Find the user by email
+    const user = await authModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Update the subscription quantity
+    user.subscription.quantity = quantity;
+    await user.save();
+
+    res.json({
+      message: `Subscription quantity for ${email} updated to ${quantity}.`,
+      data: user.subscription, // Optionally return the updated subscription data
+    });
+  } catch (error) {
+    console.error('Error updating subscription quantity:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

@@ -15,6 +15,7 @@ import {
   deleteUser,
   updateCustomer,
   resetPassword,
+  updateSubscriptionQuantity,
 } from '../controller/auth.js';
 import { upload ,cpUpload} from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -33,6 +34,7 @@ authRouter.get('/quantity/:id',getUserSubscriptionQuantity)
 authRouter.post('/webhook/update',updateCustomer)
 authRouter.put('/editProfile/:userId', cpUpload, editProfile);
 authRouter.put('/updateInShopify', updateUserInShopify);
+authRouter.put('/updatequantity',updateSubscriptionQuantity)
 authRouter.post('/Admin', AdminSignIn);
 authRouter.post('/webHook/delete',deleteUser)
 authRouter.post('/resetpassword',resetPassword)

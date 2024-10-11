@@ -186,6 +186,9 @@ const productSchema = new mongoose.Schema(
     },
     expiresAt: { type: Date },
     credit_required: { type: Number },
+    buy_credits:{
+      price:Number
+    }
   },
   {
     timestamps: true,
