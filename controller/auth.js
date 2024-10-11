@@ -163,9 +163,80 @@ export const signUp = async (req, res) => {
   }
 };
 
+// export const signIn = async (req, res) => {
+//   try {
+//     // Validate input data
+//     const { error } = loginSchema.validate(req.body);
+//     if (error) {
+//       return res.status(400).json({ error: error.details[0].message });
+//     }
+
+//     const { email, password } = req.body;
+
+//     // Check if user exists in the database
+//     const user = await authModel.findOne({ email });
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ error: 'User does not exist with this email' });
+//     }
+
+//     // Verify password
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(401).json({ error: 'Invalid password' });
+//     }
+
+//     // Basic Auth credentials for Shopify
+//     const apiKey = process.env.SHOPIFY_API_KEY;
+//     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+//     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+
+//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+//       'base64'
+//     );
+//     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
+
+//     // Check Shopify credentials
+//     const response = await fetch(shopifyUrl, {
+//       method: 'GET',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         Authorization: `Basic ${base64Credentials}`,
+//       },
+//     });
+
+//     const shopifyData = await response.json();
+
+//     if (response.status !== 200 || !shopifyData.customers.length) {
+//       return res.status(404).json({ error: 'User does not exist in Shopify' });
+//     }
+
+//     const shopifyCustomer = shopifyData.customers[0];
+
+//     // Optional: Log Shopify Customer ID
+//     console.log('Shopify Customer ID:', shopifyCustomer.id);
+
+//     // Create a JWT token for your application
+//     const token = createToken({ _id: user._id });
+
+//     res.json({
+//       message: 'Successfully logged in',
+//       token,
+//       data: {
+//         user,
+//         shopifyCustomer, // Include Shopify customer data if needed
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Login error:', error.message || error);
+//     return res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
 export const signIn = async (req, res) => {
   try {
-    // Validate input data
+    // Validate input data using Joi schema
     const { error } = loginSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
@@ -173,31 +244,28 @@ export const signIn = async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Check if user exists in the database
+    // Check if user exists in MongoDB
     const user = await authModel.findOne({ email });
     if (!user) {
-      return res
-        .status(404)
-        .json({ error: 'User does not exist with this email' });
+      return res.status(404).json({ error: 'User does not exist with this email' });
     }
 
-    // Verify password
+    // Verify password using bcrypt
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Basic Auth credentials for Shopify
+    // Shopify API credentials
     const apiKey = process.env.SHOPIFY_API_KEY;
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
+    // Prepare Basic Auth for Shopify API
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
 
-    // Check Shopify credentials
+    // Fetch Shopify customer data
     const response = await fetch(shopifyUrl, {
       method: 'GET',
       headers: {
@@ -208,24 +276,31 @@ export const signIn = async (req, res) => {
 
     const shopifyData = await response.json();
 
+    // Check if the user exists in Shopify
     if (response.status !== 200 || !shopifyData.customers.length) {
       return res.status(404).json({ error: 'User does not exist in Shopify' });
     }
 
     const shopifyCustomer = shopifyData.customers[0];
 
-    // Optional: Log Shopify Customer ID
-    console.log('Shopify Customer ID:', shopifyCustomer.id);
+    // Check for the 'isAdmin' tag in Shopify (not MongoDB)
+    const isAdmin = shopifyCustomer.tags.split(',').includes('isAdmin');
+    console.log('Is Admin from Shopify:', isAdmin); // Check if isAdmin is detected correctly from Shopify
 
-    // Create a JWT token for your application
-    const token = createToken({ _id: user._id });
+    // Update MongoDB user record with Shopify-admin status
+    user.isAdmin = isAdmin;
+    user.shopifyId = shopifyCustomer.id; // Save Shopify ID for future reference
+    await user.save();
 
+    // Create JWT token with isAdmin field from Shopify
+    const token = createToken({ _id: user._id, isAdmin });
+
+    // Send response with token and user data
     res.json({
-      message: 'Successfully logged in',
+      message: `Successfully logged in as ${isAdmin ? 'admin' : 'user'}`,
       token,
       data: {
         user,
-        shopifyCustomer, // Include Shopify customer data if needed
       },
     });
   } catch (error) {
@@ -233,6 +308,8 @@ export const signIn = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+
 
 const hashPassword = async (password) => {
   if (password) {
