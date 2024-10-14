@@ -3601,6 +3601,7 @@ export const updateProductPrice = async (req, res) => {
   }
 };
 
+
 export const updateNewPrice = async (req, res) => {
   const { id } = req.params; // MongoDB product ID
   const { price, creditId } = req.body; // creditId is the Shopify product ID from the request
@@ -3686,8 +3687,6 @@ export const updateNewPrice = async (req, res) => {
 };
 
 
-
-
 export const fetchPricePerCredit = async (req, res) => {
   try {
       // Use `await` to wait for the aggregation to finish
@@ -3713,3 +3712,5 @@ export const fetchPricePerCredit = async (req, res) => {
       res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 }; 
+
+

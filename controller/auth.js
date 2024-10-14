@@ -944,6 +944,7 @@ export const getUserData = async (req, res) => {
   }
 };
 
+//webhook Api for customer update
 export const updateCustomer = async (req, res) => {
   const customerData = req.body;
 
@@ -976,7 +977,7 @@ const transporter = nodemailer.createTransport({
     user: 'medsparecovery@gmail.com',
     pass: 'vfqm uxah oapw qnka',
   },
-  secure: false, // Use true if using 465 port and secure connection
+  secure: true, // Use true if using 465 port and secure connection
   tls: {
     rejectUnauthorized: false, // This might help with some connection issues
   },
