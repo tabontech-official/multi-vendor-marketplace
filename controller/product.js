@@ -3810,7 +3810,8 @@ export const fetchPricePerCredit = async (req, res) => {
           {
               $project: {
                 creditId:1,
-                price: 1, // Only project the `price` field
+                price: 1,
+                variantId:1 // Only project the `price` field
               }
           }
       ]);
