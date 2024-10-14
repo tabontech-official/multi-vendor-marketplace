@@ -1095,9 +1095,12 @@ export const updateSubscriptionQuantity = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
+    const currentQuantity = user.subscription.quantity || 0; // Use 0 if undefined
 
+    // Add the new quantity to the current quantity
+    const updatedQuantity = currentQuantity + quantity;
     // Update the subscription quantity
-    user.subscription.quantity = quantity;
+    user.subscription.quantity = updatedQuantity;
     await user.save();
 
     res.json({
