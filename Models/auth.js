@@ -55,7 +55,6 @@ const authSchema = new mongoose.Schema({
     status: {
       type: String,
       enum: ['active', 'inactive', 'canceled', 'pending'],
-      default: 'inactive',
     },
     startDate: {
       type: Date,
