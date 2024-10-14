@@ -3558,8 +3558,7 @@ export const deletAllProduct = async (req, res) => {
 
 //In this api admin can change credits on the base of product type
 export const updateCredits=async(req,res)=>{
-  const { productType } = req.params;
-  const { newCredit } = req.body;
+  const { newCredit,productType } = req.body;
 
   // Validate input
   if (typeof newCredit !== 'number' || newCredit < 0) {

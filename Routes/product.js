@@ -46,5 +46,5 @@ productRouter.put('/updateId/:id',updateNewPrice)
 productRouter.get('/getPrice',fetchPricePerCredit)
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.delete('/', deletAllProduct);
-productRouter.put('/credits/:productType', updateCredits);
+productRouter.put('/credits', updateCredits);
 export default productRouter;
