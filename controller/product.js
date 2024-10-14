@@ -3584,41 +3584,147 @@ export const updateCredits=async(req,res)=>{
 
 
 export const updateProductPrice = async (req, res) => {
-  const { creditId, price } = req.body; // Extract id and price from the request body
+  const { creditId, price } = req.body;
 
   try {
-      // Use findOneAndUpdate to insert if it doesn't exist, or update if it does
-      const updatedProduct = await BuyCreditModel.findOneAndUpdate(
-          { creditId: creditId }, // Find by id
-          { price: price }, // Update price
-          { new: true, upsert: true } // new: return the updated document; upsert: create if not found
-      );
+      // Fetch the Shopify product details using the productId
+      const apiKey = process.env.SHOPIFY_API_KEY;
+      const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+      const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-      res.status(200).json(updatedProduct);
+      const shopifyProductUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${creditId}.json`;
+
+      const productResponse = await fetch(shopifyProductUrl, {
+          method: 'GET',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
+          },
+      });
+
+      const shopifyProductData = await productResponse.json();
+
+      // Check if the product was fetched successfully
+      if (productResponse.status !== 200 || !shopifyProductData.product) {
+          return res.status(404).json({ message: 'Failed to fetch product from Shopify' });
+      }
+
+      // Step 2: Find the correct variant within the product
+      const variant = shopifyProductData.product.variants[0]; // Assuming a single variant for simplicity
+
+      if (!variant) {
+          return res.status(404).json({ message: 'No variants found for this product' });
+      }
+
+      // Store the product info in the database
+      const product = new BuyCreditModel({
+        creditId,
+          variantId: variant.id, // Use the fetched variant ID
+          price,
+      });
+
+      await product.save();
+
+      res.status(201).json({ message: 'Product updated successfully', variantId: variant.id });
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'An error occurred', error: error.message });
+      console.error('Error updating product:', error);
+      res.status(500).json({ message: 'Error updating product', error: error.message });
   }
 };
 
 
+
+// export const updateNewPrice = async (req, res) => {
+//   const  id  = "6708f23521b6b9ec958fafe8"; // MongoDB product ID
+//   const { price, creditId } = req.body; // creditId is the Shopify product ID from the request
+
+//   try {
+//     // Step 1: Update the product in MongoDB
+//     const updatedProduct = await BuyCreditModel.findByIdAndUpdate(
+//       id,
+//       { price, creditId }, // Update fields in MongoDB
+//       { new: true, runValidators: true } // Return the updated document and run validators
+//     );
+
+//     if (!updatedProduct) {
+//       return res.status(404).json({ message: 'Product not found' }); // Handle not found case
+//     }
+
+//     // Step 2: Fetch the product from Shopify to get its variants
+//     const apiKey = process.env.SHOPIFY_API_KEY;
+//     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+//     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+
+//     // Fetch the Shopify product details using the product ID (creditId)
+//     const shopifyProductUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${creditId}.json`;
+
+//     const productResponse = await fetch(shopifyProductUrl, {
+//       method: 'GET',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
+//       },
+//     });
+
+//     const shopifyProductData = await productResponse.json();
+
+//     if (productResponse.status !== 200 || !shopifyProductData.product) {
+//       return res.status(404).json({ message: 'Failed to fetch product from Shopify' });
+//     }
+
+//     // Step 3: Find the correct variant within the product (assuming a single variant for simplicity)
+//     const variant = shopifyProductData.product.variants[0]; // You may need to adjust this to find the specific variant
+
+//     if (!variant) {
+//       return res.status(404).json({ message: 'No variants found for this product' });
+//     }
+
+//     // Step 4: Update the price for that specific variant
+//     const shopifyVariantUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`;
+
+//     const updateResponse = await fetch(shopifyVariantUrl, {
+//       method: 'PUT', // Use PUT for updating resources in Shopify
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
+//       },
+//       body: JSON.stringify({
+//         variant: {
+//           id: variant.id, // Keep the variant ID the same
+//           price: price,   // Update only the price
+//         }
+//       }),
+//     });
+
+//     const updateData = await updateResponse.json();
+
+//     if (updateResponse.status !== 200) {
+//       return res.status(updateResponse.status).json({
+//         message: 'Failed to update price in Shopify',
+//         error: updateData.errors,
+//       });
+//     }
+
+//     // Step 5: Return the updated MongoDB product and Shopify variant
+//     res.status(200).json({
+//       message: 'Price updated successfully in both MongoDB and Shopify',
+//       updatedProduct, // MongoDB response
+//       updatedVariant: updateData.variant, // Shopify response (updated variant)
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'An error occurred', error: error.message }); // Handle errors
+//   }
+// };
+
+
 export const updateNewPrice = async (req, res) => {
-  const  id  = "6708f23521b6b9ec958fafe8"; // MongoDB product ID
+  const id = "670cdd8351a965e64f096390"; // MongoDB product ID
   const { price, creditId } = req.body; // creditId is the Shopify product ID from the request
 
   try {
-    // Step 1: Update the product in MongoDB
-    const updatedProduct = await BuyCreditModel.findByIdAndUpdate(
-      id,
-      { price, creditId }, // Update fields in MongoDB
-      { new: true, runValidators: true } // Return the updated document and run validators
-    );
-
-    if (!updatedProduct) {
-      return res.status(404).json({ message: 'Product not found' }); // Handle not found case
-    }
-
-    // Step 2: Fetch the product from Shopify to get its variants
+    // Step 1: Fetch the product from Shopify to get its variants
     const apiKey = process.env.SHOPIFY_API_KEY;
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
@@ -3640,27 +3746,27 @@ export const updateNewPrice = async (req, res) => {
       return res.status(404).json({ message: 'Failed to fetch product from Shopify' });
     }
 
-    // Step 3: Find the correct variant within the product (assuming a single variant for simplicity)
-    const variant = shopifyProductData.product.variants[0]; // You may need to adjust this to find the specific variant
+    // Step 2: Find the correct variant within the product
+    const variant = shopifyProductData.product.variants[0]; // Assuming a single variant for simplicity
 
     if (!variant) {
       return res.status(404).json({ message: 'No variants found for this product' });
     }
 
-    // Step 4: Update the price for that specific variant
+    // Step 3: Update the price for that specific variant in Shopify
     const shopifyVariantUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`;
 
     const updateResponse = await fetch(shopifyVariantUrl, {
-      method: 'PUT', // Use PUT for updating resources in Shopify
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
       },
       body: JSON.stringify({
         variant: {
-          id: variant.id, // Keep the variant ID the same
-          price: price,   // Update only the price
-        }
+          id: variant.id,
+          price: price, // Update only the price
+        },
       }),
     });
 
@@ -3673,6 +3779,16 @@ export const updateNewPrice = async (req, res) => {
       });
     }
 
+    // Step 4: Update the product in MongoDB to include price, creditId, and variantId
+    const updatedProduct = await BuyCreditModel.findByIdAndUpdate(
+      id,
+      { price, creditId, variantId: variant.id }, // Update MongoDB fields
+      { new: true, runValidators: true } // Return the updated document and run validators
+    );
+    if (!updatedProduct) {
+      return res.status(404).json({ message: 'Product not found in MongoDB' });
+    }
+
     // Step 5: Return the updated MongoDB product and Shopify variant
     res.status(200).json({
       message: 'Price updated successfully in both MongoDB and Shopify',
@@ -3682,7 +3798,7 @@ export const updateNewPrice = async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'An error occurred', error: error.message }); // Handle errors
+    res.status(500).json({ message: 'An error occurred', error: error.message });
   }
 };
 

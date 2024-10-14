@@ -41,7 +41,7 @@ productRouter.get('/getProduct/:userId', getProduct);
 productRouter.put('/updateListing/:id', cpUpload, updateListing);
 productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
-productRouter.put('/updatePrice',updateProductPrice)
+productRouter.post('/updatePrice',updateProductPrice)
 productRouter.put('/updateId/',updateNewPrice)
 productRouter.get('/getPrice',fetchPricePerCredit)
 productRouter.delete('/deleteProduct/:id', deleteProduct);
