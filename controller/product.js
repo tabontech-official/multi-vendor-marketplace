@@ -3573,7 +3573,7 @@ export const updateCredits=async(req,res)=>{
 
     // Send a response
     res.json({
-      message: `Updated credit config for '${productType}' to require ${newCredit} credits.`,
+      message: `Updated credit for '${productType}' to require ${newCredit} credits.`,
       
     });
   } catch (error) {
