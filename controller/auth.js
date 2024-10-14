@@ -974,8 +974,8 @@ export const deleteUser = async (req, res) => {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'medsparecovery@gmail.com',
-    pass: 'vfqm uxah oapw qnka',
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
   secure: true, // Use true if using 465 port and secure connection
   tls: {

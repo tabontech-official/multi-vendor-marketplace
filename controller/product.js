@@ -3603,7 +3603,7 @@ export const updateProductPrice = async (req, res) => {
 
 
 export const updateNewPrice = async (req, res) => {
-  const { id } = req.params; // MongoDB product ID
+  const  id  = "6708f23521b6b9ec958fafe8"; // MongoDB product ID
   const { price, creditId } = req.body; // creditId is the Shopify product ID from the request
 
   try {
