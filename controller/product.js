@@ -3128,7 +3128,7 @@ if (product_type === 'Providers Available') {
 // Set common fields for all product types
 const commonFields = {
   title: req.body.name || req.body.qualificationRequested,
-  body_html: req.body.description,
+  body_html: req.body.description || req.body.offeredPositionDescription,
   vendor: req.body.brand,
   product_type,
   created_at: new Date(),
