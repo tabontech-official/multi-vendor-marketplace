@@ -214,7 +214,6 @@ export const signIn = async (req, res) => {
       // Return the token and admin status
       res.json({ token, isAdmin: user.isAdmin ,user});
   } catch (error) {
-      console.error('Sign-in error:', error);
       res.status(500).json({ message: 'Server error' });
   }
 };
