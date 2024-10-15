@@ -2351,8 +2351,9 @@ export const updateListing = async (req, res) => {
 
     const username = user.userName ; // Fallback to 'Unknown' if not available
     const country = user.country;
-   
-
+   const email=user.email;
+   const phoneNumber=user.phoneNumber
+    const city=user.city
     // Find the product by MongoDB ID
     const product = await productModel.findOne({id});
     if (!product) {
@@ -2507,7 +2508,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'userinformation',
-            value: `${updateData.username} | ${updateData.email} | ${updateData.phoneNumber} | ${updateData.city} - ${updateData.country}`,
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
             type: 'single_line_text_field',
           },
         },
@@ -2654,7 +2655,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'userinformation',
-            value: `${updateData.username} | ${updateData.email} | ${updateData.phoneNumber} | ${updateData.city} - ${updateData.country}`,
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
             type: 'single_line_text_field',
           },
         },
@@ -2724,7 +2725,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'userinformation',
-            value: `${updateData.username} | ${updateData.email} | ${updateData.phoneNumber} | ${updateData.city} - ${updateData.country}`,
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
             type: 'single_line_text_field',
           },
         },
@@ -2791,7 +2792,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'userinformation',
-            value: `${updateData.username} | ${updateData.email} | ${updateData.phoneNumber} | ${updateData.city} - ${updateData.country}`,
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
             type: 'single_line_text_field',
           },
         },
@@ -2990,7 +2991,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'userinformation',
-            value: `${updateData.username} | ${updateData.email} | ${updateData.phoneNumber} | ${updateData.city} - ${updateData.country}`,
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
             type: 'single_line_text_field',
           },
         },
