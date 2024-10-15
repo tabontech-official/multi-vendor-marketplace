@@ -2748,34 +2748,44 @@ export const updateListing = async (req, res) => {
           },
         },
         {
-          namespace: 'fold_tech',
-          key: 'qualification_requested',
-          value: updateData.qualificationRequested,
-          type: 'single_line_text_field',
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'qualification_requested',
+            value: updateData.qualificationRequested,
+            type: 'single_line_text_field',
+          },
         },
         {
-          namespace: 'fold_tech',
-          key: 'job_type',
-          value: updateData.jobType,
-          type: 'single_line_text_field',
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'job_type',
+            value: updateData.jobType,
+            type: 'single_line_text_field',
+          },
         },
         {
-          namespace: 'fold_tech',
-          key: 'type_of_job_offered',
-          value: updateData.typeOfJobOffered,
-          type: 'single_line_text_field',
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'type_of_job_offered',
+            value: updateData.typeOfJobOffered,
+            type: 'single_line_text_field',
+          },
         },
         {
-          namespace: 'fold_tech',
-          key: 'offered_yearly_salary',
-          value: updateData.offeredYearlySalary,
-          type: 'number_integer',
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'offered_yearly_salary',
+            value: updateData.offeredYearlySalary,
+            type: 'number_integer',  // Ensure this is actually an integer
+          },
         },
         {
-          namespace: 'fold_tech',
-          key: 'offered_position_description',
-          value: updateData.offeredPositionDescription,
-          type: 'single_line_text_field',
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'offered_position_description',
+            value: updateData.offeredPositionDescription,
+            type: 'single_line_text_field',
+          },
         },
         {
           metafield: {
@@ -2786,6 +2796,7 @@ export const updateListing = async (req, res) => {
           },
         },
       ];
+    
     } else if (product_type === 'Spa Room For Rent') {
       metafieldsPayload = [
         {
@@ -2993,7 +3004,7 @@ export const updateListing = async (req, res) => {
     // Prepare Shopify payload, including user info
     const shopifyPayload = {
       product: {
-        title: `${updateData.name} | ${country} , ${updateData.location} , ${updateData.zip}`,
+        title: `${updateData.name || updateData.qualificationRequested} | ${country} , ${updateData.location} , ${updateData.zip}`,
         body_html: updateData.description,
         vendor: updateData.brand,
         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
@@ -3116,7 +3127,7 @@ if (product_type === 'Providers Available') {
 
 // Set common fields for all product types
 const commonFields = {
-  title: req.body.name,
+  title: req.body.name || req.body.qualificationRequested,
   body_html: req.body.description,
   vendor: req.body.brand,
   product_type,
