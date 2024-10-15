@@ -2768,7 +2768,7 @@ export const updateListing = async (req, res) => {
         {
           namespace: 'fold_tech',
           key: 'offered_yearly_salary',
-          value: updateData.offeredYearlySalary.toString(),
+          value: updateData.offeredYearlySalary,
           type: 'number_integer',
         },
         {
