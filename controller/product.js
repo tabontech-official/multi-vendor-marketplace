@@ -3280,7 +3280,7 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check subscription credits
-    if (!user.subscription || user.subscription.quantity <= 0) {
+    if (!user.subscription || user.subscription.quantity < 0) {
       return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
     }
 
@@ -3687,3 +3687,30 @@ export const fetchPricePerCredit = async (req, res) => {
 }; 
 
 
+export const fetchRequireCredits = async (req, res) => {
+  try {
+    // Fetch product types and required credits using aggregation
+    const products = await productModel.aggregate([
+      {
+        $project: {
+          credit_required: 1,
+          product_type: 1
+        }
+      }
+    ]);
+
+    // Check if products were found
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: 'No products found.' });
+    }
+
+    // Send response with fetched products
+    res.status(200).json({
+      message: 'Products and required credits fetched successfully.',
+      data: products
+    });
+  } catch (error) {
+    console.error('Error fetching required credits:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+};

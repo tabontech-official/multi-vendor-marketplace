@@ -221,7 +221,7 @@ export const signIn = async (req, res) => {
     await user.save();
 
     // Create JWT token with isAdmin field from Shopify
-    const token = createToken({ _id: user._id, isAdmin });
+    const token = createToken({ _id: user._id, isAdmin});
 
     // Send response with token and user data
     res.json({
@@ -1112,3 +1112,6 @@ export const updateSubscriptionQuantity = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+
+
