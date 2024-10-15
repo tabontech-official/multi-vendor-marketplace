@@ -164,79 +164,62 @@ export const signUp = async (req, res) => {
 };
 
 
-export const signIn = async (req, res) => {
+const checkShopifyAdminTag = async (email) => {
   try {
-    // Validate input data using Joi schema
-    const { error } = loginSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
+      const response = await axios.get(`https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`);
+      const customers = response.data.customers;
 
-    const { email, password } = req.body;
+      if (customers.length > 0) {
+          const tags = customers[0].tags.split(','); // Split tags into an array
+          return tags.includes('isAdmin'); // Check if 'isAdmin' tag is present
+      }
 
-    // Check if user exists in MongoDB
-    const user = await authModel.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: 'User does not exist with this email' });
-    }
-
-    // Verify password using bcrypt
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    // Shopify API credentials
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-
-    // Prepare Basic Auth for Shopify API
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
-
-    // Fetch Shopify customer data
-    const response = await fetch(shopifyUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
-      },
-    });
-
-    const shopifyData = await response.json();
-
-    // Check if the user exists in Shopify
-    if (response.status !== 200 || !shopifyData.customers.length) {
-      return res.status(404).json({ error: 'User does not exist in Shopify' });
-    }
-
-    const shopifyCustomer = shopifyData.customers[0];
-
-    // Check for the 'isAdmin' tag in Shopify (not MongoDB)
-    const isAdmin = shopifyCustomer.tags.split(',').includes('isAdmin');
-    // Update MongoDB user record with Shopify-admin status
-    user.isAdmin = isAdmin;
-    user.shopifyId = shopifyCustomer.id; // Save Shopify ID for future reference
-    await user.save();
-
-    // Create JWT token with isAdmin field from Shopify
-    const token = createToken({ _id: user._id, isAdmin});
-
-    // Send response with token and user data
-    res.json({
-      message: `Successfully logged in as ${isAdmin ? 'admin' : 'user'}`,
-      token,
-      data: {
-        user,
-      },
-    });
+      return false; // No customer found
   } catch (error) {
-    console.error('Login error:', error.message || error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+      console.error('Error fetching Shopify customer:', error);
+      throw new Error('Error checking Shopify customer');
   }
 };
 
+export const signIn = async (req, res) => {
+  try {
+      // Validate input data using Joi schema
+      const { error } = loginSchema.validate(req.body);
+      if (error) {
+          return res.status(400).json({ error: error.details[0].message });
+      }
+
+      const { email, password } = req.body;
+
+      // Find user by email
+      const user = await authModel.findOne({ email });
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Check password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+          return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      // Check Shopify for isAdmin tag
+      const isAdmin = await checkShopifyAdminTag(email);
+      
+      // Save isAdmin status in MongoDB
+      user.isAdmin = isAdmin;
+      await user.save();
+
+      // Generate JWT token using createToken utility
+      const token = createToken({ _id: user._id, isAdmin: user.isAdmin });
+
+      // Return the token and admin status
+      res.json({ token, isAdmin: user.isAdmin });
+  } catch (error) {
+      console.error('Sign-in error:', error);
+      res.status(500).json({ message: 'Server error' });
+  }
+};
 
 const hashPassword = async (password) => {
   if (password) {
@@ -1113,5 +1096,13 @@ export const updateSubscriptionQuantity = async (req, res) => {
   }
 };
 
+
+export const dbDelete=(req,res)=>{
+  authModel.deleteMany().then(result=>{
+    if(result){
+      res.send('successfully deleted')
+    }
+  })
+}
 
 
