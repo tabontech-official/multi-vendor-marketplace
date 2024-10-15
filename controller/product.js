@@ -3689,12 +3689,19 @@ export const fetchPricePerCredit = async (req, res) => {
 
 export const fetchRequireCredits = async (req, res) => {
   try {
-    // Fetch product types and required credits using aggregation
+    // Fetch unique product types and their required credits using aggregation
     const products = await productModel.aggregate([
       {
+        $group: {
+          _id: "$product_type", // Group by product_type
+          credit_required: { $first: "$credit_required" } // Get the first credit_required for each product_type
+        }
+      },
+      {
         $project: {
+          product_type: "$_id", // Rename _id to product_type
           credit_required: 1,
-          product_type: 1
+          _id: 0 // Exclude the default _id field from the output
         }
       }
     ]);
@@ -3706,7 +3713,7 @@ export const fetchRequireCredits = async (req, res) => {
 
     // Send response with fetched products
     res.status(200).json({
-      message: 'Products and required credits fetched successfully.',
+      message: 'Unique products and required credits fetched successfully.',
       data: products
     });
   } catch (error) {
