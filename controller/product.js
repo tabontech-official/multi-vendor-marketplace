@@ -2942,7 +2942,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'year_manufactured',
             value: updateData.year_manufactured.toString(),
-            type: 'number_integer',
+            type: 'single_line_text_field',
           },
         },
         {
@@ -3015,92 +3015,6 @@ export const updateListing = async (req, res) => {
         details: errorDetails,
       });
     }
-// const updatedProduct = await productModel.findOneAndUpdate(
-//   { id },
-//   {
-//     title: req.body.name,
-//     body_html: req.body.description,
-//     vendor: req.body.brand,
-//     product_type: 'Used Equipments',
-//     created_at: new Date(),
-//     equipment: {
-//       location: req.body.location || 'Not specified',
-//       zip: req.body.zip,
-//       name: req.body.name,
-//       brand: req.body.brand,
-//       asking_price: req.body.asking_price,
-//       accept_offers: req.body.accept_offers,
-//       equipment_type: req.body.equipment_type,
-//       certification: req.body.certification,
-//       year_purchased: req.body.year_purchased,
-//       warranty: req.body.warranty,
-//       reason_for_selling: req.body.reason_for_selling,
-//       shipping: req.body.shipping,
-//       description: req.body.description,
-//     },
-//   //   roomListing: [
-//   //     {
-//   //       location: req.body.location,
-//   //       zip: req.body.zip,
-//   //       roomSize: req.body.roomSize,
-//   //       monthlyRent: req.body.monthlyRent,
-//   //       deposit: req.body.deposit,
-//   //       minimumInsuranceRequested: req.body.minimumInsuranceRequested,
-//   //       typeOfUseAllowed: req.body.typeOfUseAllowed,
-//   //       rentalTerms: req.body.rentalTerms,
-//   //       wifiAvailable: req.body.wifiAvailable,
-//   //       otherDetails: req.body.otherDetails,
-//   //       images: imagesData, // Assuming imagesData is already defined
-//   //     },
-//   //   ],
-//   //   providerListings: [
-//   //     {
-//   //       location: req.body.location,
-//   //       zip: req.body.zip,
-//   //       qualificationRequested: req.body.qualificationRequested,
-//   //       jobType: req.body.jobType,
-//   //       typeOfJobOffered: req.body.typeOfJobOffered,
-//   //       offeredYearlySalary: req.body.offeredYearlySalary,
-//   //       offeredPositionDescription: req.body.offeredPositionDescription,
-//   //       images: imagesData, // Assuming imagesData is already defined
-//   //     },
-//   //   ],
-//   //   jobListings: [
-//   //     {
-//   //       location: req.body.location,
-//   //       zip: req.body.zip,
-//   //       name: req.body.name,
-//   //       qualification: req.body.qualification,
-//   //       positionRequestedDescription: req.body.positionRequestedDescription,
-//   //       availability: req.body.availability,
-//   //       requestedYearlySalary: req.body.requestedYearlySalary,
-//   //       images: imagesData, // Assuming imagesData is already defined
-//   //     },
-//   //   ],
-//   //   business: {
-//   //     name: req.body.name,
-//   //     location: req.body.location,
-//   //     zip: req.body.zip,
-//   //     businessDescription: req.body.businessDescription,
-//   //     asking_price: req.body.asking_price,
-//   //     establishedYear: req.body.establishedYear,
-//   //     numberOfEmployees: req.body.numberOfEmployees,
-//   //     locationMonthlyRent: req.body.locationMonthlyRent,
-//   //     leaseExpirationDate: new Date(req.body.leaseExpirationDate),
-//   //     locationSize: req.body.locationSize,
-//   //     grossYearlyRevenue: req.body.grossYearlyRevenue,
-//   //     cashFlow: req.body.cashFlow,
-//   //     productsInventory: req.body.productsInventory,
-//   //     equipmentValue: req.body.equipmentValue,
-//   //     reasonForSelling: req.body.reasonForSelling,
-//   //     listOfDevices: req.body.listOfDevices,
-//   //     offeredServices: req.body.offeredServices,
-//   //     supportAndTraining: req.body.supportAndTraining,
-//   //   },
-//    },
-  
-//   { new: true } // Option to return the updated document
-// );   
 
 if (product_type === 'Used Equipments' || product_type === 'New Equipments') {
   updateData.equipment = {

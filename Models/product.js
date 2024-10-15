@@ -144,6 +144,7 @@ const productSchema = new mongoose.Schema(
         experience: { type: Number },
         availability: { type: String },
         requestedYearlySalary: { type: Number },
+        availabilitydate:{ type: String },
         image: { type: String }, // URL to the uploaded image
       },
     ],
