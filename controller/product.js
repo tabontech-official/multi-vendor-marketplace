@@ -2748,28 +2748,34 @@ export const updateListing = async (req, res) => {
           },
         },
         {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'room_size',
-            value: updateData.roomSize.toString(),
-            type: 'number_integer',
-          },
+          namespace: 'fold_tech',
+          key: 'qualification_requested',
+          value: updateData.qualificationRequested,
+          type: 'single_line_text_field',
         },
         {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'monthly_rent',
-            value: updateData.monthlyRent.toString(),
-            type: 'number_integer',
-          },
+          namespace: 'fold_tech',
+          key: 'job_type',
+          value: updateData.jobType,
+          type: 'single_line_text_field',
         },
         {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'deposit',
-            value: updateData.deposit.toString(),
-            type: 'number_integer',
-          },
+          namespace: 'fold_tech',
+          key: 'type_of_job_offered',
+          value: updateData.typeOfJobOffered,
+          type: 'single_line_text_field',
+        },
+        {
+          namespace: 'fold_tech',
+          key: 'offered_yearly_salary',
+          value: updateData.offeredYearlySalary.toString(),
+          type: 'number_integer',
+        },
+        {
+          namespace: 'fold_tech',
+          key: 'offered_position_description',
+          value: updateData.offeredPositionDescription,
+          type: 'single_line_text_field',
         },
         {
           metafield: {
