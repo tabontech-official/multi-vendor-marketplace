@@ -2884,7 +2884,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'userinformation',
-            value: `${updateData.username} | ${updateData.email} | ${updateData.phoneNumber} | ${updateData.city} - ${updateData.country}`,
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
             type: 'single_line_text_field',
           },
         },
