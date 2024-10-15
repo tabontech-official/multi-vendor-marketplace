@@ -103,7 +103,7 @@ const productSchema = new mongoose.Schema(
       accept_offers: { type: Boolean },
       equipment_type: { type: String },
       certification: { type: String },
-      year_purchased: { type: Number },
+      year_purchased: { type: String },
       warranty: { type: String },
       reason_for_selling: { type: String },
       shipping: { type: String },
@@ -144,7 +144,6 @@ const productSchema = new mongoose.Schema(
         experience: { type: Number },
         availability: { type: String },
         requestedYearlySalary: { type: Number },
-        availabilitydate:{ type: String },
         image: { type: String }, // URL to the uploaded image
       },
     ],
