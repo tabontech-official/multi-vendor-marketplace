@@ -308,7 +308,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'accept_offers',
-          value: accept_offers ? 'true' : 'false',
+          value: accept_offers,
           type: 'boolean',
         },
       },
@@ -2452,7 +2452,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'accept_offers',
-            value: updateData.accept_offers ? 'true' : 'false',
+            value: updateData.accept_offers,
             type: 'boolean',
           },
         },
