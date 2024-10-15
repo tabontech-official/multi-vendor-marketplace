@@ -3006,7 +3006,7 @@ export const updateListing = async (req, res) => {
       product: {
         title: `${updateData.name || updateData.qualificationRequested} | ${country} , ${updateData.location} , ${updateData.zip}`,
         body_html: updateData.description,
-        vendor: updateData.brand,
+        vendor: updateData.brand || updateData.location,
         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
         images: product.images, // Attach updated images
       },
