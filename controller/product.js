@@ -3265,7 +3265,7 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    const { userId } = localProduct;
+    const { userId, product_type } = localProduct;
 
     // Fetch user from MongoDB
     const user = await authModel.findById(userId);
@@ -3274,14 +3274,24 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check subscription quantity
+    const productConfig = await productModel.findOne({ product_type });
+    if (!productConfig) {
+      return res.status(404).json({ error: 'Product configuration not found for this product type.' });
+    }
+
+    // Check subscription credits
     if (!user.subscription || user.subscription.quantity <= 0) {
+      return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+    }
+
+    if (user.subscription.quantity < productConfig.credit_required) {
       return res.status(400).json({
-        error: 'Insufficient subscription credits to publish product.',
+        error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
       });
     }
 
     // Decrement the subscription quantity
-    user.subscription.quantity -= 1;
+    user.subscription.quantity -= productConfig.credit_required;
     await user.save();
 
     // Update product status in Shopify
