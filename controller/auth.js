@@ -162,11 +162,9 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-
 const checkShopifyAdminTag = async (email) => {
   try {
-      const response = await axios.get(`https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`);
+      const response = await axios.get(`https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_API_PASSWORD}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`);
       const customers = response.data.customers;
 
       if (customers.length > 0) {
@@ -200,7 +198,7 @@ export const signIn = async (req, res) => {
       // Check password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-          return res.status(401).json({ message: 'Invalid credentials' });
+          return res.status(401).json({ message: 'Invalid password' });
       }
 
       // Check Shopify for isAdmin tag
@@ -220,6 +218,7 @@ export const signIn = async (req, res) => {
       res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 const hashPassword = async (password) => {
   if (password) {
