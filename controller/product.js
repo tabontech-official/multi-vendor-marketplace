@@ -2820,7 +2820,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'room_size',
-            value: updateData.roomSize.toString(),
+            value: updateData.roomSize,
             type: 'number_integer',
           },
         },
@@ -2828,7 +2828,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'monthly_rent',
-            value: updateData.monthlyRent.toString(),
+            value: updateData.monthlyRent,
             type: 'number_integer',
           },
         },
@@ -2836,7 +2836,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'deposit',
-            value: updateData.deposit.toString(),
+            value: updateData.deposit,
             type: 'number_integer',
           },
         },
@@ -2844,7 +2844,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'minimum_insurance_requested',
-            value: updateData.minimumInsuranceRequested.toString(),
+            value: updateData.minimumInsuranceRequested,
             type: 'number_integer',
           },
         },
@@ -2868,7 +2868,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'wifi_available',
-            value: updateData.wifiAvailable.toString(),
+            value: updateData.wifiAvailable,
             type: 'boolean',
           },
         },
@@ -3129,7 +3129,7 @@ if (product_type === 'Providers Available') {
 // Set common fields for all product types
 const commonFields = {
   title: req.body.name || req.body.qualificationRequested,
-  body_html: req.body.description || req.body.offeredPositionDescription,
+  body_html: req.body.description || req.body.offeredPositionDescription || req.body.otherDetails,
   vendor: req.body.brand,
   product_type,
   created_at: new Date(),
