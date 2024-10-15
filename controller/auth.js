@@ -164,8 +164,25 @@ export const signUp = async (req, res) => {
 };
 const checkShopifyAdminTag = async (email) => {
   try {
-      const response = await axios.get(`https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_API_PASSWORD}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`);
-      const customers = response.data.customers;
+      // Encode the API key and access token in base64 for Basic Auth
+      const credentials = `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`;
+      const base64Credentials = Buffer.from(credentials).toString('base64');
+
+      const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`, {
+          method: 'GET',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${base64Credentials}`, // Use Basic Auth
+          },
+      });
+
+      // Check if the response is OK (status in the range 200-299)
+      if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const customers = data.customers;
 
       if (customers.length > 0) {
           const tags = customers[0].tags.split(','); // Split tags into an array
