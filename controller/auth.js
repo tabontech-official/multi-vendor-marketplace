@@ -962,6 +962,7 @@ export const deleteUser = async (req, res) => {
   try {
     // Delete from MongoDB
     await authModel.deleteOne({ shopifyId: customerId });
+    console.log("delete by shopify ")
     res.status(200).send('Customer deleted successfully.');
   } catch (error) {
     console.error('Error deleting customer from MongoDB:', error);
