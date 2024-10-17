@@ -3033,7 +3033,7 @@ export const updateListing = async (req, res) => {
         details: errorDetails,
       });
     }
-
+    const currentStatus = product.status;
 if (product_type === 'Used Equipments' || product_type === 'New Equipments') {
   updateData.equipment = {
     location: req.body.location,
@@ -3132,6 +3132,7 @@ const commonFields = {
   body_html: req.body.description || req.body.offeredPositionDescription || req.body.otherDetails,
   vendor: req.body.brand,
   product_type,
+  status:currentStatus,
   created_at: new Date(),
 };
 
