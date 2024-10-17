@@ -3005,7 +3005,7 @@ export const updateListing = async (req, res) => {
     // Prepare Shopify payload, including user info
     const shopifyPayload = {
       product: {
-        title: `${updateData.name || updateData.qualificationRequested} | ${country} , ${updateData.location} , ${updateData.zip}`,
+        title: `${updateData.name || updateData.qualificationRequested || updateData.location} | ${country} , ${updateData.location} , ${updateData.zip}`,
         body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails,
         vendor: updateData.brand || updateData.location,
         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
