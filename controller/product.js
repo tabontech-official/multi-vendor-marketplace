@@ -1088,7 +1088,7 @@ export const addNewBusiness = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'lease_expiration_date',
-        value: new Date(leaseExpirationDate).toISOString(),
+        value: leaseExpirationDate,
         type: 'single_line_text_field',
       },
       {
