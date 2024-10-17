@@ -2444,7 +2444,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'asking_price',
-            value: updateData.asking_price.toString(),
+            value: updateData.asking_price,
             type: 'single_line_text_field',
           },
         },
@@ -2476,7 +2476,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'year_purchased',
-            value: updateData.year_purchased.toString(),
+            value: updateData.year_purchased,
             type: 'single_line_text_field',
           },
         },
