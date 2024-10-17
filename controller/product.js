@@ -2020,7 +2020,7 @@ export const addRoomListing = async (req, res) => {
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${country} | ${location}, ${zip}`,
+        title: `${typeOfUseAllowed} | ${location}, ${country} ${zip}`,
         body_html: otherDetails,
         vendor: location,
         product_type: 'Spa Room For Rent',
@@ -3005,7 +3005,7 @@ export const updateListing = async (req, res) => {
     // Prepare Shopify payload, including user info
     const shopifyPayload = {
       product: {
-        title: `${updateData.name || updateData.qualificationRequested || country} | ${country} , ${updateData.location} , ${updateData.zip}`,
+        title: `${updateData.name || updateData.qualificationRequested || updateData.typeOfUseAllowed} | ${country} , ${updateData.location} , ${updateData.zip}`,
         body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails,
         vendor: updateData.brand || updateData.location,
         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
