@@ -3280,9 +3280,9 @@ export const publishProduct = async (req, res) => {
     }
 
     // Check subscription credits
-    if (!user.subscription || user.subscription.quantity < 0) {
-      return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-    }
+    // if (!user.subscription || user.subscription.quantity < 0) {
+    //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+    // }
 
     if (user.subscription.quantity < productConfig.credit_required) {
       return res.status(400).json({
@@ -3329,8 +3329,7 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    // Schedule the unpublish task
-    scheduleUnpublish(productId, userId, expiresAt);
+
 
     // Send response
     return res.status(200).json({
