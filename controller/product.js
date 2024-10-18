@@ -1698,9 +1698,7 @@ export const addNewProviderListing = async (req, res) => {
         .status(400)
         .json({ error: 'Offered position description is required.' });
     }
-    if (!req.files?.images || req.files.images.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
-    }
+   
     // Continue with any additional field validations as needed
 
     // Step 1: Create Product in Shopify
@@ -1782,37 +1780,37 @@ export const addNewProviderListing = async (req, res) => {
     }
 
     // Step 3: Upload Images to Shopify if provided
-    const imagesData = [];
-    if (Array.isArray(images) && images.length > 0) {
-      for (const image of images) {
-        const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
+    // const imagesData = [];
+    // if (Array.isArray(images) && images.length > 0) {
+    //   for (const image of images) {
+    //     const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
 
-        const imagePayload = {
-          image: {
-            src: cloudinaryImageUrl,
-          },
-        };
+    //     const imagePayload = {
+    //       image: {
+    //         src: cloudinaryImageUrl,
+    //       },
+    //     };
 
-        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+    //     const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    //     const imageResponse = await shopifyRequest(
+    //       imageUrl,
+    //       'POST',
+    //       imagePayload
+    //     );
 
-        if (imageResponse && imageResponse.image) {
-          imagesData.push({
-            id: imageResponse.image.id,
-            product_id: productId,
-            position: imageResponse.image.position,
-            alt: 'Provider Needed',
-            width: imageResponse.image.width,
-            height: imageResponse.image.height,
-            src: imageResponse.image.src,
-          });
-        }
-      }
-    }
+    //     if (imageResponse && imageResponse.image) {
+    //       imagesData.push({
+    //         id: imageResponse.image.id,
+    //         product_id: productId,
+    //         position: imageResponse.image.position,
+    //         alt: 'Provider Needed',
+    //         width: imageResponse.image.width,
+    //         height: imageResponse.image.height,
+    //         src: imageResponse.image.src,
+    //       });
+    //     }
+    //   }
+    // }
 
     // Step 4: Save Provider Listing to MongoDB
     const newProviderListing = new productModel({
@@ -1823,7 +1821,7 @@ export const addNewProviderListing = async (req, res) => {
       product_type: 'Provider Needed',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imagesData,
+      // images: imagesData,
       providerListings: [
         {
           location,
@@ -1833,7 +1831,7 @@ export const addNewProviderListing = async (req, res) => {
           typeOfJobOffered,
           offeredYearlySalary,
           offeredPositionDescription,
-          images: imagesData,
+          // images: imagesData,
         },
       ],
       userId,
