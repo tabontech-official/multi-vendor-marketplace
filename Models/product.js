@@ -79,6 +79,11 @@ const productSchema = new mongoose.Schema(
         src: { type: String },
       },
     ],
+    files:[
+      {
+        type:String
+      }
+    ],
 
     metafields: [
       {

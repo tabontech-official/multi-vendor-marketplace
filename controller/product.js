@@ -4,6 +4,7 @@ import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
 import { BuyCreditModel } from '../Models/buyCredit.js';
 
+
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
   try {
@@ -76,6 +77,7 @@ const shopifyRequest = async (url, method, body) => {
     'base64'
   );
 
+  
   const response = await fetch(url, {
     method,
     headers: {
@@ -92,6 +94,7 @@ const shopifyRequest = async (url, method, body) => {
 
   return response.json();
 };
+
 
 export const addProduct = async (req, res) => {
   try {
@@ -1330,6 +1333,310 @@ export const addNewBusiness = async (req, res) => {
 };
 
 
+// export const addNewJobListing = async (req, res) => {
+//   let productId; // Declare productId outside try block for access in catch
+//   try {
+//     // Log incoming request data
+//     console.log('Request Body:', req.body);
+//     console.log('Uploaded Files:', req.files);
+
+//     // Extract job listing details from request body
+//     const {
+//       location,
+//       zip,
+//       name,
+//       qualification,
+//       positionRequestedDescription,
+//       availability,
+//       requestedYearlySalary,
+//       userId,
+//       status,
+//     } = req.body;
+
+//     // Handle file upload
+//     const images = req.files?.images || []; // Ensure we have an array of images
+//     const productStatus = status === 'publish' ? 'active' : 'draft';
+//     const user = await authModel.findById(userId);
+//     if (!user) return res.status(404).json({ error: 'User not found.' });
+
+//     const username = user.userName;
+//     const phoneNumber = user.phoneNumber;
+//     const country = user.country;
+//     const city = user.city;
+//     const email = user.email;
+
+//     // Validate required field
+//     if (!zip) {
+//       return res.status(400).json({ error: 'Zipcode is required.' });
+//     }
+
+//     if (!name) {
+//       return res.status(400).json({ error: 'Business name is required.' });
+//     }
+
+//     if (!location) {
+//       return res.status(400).json({ error: 'Location is required.' });
+//     }
+
+//     if (!qualification) {
+//       return res.status(400).json({ error: 'Qualification is required.' });
+//     }
+
+//     if (!positionRequestedDescription) {
+//       return res
+//         .status(400)
+//         .json({ error: 'Position requested description is required.' });
+//     }
+
+//     if (!availability) {
+//       return res.status(400).json({ error: 'Availability is required.' });
+//     }
+
+//     if (!requestedYearlySalary) {
+//       return res
+//         .status(400)
+//         .json({ error: 'Requested yearly salary is required.' });
+//     }
+//     if (!req.files?.images || req.files.images.length === 0) {
+//       return res.status(400).json({ error: 'At least one image is required.' });
+//     }
+//     // Continue with any additional field validations as needed
+
+//     // Step 1: Create Product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: `${name} | ${country} , ${location} , ${zip}`,
+//         body_html: positionRequestedDescription,
+//         vendor: location,
+//         product_type: 'Providers Available',
+//         variants: [{ price: requestedYearlySalary.toString() }],
+//         status: productStatus,
+//         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
+//       },
+//     };
+
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+//     const productResponse = await shopifyRequest(
+//       shopifyUrl,
+//       'POST',
+//       shopifyPayload
+//     );
+//     productId = productResponse.product.id; // Assign productId
+
+//     // Step 2: Create Structured Metafields for the Job Listing Details
+//     const metafieldsPayload = [
+//       {
+//         namespace: 'fold_tech',
+//         key: 'zip',
+//         value: zip || 'Not specified',
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'location',
+//         value: location,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'name',
+//         value: name,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'qualification',
+//         value: qualification,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'position_requested_description',
+//         value: positionRequestedDescription,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'availability',
+//         value: availability,
+//         type: 'single_line_text_field',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'requested_yearly_salary',
+//         value: requestedYearlySalary.toString(),
+//         type: 'number_decimal',
+//       },
+//       {
+//         namespace: 'fold_tech',
+//         key: 'userinformation',
+//         value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         type: 'single_line_text_field',
+//       },
+//     ];
+
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
+//     }
+
+//     // Step 3: Upload Images to Shopify if provided
+//     const imagesData = [];
+//     if (Array.isArray(images) && images.length > 0) {
+//       for (const image of images) {
+//         const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
+
+//         const imagePayload = {
+//           image: {
+//             src: cloudinaryImageUrl,
+//           },
+//         };
+
+//         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+//         const imageResponse = await shopifyRequest(
+//           imageUrl,
+//           'POST',
+//           imagePayload
+//         );
+
+//         if (imageResponse && imageResponse.image) {
+//           imagesData.push({
+//             id: imageResponse.image.id,
+//             product_id: productId,
+//             position: imageResponse.image.position,
+//             alt: 'Job Listing Image',
+//             width: imageResponse.image.width,
+//             height: imageResponse.image.height,
+//             src: imageResponse.image.src,
+//           });
+//         }
+//       }
+//     }
+
+//     // Step 4: Save Product to MongoDB
+//     const newJobListing = new productModel({
+//       id: productId,
+//       title: name,
+//       body_html: positionRequestedDescription,
+//       vendor: location,
+//       product_type: 'Providers Available',
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       images: imagesData,
+//       jobListings: [
+//         {
+//           location,
+//           zip,
+//           name,
+//           qualification,
+//           positionRequestedDescription,
+//           availability,
+//           requestedYearlySalary,
+//           images: imagesData,
+//         },
+//       ],
+//       userId,
+//       status: productStatus,
+//     });
+
+//     await newJobListing.save();
+
+//     // Subscription management for active listings
+//     if (status === 'active') {
+//       const user = await authModel.findById(userId);
+//       if (!user) return res.status(404).json({ error: 'User not found.' });
+
+//       // Check subscription quantity
+//       const productConfig = await productModel.findOne({ product_type: 'Providers Available' });
+//       if (!productConfig) {
+//         return res.status(404).json({ error: 'Product configuration not found.' });
+//       }
+
+//       // if (!user.subscription || user.subscription.quantity <= 0) {
+//       //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+//       // }
+
+//       if (user.subscription.quantity < productConfig.credit_required) {
+//         return res.status(400).json({
+//           error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
+//         });
+//       }
+
+//       // Decrement the subscription quantity
+//       user.subscription.quantity -= productConfig.credit_required;
+//       await user.save();
+
+//       // Set expiration date to 30 days from now
+//       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+//       // Step 6: Update product status in Shopify
+//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//       const shopifyUpdatePayload = {
+//         product: {
+//           id: productId,
+//           status: 'active',
+//           published_scope: 'global',
+//         },
+//       };
+
+//       const shopifyResponse = await shopifyRequest(
+//         updateShopifyUrl,
+//         'PUT',
+//         shopifyUpdatePayload
+//       );
+//       if (!shopifyResponse.product) {
+//         return res
+//           .status(400)
+//           .json({ error: 'Failed to update product status in Shopify.' });
+//       }
+
+//       // Step 7: Update product status in MongoDB
+//       const updatedProduct = await productModel.findOneAndUpdate(
+//         { id: productId },
+//         { status: 'active', expiresAt },
+//         { new: true }
+//       );
+
+//       if (!updatedProduct) {
+//         return res
+//           .status(404)
+//           .json({ error: 'Product not found in database.' });
+//       }
+
+//       // Schedule the unpublish task
+
+//       // Send a successful response
+//       return res.status(201).json({
+//         message: 'Product successfully created and published.',
+//         product: updatedProduct,
+//         expiresAt,
+//       });
+//     }
+
+//     // If the product is saved as draft
+//     res.status(201).json({
+//       message: 'Product successfully created and saved as draft.',
+//       product: newJobListing,
+//       expiresAt: null, // No expiration date for draft
+//     });
+//   } catch (error) {
+//     console.error('Error in addNewEquipments function:', error);
+
+//     // Attempt to delete the product from Shopify if it was created
+//     if (productId) {
+//       try {
+//         const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//         await shopifyRequest(deleteShopifyUrl, 'DELETE');
+//       } catch (deleteError) {
+//         console.error('Error deleting product from Shopify:', deleteError);
+//       }
+//     }
+
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
 export const addNewJobListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -1351,7 +1658,7 @@ export const addNewJobListing = async (req, res) => {
     } = req.body;
 
     // Handle file upload
-    const images = req.files?.images || []; // Ensure we have an array of images
+    const files = req.files?.images || []; // Ensure we have an array of files
     const productStatus = status === 'publish' ? 'active' : 'draft';
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
@@ -1363,41 +1670,14 @@ export const addNewJobListing = async (req, res) => {
     const email = user.email;
 
     // Validate required field
-    if (!zip) {
-      return res.status(400).json({ error: 'Zipcode is required.' });
-    }
-
-    if (!name) {
-      return res.status(400).json({ error: 'Business name is required.' });
-    }
-
-    if (!location) {
-      return res.status(400).json({ error: 'Location is required.' });
-    }
-
-    if (!qualification) {
-      return res.status(400).json({ error: 'Qualification is required.' });
-    }
-
-    if (!positionRequestedDescription) {
-      return res
-        .status(400)
-        .json({ error: 'Position requested description is required.' });
-    }
-
-    if (!availability) {
-      return res.status(400).json({ error: 'Availability is required.' });
-    }
-
-    if (!requestedYearlySalary) {
-      return res
-        .status(400)
-        .json({ error: 'Requested yearly salary is required.' });
-    }
-    if (!req.files?.images || req.files.images.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
-    }
-    // Continue with any additional field validations as needed
+    if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
+    if (!name) return res.status(400).json({ error: 'Business name is required.' });
+    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!qualification) return res.status(400).json({ error: 'Qualification is required.' });
+    if (!positionRequestedDescription) return res.status(400).json({ error: 'Position requested description is required.' });
+    if (!availability) return res.status(400).json({ error: 'Availability is required.' });
+    if (!requestedYearlySalary) return res.status(400).json({ error: 'Requested yearly salary is required.' });
+    if (files.length === 0) return res.status(400).json({ error: 'At least one file is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -1413,11 +1693,7 @@ export const addNewJobListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Job Listing Details
@@ -1472,17 +1748,15 @@ export const addNewJobListing = async (req, res) => {
       },
     ];
 
-    for (const metafield of metafieldsPayload) {
-      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-      await shopifyRequest(metafieldsUrl, 'POST', { metafield });
-    }
-
-    // Step 3: Upload Images to Shopify if provided
+    // Step 3: Process Files for Images and PDFs
     const imagesData = [];
-    if (Array.isArray(images) && images.length > 0) {
-      for (const image of images) {
-        const cloudinaryImageUrl = image?.path; // Ensure we use the correct path
+    const pdfsData = [];
 
+    for (const file of files) {
+      const cloudinaryImageUrl = file?.path; // Ensure we use the correct path
+
+      if (file.mimetype.startsWith('image/')) {
+        // If the file is an image
         const imagePayload = {
           image: {
             src: cloudinaryImageUrl,
@@ -1490,11 +1764,7 @@ export const addNewJobListing = async (req, res) => {
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -1507,7 +1777,29 @@ export const addNewJobListing = async (req, res) => {
             src: imageResponse.image.src,
           });
         }
+      } else if (file.mimetype === 'application/pdf') {
+        // If the file is a PDF
+        pdfsData.push({
+          file_name: file.originalname,
+          file_url: cloudinaryImageUrl,
+        });
       }
+    }
+
+    // Add PDFs to the metafieldsPayload
+    for (const pdf of pdfsData) {
+      metafieldsPayload.push({
+        namespace: 'fold_tech',
+        key: 'pdf',
+        value: pdf.file_url,
+        type: 'single_line_text_field',
+      });
+    }
+
+    // Create Metafields
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+      await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
     // Step 4: Save Product to MongoDB
@@ -1549,10 +1841,6 @@ export const addNewJobListing = async (req, res) => {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
 
-      // if (!user.subscription || user.subscription.quantity <= 0) {
-      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-      // }
-
       if (user.subscription.quantity < productConfig.credit_required) {
         return res.status(400).json({
           error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
@@ -1576,15 +1864,9 @@ export const addNewJobListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(
-        updateShopifyUrl,
-        'PUT',
-        shopifyUpdatePayload
-      );
+      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
       if (!shopifyResponse.product) {
-        return res
-          .status(400)
-          .json({ error: 'Failed to update product status in Shopify.' });
+        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -1595,12 +1877,8 @@ export const addNewJobListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res
-          .status(404)
-          .json({ error: 'Product not found in database.' });
+        return res.status(404).json({ error: 'Product not found in database.' });
       }
-
-      // Schedule the unpublish task
 
       // Send a successful response
       return res.status(201).json({
@@ -1617,7 +1895,7 @@ export const addNewJobListing = async (req, res) => {
       expiresAt: null, // No expiration date for draft
     });
   } catch (error) {
-    console.error('Error in addNewEquipments function:', error);
+    console.error('Error in addNewJobListing function:', error);
 
     // Attempt to delete the product from Shopify if it was created
     if (productId) {

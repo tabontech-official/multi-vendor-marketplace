@@ -20,4 +20,4 @@ cloudinary.v2.config({
   export const upload = multer({ storage })
   
 
-export  const cpUpload = upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 }])
+export  const cpUpload = upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 } ,{name:'files',maxCount:1}])
