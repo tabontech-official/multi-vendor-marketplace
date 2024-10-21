@@ -3272,6 +3272,65 @@ export const updateListing = async (req, res) => {
           },
         },
       ];
+    }else if (product_type === 'Looking For') {
+      metafieldsPayload = [
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'zip',
+            value: updateData.zip || 'Not specified',
+            type: 'single_line_text_field',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'name',
+            value: updateData.name,
+            type: 'single_line_text_field',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'description',
+            value: updateData.description,
+            type: 'single_line_text_field',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'location',
+            value: updateData.location || 'Unknown',
+            type: 'single_line_text_field',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'brand',
+            value: updateData.brand,
+            type: 'single_line_text_field',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'sale_price',
+            value: updateData.sale_price.toString(),
+            type: 'number_integer',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'userinformation',
+            value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+            type: 'single_line_text_field',
+          },
+        },
+      ];
     }
 
     for (const metafield of metafieldsPayload) {
@@ -3310,7 +3369,7 @@ export const updateListing = async (req, res) => {
       });
     }
     const currentStatus = product.status;
-if (product_type === 'Used Equipments' || product_type === 'New Equipments') {
+if (product_type === 'Used Equipments' || product_type === 'New Equipments' || product_type === 'Looking For' ) {
   updateData.equipment = {
     location: req.body.location,
     zip: req.body.zip,
