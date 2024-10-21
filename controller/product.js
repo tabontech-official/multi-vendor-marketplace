@@ -4148,7 +4148,7 @@ export const lookingFor = async (req, res) => {
           position: imageResponse.image.position,
           created_at: imageResponse.image.created_at,
           updated_at: imageResponse.image.updated_at,
-          alt: 'Equipment Image',
+          alt: 'Looking Image',
           width: imageResponse.image.width,
           height: imageResponse.image.height,
           src: imageResponse.image.src,
@@ -4191,7 +4191,7 @@ export const lookingFor = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'New Equipments' });
+      const productConfig = await productModel.findOne({ product_type: 'Looking For' });
       if (!productConfig) {
         return res.status(404).json({ error: 'Product configuration not found.' });
       }
