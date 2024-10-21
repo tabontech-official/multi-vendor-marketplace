@@ -20,7 +20,8 @@ import {
   updateProductPrice,
   updateNewPrice,
   fetchPricePerCredit,
-  fetchRequireCredits
+  fetchRequireCredits,
+  lookingFor
 } from '../controller/product.js';
 import { upload, cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -49,4 +50,5 @@ productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.delete('/', deletAllProduct);
 productRouter.put('/credits', updateCredits);
 productRouter.get('/fetchRequireCredits',fetchRequireCredits)
+productRouter.post('/lookingFor',cpUpload,lookingFor)
 export default productRouter;

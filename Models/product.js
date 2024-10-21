@@ -193,7 +193,15 @@ const productSchema = new mongoose.Schema(
     credit_required: { type: Number },
     buy_credits:{
       price:Number
-    }
+    },
+    looking: {
+      location: { type: String },
+      zip: { type: Number },
+      name: { type: String },
+      brand: { type: String },
+      sale_price: { type: Number },
+      description: { type: String },
+    },
   },
   {
     timestamps: true,
