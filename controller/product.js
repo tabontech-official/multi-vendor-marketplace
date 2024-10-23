@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
 import { BuyCreditModel } from '../Models/buyCredit.js';
-
+import fs from 'fs'
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -95,8 +95,7 @@ const shopifyRequest = async (url, method, body) => {
   return response.json();
 };
 
-
-export const addProduct = async (req, res) => {
+export  const addProduct = async (req, res) => {
   try {
     const { title, body_html, vendor, product_type, price } = req.body;
     const image = req.file; // Handle file upload
@@ -1910,7 +1909,7 @@ export const addNewJobListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
+ 
 export const addNewProviderListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -3318,7 +3317,7 @@ export const updateListing = async (req, res) => {
           metafield: {
             namespace: 'fold_tech',
             key: 'sale_price',
-            value: updateData.sale_price.toString(),
+            value: updateData.sale_price,
             type: 'number_integer',
           },
         },
@@ -3369,7 +3368,7 @@ export const updateListing = async (req, res) => {
       });
     }
     const currentStatus = product.status;
-if (product_type === 'Used Equipments' || product_type === 'New Equipments' || product_type === 'Looking For' ) {
+if (product_type === 'Used Equipments' || product_type === 'New Equipments' ) {
   updateData.equipment = {
     location: req.body.location,
     zip: req.body.zip,
@@ -3460,7 +3459,17 @@ if (product_type === 'Providers Available') {
     },
   ];
 }
-
+if (product_type === 'Looking For') {
+  updateData.looking = {
+    name: req.body.name,
+    location: req.body.location,
+    zip: req.body.zip,
+    brand: req.body.brand,
+    sale_price: req.body.sale_price,
+    description: req.body.description,
+    images:imagesData
+  };
+}
 // Set common fields for all product types
 const commonFields = {
   title: req.body.name || req.body.qualificationRequested,
@@ -4339,3 +4348,18 @@ export const lookingFor = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+export const getAllProductData=async(req,res)=>{
+  try {
+    await productModel.find().then(result=>{
+      if(result){
+        res.status(200).send(result)
+      }else {
+        res.status(400).send('unable to fetch')
+      }
+    })
+  } catch (error) {
+    res.status(error.message)
+  }
+}

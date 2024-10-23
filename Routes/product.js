@@ -21,7 +21,8 @@ import {
   updateNewPrice,
   fetchPricePerCredit,
   fetchRequireCredits,
-  lookingFor
+  lookingFor,
+  getAllProductData
 } from '../controller/product.js';
 import { upload, cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -40,6 +41,7 @@ productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/webhook/product/update', productUpdate);
 productRouter.get('/search/:userId', verifyShopifyWebhook, getSearchProduct);
 productRouter.get('/getProduct/:userId', getProduct);
+productRouter.get('/getAllData',getAllProductData)
 productRouter.put('/updateListing/:id', cpUpload, updateListing);
 productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);

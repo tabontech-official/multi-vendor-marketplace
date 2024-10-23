@@ -1122,3 +1122,16 @@ export const dbDelete=(req,res)=>{
 }
 
 
+export const getAllUsersData=async(req,res)=>{
+try {
+  await authModel.find().then(result=>{
+    if(result){
+      res.status(200).send(result)
+    }else{
+      res.status(400).send('unable to fetch')
+    }
+  })
+} catch (error) {
+  res.send(error.message)
+}
+}
