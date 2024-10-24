@@ -4350,18 +4350,45 @@ export const lookingFor = async (req, res) => {
 };
 
 
-export const getAllProductData=async(req,res)=>{
+// export const getAllProductData=async(req,res)=>{
+//   try {
+//     await productModel.find().then(result=>{
+//       if(result){
+//         res.status(200).send({
+//           products:result
+//         })
+//       }else {
+//         res.status(400).send('unable to fetch')
+//       }
+//     })
+//   } catch (error) {
+//     res.status(error.message)
+//   }
+// }
+
+export const getAllProductData = async (req, res) => {
+  const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
+  const limit = parseInt(req.query.limit) || 10; // Default to 10 products per page
+
   try {
-    await productModel.find().then(result=>{
-      if(result){
-        res.status(200).send({
-          products:result
-        })
-      }else {
-        res.status(400).send('unable to fetch')
-      }
-    })
+    const products = await productModel
+      .find()
+      .skip((page - 1) * limit) // Skip products based on the page number
+      .limit(limit); // Limit the number of products returned
+
+    const totalProducts = await productModel.countDocuments(); // Get the total number of products
+
+    if (products) {
+      res.status(200).send({
+        products,
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts
+      });
+    } else {
+      res.status(400).send('Unable to fetch products');
+    }
   } catch (error) {
-    res.status(error.message)
+    res.status(500).send({ error: error.message });
   }
-}
+};
