@@ -4354,7 +4354,9 @@ export const getAllProductData=async(req,res)=>{
   try {
     await productModel.find().then(result=>{
       if(result){
-        res.status(200).send(result)
+        res.status(200).send({
+          products:result
+        })
       }else {
         res.status(400).send('unable to fetch')
       }
