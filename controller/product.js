@@ -2546,6 +2546,38 @@ export const addRoomListing = async (req, res) => {
 };
 
 
+// export const getProduct = async (req, res) => {
+//   try {
+//     const userId = req.params.userId;
+
+//     // Validate userId (basic check, you can enhance this)
+//     if (!userId) {
+//       return res.status(400).json({ error: 'userId is required.' });
+//     }
+
+//     // Find products by userId
+//     const products = await productModel.find({ userId: userId });
+
+//     // Check if products were found
+//     if (products.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: 'No products found for this user.' });
+//     }
+
+//     // Send the found products as a response
+//     res.status(200).json({ products });
+//   } catch (error) {
+//     console.error('Error in getProductsByUserId function:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+
+
+// get product by search
+
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -2555,25 +2587,39 @@ export const getProduct = async (req, res) => {
       return res.status(400).json({ error: 'userId is required.' });
     }
 
-    // Find products by userId
-    const products = await productModel.find({ userId: userId });
+    // Pagination setup
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default to 10 products per page
+    const skip = (page - 1) * limit; // Number of items to skip
+
+    // Find products by userId with pagination
+    const products = await productModel
+      .find({ userId: userId })
+      .skip(skip)
+      .limit(limit);
+
+    // Get the total number of products for the user
+    const totalProducts = await productModel.countDocuments({ userId: userId });
 
     // Check if products were found
     if (products.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No products found for this user.' });
+      return res.status(404).json({ message: 'No products found for this user.' });
     }
 
-    // Send the found products as a response
-    res.status(200).json({ products });
+    // Send the paginated products as a response
+    res.status(200).json({
+      products,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+    });
   } catch (error) {
     console.error('Error in getProductsByUserId function:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// get product by search
+
 export const getSearchProduct = async (req, res) => {
   const { query } = req.query; // Get search query from query parameters
   const { userId } = req.params; // Get user ID from URL parameters
