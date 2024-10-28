@@ -1653,6 +1653,7 @@ export const addNewJobListing = async (req, res) => {
       availability,
       requestedYearlySalary,
       userId,
+      availableToWorkAs,
       status,
     } = req.body;
 
@@ -1675,7 +1676,7 @@ export const addNewJobListing = async (req, res) => {
     if (!qualification) return res.status(400).json({ error: 'Qualification is required.' });
     if (!positionRequestedDescription) return res.status(400).json({ error: 'Position requested description is required.' });
     if (!availability) return res.status(400).json({ error: 'Availability is required.' });
-    // if (!requestedYearlySalary) return res.status(400).json({ error: 'Requested yearly salary is required.' });
+    if (!availableToWorkAs) return res.status(400).json({ error: 'available To Work As is required.' });
     if (files.length === 0) return res.status(400).json({ error: 'At least one file is required.' });
 
     // Step 1: Create Product in Shopify
@@ -1713,6 +1714,12 @@ export const addNewJobListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'name',
         value: name,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'availableToWorkAs',
+        value: availableToWorkAs,
         type: 'single_line_text_field',
       },
       {
@@ -1820,6 +1827,7 @@ export const addNewJobListing = async (req, res) => {
           positionRequestedDescription,
           availability,
           requestedYearlySalary,
+          availableToWorkAs,
           images: imagesData,
         },
       ],
