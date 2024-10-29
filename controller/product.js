@@ -4,6 +4,7 @@ import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
 import { BuyCreditModel } from '../Models/buyCredit.js';
 import fs from 'fs'
+import { listingModel } from '../Models/Listing.js';
 
 //fetch product data fom shopify store
 export const fetchAndStoreProducts = async (req, res) => {
@@ -413,7 +414,7 @@ export const addUsedEquipments = async (req, res) => {
     expirationDate.setMonth(expirationDate.getMonth() + 6);
 
     // Step 4: Save Product to MongoDB
-    const newProduct = new productModel({
+    const newProduct = new listingModel({
       id: productId,
       title: name,
       body_html: description,
@@ -765,7 +766,7 @@ export const addNewEquipments = async (req, res) => {
     }
 
     // Step 5: Save Product to MongoDB
-    const newProduct = new productModel({
+    const newProduct = new listingModel({
       id: productId,
       title: name,
       body_html: '', // Empty body_html as we use metafields for details
@@ -1196,7 +1197,7 @@ export const addNewBusiness = async (req, res) => {
     }
 
     // Step 4: Save Product to MongoDB
-    const newProduct = new productModel({
+    const newProduct = new listingModel({
       id: productId,
       title: name,
       body_html: businessDescription,
@@ -1809,7 +1810,7 @@ export const addNewJobListing = async (req, res) => {
     }
 
     // Step 4: Save Product to MongoDB
-    const newJobListing = new productModel({
+    const newJobListing = new listingModel({
       id: productId,
       title: name,
       body_html: positionRequestedDescription,
@@ -2098,7 +2099,7 @@ export const addNewProviderListing = async (req, res) => {
     // }
 
     // Step 4: Save Provider Listing to MongoDB
-    const newProviderListing = new productModel({
+    const newProviderListing = new listingModel({
       id: productId,
       title: qualificationRequested,
       body_html: offeredPositionDescription,
@@ -2430,7 +2431,7 @@ export const addRoomListing = async (req, res) => {
     }
 
     // Step 4: Save Room Listing to MongoDB
-    const newRoomListing = new productModel({
+    const newRoomListing = new listingModel({
       id: productId,
       title: location,
       body_html: otherDetails,
@@ -2601,7 +2602,7 @@ export const getProduct = async (req, res) => {
     const skip = (page - 1) * limit; // Number of items to skip
 
     // Find products by userId with pagination
-    const products = await productModel
+    const products = await listingModel
       .find({ userId: userId })
       .skip(skip)
       .limit(limit);
@@ -2684,7 +2685,7 @@ export const updateListing = async (req, res) => {
    const phoneNumber=user.phoneNumber
     const city=user.city
     // Find the product by MongoDB ID
-    const product = await productModel.findOne({id});
+    const product = await listingModel.findOne({id});
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -3535,7 +3536,7 @@ const commonFields = {
 };
 
 // Combine common fields with the specific update data
-const updatedProduct = await productModel.findOneAndUpdate(
+const updatedProduct = await listingModel.findOneAndUpdate(
   { id },
   { ...commonFields, ...updateData },
   { new: true } // Option to return the updated document
@@ -3659,7 +3660,7 @@ export const publishProduct = async (req, res) => {
 
   try {
     // Fetch the local product
-    const localProduct = await productModel.findOne({ id: productId });
+    const localProduct = await listingModel.findOne({ id: productId });
     if (!localProduct) {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
@@ -3718,7 +3719,7 @@ export const publishProduct = async (req, res) => {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // Update product status in MongoDB
-    const updatedProduct = await productModel.findOneAndUpdate(
+    const updatedProduct = await listingModel.findOneAndUpdate(
       { id: productId },
       { status: 'active', expiresAt },
       { new: true }
@@ -3864,7 +3865,7 @@ export const unpublishProduct = async (req, res) => {
     }
 
     // Step 2: Update product status in MongoDB
-    const updatedProduct = await productModel.findOneAndUpdate(
+    const updatedProduct = await listingModel.findOneAndUpdate(
       { id: productId },
       { status: 'draft' },
       { new: true }
@@ -4279,7 +4280,7 @@ export const lookingFor = async (req, res) => {
     }
 
     // Step 5: Save Product to MongoDB
-    const newProduct = new productModel({
+    const newProduct = new listingModel({
       id: productId,
       title: name,
       body_html: '', // Empty body_html as we use metafields for details
@@ -4357,7 +4358,7 @@ export const lookingFor = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -4409,12 +4410,12 @@ export const getAllProductData = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10; // Default to 10 products per page
 
   try {
-    const products = await productModel
+    const products = await listingModel
       .find()
       .skip((page - 1) * limit) // Skip products based on the page number
       .limit(limit); // Limit the number of products returned
 
-    const totalProducts = await productModel.countDocuments(); // Get the total number of products
+    const totalProducts = await listingModel.countDocuments(); // Get the total number of products
 
     if (products) {
       res.status(200).send({
