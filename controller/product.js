@@ -488,7 +488,7 @@ export const addUsedEquipments = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -850,7 +850,7 @@ export const addNewEquipments = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -1287,7 +1287,7 @@ export const addNewBusiness = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -1878,7 +1878,7 @@ export const addNewJobListing = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -2176,7 +2176,7 @@ export const addNewProviderListing = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -2510,7 +2510,7 @@ export const addRoomListing = async (req, res) => {
       }
 
       // Step 7: Update product status in MongoDB
-      const updatedProduct = await productModel.findOneAndUpdate(
+      const updatedProduct = await listingModel.findOneAndUpdate(
         { id: productId },
         { status: 'active', expiresAt },
         { new: true }
@@ -3586,7 +3586,7 @@ export const deleteProduct = async (req, res) => {
 
   try {
     // Find product in MongoDB
-    const product = await productModel.findById(id);
+    const product = await listingModel.findById(id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -3618,7 +3618,7 @@ export const deleteProduct = async (req, res) => {
     }
 
     // Delete from MongoDB
-    await productModel.findByIdAndDelete(id);
+    await listingModel.findByIdAndDelete(id);
 
     res.status(200).json({ message: 'Product deleted successfully' });
   } catch (error) {
@@ -3639,7 +3639,7 @@ export const productDelete = async (req, res) => {
 
   try {
     // Delete the product from MongoDB using the Shopify product ID
-    const result = await productModel.deleteOne({ id });
+    const result = await listingModel.deleteOne({ id });
 
     if (result.deletedCount === 0) {
       console.log(`Product with ID ${id} not found in MongoDB.`);
@@ -3889,7 +3889,7 @@ export const unpublishProduct = async (req, res) => {
 
 export const deletAllProduct = async (req, res) => {
   try {
-    productModel.deleteMany().then((result) => {
+    listingModel.deleteMany().then((result) => {
       if (result) {
         res.status(200).send('sucessfully deleted');
       }
