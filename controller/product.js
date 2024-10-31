@@ -4225,7 +4225,7 @@ export const lookingFor = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'sale_price',
-          value: sale_price || 0,
+          value: sale_price,
           type: 'number_integer',
         },
       },
