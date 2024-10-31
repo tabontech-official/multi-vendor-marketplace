@@ -4164,7 +4164,7 @@ export const lookingFor = async (req, res) => {
         body_html: description,
         vendor: brand,
         product_type: 'Looking For',
-        variants: [{ price: sale_price }],
+        variants: [{ price: sale_price ? sale_price.toFixed(2).toString() : "0.00" }],
         status: productStatus,
         published_scope: 'global',
         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
