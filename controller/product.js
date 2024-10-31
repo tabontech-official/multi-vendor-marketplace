@@ -4412,12 +4412,13 @@ export const getAllProductData = async (req, res) => {
   try {
     const products = await listingModel
       .find()
+      .sort({ createdAt: -1 }) // Sort by createdAt in descending order (latest first)
       .skip((page - 1) * limit) // Skip products based on the page number
       .limit(limit); // Limit the number of products returned
 
     const totalProducts = await listingModel.countDocuments(); // Get the total number of products
 
-    if (products) {
+    if (products.length > 0) { // Check if products are found
       res.status(200).send({
         products,
         currentPage: page,
@@ -4425,7 +4426,7 @@ export const getAllProductData = async (req, res) => {
         totalProducts
       });
     } else {
-      res.status(400).send('Unable to fetch products');
+      res.status(400).send('No products found'); // Adjusted message for clarity
     }
   } catch (error) {
     res.status(500).send({ error: error.message });
