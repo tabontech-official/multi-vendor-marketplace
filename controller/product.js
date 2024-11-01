@@ -2767,7 +2767,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'description',
             value: updateData.description,
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -2866,7 +2866,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'business_description',
             value: updateData.businessDescription,
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -3040,7 +3040,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'position_requested_description',
             value: updateData.positionRequestedDescription || 'No Description',
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -3115,7 +3115,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'offered_position_description',
             value: updateData.offeredPositionDescription,
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -3207,7 +3207,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'other_details',
             value: updateData.otherDetails,
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -3242,7 +3242,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'description',
             value: updateData.description,
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -3349,7 +3349,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'description',
             value: updateData.description,
-            type: 'single_line_text_field',
+            type: 'multi_line_text_field',
           },
         },
         {
@@ -4202,7 +4202,7 @@ export const lookingFor = async (req, res) => {
           namespace: 'fold_tech',
           key: 'description',
           value: description,
-          type: 'single_line_text_field',
+          type: 'multi_line_text_field',
         },
       },
       {
