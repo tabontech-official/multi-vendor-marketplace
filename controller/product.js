@@ -418,7 +418,7 @@ export const addUsedEquipments = async (req, res) => {
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: description,
+      body_html: formattedDescription,
       vendor: brand,
       product_type: 'Used Equipments',
       created_at: new Date(),
@@ -438,7 +438,7 @@ export const addUsedEquipments = async (req, res) => {
         warranty: warranty,
         reason_for_selling: reason_for_selling,
         shipping: shipping,
-        description: description,
+        description: formattedDescription,
       },
       userId,
       status: productStatus,
