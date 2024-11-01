@@ -296,7 +296,7 @@ export const addUsedEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'description',
           value: description,
-          type: 'single_line_text_field',
+          type: 'multi_line_text_field',
         },
       },
       {
@@ -640,7 +640,7 @@ export const addNewEquipments = async (req, res) => {
           namespace: 'fold_tech',
           key: 'description',
           value: description,
-          type: 'single_line_text_field',
+          type: 'multi_line_text_field',
         },
       },
       {
@@ -1062,7 +1062,7 @@ export const addNewBusiness = async (req, res) => {
         namespace: 'fold_tech',
         key: 'business_description',
         value: businessDescription,
-        type: 'single_line_text_field',
+        type: 'multi_line_text_field',
       },
       {
         namespace: 'fold_tech',
@@ -1733,7 +1733,7 @@ export const addNewJobListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'position_requested_description',
         value: positionRequestedDescription,
-        type: 'single_line_text_field',
+        type: 'multi_line_text_field',
       },
       {
         namespace: 'fold_tech',
@@ -2050,7 +2050,7 @@ export const addNewProviderListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'offered_position_description',
         value: offeredPositionDescription,
-        type: 'single_line_text_field',
+        type: 'multi_line_text_field',
       },
       {
         namespace: 'fold_tech',
@@ -2383,7 +2383,7 @@ export const addRoomListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'other_details',
         value: otherDetails,
-        type: 'single_line_text_field',
+        type: 'multi_line_text_field',
       },
       {
         namespace: 'fold_tech',
