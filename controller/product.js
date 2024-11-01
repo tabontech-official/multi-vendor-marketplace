@@ -4584,7 +4584,7 @@ export const lookingFor = async (req, res) => {
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
       images: imagesData,
-      equipment: {
+      looking: {
         location,
         zip,
         name,
