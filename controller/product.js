@@ -586,6 +586,7 @@ export const addNewEquipments = async (req, res) => {
     }
     // Determine product status based on action
     const productStatus = status === 'publish' ? 'active' : 'draft';
+
     const formattedDescription = description.replace(/\n/g, '<br>');
 
     // Step 1: Fetch user to get the username
@@ -771,7 +772,7 @@ export const addNewEquipments = async (req, res) => {
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: '', // Empty body_html as we use metafields for details
+      body_html: formattedDescription, // Empty body_html as we use metafields for details
       vendor: brand,
       product_type: 'New Equipments',
       created_at: new Date(),
@@ -794,7 +795,7 @@ export const addNewEquipments = async (req, res) => {
         warranty,
         training,
         shipping,
-        description,
+        description:formattedDescription,
       },
       userId,
       status: productStatus,
@@ -1203,7 +1204,7 @@ export const addNewBusiness = async (req, res) => {
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: businessDescription,
+      body_html: formattedDescription,
       vendor: location,
       product_type: 'Businesses To Purchase',
       created_at: new Date(),
@@ -1218,7 +1219,7 @@ export const addNewBusiness = async (req, res) => {
         name,
         location,
         zip,
-        businessDescription,
+        businessDescription:formattedDescription,
         asking_price: asking_price,
         establishedYear,
         numberOfEmployees,
@@ -1817,7 +1818,7 @@ export const addNewJobListing = async (req, res) => {
     const newJobListing = new listingModel({
       id: productId,
       title: name,
-      body_html: positionRequestedDescription,
+      body_html: formattedDescription,
       vendor: location,
       product_type: 'Providers Available',
       tags: productResponse.product.tags,
@@ -1829,7 +1830,7 @@ export const addNewJobListing = async (req, res) => {
           zip,
           name,
           qualification,
-          positionRequestedDescription,
+          positionRequestedDescription:formattedDescription,
           availability,
           requestedYearlySalary,
           availableToWorkAs,
@@ -2107,7 +2108,7 @@ export const addNewProviderListing = async (req, res) => {
     const newProviderListing = new listingModel({
       id: productId,
       title: qualificationRequested,
-      body_html: offeredPositionDescription,
+      body_html: formattedDescription,
       vendor: location,
       product_type: 'Provider Needed',
       tags: productResponse.product.tags,
@@ -2121,7 +2122,7 @@ export const addNewProviderListing = async (req, res) => {
           jobType,
           typeOfJobOffered,
           offeredYearlySalary,
-          offeredPositionDescription,
+          offeredPositionDescription:formattedDescription,
           // images: imagesData,
         },
       ],
@@ -2440,7 +2441,7 @@ export const addRoomListing = async (req, res) => {
     const newRoomListing = new listingModel({
       id: productId,
       title: location,
-      body_html: otherDetails,
+      body_html: formattedDescription,
       vendor: location,
       product_type: 'Spa Room For Rent',
       tags: productResponse.product.tags,
@@ -2457,7 +2458,7 @@ export const addRoomListing = async (req, res) => {
           typeOfUseAllowed,
           rentalTerms,
           wifiAvailable,
-          otherDetails,
+          otherDetails:formattedDescription,
           images: imagesData,
         },
       ],
@@ -4355,7 +4356,7 @@ if (product_type === 'Businesses To Purchase') {
     reasonForSelling: req.body.reasonForSelling,
     listOfDevices: req.body.listOfDevices,
     offeredServices: req.body.offeredServices,
-    supportAndTraining: req.body.supportAndTraining,
+    supportAndTraining: formattedDescription,
   };
 }
 
@@ -4371,7 +4372,7 @@ if (product_type === 'Spa Room For Rent') {
       typeOfUseAllowed: req.body.typeOfUseAllowed,
       rentalTerms: req.body.rentalTerms,
       wifiAvailable: req.body.wifiAvailable,
-      otherDetails: req.body.otherDetails,
+      otherDetails: formattedDescription,
       images: imagesData, // Assuming imagesData is already defined
     },
   ];
@@ -4386,7 +4387,7 @@ if (product_type === 'Provider Needed') {
       jobType: req.body.jobType,
       typeOfJobOffered: req.body.typeOfJobOffered,
       offeredYearlySalary: req.body.offeredYearlySalary,
-      offeredPositionDescription: req.body.offeredPositionDescription,
+      offeredPositionDescription: formattedDescription,
       images: imagesData, // Assuming imagesData is already defined
     },
   ];
@@ -4399,7 +4400,7 @@ if (product_type === 'Providers Available') {
       zip: req.body.zip,
       name: req.body.name,
       qualification: req.body.qualification,
-      positionRequestedDescription: req.body.positionRequestedDescription,
+      positionRequestedDescription: formattedDescription,
       availability: req.body.availability,
       requestedYearlySalary: req.body.requestedYearlySalary,
       images: imagesData, // Assuming imagesData is already defined
@@ -4413,14 +4414,16 @@ if (product_type === 'Looking For') {
     zip: req.body.zip,
     brand: req.body.brand,
     sale_price: req.body.sale_price,
-    description: req.body.description,
+    description: formattedDescription,
     images:imagesData
   };
 }
+
+// || formattedDescription || req.body.otherDetails
 // Set common fields for all product types
 const commonFields = {
   title: req.body.name || req.body.qualificationRequested,
-  body_html: formattedDescription || req.body.offeredPositionDescription || req.body.otherDetails,
+  body_html: formattedDescription ,
   vendor: req.body.brand,
   product_type,
   status:currentStatus,
