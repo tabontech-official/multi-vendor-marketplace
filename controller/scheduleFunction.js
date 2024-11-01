@@ -1,4 +1,4 @@
-import { productModel } from "../Models/product.js"
+import { listingModel } from "../Models/Listing.js";
 import cron from 'node-cron';
 export const productSubscriptionExpiration = () => {
     cron.schedule('0 */2 * * *', async () => {
@@ -6,7 +6,7 @@ export const productSubscriptionExpiration = () => {
         const currentDate = new Date();
   
         // Update products with expired subscriptions
-        const result = await productModel.updateMany(
+        const result = await listingModel.updateMany(
           { expiresAt: { $lte: currentDate }, status: 'active' }, // Check for active products only
           { $set: { status: 'draft' } }
         );
