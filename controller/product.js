@@ -231,7 +231,7 @@ export const addUsedEquipments = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const formattedDescription = description.replace(/\n/g, '<br>');
+    // const formattedDescription = description.replace(/\n/g, '<br>');
 
     // Validate required fields
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
@@ -296,7 +296,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'description',
-          value: formattedDescription,
+          value: description,
           type: 'multi_line_text_field',
         },
       },
