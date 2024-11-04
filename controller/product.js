@@ -239,12 +239,12 @@ export const addUsedEquipments = async (req, res) => {
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-    if (asking_price === undefined) return res.status(400).json({ error: 'Sale price is required.' });
+    if (asking_price === undefined) return res.status(400).json({ error: 'asking price is required.' });
     if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
     if (!certification) return res.status(400).json({ error: 'Certification is required.' });
-    if (year_purchased === undefined) return res.status(400).json({ error: 'Year manufactured is required.' });
+    if (year_purchased === undefined) return res.status(400).json({ error: 'Year purchased is required.' });
     if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
-    if (!reason_for_selling) return res.status(400).json({ error: 'Training details are required.' });
+    if (!reason_for_selling) return res.status(400).json({ error: 'reason for selling are required.' });
     if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
     if (!description) return res.status(400).json({ error: 'Description is required.' });
     if (!req.files?.images || req.files.images.length === 0) {
@@ -1678,7 +1678,7 @@ export const addNewJobListing = async (req, res) => {
 
     // Validate required field
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
-    if (!name) return res.status(400).json({ error: 'Business name is required.' });
+    if (!name) return res.status(400).json({ error: 'name is required.' });
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!qualification) return res.status(400).json({ error: 'Qualification is required.' });
     if (!positionRequestedDescription) return res.status(400).json({ error: 'Position requested description is required.' });
