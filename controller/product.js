@@ -254,7 +254,7 @@ export const addUsedEquipments = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html: formattedDescription,
+        body_html: description,
         vendor: brand,
         product_type: 'Used Equipments',
         variants: [{ price: asking_price.toString() }],
@@ -418,7 +418,7 @@ export const addUsedEquipments = async (req, res) => {
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: formattedDescription,
+      body_html: description,
       vendor: brand,
       product_type: 'Used Equipments',
       created_at: new Date(),
@@ -438,7 +438,7 @@ export const addUsedEquipments = async (req, res) => {
         warranty: warranty,
         reason_for_selling: reason_for_selling,
         shipping: shipping,
-        description: formattedDescription,
+        description,
       },
       userId,
       status: productStatus,
