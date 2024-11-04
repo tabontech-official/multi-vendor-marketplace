@@ -235,6 +235,7 @@ export const addUsedEquipments = async (req, res) => {
 
     // Validate required fields
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
+    if (!accept_offers) return res.status(400).json({ error: 'Accept offers is required.' });
     if (!location) return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
