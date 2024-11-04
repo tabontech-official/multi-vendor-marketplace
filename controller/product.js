@@ -1220,7 +1220,7 @@ export const addNewBusiness = async (req, res) => {
         name,
         location,
         zip,
-        businessDescription:formattedDescription,
+        businessDescription,
         asking_price: asking_price,
         establishedYear,
         numberOfEmployees,
