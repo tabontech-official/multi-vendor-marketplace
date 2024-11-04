@@ -587,7 +587,7 @@ export const addNewEquipments = async (req, res) => {
     // Determine product status based on action
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
-    const formattedDescription = description.replace(/\n/g, '<br>');
+    // const formattedDescription = description.replace(/\n/g, '<br>');
 
     // Step 1: Fetch user to get the username
     const user = await authModel.findById(userId);
@@ -602,7 +602,7 @@ export const addNewEquipments = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${name} | ${country},${location},${zip}`,
-        body_html: formattedDescription,
+        body_html: description,
         vendor: brand,
         product_type: 'New Equipments',
         variants: [{ price: sale_price.toString() }],
@@ -642,7 +642,7 @@ export const addNewEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'description',
-          value: formattedDescription,
+          value: description,
           type: 'multi_line_text_field',
         },
       },
@@ -772,7 +772,7 @@ export const addNewEquipments = async (req, res) => {
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: formattedDescription, // Empty body_html as we use metafields for details
+      body_html: description, // Empty body_html as we use metafields for details
       vendor: brand,
       product_type: 'New Equipments',
       created_at: new Date(),
@@ -795,7 +795,7 @@ export const addNewEquipments = async (req, res) => {
         warranty,
         training,
         shipping,
-        description:formattedDescription,
+        description:description,
       },
       userId,
       status: productStatus,
@@ -930,7 +930,7 @@ export const addNewBusiness = async (req, res) => {
     const images = req.files?.images || []; // Handle multiple file uploads
     //const askingPriceValue = parseFloat(asking_price);
     const productStatus = status === 'publish' ? 'active' : 'draft'; // Determine product status
-    const formattedDescription = businessDescription.replace(/\n/g, '<br>');
+    // const formattedDescription = businessDescription.replace(/\n/g, '<br>');
 
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
@@ -1031,7 +1031,7 @@ export const addNewBusiness = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html: formattedDescription,
+        body_html: businessDescription,
         vendor: location,
         product_type: 'Businesses To Purchase',
         variants: [{ price: asking_price.toString() }],
@@ -1065,7 +1065,7 @@ export const addNewBusiness = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'business_description',
-        value: formattedDescription,
+        value: businessDescription,
         type: 'multi_line_text_field',
       },
       {
@@ -1204,7 +1204,7 @@ export const addNewBusiness = async (req, res) => {
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: formattedDescription,
+      body_html: businessDescription,
       vendor: location,
       product_type: 'Businesses To Purchase',
       created_at: new Date(),
@@ -1661,7 +1661,7 @@ export const addNewJobListing = async (req, res) => {
       availableToWorkAs,
       status,
     } = req.body;
-    const formattedDescription = positionRequestedDescription.replace(/\n/g, '<br>');
+    // const formattedDescription = positionRequestedDescription.replace(/\n/g, '<br>');
 
     // Handle file upload
     const files = req.files?.images || []; // Ensure we have an array of files
@@ -1689,7 +1689,7 @@ export const addNewJobListing = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html:formattedDescription,
+        body_html:positionRequestedDescription,
         vendor: location,
         product_type: 'Providers Available',
         variants: [{ price: requestedYearlySalary.toString() }],
@@ -1737,7 +1737,7 @@ export const addNewJobListing = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'position_requested_description',
-        value: formattedDescription,
+        value: positionRequestedDescription,
         type: 'multi_line_text_field',
       },
       {
@@ -1818,7 +1818,7 @@ export const addNewJobListing = async (req, res) => {
     const newJobListing = new listingModel({
       id: productId,
       title: name,
-      body_html: formattedDescription,
+      body_html: positionRequestedDescription,
       vendor: location,
       product_type: 'Providers Available',
       tags: productResponse.product.tags,
@@ -1830,7 +1830,7 @@ export const addNewJobListing = async (req, res) => {
           zip,
           name,
           qualification,
-          positionRequestedDescription:formattedDescription,
+          positionRequestedDescription,
           availability,
           requestedYearlySalary,
           availableToWorkAs,
@@ -1942,7 +1942,7 @@ export const addNewProviderListing = async (req, res) => {
       userId,
       status,
     } = req.body;
-    const formattedDescription = offeredPositionDescription.replace(/\n/g, '<br>');
+    // const formattedDescription = offeredPositionDescription.replace(/\n/g, '<br>');
 
     // Handle file upload
     const images = req.files?.images || []; // Ensure we have an array of images
@@ -1997,7 +1997,7 @@ export const addNewProviderListing = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${qualificationRequested} | ${country} , ${location} , ${zip}`,
-        body_html: formattedDescription,
+        body_html: offeredPositionDescription,
         vendor: location,
         product_type: 'Provider Needed',
         variants: [{ price: offeredYearlySalary.toString() }],
@@ -2055,7 +2055,7 @@ export const addNewProviderListing = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'offered_position_description',
-        value: formattedDescription,
+        value: offeredPositionDescription,
         type: 'multi_line_text_field',
       },
       {
@@ -2108,7 +2108,7 @@ export const addNewProviderListing = async (req, res) => {
     const newProviderListing = new listingModel({
       id: productId,
       title: qualificationRequested,
-      body_html: formattedDescription,
+      body_html: offeredPositionDescription,
       vendor: location,
       product_type: 'Provider Needed',
       tags: productResponse.product.tags,
@@ -2122,7 +2122,7 @@ export const addNewProviderListing = async (req, res) => {
           jobType,
           typeOfJobOffered,
           offeredYearlySalary,
-          offeredPositionDescription:formattedDescription,
+          offeredPositionDescription,
           // images: imagesData,
         },
       ],
@@ -2247,7 +2247,7 @@ export const addRoomListing = async (req, res) => {
       status,
     } = req.body;
 
-    const formattedDescription = otherDetails.replace(/\n/g, '<br>');
+    // const formattedDescription = otherDetails.replace(/\n/g, '<br>');
 
     // Handle file upload
     const images = req.files.images || []; // Handle file upload
@@ -2312,7 +2312,7 @@ export const addRoomListing = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${typeOfUseAllowed} | ${location}, ${country} ${zip}`,
-        body_html: formattedDescription,
+        body_html: otherDetails,
         vendor: location,
         product_type: 'Spa Room For Rent',
         variants: [{ price: monthlyRent.toString() }],
@@ -2389,7 +2389,7 @@ export const addRoomListing = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'other_details',
-        value: formattedDescription,
+        value: otherDetails,
         type: 'multi_line_text_field',
       },
       {
@@ -2441,7 +2441,7 @@ export const addRoomListing = async (req, res) => {
     const newRoomListing = new listingModel({
       id: productId,
       title: location,
-      body_html: formattedDescription,
+      body_html: otherDetails,
       vendor: location,
       product_type: 'Spa Room For Rent',
       tags: productResponse.product.tags,
@@ -2458,7 +2458,7 @@ export const addRoomListing = async (req, res) => {
           typeOfUseAllowed,
           rentalTerms,
           wifiAvailable,
-          otherDetails:formattedDescription,
+          otherDetails,
           images: imagesData,
         },
       ],
