@@ -1764,13 +1764,12 @@ export const addNewJobListing = async (req, res) => {
         type: 'number_decimal',
       },
       {
-        metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
           value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
-        },
       },
+
     ];
 
     // Step 3: Process Files for Images and PDFs
@@ -2074,12 +2073,10 @@ export const addNewProviderListing = async (req, res) => {
         type: 'multi_line_text_field',
       },
       {
-        metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
           value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
-        },
       },
     ];
 
@@ -2412,13 +2409,11 @@ export const addRoomListing = async (req, res) => {
         type: 'multi_line_text_field',
       },
       {
-        metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
           value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
         },
-      },
     ];
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
