@@ -1666,6 +1666,7 @@ export const addNewJobListing = async (req, res) => {
       requestedYearlySalary,
       userId,
       availableToWorkAs,
+      jobType,
       status,
     } = req.body;
     // const formattedDescription = positionRequestedDescription.replace(/\n/g, '<br>');
@@ -1753,6 +1754,12 @@ export const addNewJobListing = async (req, res) => {
         namespace: 'fold_tech',
         key: 'availability',
         value: availability,
+        type: 'single_line_text_field',
+      },
+      {
+        namespace: 'fold_tech',
+        key: 'job_type',
+        value: jobType,
         type: 'single_line_text_field',
       },
       {
