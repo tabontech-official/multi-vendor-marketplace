@@ -229,7 +229,7 @@ export const addUsedEquipments = async (req, res) => {
     const username = user.userName; // Fetch username, default to 'Unknown' if not found
     const phoneNumber = user.phoneNumber;
     const country = user.country;
-    const city = user.city;
+    const newcity = user.city;
     const email = user.email;
     const firstName=user.firstName;
     const lastName=user.lastName
@@ -371,7 +371,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${location} - ${country}`,
           type: 'single_line_text_field',
         },
       },
