@@ -100,7 +100,7 @@ const productSchema = new mongoose.Schema(
       },
     ],
     equipment: {
-      location: { type: String },
+      location: String,
       zip: { type: Number },
       name: { type: String },
       brand: { type: String },
