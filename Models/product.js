@@ -116,6 +116,7 @@ const productSchema = new mongoose.Schema(
       year_manufactured: { type: String },
       training: { type: String },
       description: { type: String },
+      city:String,
       shopifyId: String,
     },
     business: {
