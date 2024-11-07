@@ -252,7 +252,6 @@ export const addUsedEquipments = async (req, res) => {
     if (!req.files?.images || req.files.images.length === 0) {
       return res.status(400).json({ error: 'At least one image is required.' });
     }
-    let fullLocation = `${location}_${city}`;
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
