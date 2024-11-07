@@ -231,6 +231,8 @@ export const addUsedEquipments = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName;
+    const lastName=user.lastName
     // const formattedDescription = description.replace(/\n/g, '<br>');
 
     // Validate required fields
@@ -369,7 +371,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
-          value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
         },
       },
@@ -599,6 +601,8 @@ export const addNewEquipments = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName;
+    const lastName=user.lastName
     // Step 2: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -723,7 +727,7 @@ export const addNewEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
-          value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
         },
       },
@@ -941,6 +945,8 @@ export const addNewBusiness = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName
+    const lastName=user.lastName
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -1154,10 +1160,12 @@ export const addNewBusiness = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        namespace: 'fold_tech',
-        key: 'userinformation',
-        value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -1675,6 +1683,8 @@ export const addNewJobListing = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName
+    const lastName=user.lastName
 
     // Validate required field
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
@@ -1754,10 +1764,12 @@ export const addNewJobListing = async (req, res) => {
         type: 'number_decimal',
       },
       {
-        namespace: 'fold_tech',
-        key: 'userinformation',
-        value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -1956,6 +1968,8 @@ export const addNewProviderListing = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName
+    const lastName=user.lastName
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -2060,10 +2074,12 @@ export const addNewProviderListing = async (req, res) => {
         type: 'multi_line_text_field',
       },
       {
-        namespace: 'fold_tech',
-        key: 'userinformation',
-        value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          type: 'single_line_text_field',
+        },
       },
     ];
 
@@ -2261,6 +2277,8 @@ export const addRoomListing = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName
+    const lastName=user.lastName
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -2394,10 +2412,12 @@ export const addRoomListing = async (req, res) => {
         type: 'multi_line_text_field',
       },
       {
-        namespace: 'fold_tech',
-        key: 'userinformation',
-        value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        type: 'single_line_text_field',
+        metafield: {
+          namespace: 'fold_tech',
+          key: 'userinformation',
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          type: 'single_line_text_field',
+        },
       },
     ];
     for (const metafield of metafieldsPayload) {
@@ -5334,6 +5354,8 @@ export const lookingFor = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
+    const firstName=user.firstName
+    const lastName=user.lastName
     // Step 2: Create Product in Shopify
     // const formattedDescription = description.replace(/\n/g, '<br>');
 
@@ -5412,7 +5434,7 @@ export const lookingFor = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
-          value: `${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
         },
       },
