@@ -371,7 +371,7 @@ export const addUsedEquipments = async (req, res) => {
         metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${location} - ${country}`,
+          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${newcity} - ${country}`,
           type: 'single_line_text_field',
         },
       },
