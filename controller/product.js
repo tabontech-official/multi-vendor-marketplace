@@ -90,7 +90,7 @@ const shopifyRequest = async (url, method, body) => {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText);
+    throw new Error(`request failed${errorText}`);
   }
 
   return response.json();
@@ -1160,13 +1160,11 @@ export const addNewBusiness = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-        metafield: {
           namespace: 'fold_tech',
           key: 'userinformation',
           value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
           type: 'single_line_text_field',
         },
-      },
     ];
 
     for (const metafield of metafieldsPayload) {
