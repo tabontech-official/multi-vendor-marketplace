@@ -90,7 +90,7 @@ const shopifyRequest = async (url, method, body) => {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Shopify API request failed: ${errorText}`);
+    throw new Error(errorText);
   }
 
   return response.json();
