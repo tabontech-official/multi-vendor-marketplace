@@ -17,7 +17,12 @@ cloudinary.v2.config({
     },
   });
   
-  export const upload = multer({ storage })
-  
+  const upload = multer({
+    storage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10 MB limit per file
+    },
+  });
+    
 
 export  const cpUpload = upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 } ,{name:'files',maxCount:1}])

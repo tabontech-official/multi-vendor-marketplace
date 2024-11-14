@@ -2778,6 +2778,14 @@ export const updateListing = async (req, res) => {
         {
           metafield: {
             namespace: 'fold_tech',
+            key: 'city',
+            value: updateData.city || 'Not specified',
+            type: 'single_line_text_field',
+          },
+        },
+        {
+          metafield: {
+            namespace: 'fold_tech',
             key: 'location',
             value: updateData.location || 'Not specified',
             type: 'single_line_text_field',
@@ -3470,6 +3478,7 @@ if (product_type === 'Used Equipments' || product_type === 'New Equipments' ) {
     year_manufactured: req.body.year_manufactured,
     training: req.body.training,
     description: req.body.description,
+    city:req.body.city,
   };
 }
 

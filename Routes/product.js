@@ -1,6 +1,6 @@
 import {
   fetchAndStoreProducts,
-  addProduct,
+  // addProduct,
   addUsedEquipments,
   addNewEquipments,
   addNewBusiness,
@@ -24,13 +24,13 @@ import {
   lookingFor,
   getAllProductData
 } from '../controller/product.js';
-import { upload, cpUpload } from '../middleware/cloudinary.js';
+import {  cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
 
 const productRouter = express.Router();
 productRouter.get('/shopify', fetchAndStoreProducts);
-productRouter.post('/addProduct', upload.single('image'), addProduct);
+// productRouter.post('/addProduct', upload.single('image'), addProduct);
 productRouter.post('/addEquipment', cpUpload, addUsedEquipments);
 productRouter.post('/addRoom', cpUpload, addRoomListing);
 productRouter.post('/addNewEquipments', cpUpload, addNewEquipments);
