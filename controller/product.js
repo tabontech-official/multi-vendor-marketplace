@@ -2873,14 +2873,14 @@ export const updateListing = async (req, res) => {
             type: 'single_line_text_field',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     } else if (product_type === 'Businesses To Purchase') {
       metafieldsPayload = [
