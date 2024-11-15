@@ -17,6 +17,7 @@ cloudinary.v2.config({
     },
   });
   
+  // export const upload = multer({ storage })
   const upload = multer({
     storage,
     limits: {
