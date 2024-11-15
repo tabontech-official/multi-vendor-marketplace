@@ -3020,14 +3020,14 @@ export const updateListing = async (req, res) => {
             type: 'single_line_text_field',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     } else if (product_type === 'Providers Available') {
       metafieldsPayload = [
@@ -3090,14 +3090,14 @@ export const updateListing = async (req, res) => {
             type: 'single_line_text_field',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     } else if (product_type === 'Provider Needed') {
       metafieldsPayload = [
@@ -3157,14 +3157,14 @@ export const updateListing = async (req, res) => {
             type: 'multi_line_text_field',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     
     } else if (product_type === 'Spa Room For Rent') {
@@ -3249,14 +3249,14 @@ export const updateListing = async (req, res) => {
             type: 'multi_line_text_field',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     } else if (product_type === 'New Equipments') {
       metafieldsPayload = [
@@ -3356,14 +3356,14 @@ export const updateListing = async (req, res) => {
             type: 'single_line_text_field',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     }else if (product_type === 'Looking For') {
       metafieldsPayload = [
@@ -3415,14 +3415,14 @@ export const updateListing = async (req, res) => {
             type: 'number_integer',
           },
         },
-        {
-          metafield:  {
-            namespace: 'fold_tech',
-            key: 'userinformation',
-            value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield:  {
+        //     namespace: 'fold_tech',
+        //     key: 'userinformation',
+        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
       ];
     }
 
@@ -3436,7 +3436,7 @@ export const updateListing = async (req, res) => {
         title: `${updateData.name || updateData.qualificationRequested || updateData.typeOfUseAllowed} | ${country} , ${updateData.location} , ${updateData.zip}`,
         body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails,
         vendor: updateData.brand || updateData.location,
-        tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
+        tags: `zip_${updateData.zip}, location_${updateData.location}`,
         images: product.images, // Attach updated images
       },
     };
