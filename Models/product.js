@@ -165,6 +165,7 @@ const productSchema = new mongoose.Schema(
         typeOfJobOffered: { type: String },
         offeredYearlySalary: { type: Number },
         offeredPositionDescription: { type: String },
+        city:{type:String},
         image: { type: String }, // Store the image URL
       },
     ],

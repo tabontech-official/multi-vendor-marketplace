@@ -252,17 +252,17 @@ export const addUsedEquipments = async (req, res) => {
     if (!req.files?.images || req.files.images.length === 0) {
       return res.status(400).json({ error: 'At least one image is required.' });
     }
-const fullLocation=`${city}_${location}`
+// const fullLocation=`${city}_${location}`
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
-        title: `${name} | ${country} , ${fullLocation} , ${zip}`,
+        title: `${name} | ${country} , ${location} , ${zip}`,
         body_html: description,
         vendor: brand,
         product_type: 'Used Equipments',
         variants: [{ price: asking_price.toString() }],
         status: productStatus,
-        tags: [`zip_${zip}`, `location_${fullLocation}`, `username_${username}`], // Include username in tags
+        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
       },
     };
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
@@ -283,7 +283,7 @@ const fullLocation=`${city}_${location}`
         metafield: {
           namespace: 'fold_tech',
           key: 'location',
-          value: fullLocation || 'Not specified',
+          value: location || 'Not specified',
           type: 'single_line_text_field',
         },
       },
@@ -429,7 +429,7 @@ const fullLocation=`${city}_${location}`
       variants: productResponse.product.variants,
       images: imagesData,
       equipment: {
-        location: fullLocation || 'Not specified',
+        location: location || 'Not specified',
         zip,
         name,
         brand: brand,
