@@ -932,6 +932,7 @@ export const addNewBusiness = async (req, res) => {
       userId,
       status, // "draft" or "publish"
     } = req.body;
+    const formattedDescription = businessDescription.replace(/\n/g, '<br>');
 
     const images = req.files?.images || []; // Handle multiple file uploads
     //const askingPriceValue = parseFloat(asking_price);
@@ -1039,7 +1040,7 @@ export const addNewBusiness = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html: businessDescription,
+        body_html: formattedDescription,
         vendor: location,
         product_type: 'Businesses To Purchase',
         variants: [{ price: asking_price.toString() }],
@@ -1073,7 +1074,7 @@ export const addNewBusiness = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'business_description',
-        value: businessDescription,
+        value: formattedDescription,
         type: 'multi_line_text_field',
       },
       {
