@@ -116,6 +116,7 @@ const productSchema = new mongoose.Schema(
       year_manufactured: { type: String },
       training: { type: String },
       description: { type: String },
+      city:{type:String},
       shopifyId: String,
     },
     business: {
@@ -150,7 +151,9 @@ const productSchema = new mongoose.Schema(
         availability: { type: String },
         requestedYearlySalary: { type: Number },
         image: { type: String }, // URL to the uploaded image
-        availableToWorkAs:String
+        availableToWorkAs:String,
+        jobType: { type: String },
+
       },
     ],
     providerListings: [
@@ -162,6 +165,7 @@ const productSchema = new mongoose.Schema(
         typeOfJobOffered: { type: String },
         offeredYearlySalary: { type: Number },
         offeredPositionDescription: { type: String },
+        city:{type:String},
         image: { type: String }, // Store the image URL
       },
     ],
