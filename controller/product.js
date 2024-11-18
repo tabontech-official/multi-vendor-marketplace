@@ -932,7 +932,6 @@ export const addNewBusiness = async (req, res) => {
       userId,
       status, // "draft" or "publish"
     } = req.body;
-    const formattedDescription = businessDescription.replace(/\n/g, '<br>');
 
     const images = req.files?.images || []; // Handle multiple file uploads
     //const askingPriceValue = parseFloat(asking_price);
@@ -1040,7 +1039,7 @@ export const addNewBusiness = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html: formattedDescription,
+        body_html: businessDescription,
         vendor: location,
         product_type: 'Businesses To Purchase',
         variants: [{ price: asking_price.toString() }],
@@ -1074,7 +1073,7 @@ export const addNewBusiness = async (req, res) => {
       {
         namespace: 'fold_tech',
         key: 'business_description',
-        value: formattedDescription,
+        value: businessDescription,
         type: 'multi_line_text_field',
       },
       {
@@ -3435,7 +3434,7 @@ export const updateListing = async (req, res) => {
     const shopifyPayload = {
       product: {
         title: `${updateData.name || updateData.qualificationRequested || updateData.typeOfUseAllowed} | ${country} , ${updateData.location} , ${updateData.zip}`,
-        body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails,
+        body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails || updateData.businessDescription,
         vendor: updateData.brand || updateData.location,
         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
         images: product.images, // Attach updated images
