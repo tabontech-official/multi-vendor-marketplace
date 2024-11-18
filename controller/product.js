@@ -8327,905 +8327,900 @@ export const getSearchProduct = async (req, res) => {
 };
 
 
-<<<<<<< HEAD
+// export const updateListing = async (req, res) => {
+//   const { id } = req.params; // MongoDB ID
+//   const { userId } = req.body; // User ID from body
+//   const updateData = req.body; // Data to update
+//   const images = req.files?.images || []; // Expecting multiple images
+//   const imagesData = [];
 
+//   try {
+//     // Fetch user by userId
+//     const user = await authModel.findById(userId);
+//     if (!user) return res.status(404).json({ error: 'User not found.' });
 
+//     const username = user.userName ; // Fallback to 'Unknown' if not available
+//     const country = user.country;
+//    const email=user.email;
+//    const phoneNumber=user.phoneNumber
+//     const city=user.city
+//     const firstName=user.firstName
+//     const lastName=user.lastName
+//     // Find the product by MongoDB ID
+//     const product = await listingModel.findOne({id});
+//     if (!product) {
+//       return res.status(404).json({ message: 'Product not found' });
+//     }
 
-=======
-export const updateListing = async (req, res) => {
-  const { id } = req.params; // MongoDB ID
-  const { userId } = req.body; // User ID from body
-  const updateData = req.body; // Data to update
-  const images = req.files?.images || []; // Expecting multiple images
-  const imagesData = [];
+//     // Validate that the product_type matches the data being updated
+//     const { product_type } = product;
 
-  try {
-    // Fetch user by userId
-    const user = await authModel.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+//     // Handle image uploads if images exist in the request
+//     if (Array.isArray(images) && images.length > 0) {
+//       for (const image of images) {
+//         const cloudinaryImageUrl = image?.path; // Assuming `path` has the Cloudinary URL
 
-    const username = user.userName ; // Fallback to 'Unknown' if not available
-    const country = user.country;
-   const email=user.email;
-   const phoneNumber=user.phoneNumber
-    const city=user.city
-    const firstName=user.firstName
-    const lastName=user.lastName
-    // Find the product by MongoDB ID
-    const product = await listingModel.findOne({id});
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
+//         const imagePayload = {
+//           image: {
+//             src: cloudinaryImageUrl, // Cloudinary URL
+//             alt: 'Product Image', // Optional alt text
+//           },
+//         };
 
-    // Validate that the product_type matches the data being updated
-    const { product_type } = product;
+//         // Shopify image upload URL
+//         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
 
-    // Handle image uploads if images exist in the request
-    if (Array.isArray(images) && images.length > 0) {
-      for (const image of images) {
-        const cloudinaryImageUrl = image?.path; // Assuming `path` has the Cloudinary URL
+//         // Upload image to Shopify
+//         const imageResponse = await shopifyRequest(
+//           imageUrl,
+//           'POST',
+//           imagePayload
+//         );
 
-        const imagePayload = {
-          image: {
-            src: cloudinaryImageUrl, // Cloudinary URL
-            alt: 'Product Image', // Optional alt text
-          },
-        };
+//         if (imageResponse && imageResponse.image) {
+//           imagesData.push({
+//             id: imageResponse.image.id,
+//             product_id: product.id,
+//             position: imageResponse.image.position,
+//             alt: 'Product Image',
+//             width: imageResponse.image.width,
+//             height: imageResponse.image.height,
+//             src: imageResponse.image.src,
+//           });
+//         }
+//       }
 
-        // Shopify image upload URL
-        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
+//       // Update the product's images array with the new images
+//       product.images = imagesData; // Replace existing images
+//       updateData.images = imagesData; // Ensure the images are updated in MongoDB as well
+//     }
 
-        // Upload image to Shopify
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+//     // Define metafield arrays for different product types
+//     let metafieldsPayload = [];
 
-        if (imageResponse && imageResponse.image) {
-          imagesData.push({
-            id: imageResponse.image.id,
-            product_id: product.id,
-            position: imageResponse.image.position,
-            alt: 'Product Image',
-            width: imageResponse.image.width,
-            height: imageResponse.image.height,
-            src: imageResponse.image.src,
-          });
-        }
-      }
-
-      // Update the product's images array with the new images
-      product.images = imagesData; // Replace existing images
-      updateData.images = imagesData; // Ensure the images are updated in MongoDB as well
-    }
-
-    // Define metafield arrays for different product types
-    let metafieldsPayload = [];
-
-    if (product_type === 'Used Equipments') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'city',
-            value: updateData.city || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'brand',
-            value: updateData.brand,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'description',
-            value: updateData.description,
-            type: 'multi_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'asking_price',
-            value: updateData.asking_price,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'accept_offers',
-            value: updateData.accept_offers,
-            type: 'boolean',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'equipment_type',
-            value: updateData.equipment_type,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'certification',
-            value: updateData.certification,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'year_purchased',
-            value: updateData.year_purchased,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'warranty',
-            value: updateData.warranty,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'reason_for_selling',
-            value: updateData.reason_for_selling,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'shipping',
-            value: updateData.shipping,
-            type: 'single_line_text_field',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
-    } else if (product_type === 'Businesses To Purchase') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'business_description',
-            value: updateData.businessDescription,
-            type: 'multi_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'asking_price',
-            value: updateData.asking_price.toString(),
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'established_year',
-            value: updateData.establishedYear.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'number_of_employees',
-            value: updateData.numberOfEmployees.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location_monthly_rent',
-            value: updateData.locationMonthlyRent.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'lease_expiration_date',
-            value: new Date(updateData.leaseExpirationDate).toISOString(),
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location_size',
-            value: updateData.locationSize.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'gross_yearly_revenue',
-            value: updateData.grossYearlyRevenue.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'cash_flow',
-            value: updateData.cashFlow.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'products_inventory',
-            value: updateData.productsInventory.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'equipment_value',
-            value: updateData.equipmentValue.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'reason_for_selling',
-            value: updateData.reasonForSelling,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'list_of_devices',
-            value: JSON.stringify(updateData.listOfDevices),
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'offered_services',
-            value: JSON.stringify(updateData.offeredServices),
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'support_and_training',
-            value: updateData.supportAndTraining,
-            type: 'single_line_text_field',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
-    } else if (product_type === 'Providers Available') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location || 'Unknown',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'name',
-            value: updateData.name || 'No Name Provided',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'qualification_requested',
-            value: updateData.qualificationRequested || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'requested_yearly_salary',
-            value:
-              updateData.requestedYearlySalary !== undefined
-                ? updateData.requestedYearlySalary.toString()
-                : 'Not specified',
-            type: 'number_decimal',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'position_requested_description',
-            value: updateData.positionRequestedDescription || 'No Description',
-            type: 'multi_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'availability',
-            value: updateData.availability || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
-    } else if (product_type === 'Provider Needed') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'qualification_requested',
-            value: updateData.qualificationRequested,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'job_type',
-            value: updateData.jobType,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'type_of_job_offered',
-            value: updateData.typeOfJobOffered,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'offered_yearly_salary',
-            value: updateData.offeredYearlySalary,
-            type: 'number_integer',  // Ensure this is actually an integer
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'offered_position_description',
-            value: updateData.offeredPositionDescription,
-            type: 'multi_line_text_field',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
+//     if (product_type === 'Used Equipments') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'city',
+//             value: updateData.city || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'brand',
+//             value: updateData.brand,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'description',
+//             value: updateData.description,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'asking_price',
+//             value: updateData.asking_price,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'accept_offers',
+//             value: updateData.accept_offers,
+//             type: 'boolean',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'equipment_type',
+//             value: updateData.equipment_type,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'certification',
+//             value: updateData.certification,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'year_purchased',
+//             value: updateData.year_purchased,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'warranty',
+//             value: updateData.warranty,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'reason_for_selling',
+//             value: updateData.reason_for_selling,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'shipping',
+//             value: updateData.shipping,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
+//     } else if (product_type === 'Businesses To Purchase') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'business_description',
+//             value: updateData.businessDescription,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'asking_price',
+//             value: updateData.asking_price.toString(),
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'established_year',
+//             value: updateData.establishedYear.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'number_of_employees',
+//             value: updateData.numberOfEmployees.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location_monthly_rent',
+//             value: updateData.locationMonthlyRent.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'lease_expiration_date',
+//             value: new Date(updateData.leaseExpirationDate).toISOString(),
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location_size',
+//             value: updateData.locationSize.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'gross_yearly_revenue',
+//             value: updateData.grossYearlyRevenue.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'cash_flow',
+//             value: updateData.cashFlow.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'products_inventory',
+//             value: updateData.productsInventory.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'equipment_value',
+//             value: updateData.equipmentValue.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'reason_for_selling',
+//             value: updateData.reasonForSelling,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'list_of_devices',
+//             value: JSON.stringify(updateData.listOfDevices),
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'offered_services',
+//             value: JSON.stringify(updateData.offeredServices),
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'support_and_training',
+//             value: updateData.supportAndTraining,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
+//     } else if (product_type === 'Providers Available') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location || 'Unknown',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'name',
+//             value: updateData.name || 'No Name Provided',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'qualification_requested',
+//             value: updateData.qualificationRequested || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'requested_yearly_salary',
+//             value:
+//               updateData.requestedYearlySalary !== undefined
+//                 ? updateData.requestedYearlySalary.toString()
+//                 : 'Not specified',
+//             type: 'number_decimal',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'position_requested_description',
+//             value: updateData.positionRequestedDescription || 'No Description',
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'availability',
+//             value: updateData.availability || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
+//     } else if (product_type === 'Provider Needed') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'qualification_requested',
+//             value: updateData.qualificationRequested,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'job_type',
+//             value: updateData.jobType,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'type_of_job_offered',
+//             value: updateData.typeOfJobOffered,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'offered_yearly_salary',
+//             value: updateData.offeredYearlySalary,
+//             type: 'number_integer',  // Ensure this is actually an integer
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'offered_position_description',
+//             value: updateData.offeredPositionDescription,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
     
-    } else if (product_type === 'Spa Room For Rent') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'room_size',
-            value: updateData.roomSize,
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'monthly_rent',
-            value: updateData.monthlyRent,
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'deposit',
-            value: updateData.deposit,
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'minimum_insurance_requested',
-            value: updateData.minimumInsuranceRequested,
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'type_of_use_allowed',
-            value: updateData.typeOfUseAllowed,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'rental_terms',
-            value: updateData.rentalTerms,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'wifi_available',
-            value: updateData.wifiAvailable,
-            type: 'boolean',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'other_details',
-            value: updateData.otherDetails,
-            type: 'multi_line_text_field',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
-    } else if (product_type === 'New Equipments') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'name',
-            value: updateData.name,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'description',
-            value: updateData.description,
-            type: 'multi_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location || 'Unknown',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'brand',
-            value: updateData.brand,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'sale_price',
-            value: updateData.sale_price.toString(),
-            type: 'number_integer',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'equipment_type',
-            value: updateData.equipment_type,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'certification',
-            value: updateData.certification,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'year_manufactured',
-            value: updateData.year_manufactured.toString(),
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'warranty',
-            value: updateData.warranty,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'training',
-            value: updateData.training,
-            type: 'multi_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'shipping',
-            value: updateData.shipping || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
-    }else if (product_type === 'Looking For') {
-      metafieldsPayload = [
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'zip',
-            value: updateData.zip || 'Not specified',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'name',
-            value: updateData.name,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'description',
-            value: updateData.description,
-            type: 'multi_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'location',
-            value: updateData.location || 'Unknown',
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'brand',
-            value: updateData.brand,
-            type: 'single_line_text_field',
-          },
-        },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'sale_price',
-            value: updateData.sale_price,
-            type: 'number_integer',
-          },
-        },
-        // {
-        //   metafield:  {
-        //     namespace: 'fold_tech',
-        //     key: 'userinformation',
-        //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-        //     type: 'single_line_text_field',
-        //   },
-        // },
-      ];
-    }
+//     } else if (product_type === 'Spa Room For Rent') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'room_size',
+//             value: updateData.roomSize,
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'monthly_rent',
+//             value: updateData.monthlyRent,
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'deposit',
+//             value: updateData.deposit,
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'minimum_insurance_requested',
+//             value: updateData.minimumInsuranceRequested,
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'type_of_use_allowed',
+//             value: updateData.typeOfUseAllowed,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'rental_terms',
+//             value: updateData.rentalTerms,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'wifi_available',
+//             value: updateData.wifiAvailable,
+//             type: 'boolean',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'other_details',
+//             value: updateData.otherDetails,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
+//     } else if (product_type === 'New Equipments') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'name',
+//             value: updateData.name,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'description',
+//             value: updateData.description,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location || 'Unknown',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'brand',
+//             value: updateData.brand,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'sale_price',
+//             value: updateData.sale_price.toString(),
+//             type: 'number_integer',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'equipment_type',
+//             value: updateData.equipment_type,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'certification',
+//             value: updateData.certification,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'year_manufactured',
+//             value: updateData.year_manufactured.toString(),
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'warranty',
+//             value: updateData.warranty,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'training',
+//             value: updateData.training,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'shipping',
+//             value: updateData.shipping || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
+//     }else if (product_type === 'Looking For') {
+//       metafieldsPayload = [
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'zip',
+//             value: updateData.zip || 'Not specified',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'name',
+//             value: updateData.name,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'description',
+//             value: updateData.description,
+//             type: 'multi_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'location',
+//             value: updateData.location || 'Unknown',
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'brand',
+//             value: updateData.brand,
+//             type: 'single_line_text_field',
+//           },
+//         },
+//         {
+//           metafield: {
+//             namespace: 'fold_tech',
+//             key: 'sale_price',
+//             value: updateData.sale_price,
+//             type: 'number_integer',
+//           },
+//         },
+//         // {
+//         //   metafield:  {
+//         //     namespace: 'fold_tech',
+//         //     key: 'userinformation',
+//         //     value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+//         //     type: 'single_line_text_field',
+//         //   },
+//         // },
+//       ];
+//     }
 
-    for (const metafield of metafieldsPayload) {
-      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/metafields.json`;
-      await shopifyRequest(metafieldsUrl, 'POST', metafield);
-    }
-    // Prepare Shopify payload, including user info
-    const shopifyPayload = {
-      product: {
-        title: `${updateData.name || updateData.qualificationRequested || updateData.typeOfUseAllowed} | ${country} , ${updateData.location} , ${updateData.zip}`,
-        body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails || updateData.businessDescription,
-        vendor: updateData.brand || updateData.location,
-        tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
-        images: product.images, // Attach updated images
-      },
-    };
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
+//     }
+//     // Prepare Shopify payload, including user info
+//     const shopifyPayload = {
+//       product: {
+//         title: `${updateData.name || updateData.qualificationRequested || updateData.typeOfUseAllowed} | ${country} , ${updateData.location} , ${updateData.zip}`,
+//         body_html: updateData.description || updateData.offeredPositionDescription || updateData.otherDetails || updateData.businessDescription,
+//         vendor: updateData.brand || updateData.location,
+//         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
+//         images: product.images, // Attach updated images
+//       },
+//     };
 
-    // Shopify update API URL
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
+//     // Shopify update API URL
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
 
-    // Update the product in Shopify
-    const shopifyResponse = await fetch(shopifyUrl, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(shopifyPayload),
-    });
+//     // Update the product in Shopify
+//     const shopifyResponse = await fetch(shopifyUrl, {
+//       method: 'PUT',
+//       headers: {
+//         Authorization: `Basic ${Buffer.from(`${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`).toString('base64')}`,
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(shopifyPayload),
+//     });
 
-    if (!shopifyResponse.ok) {
-      const errorDetails = await shopifyResponse.text();
-      return res.status(500).json({
-        message: 'Failed to update product in Shopify',
-        details: errorDetails,
-      });
-    }
-    const currentStatus = product.status;
-if (product_type === 'Used Equipments' || product_type === 'New Equipments' ) {
-  updateData.equipment = {
-    location: req.body.location,
-    zip: req.body.zip,
-    name: req.body.name,
-    brand: req.body.brand,
-    asking_price: req.body.asking_price,
-    accept_offers: req.body.accept_offers,
-    equipment_type: req.body.equipment_type,
-    certification: req.body.certification,
-    year_purchased: req.body.year_purchased,
-    warranty: req.body.warranty,
-    reason_for_selling: req.body.reason_for_selling,
-    shipping: req.body.shipping,
-    sale_price: req.body.sale_price,
-    year_manufactured: req.body.year_manufactured,
-    training: req.body.training,
-    description: req.body.description,
-    city:req.body.city,
-  };
-}
+//     if (!shopifyResponse.ok) {
+//       const errorDetails = await shopifyResponse.text();
+//       return res.status(500).json({
+//         message: 'Failed to update product in Shopify',
+//         details: errorDetails,
+//       });
+//     }
+//     const currentStatus = product.status;
+// if (product_type === 'Used Equipments' || product_type === 'New Equipments' ) {
+//   updateData.equipment = {
+//     location: req.body.location,
+//     zip: req.body.zip,
+//     name: req.body.name,
+//     brand: req.body.brand,
+//     asking_price: req.body.asking_price,
+//     accept_offers: req.body.accept_offers,
+//     equipment_type: req.body.equipment_type,
+//     certification: req.body.certification,
+//     year_purchased: req.body.year_purchased,
+//     warranty: req.body.warranty,
+//     reason_for_selling: req.body.reason_for_selling,
+//     shipping: req.body.shipping,
+//     sale_price: req.body.sale_price,
+//     year_manufactured: req.body.year_manufactured,
+//     training: req.body.training,
+//     description: req.body.description,
+//     city:req.body.city,
+//   };
+// }
 
-if (product_type === 'Businesses To Purchase') {
-  updateData.business = {
-    name: req.body.name,
-    location: req.body.location,
-    zip: req.body.zip,
-    businessDescription: req.body.businessDescription,
-    asking_price: req.body.asking_price,
-    establishedYear: req.body.establishedYear,
-    numberOfEmployees: req.body.numberOfEmployees,
-    locationMonthlyRent: req.body.locationMonthlyRent,
-    leaseExpirationDate: new Date(req.body.leaseExpirationDate),
-    locationSize: req.body.locationSize,
-    grossYearlyRevenue: req.body.grossYearlyRevenue,
-    cashFlow: req.body.cashFlow,
-    productsInventory: req.body.productsInventory,
-    equipmentValue: req.body.equipmentValue,
-    reasonForSelling: req.body.reasonForSelling,
-    listOfDevices: req.body.listOfDevices,
-    offeredServices: req.body.offeredServices,
-    supportAndTraining: req.body.supportAndTraining,
-  };
-}
+// if (product_type === 'Businesses To Purchase') {
+//   updateData.business = {
+//     name: req.body.name,
+//     location: req.body.location,
+//     zip: req.body.zip,
+//     businessDescription: req.body.businessDescription,
+//     asking_price: req.body.asking_price,
+//     establishedYear: req.body.establishedYear,
+//     numberOfEmployees: req.body.numberOfEmployees,
+//     locationMonthlyRent: req.body.locationMonthlyRent,
+//     leaseExpirationDate: new Date(req.body.leaseExpirationDate),
+//     locationSize: req.body.locationSize,
+//     grossYearlyRevenue: req.body.grossYearlyRevenue,
+//     cashFlow: req.body.cashFlow,
+//     productsInventory: req.body.productsInventory,
+//     equipmentValue: req.body.equipmentValue,
+//     reasonForSelling: req.body.reasonForSelling,
+//     listOfDevices: req.body.listOfDevices,
+//     offeredServices: req.body.offeredServices,
+//     supportAndTraining: req.body.supportAndTraining,
+//   };
+// }
 
-if (product_type === 'Spa Room For Rent') {
-  updateData.roomListing = [
-    {
-      location: req.body.location,
-      zip: req.body.zip,
-      roomSize: req.body.roomSize,
-      monthlyRent: req.body.monthlyRent,
-      deposit: req.body.deposit,
-      minimumInsuranceRequested: req.body.minimumInsuranceRequested,
-      typeOfUseAllowed: req.body.typeOfUseAllowed,
-      rentalTerms: req.body.rentalTerms,
-      wifiAvailable: req.body.wifiAvailable,
-      otherDetails: req.body.otherDetails,
-      images: imagesData, // Assuming imagesData is already defined
-    },
-  ];
-}
+// if (product_type === 'Spa Room For Rent') {
+//   updateData.roomListing = [
+//     {
+//       location: req.body.location,
+//       zip: req.body.zip,
+//       roomSize: req.body.roomSize,
+//       monthlyRent: req.body.monthlyRent,
+//       deposit: req.body.deposit,
+//       minimumInsuranceRequested: req.body.minimumInsuranceRequested,
+//       typeOfUseAllowed: req.body.typeOfUseAllowed,
+//       rentalTerms: req.body.rentalTerms,
+//       wifiAvailable: req.body.wifiAvailable,
+//       otherDetails: req.body.otherDetails,
+//       images: imagesData, // Assuming imagesData is already defined
+//     },
+//   ];
+// }
 
-if (product_type === 'Provider Needed') {
-  updateData.providerListings = [
-    {
-      location: req.body.location,
-      zip: req.body.zip,
-      qualificationRequested: req.body.qualificationRequested,
-      jobType: req.body.jobType,
-      typeOfJobOffered: req.body.typeOfJobOffered,
-      offeredYearlySalary: req.body.offeredYearlySalary,
-      offeredPositionDescription: req.body.offeredPositionDescription,
-      images: imagesData, // Assuming imagesData is already defined
-    },
-  ];
-}
+// if (product_type === 'Provider Needed') {
+//   updateData.providerListings = [
+//     {
+//       location: req.body.location,
+//       zip: req.body.zip,
+//       qualificationRequested: req.body.qualificationRequested,
+//       jobType: req.body.jobType,
+//       typeOfJobOffered: req.body.typeOfJobOffered,
+//       offeredYearlySalary: req.body.offeredYearlySalary,
+//       offeredPositionDescription: req.body.offeredPositionDescription,
+//       images: imagesData, // Assuming imagesData is already defined
+//     },
+//   ];
+// }
 
-if (product_type === 'Providers Available') {
-  updateData.jobListings = [
-    {
-      location: req.body.location,
-      zip: req.body.zip,
-      name: req.body.name,
-      qualification: req.body.qualification,
-      positionRequestedDescription: req.body.positionRequestedDescription,
-      availability: req.body.availability,
-      requestedYearlySalary: req.body.requestedYearlySalary,
-      images: imagesData, // Assuming imagesData is already defined
-    },
-  ];
-}
-if (product_type === 'Looking For') {
-  updateData.looking = {
-    name: req.body.name,
-    location: req.body.location,
-    zip: req.body.zip,
-    brand: req.body.brand,
-    sale_price: req.body.sale_price,
-    description: req.body.description,
-    images:imagesData
-  };
-}
-// Set common fields for all product types
-const commonFields = {
-  title: req.body.name || req.body.qualificationRequested,
-  body_html: req.body.description || req.body.offeredPositionDescription || req.body.otherDetails,
-  vendor: req.body.brand,
-  product_type,
-  status:currentStatus,
-  created_at: new Date(),
-};
+// if (product_type === 'Providers Available') {
+//   updateData.jobListings = [
+//     {
+//       location: req.body.location,
+//       zip: req.body.zip,
+//       name: req.body.name,
+//       qualification: req.body.qualification,
+//       positionRequestedDescription: req.body.positionRequestedDescription,
+//       availability: req.body.availability,
+//       requestedYearlySalary: req.body.requestedYearlySalary,
+//       images: imagesData, // Assuming imagesData is already defined
+//     },
+//   ];
+// }
+// if (product_type === 'Looking For') {
+//   updateData.looking = {
+//     name: req.body.name,
+//     location: req.body.location,
+//     zip: req.body.zip,
+//     brand: req.body.brand,
+//     sale_price: req.body.sale_price,
+//     description: req.body.description,
+//     images:imagesData
+//   };
+// }
+// // Set common fields for all product types
+// const commonFields = {
+//   title: req.body.name || req.body.qualificationRequested,
+//   body_html: req.body.description || req.body.offeredPositionDescription || req.body.otherDetails,
+//   vendor: req.body.brand,
+//   product_type,
+//   status:currentStatus,
+//   created_at: new Date(),
+// };
 
-// Combine common fields with the specific update data
-const updatedProduct = await listingModel.findOneAndUpdate(
-  { id },
-  { ...commonFields, ...updateData },
-  { new: true } // Option to return the updated document
-);
+// // Combine common fields with the specific update data
+// const updatedProduct = await listingModel.findOneAndUpdate(
+//   { id },
+//   { ...commonFields, ...updateData },
+//   { new: true } // Option to return the updated document
+// );
  
-return res
-      .status(200)
-      .json({ message: 'Product updated successfully', product: updatedProduct });
-  } catch (error) {
-    console.error('Error updating product:', error);
-    return res.status(500).json({ message: 'An error occurred', error });
-  }
-};
+// return res
+//       .status(200)
+//       .json({ message: 'Product updated successfully', product: updatedProduct });
+//   } catch (error) {
+//     console.error('Error updating product:', error);
+//     return res.status(500).json({ message: 'An error occurred', error });
+//   }
+// };
 
 
 // export const updateListing = async (req, res) => {
@@ -10116,7 +10111,6 @@ return res
 // };
 
 
->>>>>>> 54682a0c87aa1a46212b19e2fc0607f27659840e
 
 export const productUpdate = async (req, res) => {
   const { id, updateData } = req.body; // Shopify product ID and update data from the request body
