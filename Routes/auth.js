@@ -19,7 +19,7 @@ import {
   dbDelete,
   getAllUsersData,
 } from '../controller/auth.js';
-import { upload ,cpUpload} from '../middleware/cloudinary.js';
+import { cpUpload} from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 const authRouter = express.Router();
 
