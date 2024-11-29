@@ -29,7 +29,7 @@ app.use('/auth', authRouter);
 app.use('/product', productRouter);
 app.use('/order', orderRouter);
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.send('API is running...')
 });
 
 export default app;
