@@ -2753,6 +2753,7 @@ export const addNewJobListing = async (req, res) => {
           qualification,
           positionRequestedDescription,
           availability,
+          jobType,
           requestedYearlySalary,
           availableToWorkAs,
           images: imagesData,
