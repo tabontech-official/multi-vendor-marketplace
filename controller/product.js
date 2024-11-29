@@ -468,6 +468,14 @@ export const updateListing = async (req, res) => {
             type: 'multi_line_text_field',
           },
         },
+        {
+          metafield: {
+            namespace: 'fold_tech',
+            key: 'availableToWorkAs',
+            value: updateData.availableToWorkAs,
+            type: 'single_line_text_field',
+          },
+        },
         // {
         //   metafield:  {
         //     namespace: 'fold_tech',
