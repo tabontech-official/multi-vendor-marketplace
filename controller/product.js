@@ -869,6 +869,8 @@ if (product_type === 'Providers Available') {
       positionRequestedDescription: req.body.positionRequestedDescription,
       availability: req.body.availability,
       requestedYearlySalary: req.body.requestedYearlySalary,
+      jobType:req.body.jobType,
+      availableToWorkAs:req.body.availableToWorkAs,
       images: imagesData, // Assuming imagesData is already defined
     },
   ];
