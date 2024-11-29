@@ -2764,7 +2764,7 @@ export const addNewJobListing = async (req, res) => {
       status: productStatus,
     });
 
-    await newJobListing.save();
+    await newJobListing.save()
 
     // Subscription management for active listings
     if (status === 'active') {
