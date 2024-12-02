@@ -2576,7 +2576,7 @@ export const addNewJobListing = async (req, res) => {
       status,
     } = req.body;
     // const formattedDescription = positionRequestedDescription.replace(/\n/g, '<br>');
-
+  
     // Handle file upload
     const files = req.files?.images || []; // Ensure we have an array of files
     const productStatus = status === 'publish' ? 'active' : 'draft';
@@ -2758,8 +2758,8 @@ export const addNewJobListing = async (req, res) => {
           jobType,
           requestedYearlySalary,
           availableToWorkAs,
-          jobType:jobType,
           images: imagesData,
+       
         },
       ],
       userId,
@@ -2868,7 +2868,7 @@ export const addNewProviderListing = async (req, res) => {
       status,
     } = req.body;
     // const formattedDescription = offeredPositionDescription.replace(/\n/g, '<br>');
-
+console.log(req.body)
     // Handle file upload
     const images = req.files?.images || []; // Ensure we have an array of images
     const productStatus = status === 'publish' ? 'active' : 'draft';

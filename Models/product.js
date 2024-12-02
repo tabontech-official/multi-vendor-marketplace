@@ -143,7 +143,6 @@ const productSchema = new mongoose.Schema(
       {
         location: { type: String },
         zip: { type: Number },
-
         name: { type: String },
         qualification: { type: String },
         positionRequestedDescription: { type: String },
@@ -151,10 +150,10 @@ const productSchema = new mongoose.Schema(
         availability: { type: String },
         requestedYearlySalary: { type: Number },
         image: { type: String }, // URL to the uploaded image
-        availableToWorkAs:String,
+        availableToWorkAs: { type: String },
         jobType: { type: String },
-
-      },
+      }
+    
     ],
     providerListings: [
       {
