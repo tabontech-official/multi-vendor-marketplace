@@ -150,7 +150,8 @@ const listingSchema = new mongoose.Schema(
         availability: { type: String },
         requestedYearlySalary: { type: Number },
         image: { type: String }, // URL to the uploaded image
-        availableToWorkAs:String
+        availableToWorkAs:String,
+        jobType: String, // Ensure this field exists
       },
     ],
     providerListings: [
