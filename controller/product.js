@@ -1126,6 +1126,7 @@ export const addUsedEquipments = async (req, res) => {
       userId,
       status
     } = req.body;
+    console.log(req.body)
     // Validate required field
     const productStatus = status === 'publish' ? 'active' : 'draft';
     const user = await authModel.findById(userId);
