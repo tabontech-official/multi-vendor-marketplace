@@ -28,7 +28,12 @@ app.use(express.json({limit:"5000000mb"}));
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
 app.use('/order', orderRouter);
-
+app.use((req, res, next) => {
+  res.setTimeout(300000, () => {  // 300000 ms = 5 minutes
+    res.status(504).send('Request timed out');
+  });
+  next();
+});
 app.get('/', (req, res) => {
   res.send('API is running...')
 });
