@@ -3,7 +3,7 @@
   
     "functions": {
       "app.js": {
-        "memory": 3009,
+       
         "maxDuration": 300
       }
     },
