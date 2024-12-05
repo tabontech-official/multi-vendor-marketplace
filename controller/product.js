@@ -6366,7 +6366,7 @@ export const lookingFor = async (req, res) => {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
-
+console.log(req.files)
     // Step 4: Upload Images to Shopify if provided
     const images = req.files?.images || [];
     const imagesData = [];
