@@ -5,11 +5,5 @@
       "runtime": "@vercel/node@20",  
       "maxDuration": 60
     }
-  },
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/app.js"
-    }
-  ]
+  }
 }
