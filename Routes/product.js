@@ -27,7 +27,6 @@ import {
 import {  cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
-import { uploadImage } from '../middleware/upload.js';
 
 const productRouter = express.Router();
 productRouter.get('/shopify', fetchAndStoreProducts);
@@ -53,5 +52,5 @@ productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.delete('/', deletAllProduct);
 productRouter.put('/credits', updateCredits);
 productRouter.get('/fetchRequireCredits',fetchRequireCredits)
-productRouter.post('/lookingFor',uploadImage,lookingFor)
+productRouter.post('/lookingFor',cpUpload,lookingFor)
 export default productRouter;
