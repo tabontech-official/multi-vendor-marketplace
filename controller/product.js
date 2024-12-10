@@ -6241,343 +6241,6 @@ export const fetchRequireCredits = async (req, res) => {
 //   }
 // };
 
-// export const lookingFor = async (req, res) => {
-//   let productId;
-//   try {
-//     const {
-//       location,
-//       zip,
-//       name,
-//       brand,
-//       sale_price,
-//       description,
-//       userId,
-//       status, // 'publish' or 'draft'
-//     } = req.body;
-
-//     // Validate required fields
-//     if (!zip) return res.status(400).json({ error: 'ZipCode is required.' });
-//     if (!location)
-//       return res.status(400).json({ error: 'Location is required.' });
-//     if (!name) return res.status(400).json({ error: 'Name is required.' });
-//     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-//     if (!description)
-//       return res.status(400).json({ error: 'Description is required.' });
-    
-//     // Determine product status based on action
-//     const productStatus = status === 'publish' ? 'active' : 'draft';
-
-//     // Step 1: Fetch user to get the username
-//     const user = await authModel.findById(userId);
-//     if (!user) return res.status(404).json({ error: 'User not found.' });
-
-//     const username = user.userName; // Fetch username, default to 'Unknown' if not found
-//     const phoneNumber = user.phoneNumber;
-//     const country = user.country;
-//     const city = user.city;
-//     const email = user.email;
-//     const firstName=user.firstName
-//     const lastName=user.lastName
-//     // Step 2: Create Product in Shopify
-//     // const formattedDescription = description.replace(/\n/g, '<br>');
-
-//     const shopifyPayload = {
-//       product: {
-//         title: `${name} | ${country},${location},${zip}`,
-//         body_html: description,
-//         vendor: brand,
-//         product_type: 'Looking For',
-//         variants: [{ price: sale_price }],
-//         status: productStatus,
-//         published_scope: 'global',
-//         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
-//       },
-//     };
-
-//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-//     const productResponse = await shopifyRequest(
-//       shopifyUrl,
-//       'POST',
-//       shopifyPayload
-//     );
-//     productId = productResponse.product.id; // Assign productId
-
-//     // Step 3: Create Structured Metafields for the Equipment Details
-//     const metafieldsPayload = [
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'zip',
-//           value: zip || 'Not specified',
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'name',
-//           value: name,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'description',
-//           value: description,
-//           type: 'multi_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'location',
-//           value: location || 'Unknown',
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'brand',
-//           value: brand,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'sale_price',
-//           value: sale_price || 0,
-//           type: 'number_integer',
-//         },
-//       },
-//       {
-//         metafield: {
-//           namespace: 'fold_tech',
-//           key: 'userinformation',
-//           value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-//           type: 'single_line_text_field',
-//         },
-//       },
-//     ];
-
-//     for (const metafield of metafieldsPayload) {
-//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
-//     }
-// console.log(req.files)
-//     // Step 4: Upload Images to Shopify if provided
-//     const images = req.files?.images || [];
-//     const imagesData = [];
-
-//     for (const image of images) {
-//       const cloudinaryImageUrl = image.path; // Ensure we use the correct path
-
-//       const imagePayload = {
-//         image: {
-//           src: cloudinaryImageUrl,
-//         },
-//       };
-
-//       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-//       const imageResponse = await shopifyRequest(
-//         imageUrl,
-//         'POST',
-//         imagePayload
-//       );
-
-//       if (imageResponse && imageResponse.image) {
-//         imagesData.push({
-//           id: imageResponse.image.id,
-//           product_id: productId,
-//           position: imageResponse.image.position,
-//           created_at: imageResponse.image.created_at,
-//           updated_at: imageResponse.image.updated_at,
-//           alt: 'Looking Image',
-//           width: imageResponse.image.width,
-//           height: imageResponse.image.height,
-//           src: imageResponse.image.src,
-//         });
-//       }
-//     }
-
-//     // Step 5: Save Product to MongoDB
-//     const newProduct = new listingModel({
-//       id: productId,
-//       title: name,
-//       body_html: description, // Empty body_html as we use metafields for details
-//       vendor: brand,
-//       product_type: 'Looking For',
-//       created_at: new Date(),
-//       handle: productResponse.product.handle,
-//       updated_at: new Date(),
-//       published_at: productResponse.product.published_at,
-//       template_suffix: productResponse.product.template_suffix,
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       images: imagesData,
-//       looking: {
-//         location,
-//         zip,
-//         name,
-//         brand,
-//         sale_price,
-//         description,
-//       },
-//       userId,
-//       status: productStatus,
-//     });
-
-//     await newProduct.save();
-
-//     // If the product is published, decrease user subscription quantity
-//     if (status === 'active') {
-//       const user = await authModel.findById(userId);
-//       if (!user) return res.status(404).json({ error: 'User not found.' });
-
-//       // Check subscription quantity
-//       const productConfig = await productModel.findOne({ product_type: 'Looking For' });
-//       if (!productConfig) {
-//         return res.status(404).json({ error: 'Product configuration not found.' });
-//       }
-
-//       // if (!user.subscription || user.subscription.quantity <= 0) {
-//       //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-//       // }
-
-//       if (user.subscription.quantity < productConfig.credit_required) {
-//         return res.status(400).json({
-//           error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
-//         });
-//       }
-
-//       // Decrement the subscription quantity
-//       user.subscription.quantity -= productConfig.credit_required;
-//       await user.save();
-
-//       // Set expiration date to 30 days from now
-//       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-//       // Step 6: Update product status in Shopify
-//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-//       const shopifyUpdatePayload = {
-//         product: {
-//           id: productId,
-//           status: 'active',
-//           published_scope: 'global',
-//         },
-//       };
-
-//       const shopifyResponse = await shopifyRequest(
-//         updateShopifyUrl,
-//         'PUT',
-//         shopifyUpdatePayload
-//       );
-//       if (!shopifyResponse.product) {
-//         return res
-//           .status(400)
-//           .json({ error: 'Failed to update product status in Shopify.' });
-//       }
-
-//       // Step 7: Update product status in MongoDB
-//       const updatedProduct = await listingModel.findOneAndUpdate(
-//         { id: productId },
-//         { status: 'active', expiresAt },
-//         { new: true }
-//       );
-
-//       if (!updatedProduct) {
-//         return res
-//           .status(404)
-//           .json({ error: 'Product not found in database.' });
-//       }
-
-//       // Schedule the unpublish task
-//       //scheduleUnpublish(productId, userId, expiresAt);
-
-//       // Send a successful response
-//       return res.status(201).json({
-//         message: 'Product successfully created and published.',
-//         product: updatedProduct,
-//         expiresAt,
-//       });
-//     }
-
-//     // If the product is saved as draft
-//     res.status(201).json({
-//       message: 'Product successfully created and saved as draft.',
-//       product: newProduct,
-//       expiresAt: null, // No expiration date for draft
-//     });
-//   } catch (error) {
-//     console.error('Error in addNewEquipments function:', error);
-
-//     // Attempt to delete the product from Shopify if it was created
-//     if (productId) {
-//       try {
-//         const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-//         await shopifyRequest(deleteShopifyUrl, 'DELETE');
-//       } catch (deleteError) {
-//         console.error('Error deleting product from Shopify:', deleteError);
-//       }
-//     }
-
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
-
-// Image Upload API Endpoint (with Shopify integration)
-export const uploadImage = async (req, res) => {
-  try {
-    const images = req.files?.images || []; // Images sent in the request
-    const uploadedImages = [];
-
-    // Process each image, upload to Cloudinary, and return the URL
-    for (const image of images) {
-      // Assuming image.path is the Cloudinary URL after upload
-      const cloudinaryImageUrl = image.path;  // Example path from Cloudinary
-
-      // Prepare the image object to return the URL
-      uploadedImages.push({
-        url: cloudinaryImageUrl,  // URL of the uploaded image
-        name: image.originalname,
-        size: image.size,
-      });
-
-      // Now upload to Shopify (Image Upload to Shopify API)
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,  // Use the Cloudinary URL or other storage URL
-        },
-      };
-
-      const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${req.body.productId}/images.json`;
-      const imageResponse = await shopifyRequest(shopifyUrl, 'POST', imagePayload);
-
-      if (imageResponse && imageResponse.image) {
-        uploadedImages.push({
-          shopifyImageId: imageResponse.image.id,
-          productId: req.body.productId,
-          position: imageResponse.image.position,
-          src: imageResponse.image.src,
-        });
-      }
-    }
-
-    // Return the uploaded image data including Shopify image data
-    return res.status(200).json({
-      message: 'Images uploaded successfully to Cloudinary and Shopify.',
-      images: uploadedImages,
-    });
-  } catch (error) {
-    console.error('Error uploading images:', error);
-    return res.status(500).json({ error: 'Failed to upload images to Cloudinary or Shopify' });
-  }
-};
-
-
 export const lookingFor = async (req, res) => {
   let productId;
   try {
@@ -6594,11 +6257,13 @@ export const lookingFor = async (req, res) => {
 
     // Validate required fields
     if (!zip) return res.status(400).json({ error: 'ZipCode is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
+    if (!location)
+      return res.status(400).json({ error: 'Location is required.' });
     if (!name) return res.status(400).json({ error: 'Name is required.' });
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-    if (!description) return res.status(400).json({ error: 'Description is required.' });
-
+    if (!description)
+      return res.status(400).json({ error: 'Description is required.' });
+    
     // Determine product status based on action
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
@@ -6606,15 +6271,16 @@ export const lookingFor = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName; 
+    const username = user.userName; // Fetch username, default to 'Unknown' if not found
     const phoneNumber = user.phoneNumber;
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName = user.firstName;
-    const lastName = user.lastName;
-
+    const firstName=user.firstName
+    const lastName=user.lastName
     // Step 2: Create Product in Shopify
+    // const formattedDescription = description.replace(/\n/g, '<br>');
+
     const shopifyPayload = {
       product: {
         title: `${name} | ${country},${location},${zip}`,
@@ -6629,7 +6295,11 @@ export const lookingFor = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 3: Create Structured Metafields for the Equipment Details
@@ -6692,17 +6362,51 @@ export const lookingFor = async (req, res) => {
       },
     ];
 
-    // Upload metafields
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
+console.log(req.files)
+    // Step 4: Upload Images to Shopify if provided
+    const images = req.files?.images || [];
+    const imagesData = [];
 
-    // Step 4: Save Product to MongoDB without images
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
+
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
+
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Looking Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
+    }
+
+    // Step 5: Save Product to MongoDB
     const newProduct = new listingModel({
       id: productId,
       title: name,
-      body_html: description,
+      body_html: description, // Empty body_html as we use metafields for details
       vendor: brand,
       product_type: 'Looking For',
       created_at: new Date(),
@@ -6712,7 +6416,7 @@ export const lookingFor = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: [],  // No images are handled here
+      images: imagesData,
       looking: {
         location,
         zip,
@@ -6727,17 +6431,103 @@ export const lookingFor = async (req, res) => {
 
     await newProduct.save();
 
-    // Send a successful response
-    res.status(201).json({
-      message: 'Product successfully created.',
-      product: newProduct,
-    });
+    // If the product is published, decrease user subscription quantity
+    if (status === 'active') {
+      const user = await authModel.findById(userId);
+      if (!user) return res.status(404).json({ error: 'User not found.' });
 
+      // Check subscription quantity
+      const productConfig = await productModel.findOne({ product_type: 'Looking For' });
+      if (!productConfig) {
+        return res.status(404).json({ error: 'Product configuration not found.' });
+      }
+
+      // if (!user.subscription || user.subscription.quantity <= 0) {
+      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+      // }
+
+      if (user.subscription.quantity < productConfig.credit_required) {
+        return res.status(400).json({
+          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
+        });
+      }
+
+      // Decrement the subscription quantity
+      user.subscription.quantity -= productConfig.credit_required;
+      await user.save();
+
+      // Set expiration date to 30 days from now
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      // Step 6: Update product status in Shopify
+      const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+      const shopifyUpdatePayload = {
+        product: {
+          id: productId,
+          status: 'active',
+          published_scope: 'global',
+        },
+      };
+
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
+      if (!shopifyResponse.product) {
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
+      }
+
+      // Step 7: Update product status in MongoDB
+      const updatedProduct = await listingModel.findOneAndUpdate(
+        { id: productId },
+        { status: 'active', expiresAt },
+        { new: true }
+      );
+
+      if (!updatedProduct) {
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
+      }
+
+      // Schedule the unpublish task
+      //scheduleUnpublish(productId, userId, expiresAt);
+
+      // Send a successful response
+      return res.status(201).json({
+        message: 'Product successfully created and published.',
+        product: updatedProduct,
+        expiresAt,
+      });
+    }
+
+    // If the product is saved as draft
+    res.status(201).json({
+      message: 'Product successfully created and saved as draft.',
+      product: newProduct,
+      expiresAt: null, // No expiration date for draft
+    });
   } catch (error) {
-    console.error('Error in lookingFor function:', error);
+    console.error('Error in addNewEquipments function:', error);
+
+    // Attempt to delete the product from Shopify if it was created
+    if (productId) {
+      try {
+        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+        await shopifyRequest(deleteShopifyUrl, 'DELETE');
+      } catch (deleteError) {
+        console.error('Error deleting product from Shopify:', deleteError);
+      }
+    }
+
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 export const getAllProductData = async (req, res) => {
   const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided

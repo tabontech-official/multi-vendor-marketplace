@@ -22,8 +22,7 @@ import {
   fetchPricePerCredit,
   fetchRequireCredits,
   lookingFor,
-  getAllProductData,
-  uploadImage
+  getAllProductData
 } from '../controller/product.js';
 import {  cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -54,5 +53,4 @@ productRouter.delete('/', deletAllProduct);
 productRouter.put('/credits', updateCredits);
 productRouter.get('/fetchRequireCredits',fetchRequireCredits)
 productRouter.post('/lookingFor',cpUpload,lookingFor)
-productRouter.post('/uploadImages',cpUpload,uploadImage)
 export default productRouter;
