@@ -6416,7 +6416,7 @@ console.log(req.files)
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imagesData,
+      // images: imagesData,
       looking: {
         location,
         zip,
