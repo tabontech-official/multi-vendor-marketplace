@@ -1629,35 +1629,35 @@ export const addUsedEquipments = async (req, res) => {
     }
 
     // Step 3: Upload Images to Shopify if provided
-    // const images = req.files?.images || [];
-    // const imagesData = [];
+    const images = req.files?.images || [];
+    const imagesData = [];
 
-    // for (const image of images) {
-    //   const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-    //   const imagePayload = {
-    //     image: {
-    //       src: cloudinaryImageUrl,
-    //     },
-    //   };
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
 
-    //   const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    //   const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
-    //   if (imageResponse && imageResponse.image) {
-    //     imagesData.push({
-    //       id: imageResponse.image.id,
-    //       product_id: productId,
-    //       position: imageResponse.image.position,
-    //       created_at: imageResponse.image.created_at,
-    //       updated_at: imageResponse.image.updated_at,
-    //       alt: 'Equipment Image',
-    //       width: imageResponse.image.width,
-    //       height: imageResponse.image.height,
-    //       src: imageResponse.image.src,
-    //     });
-    //   }
-    // }
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
+    }
 
     const createdAt = new Date();
     const expirationDate = new Date(createdAt);
@@ -2354,39 +2354,39 @@ export const addNewEquipments = async (req, res) => {
     }
 
     // Step 4: Upload Images to Shopify if provided
-    // const images = req.files?.images || [];
-    // const imagesData = [];
+    const images = req.files?.images || [];
+    const imagesData = [];
 
-    // for (const image of images) {
-    //   const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-    //   const imagePayload = {
-    //     image: {
-    //       src: cloudinaryImageUrl,
-    //     },
-    //   };
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
 
-    //   const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-    //   const imageResponse = await shopifyRequest(
-    //     imageUrl,
-    //     'POST',
-    //     imagePayload
-    //   );
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
 
-    //   if (imageResponse && imageResponse.image) {
-    //     imagesData.push({
-    //       id: imageResponse.image.id,
-    //       product_id: productId,
-    //       position: imageResponse.image.position,
-    //       created_at: imageResponse.image.created_at,
-    //       updated_at: imageResponse.image.updated_at,
-    //       alt: 'Equipment Image',
-    //       width: imageResponse.image.width,
-    //       height: imageResponse.image.height,
-    //       src: imageResponse.image.src,
-    //     });
-    //   }
-    // }
+      if (imageResponse && imageResponse.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: 'Equipment Image',
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
+    }
 
     // Step 5: Save Product to MongoDB
     const newProduct = new listingModel({
