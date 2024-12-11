@@ -7234,6 +7234,73 @@ console.log(req.files)
   }
 };
 
+// export const updateImages = async (req, res) => {
+//   const { id } = req.params; // This will be the Shopify product ID passed in the URL
+  
+//   try {
+//     // Use the `id` to fetch the product from the MongoDB database
+//     const product = await listingModel.findOne({ id });
+//     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+//     console.log(req.files); // Log the uploaded files (images)
+
+//     const images = req.files?.images || []; // Get images from the request files
+//     const imagesData = [];
+
+//     for (const image of images) {
+//       const cloudinaryImageUrl = image.path; // URL of the uploaded image on Cloudinary
+
+//       // Prepare the payload for the Shopify API request
+//       const imagePayload = {
+//         image: {
+//           src: cloudinaryImageUrl, // Cloudinary URL for the image
+//         },
+//       };
+
+//       // Generate the Shopify API URL to add an image to the product
+//       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/images.json`;
+
+//       // Make the request to Shopify to upload the image
+//       const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+//       if (imageResponse && imageResponse.image) {
+//         // Collect the image data
+//         imagesData.push({
+//           id: imageResponse.image.id,
+//           product_id: id,
+//           position: imageResponse.image.position,
+//           created_at: imageResponse.image.created_at,
+//           updated_at: imageResponse.image.updated_at,
+//           alt: 'Looking Image',
+//           width: imageResponse.image.width,
+//           height: imageResponse.image.height,
+//           src: imageResponse.image.src,
+//         });
+//       }
+//     }
+
+//     // Update the images in the MongoDB database
+//     const updatedProduct = await listingModel.findOneAndUpdate(
+//       { id },
+//       { images: imagesData },
+//       { new: true }
+//     );
+
+//     if (!updatedProduct) {
+//       return res.status(404).json({ error: 'Product not found in database.' });
+//     }
+
+//     res.status(200).json({
+//       message: 'Product images successfully updated.',
+//       product: updatedProduct,
+//     });
+//   } catch (error) {
+//     console.error('Error updating images:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
 export const updateImages = async (req, res) => {
   const { id } = req.params; // This will be the Shopify product ID passed in the URL
   
@@ -7245,8 +7312,17 @@ export const updateImages = async (req, res) => {
     console.log(req.files); // Log the uploaded files (images)
 
     const images = req.files?.images || []; // Get images from the request files
+
+    // Check if any image exceeds 50MB size limit
+    for (const image of images) {
+      if (image.size > 50 * 1024 * 1024) { // 50MB limit in bytes
+        return res.status(400).json({ error: 'One or more images exceed the 50MB size limit.' });
+      }
+    }
+
     const imagesData = [];
 
+    // Process each image
     for (const image of images) {
       const cloudinaryImageUrl = image.path; // URL of the uploaded image on Cloudinary
 
@@ -7296,6 +7372,17 @@ export const updateImages = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating images:', error);
+
+    // If an error occurs, delete the product from Shopify
+    try {
+      const deleteUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}.json`;
+      await shopifyRequest(deleteUrl, 'DELETE');
+      console.log('Product deleted from Shopify due to error');
+    } catch (deleteError) {
+      console.error('Error deleting product from Shopify:', deleteError);
+    }
+
+    // Send the error response back to the client
     res.status(500).json({ error: error.message });
   }
 };
