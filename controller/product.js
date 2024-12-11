@@ -1495,9 +1495,9 @@ export const addUsedEquipments = async (req, res) => {
     if (!reason_for_selling) return res.status(400).json({ error: 'reason for selling are required.' });
     if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
     if (!description) return res.status(400).json({ error: 'Description is required.' });
-    if (!req.files?.images || req.files.images.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
-    }
+    // if (!req.files?.images || req.files.images.length === 0) {
+    //   return res.status(400).json({ error: 'At least one image is required.' });
+    // }
 // const fullLocation=`${city}_${location}`
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
