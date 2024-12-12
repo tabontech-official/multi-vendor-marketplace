@@ -2546,7 +2546,7 @@ export const addNewBusiness = async (req, res) => {
       status, // "draft" or "publish"
     } = req.body;
 
-    const images = req.files?.images || []; // Handle multiple file uploads
+    // const images = req.files?.images || []; // Handle multiple file uploads
     //const askingPriceValue = parseFloat(asking_price);
     const productStatus = status === 'publish' ? 'active' : 'draft'; // Determine product status
     // const formattedDescription = businessDescription.replace(/\n/g, '<br>');
@@ -2644,9 +2644,9 @@ export const addNewBusiness = async (req, res) => {
         .status(400)
         .json({ error: 'Support and training information is required.' });
     }
-    if (!req.files?.images || req.files.images.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
-    }
+    // if (!req.files?.images || req.files.images.length === 0) {
+    //   return res.status(400).json({ error: 'At least one image is required.' });
+    // }
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -2787,39 +2787,39 @@ export const addNewBusiness = async (req, res) => {
     }
 
     // Step 3: Upload Images to Shopify if provided
-    const imagesData = [];
-    if (Array.isArray(images) && images.length > 0) {
-      for (const image of images) {
-        const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+    // const imagesData = [];
+    // if (Array.isArray(images) && images.length > 0) {
+    //   for (const image of images) {
+    //     const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-        const imagePayload = {
-          image: {
-            src: cloudinaryImageUrl,
-          },
-        };
+    //     const imagePayload = {
+    //       image: {
+    //         src: cloudinaryImageUrl,
+    //       },
+    //     };
 
-        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+    //     const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    //     const imageResponse = await shopifyRequest(
+    //       imageUrl,
+    //       'POST',
+    //       imagePayload
+    //     );
 
-        if (imageResponse && imageResponse.image) {
-          imagesData.push({
-            id: imageResponse.image.id,
-            product_id: productId,
-            position: imageResponse.image.position,
-            created_at: imageResponse.image.created_at,
-            updated_at: imageResponse.image.updated_at,
-            alt: 'Business Listing Image',
-            width: imageResponse.image.width,
-            height: imageResponse.image.height,
-            src: imageResponse.image.src,
-          });
-        }
-      }
-    }
+    //     if (imageResponse && imageResponse.image) {
+    //       imagesData.push({
+    //         id: imageResponse.image.id,
+    //         product_id: productId,
+    //         position: imageResponse.image.position,
+    //         created_at: imageResponse.image.created_at,
+    //         updated_at: imageResponse.image.updated_at,
+    //         alt: 'Business Listing Image',
+    //         width: imageResponse.image.width,
+    //         height: imageResponse.image.height,
+    //         src: imageResponse.image.src,
+    //       });
+    //     }
+    //   }
+    // }
 
     // Step 4: Save Product to MongoDB
     const newProduct = new listingModel({
@@ -2835,7 +2835,7 @@ export const addNewBusiness = async (req, res) => {
       template_suffix: productResponse.product.template_suffix,
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imagesData,
+      // images: imagesData,
       business: {
         name,
         location,
