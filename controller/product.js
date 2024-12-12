@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 import { BuyCreditModel } from '../Models/buyCredit.js';
 import fs from 'fs'
 import { listingModel } from '../Models/Listing.js';
-
+import axios from 'axios';
 
 export const updateListing = async (req, res) => {
   const { id } = req.params; // MongoDB ID
@@ -7076,40 +7076,40 @@ export const lookingFor = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
 console.log(req.files)
-    // Step 4: Upload Images to Shopify if provided
-    const images = req.files?.images || [];
-    const imagesData = [];
+    // // Step 4: Upload Images to Shopify if provided
+    // const images = req.files?.images || [];
+    // const imagesData = [];
 
-    for (const image of images) {
-      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+    // for (const image of images) {
+    //   const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,
-        },
-      };
+    //   const imagePayload = {
+    //     image: {
+    //       src: cloudinaryImageUrl,
+    //     },
+    //   };
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(
-        imageUrl,
-        'POST',
-        imagePayload
-      );
+    //   const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    //   const imageResponse = await shopifyRequest(
+    //     imageUrl,
+    //     'POST',
+    //     imagePayload
+    //   );
 
-      if (imageResponse && imageResponse.image) {
-        imagesData.push({
-          id: imageResponse.image.id,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Looking Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        });
-      }
-    }
+    //   if (imageResponse && imageResponse.image) {
+    //     imagesData.push({
+    //       id: imageResponse.image.id,
+    //       product_id: productId,
+    //       position: imageResponse.image.position,
+    //       created_at: imageResponse.image.created_at,
+    //       updated_at: imageResponse.image.updated_at,
+    //       alt: 'Looking Image',
+    //       width: imageResponse.image.width,
+    //       height: imageResponse.image.height,
+    //       src: imageResponse.image.src,
+    //     });
+    //   }
+    // }
 
     // Step 5: Save Product to MongoDB
     const newProduct = new listingModel({
@@ -7302,86 +7302,99 @@ console.log(req.files)
 //   }
 // };
 
+
 export const updateImages = async (req, res) => {
   const { id } = req.params; // Get the product ID from URL
   const imageUrls = req.body.images; // Get the image URLs from the body
 
-  console.log('Received image URLs:', imageUrls); // Log the request body
- 
+  console.log('Request Body:', req.body); // Log the request body
+
   try {
-    // Step 1: Find the product in the database using the provided id
+    // Find the product in the database using the provided id
     const product = await listingModel.findOne({ id });
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-    // Step 2: If no images are provided, return an error
+    // If no images are provided, return an error
     if (!imageUrls || imageUrls.length === 0) {
       return res.status(400).json({ error: 'No images provided to update.' });
     }
 
-    // Step 3: Prepare the image payload for Shopify (using Cloudinary URLs)
-    const imagePayload = imageUrls.map(url => ({
-      image: {
-        src: url, // Cloudinary URL of the image
-      },
+    // Prepare the images data for the database update
+    const imagesData = imageUrls.map((url, index) => ({
+      src: url, // Cloudinary URL of the image
+      position: index + 1, // Position of the image (if applicable)
+      alt: `Image ${index + 1}`, // Alt text for the image
     }));
 
-    console.log('Prepared Shopify image payload:', imagePayload); // Log the payload before sending
-
-    // Step 4: Construct Shopify API URL for uploading product images
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/images.json`;
-
-    // Step 5: Send the image payload to Shopify to upload the images
-    const imageResponse = await shopifyRequest(shopifyUrl, 'POST', { images: imagePayload });
-
-    // Step 6: Handle the Shopify response and push image data to imagesData array
-    const imagesData = []; // Array to store images data
-    if (imageResponse && imageResponse.images) {
-      imageResponse.images.forEach(image => {
-        imagesData.push({
-          id: image.id,
-          product_id: id,
-          position: image.position,
-          created_at: image.created_at,
-          updated_at: image.updated_at,
-          alt: 'Looking Image', // Default alt text if not provided
-          width: image.width,
-          height: image.height,
-          src: image.src, // Shopify image URL
-        });
-      });
-
-      console.log('Successfully uploaded images to Shopify:', imageResponse.images);
-    } else {
-      throw new Error('Failed to upload images to Shopify.');
-    }
-
-    // Step 7: Update the product in the database with the new image data (Shopify URLs)
+    // Update the product in the database with the new images
     const updatedProduct = await listingModel.findOneAndUpdate(
       { id },
-      { images: imagesData }, // Save Shopify image URLs in the database
+      { images: imagesData },
       { new: true } // Return the updated document
     );
 
     if (!updatedProduct) {
-      return res.status(404).json({ error: 'Product not found in the database.' });
+      return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    // Step 8: Send a success response with the updated product
-    res.status(200).json({
-      message: 'Product images successfully updated in both Shopify and the database.',
-      product: updatedProduct,
-    });
+    // Prepare the images for Shopify API
+    const shopifyImages = imageUrls.map((url, index) => ({
+      src: url, // Cloudinary URL of the image
+      alt: `Image ${index + 1}`,  // Optional: Add alt text
+      position: index + 1,        // Optional: Set image position
+    }));
+
+    // Loop through the images and upload them to Shopify
+    const imagesDataToPush = [];
+    for (let i = 0; i < shopifyImages.length; i++) {
+      const imagePayload = {
+        image: {
+          src: shopifyImages[i].src,
+          alt: shopifyImages[i].alt,
+          position: shopifyImages[i].position,
+        }
+      };
+
+      // Prepare the Shopify API URL
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/images.json`;
+
+      // Use the `shopifyRequest` function to send the image data to Shopify
+      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+      // If the image upload is successful, add the image data to the array
+      if (imageResponse && imageResponse.image) {
+        imagesDataToPush.push({
+          id: imageResponse.image.id,
+          product_id: id,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: imageResponse.image.alt,
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
+      }
+    }
+
+    // If images were successfully uploaded to Shopify, respond with success
+    if (imagesDataToPush.length > 0) {
+      res.status(200).json({
+        message: 'Product images successfully updated in database and Shopify.',
+        product: updatedProduct,
+        shopifyResponse: imagesDataToPush
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to upload images to Shopify.' });
+    }
+
   } catch (error) {
     console.error('Error updating images:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
-
-
-
-
-
+// Helper function to handle Shopify API requests
 
 
 
