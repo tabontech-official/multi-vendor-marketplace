@@ -3942,9 +3942,9 @@ export const addRoomListing = async (req, res) => {
       return res.status(400).json({ error: 'Other details are required.' });
     }
 
-    if (!req.files?.images || req.files.images.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required.' });
-    }
+    // if (!req.files?.images || req.files.images.length === 0) {
+    //   return res.status(400).json({ error: 'At least one image is required.' });
+    // }
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -4041,38 +4041,38 @@ export const addRoomListing = async (req, res) => {
       await shopifyRequest(metafieldsUrl, 'POST', { metafield });
     }
 
-    const imagesData = [];
-    if (Array.isArray(images) && images.length > 0) {
-      for (let i = 0; i < images.length; i++) {
-        const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
+    // const imagesData = [];
+    // if (Array.isArray(images) && images.length > 0) {
+    //   for (let i = 0; i < images.length; i++) {
+    //     const cloudinaryImageUrl = images[i]?.path; // Use the path to the image
 
-        const imagePayload = {
-          image: {
-            // Corrected key from 'images' to 'image'
-            src: cloudinaryImageUrl,
-          },
-        };
+    //     const imagePayload = {
+    //       image: {
+    //         // Corrected key from 'images' to 'image'
+    //         src: cloudinaryImageUrl,
+    //       },
+    //     };
 
-        const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+    //     const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+    //     const imageResponse = await shopifyRequest(
+    //       imageUrl,
+    //       'POST',
+    //       imagePayload
+    //     );
 
-        if (imageResponse && imageResponse.image) {
-          imagesData.push({
-            id: imageResponse.image.id,
-            product_id: productId,
-            position: imageResponse.image.position,
-            alt: 'Room Listing Image',
-            width: imageResponse.image.width,
-            height: imageResponse.image.height,
-            src: imageResponse.image.src,
-          });
-        }
-      }
-    }
+    //     if (imageResponse && imageResponse.image) {
+    //       imagesData.push({
+    //         id: imageResponse.image.id,
+    //         product_id: productId,
+    //         position: imageResponse.image.position,
+    //         alt: 'Room Listing Image',
+    //         width: imageResponse.image.width,
+    //         height: imageResponse.image.height,
+    //         src: imageResponse.image.src,
+    //       });
+    //     }
+    //   }
+    // }
 
     // Step 4: Save Room Listing to MongoDB
     const newRoomListing = new listingModel({
