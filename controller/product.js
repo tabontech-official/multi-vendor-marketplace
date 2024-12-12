@@ -4083,7 +4083,7 @@ export const addRoomListing = async (req, res) => {
       product_type: 'Spa Room For Rent',
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imagesData,
+      // images: imagesData,
       roomListing: [
         {
           location,
