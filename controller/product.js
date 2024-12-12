@@ -7236,62 +7236,106 @@ console.log(req.files)
   }
 };
 
-export const updateImages = async (req, res) => {
-  const { id } = req.params; // This will be the Shopify product ID passed in the URL
+// export const updateImages = async (req, res) => {
+//   const { id } = req.params; // This will be the Shopify product ID passed in the URL
   
+//   try {
+//     // Use the `id` to fetch the product from the MongoDB database
+//     const product = await listingModel.findOne({ id });
+//     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+//     console.log(req.files); // Log the uploaded files (images)
+
+//     const images = req.files?.images || []; // Get images from the request files
+//     const imagesData = [];
+
+//     for (const image of images) {
+//       const cloudinaryImageUrl = image.path; // URL of the uploaded image on Cloudinary
+
+//       // Prepare the payload for the Shopify API request
+//       const imagePayload = {
+//         image: {
+//           src: cloudinaryImageUrl, // Cloudinary URL for the image
+//         },
+//       };
+
+//       // Generate the Shopify API URL to add an image to the product
+//       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/images.json`;
+
+//       // Make the request to Shopify to upload the image
+//       const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+
+//       if (imageResponse && imageResponse.image) {
+//         // Collect the image data
+//         imagesData.push({
+//           id: imageResponse.image.id,
+//           product_id: id,
+//           position: imageResponse.image.position,
+//           created_at: imageResponse.image.created_at,
+//           updated_at: imageResponse.image.updated_at,
+//           alt: 'Looking Image',
+//           width: imageResponse.image.width,
+//           height: imageResponse.image.height,
+//           src: imageResponse.image.src,
+//         });
+//       }
+//     }
+
+//     // Update the images in the MongoDB database
+//     const updatedProduct = await listingModel.findOneAndUpdate(
+//       { id },
+//       { images: imagesData },
+//       { new: true }
+//     );
+
+//     if (!updatedProduct) {
+//       return res.status(404).json({ error: 'Product not found in database.' });
+//     }
+
+//     res.status(200).json({
+//       message: 'Product images successfully updated.',
+//       product: updatedProduct,
+//     });
+//   } catch (error) {
+//     console.error('Error updating images:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+export const updateImages = async (req, res) => {
+  const { id } = req.params; // Get the product ID from URL
+  const imageUrls = req.body.images; // Get the image URLs from the body
+
+  console.log(req.body); // Log the request body
+
   try {
-    // Use the `id` to fetch the product from the MongoDB database
+    // Find the product in the database using the provided id
     const product = await listingModel.findOne({ id });
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-    console.log(req.files); // Log the uploaded files (images)
-
-    const images = req.files?.images || []; // Get images from the request files
-    const imagesData = [];
-
-    for (const image of images) {
-      const cloudinaryImageUrl = image.path; // URL of the uploaded image on Cloudinary
-
-      // Prepare the payload for the Shopify API request
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl, // Cloudinary URL for the image
-        },
-      };
-
-      // Generate the Shopify API URL to add an image to the product
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/images.json`;
-
-      // Make the request to Shopify to upload the image
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
-
-      if (imageResponse && imageResponse.image) {
-        // Collect the image data
-        imagesData.push({
-          id: imageResponse.image.id,
-          product_id: id,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Looking Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        });
-      }
+    // If no images are provided, return an error
+    if (!imageUrls || imageUrls.length === 0) {
+      return res.status(400).json({ error: 'No images provided to update.' });
     }
 
-    // Update the images in the MongoDB database
+    // Prepare the images data for the database update
+    const imagesData = imageUrls.map((url, index) => ({
+      src: url, // Cloudinary URL of the image
+      position: index + 1, // Position of the image (if applicable)
+      alt: `Image ${index + 1}`, // Alt text for the image
+    }));
+
+    // Update the product in the database with the new images
     const updatedProduct = await listingModel.findOneAndUpdate(
       { id },
       { images: imagesData },
-      { new: true }
+      { new: true } // Return the updated document
     );
 
     if (!updatedProduct) {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
+    // Send a success response
     res.status(200).json({
       message: 'Product images successfully updated.',
       product: updatedProduct,
@@ -7301,7 +7345,6 @@ export const updateImages = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 
 export const getAllProductData = async (req, res) => {

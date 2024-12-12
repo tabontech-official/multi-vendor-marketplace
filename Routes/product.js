@@ -54,5 +54,5 @@ productRouter.delete('/', deletAllProduct);
 productRouter.put('/credits', updateCredits);
 productRouter.get('/fetchRequireCredits',fetchRequireCredits)
 productRouter.post('/lookingFor',cpUpload,lookingFor)
-productRouter.put('/updateImages/:id',cpUpload,updateImages)
+productRouter.put('/updateImages/:id',updateImages)
 export default productRouter;
