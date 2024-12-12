@@ -3307,7 +3307,7 @@ export const addNewJobListing = async (req, res) => {
     if (!positionRequestedDescription) return res.status(400).json({ error: 'Position requested description is required.' });
     if (!availability) return res.status(400).json({ error: 'Availability is required.' });
     if (!availableToWorkAs) return res.status(400).json({ error: 'available To Work As is required.' });
-    if (files.length === 0) return res.status(400).json({ error: 'At least one file is required.' });
+    // if (files.length === 0) return res.status(400).json({ error: 'At least one file is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
@@ -7395,9 +7395,6 @@ export const updateImages = async (req, res) => {
 };
 
 // Helper function to handle Shopify API requests
-
-
-
 
 export const getAllProductData = async (req, res) => {
   const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
