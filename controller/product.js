@@ -4096,7 +4096,7 @@ export const addRoomListing = async (req, res) => {
           rentalTerms,
           wifiAvailable,
           otherDetails,
-          images: imagesData,
+          // images: imagesData,
         },
       ],
       userId: userId,
