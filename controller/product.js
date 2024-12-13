@@ -468,14 +468,14 @@ export const updateListing = async (req, res) => {
             type: 'multi_line_text_field',
           },
         },
-        {
-          metafield: {
-            namespace: 'fold_tech',
-            key: 'availableToWorkAs',
-            value: updateData.availableToWorkAs,
-            type: 'single_line_text_field',
-          },
-        },
+        // {
+        //   metafield: {
+        //     namespace: 'fold_tech',
+        //     key: 'availableToWorkAs',
+        //     value: updateData.availableToWorkAs,
+        //     type: 'single_line_text_field',
+        //   },
+        // },
         // {
         //   metafield:  {
         //     namespace: 'fold_tech',
@@ -744,7 +744,7 @@ export const updateListing = async (req, res) => {
         // },
       ];
     }
-
+console.log(metafieldsPayload)
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
