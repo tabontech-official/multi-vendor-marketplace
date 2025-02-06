@@ -6465,7 +6465,7 @@ export const updateCredits=async(req,res)=>{
     console.error('Error updating credit requirement:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
-}
+};
 
 
 export const updateProductPrice = async (req, res) => {
