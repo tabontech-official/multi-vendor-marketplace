@@ -1047,7 +1047,7 @@ export const resetPassword = async (req, res) => {
 };
 
 const updateShopifyPassword = async (shopifyId, newPassword) => {
-  const shopifyDomain = 'med-spa-trader.myshopify.com';
+  const shopifyDomain = 'wasiq-test.myshopify.com';
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
 

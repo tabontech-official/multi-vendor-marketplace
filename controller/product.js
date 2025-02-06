@@ -6144,7 +6144,7 @@ export const deleteProduct = async (req, res) => {
     }
 
     // Construct the Shopify URL
-    const shopifyUrl = `https://med-spa-trader.myshopify.com/admin/api/2023-10/products/${product.id}.json`;
+    const shopifyUrl = `https://wasiq-test.myshopify.com/admin/api/2023-10/products/${product.id}.json`;
 
     // Delete from Shopify using Authorization header
     const response = await fetch(shopifyUrl, {
