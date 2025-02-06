@@ -10,11 +10,16 @@ const connected = cyan;
 const error = yellow;
 const disconnected = red;
 
+// const Connect = () => {
+//   mongoose.connect(process.env.DB_URL, {
+
+//   });
 const Connect = () => {
   mongoose.connect(process.env.DB_URL, {
-
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 10000, // 10 seconds timeout
   });
-
   mongoose.connection.on('connected', () => {
     console.log(connected('MongoDB connected'));
   });
