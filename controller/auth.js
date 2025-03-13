@@ -164,7 +164,6 @@ export const signUp = async (req, res) => {
 };
 const checkShopifyAdminTag = async (email) => {
   try {
-      // Encode the API key and access token in base64 for Basic Auth
       const credentials = `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`;
       const base64Credentials = Buffer.from(credentials).toString('base64');
 
@@ -172,11 +171,10 @@ const checkShopifyAdminTag = async (email) => {
           method: 'GET',
           headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Basic ${base64Credentials}`, // Use Basic Auth
+              'Authorization': `Basic ${base64Credentials}`,
           },
       });
 
-      // Check if the response is OK (status in the range 200-299)
       if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -185,20 +183,26 @@ const checkShopifyAdminTag = async (email) => {
       const customers = data.customers;
 
       if (customers.length > 0) {
-          const tags = customers[0].tags.split(','); // Split tags into an array
-          return tags.includes('isAdmin'); // Check if 'isAdmin' tag is present
+          const tags = customers[0].tags.split(',').map(tag => tag.trim()); // Convert tags to an array
+          
+          // Role Mapping from Shopify Tags
+          if (tags.includes("isAdmin")) return "isAdmin";
+          if (tags.includes("MasterAdmin")) return "MasterAdmin";
+          if (tags.includes("SuperAdmin")) return "SuperAdmin";
+          if (tags.includes("AdminTeam")) return "AdminTeam";
+
       }
 
-      return false; // No customer found
+      return false; // Default role if no customer is found
   } catch (error) {
       console.error('Error fetching Shopify customer:', error);
       throw new Error('Error checking Shopify customer');
   }
 };
 
+
 export const signIn = async (req, res) => {
   try {
-      // Validate input data using Joi schema
       const { error } = loginSchema.validate(req.body);
       if (error) {
           return res.status(400).json({ error: error.details[0].message });
@@ -206,30 +210,27 @@ export const signIn = async (req, res) => {
 
       const { email, password } = req.body;
 
-      // Find user by email
       const user = await authModel.findOne({ email });
       if (!user) {
           return res.status(404).json({ message: 'User not found' });
       }
 
-      // Check password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
           return res.status(401).json({ message: 'Invalid password' });
       }
 
-      // Check Shopify for isAdmin tag
-      const isAdmin = await checkShopifyAdminTag(email);
+      // Get Role from Shopify
+      const userRole = await checkShopifyAdminTag(email);
       
-      // Save isAdmin status in MongoDB
-      user.isAdmin = isAdmin;
+      // Save role in MongoDB
+      user.role = userRole;
       await user.save();
 
-      // Generate JWT token using createToken utility
-      const token = createToken({ _id: user._id, isAdmin: user.isAdmin });
+      // Generate JWT Token with Role
+      const token = createToken({ _id: user._id, role: user.role });
 
-      // Return the token and admin status
-      res.json({ token, isAdmin: user.isAdmin ,user});
+      res.json({ token, role: user.role, user });
   } catch (error) {
       res.status(500).json({ message: 'Server error' });
   }
