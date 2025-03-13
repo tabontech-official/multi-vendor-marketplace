@@ -183,17 +183,16 @@ const checkShopifyAdminTag = async (email) => {
       const customers = data.customers;
 
       if (customers.length > 0) {
-          const tags = customers[0].tags.split(',').map(tag => tag.trim()); // Convert tags to an array
-          
-          // Role Mapping from Shopify Tags
-          if (tags.includes("isAdmin")) return "isAdmin";
-          if (tags.includes("MasterAdmin")) return "MasterAdmin";
-          if (tags.includes("SuperAdmin")) return "SuperAdmin";
-          if (tags.includes("AdminTeam")) return "AdminTeam";
+          const tags = customers[0].tags.split(',').map(tag => tag.trim());
 
+          // Role Mapping from Shopify Tags
+          if (tags.includes("DevAdmin")) return "Dev Admin";
+          if (tags.includes("MasterAdmin")) return "Master Admin";
+          if (tags.includes("SuperAdmin")) return "Super Admin";
+          if (tags.includes("AdminTeam")) return "Admin Team";
       }
 
-      return false; // Default role if no customer is found
+      return "User"; // Default role if no customer is found
   } catch (error) {
       console.error('Error fetching Shopify customer:', error);
       throw new Error('Error checking Shopify customer');
