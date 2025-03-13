@@ -7,11 +7,11 @@ const authSchema = new mongoose.Schema({
   lastName: {
     type: String,
   },
-  userName:{
-    type:String
+  userName: {
+    type: String,
   },
   email: {
-    type: String, 
+    type: String,
   },
   password: {
     type: String,
@@ -38,11 +38,11 @@ const authSchema = new mongoose.Schema({
   city: {
     type: String,
   },
-  state:{
-   type:String
+  state: {
+    type: String,
   },
 
-   avatar: { type: [String], default: [] }, 
+  avatar: { type: [String], default: [] },
   token: String,
   hasPaidSubscription: {
     type: Boolean,
@@ -62,20 +62,24 @@ const authSchema = new mongoose.Schema({
     expiresAt: {
       type: Date,
     },
-    quantity:{
-      type:Number,
-      default:0
-    }
+    quantity: {
+      type: Number,
+      default: 0,
+    },
   },
-  isAdmin:{
-    type:Boolean
+  isAdmin: {
+    type: Boolean,
   },
-  role: { type: String }
-
+  role: {
+    type: String,
+  },
+  modules: [String]
+    
+  
 });
 authSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next(); // Only hash the password if it's new or modified
-  
+
   const salt = await bcrypt.genSalt(10); // Generate salt
   this.password = await bcrypt.hash(this.password, salt); // Hash the password
   next(); // Proceed to save

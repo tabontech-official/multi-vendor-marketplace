@@ -18,6 +18,8 @@ import {
   updateSubscriptionQuantity,
   dbDelete,
   getAllUsersData,
+  updateUserTagsModule,
+  getUserWithModules,
 } from '../controller/auth.js';
 import { cpUpload} from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -41,5 +43,8 @@ authRouter.post('/Admin', AdminSignIn);
 authRouter.post('/webHook/delete',deleteUser)
 authRouter.post('/resetpassword',resetPassword)
 authRouter.delete('/',dbDelete)
+authRouter.patch('/updateUserTagsModule',updateUserTagsModule)
 authRouter.get('/getall',getAllUsersData)
+authRouter.get("/getUserWithModules/:id", getUserWithModules)
+
 export default authRouter;

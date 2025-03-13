@@ -164,77 +164,78 @@ export const signUp = async (req, res) => {
 };
 const checkShopifyAdminTag = async (email) => {
   try {
-      const credentials = `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`;
-      const base64Credentials = Buffer.from(credentials).toString('base64');
+    const credentials = `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`;
+    const base64Credentials = Buffer.from(credentials).toString('base64');
 
-      const response = await fetch(`https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`, {
-          method: 'GET',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Basic ${base64Credentials}`,
-          },
-      });
-
-      if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+    const response = await fetch(
+      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${base64Credentials}`,
+        },
       }
+    );
 
-      const data = await response.json();
-      const customers = data.customers;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      if (customers.length > 0) {
-          const tags = customers[0].tags.split(',').map(tag => tag.trim());
+    const data = await response.json();
+    const customers = data.customers;
 
-          // Role Mapping from Shopify Tags
-          if (tags.includes("DevAdmin")) return "Dev Admin";
-          if (tags.includes("MasterAdmin")) return "Master Admin";
-          if (tags.includes("SuperAdmin")) return "Super Admin";
-          if (tags.includes("AdminTeam")) return "Admin Team";
-      }
+    if (customers.length > 0) {
+      const tags = customers[0].tags.split(',').map((tag) => tag.trim());
 
-      return "User"; // Default role if no customer is found
+      // Role Mapping from Shopify Tags
+      if (tags.includes('DevAdmin')) return 'Dev Admin';
+      if (tags.includes('MasterAdmin')) return 'Master Admin';
+      if (tags.includes('Client')) return 'Client';
+      if (tags.includes('Staff')) return 'Staff';
+    }
+
+    return 'User'; // Default role if no customer is found
   } catch (error) {
-      console.error('Error fetching Shopify customer:', error);
-      throw new Error('Error checking Shopify customer');
+    console.error('Error fetching Shopify customer:', error);
+    throw new Error('Error checking Shopify customer');
   }
 };
-
 
 export const signIn = async (req, res) => {
   try {
-      const { error } = loginSchema.validate(req.body);
-      if (error) {
-          return res.status(400).json({ error: error.details[0].message });
-      }
+    const { error } = loginSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-      const { email, password } = req.body;
+    const { email, password } = req.body;
 
-      const user = await authModel.findOne({ email });
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
+    const user = await authModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-          return res.status(401).json({ message: 'Invalid password' });
-      }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid password' });
+    }
 
-      // Get Role from Shopify
-      const userRole = await checkShopifyAdminTag(email);
-      
-      // Save role in MongoDB
-      user.role = userRole;
-      await user.save();
+    // Get Role from Shopify
+    const userRole = await checkShopifyAdminTag(email);
 
-      // Generate JWT Token with Role
-      const token = createToken({ _id: user._id, role: user.role });
+    // Save role in MongoDB
+    user.role = userRole;
+    await user.save();
 
-      res.json({ token, role: user.role, user });
+    // Generate JWT Token with Role
+    const token = createToken({ _id: user._id, role: user.role });
+
+    res.json({ token, role: user.role, user });
   } catch (error) {
-      res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 const hashPassword = async (password) => {
   if (password) {
@@ -389,6 +390,113 @@ export const updateUser = async (req, res) => {
   }
 };
 
+export const updateUserTagsModule = async (req, res) => {
+  try {
+    const { email, modules, role } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Fetch user from MongoDB to get Shopify ID
+    const user = await authModel.findOne({ email });
+
+    if (!user || !user.shopifyId) {
+      return res
+        .status(404)
+        .json({ error: 'User not found or Shopify ID missing' });
+    }
+
+    const shopifyId = user.shopifyId; // Get Shopify ID from DB
+
+    // Prepare Shopify update payload
+    const shopifyPayload = {
+      customer: {
+        tags: role, // Shopify uses tags for role management
+      },
+    };
+
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
+    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
+
+    // Update user in Shopify
+    const response = await fetch(shopifyUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
+      },
+      body: JSON.stringify(shopifyPayload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error updating user in Shopify:', errorData);
+      return res
+        .status(500)
+        .json({ error: 'Failed to update user in Shopify' });
+    }
+
+    // Update user in MongoDB
+    const mongoUpdateData = {
+      modules,
+      role,
+    };
+
+    const updatedUser = await authModel.findOneAndUpdate(
+      { email },
+      mongoUpdateData,
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found in MongoDB' });
+    }
+
+    // Send response
+    res.status(200).json({
+      message: 'User updated successfully in both Shopify and MongoDB',
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error in updateUserTagsModule function:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getUserWithModules = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await authModel.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $project: {
+          _id: 0,
+          modules: 1,
+        },
+      },
+    ]);
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.status(200).json(result[0]);
+  } catch (error) {
+    console.error('Error fetching user modules:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const newSignUp = async (req, res) => {
   try {
     // Validate request body (Optional: Uncomment if you have a validation schema)
@@ -475,10 +583,9 @@ export const newSignUp = async (req, res) => {
   }
 };
 
-// Helper function to revoke Shopify token
 export const updateUserInShopify = async (req, res) => {
   try {
-    // Validate request body
+    y;
     const { email, firstName, lastName, password, additionalTags } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -559,23 +666,19 @@ export const updateUserInShopify = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    const userId = req.params.userId; // Access userId from params
+    const userId = req.params.userId;
 
-    // Check if userId is valid
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Find user by ID (if needed)
     const user = await authModel.findById(userId);
 
-    // Optionally check if user exists
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Clear the cookie
-    res.clearCookie('token', { path: '/' }); // Add options if needed
+    res.clearCookie('token', { path: '/' });
 
     res.status(200).json({ message: 'Logout successfully', userId });
   } catch (error) {
@@ -773,52 +876,11 @@ export const fetchUserData = async (req, res) => {
   }
 };
 
-// export const getUserSubscriptionQuantity = async (req, res) => {
-//   const { userId } = req.params;
-
-//   // Validate userId format
-//   if (!mongoose.isValidObjectId(userId)) {
-//     return res.status(400).json({ error: 'Invalid user ID format.' });
-//   }
-
-//   try {
-//     // Fetch the user by userId
-//     const user = await authModel.findById(userId);
-
-//     // Check if user exists
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found.' });
-//     }
-
-//     // Check if subscription exists
-//     if (
-//       !user.subscription ||
-//       !user.subscription.quantity ||
-//       !user.subscription.expiresAt
-//     ) {
-//       return res.status(400).json({
-//         message: 'Insuffcient credits',
-//       });
-//     }
-
-//     // Return the quantity and expiry date from the user's subscription
-//     return res.status(200).json({
-//       quantity: user.subscription.quantity,
-//       expiresAt: user.subscription.expiresAt,
-//     });
-//   } catch (error) {
-//     console.error('Error fetching user subscription quantity:', error);
-//     return res
-//       .status(500)
-//       .json({ error: 'Internal server error. Please try again later.' });
-//   }
-// };
-
 export const getUserSubscriptionQuantity = async (req, res) => {
   const { id } = req.params;
 
   // Validate userId format
-  
+
   try {
     // Fetch the user by userId
     const user = await authModel.findById(id);
@@ -829,9 +891,7 @@ export const getUserSubscriptionQuantity = async (req, res) => {
     }
 
     // Check if subscription exists
-    if (
-      !user.subscription.quantity
-    ) {
+    if (!user.subscription.quantity) {
       return res.status(400).json({
         message: 'Insuffcient credits',
       });
@@ -924,7 +984,6 @@ export const AdminSignIn = async (req, res) => {
   }
 };
 
-
 export const getUserData = async (req, res) => {
   try {
     const data = await authModel.find();
@@ -962,7 +1021,7 @@ export const deleteUser = async (req, res) => {
   try {
     // Delete from MongoDB
     await authModel.deleteOne({ shopifyId: customerId });
-  
+
     res.status(200).send('Customer deleted successfully.');
   } catch (error) {
     console.error('Error deleting customer from MongoDB:', error);
@@ -1078,13 +1137,14 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
   }
 };
 
-
 export const updateSubscriptionQuantity = async (req, res) => {
   const { email, quantity } = req.body; // Get email and new quantity from the request body
 
   // Validate the quantity
   if (typeof quantity !== 'number' || quantity < 0) {
-    return res.status(400).json({ error: 'Quantity must be a non-negative number.' });
+    return res
+      .status(400)
+      .json({ error: 'Quantity must be a non-negative number.' });
   }
 
   try {
@@ -1112,26 +1172,24 @@ export const updateSubscriptionQuantity = async (req, res) => {
   }
 };
 
-
-export const dbDelete=(req,res)=>{
-  authModel.deleteMany().then(result=>{
-    if(result){
-      res.send('successfully deleted')
+export const dbDelete = (req, res) => {
+  authModel.deleteMany().then((result) => {
+    if (result) {
+      res.send('successfully deleted');
     }
-  })
-}
+  });
+};
 
-
-export const getAllUsersData=async(req,res)=>{
-try {
-  await authModel.find().then(result=>{
-    if(result){
-      res.status(200).send(result)
-    }else{
-      res.status(400).send('unable to fetch')
-    }
-  })
-} catch (error) {
-  res.send(error.message)
-}
-}
+export const getAllUsersData = async (req, res) => {
+  try {
+    await authModel.find().then((result) => {
+      if (result) {
+        res.status(200).send(result);
+      } else {
+        res.status(400).send('unable to fetch');
+      }
+    });
+  } catch (error) {
+    res.send(error.message);
+  }
+};
