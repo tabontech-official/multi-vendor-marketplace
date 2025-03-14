@@ -392,27 +392,23 @@ export const updateUser = async (req, res) => {
 
 export const updateUserTagsModule = async (req, res) => {
   try {
-    const { email, modules, role } = req.body;
+    const { email, modules, role} = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // Fetch user from MongoDB to get Shopify ID
-    const user = await authModel.findOne({ email });
+    let existingUser = await authModel.findOne({ email });
 
-    if (!user || !user.shopifyId) {
-      return res
-        .status(404)
-        .json({ error: 'User not found or Shopify ID missing' });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists with this email' });
     }
 
-    const shopifyId = user.shopifyId; // Get Shopify ID from DB
-
-    // Prepare Shopify update payload
+    
     const shopifyPayload = {
       customer: {
-        tags: role, // Shopify uses tags for role management
+        tags: role,  
+        email: email,
       },
     };
 
@@ -420,14 +416,11 @@ export const updateUserTagsModule = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
-    // Update user in Shopify
     const response = await fetch(shopifyUrl, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Basic ${base64Credentials}`,
@@ -435,40 +428,36 @@ export const updateUserTagsModule = async (req, res) => {
       body: JSON.stringify(shopifyPayload),
     });
 
+    const shopifyResponse = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error updating user in Shopify:', errorData);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update user in Shopify' });
+      console.error('Error creating user in Shopify:', shopifyResponse);
+      return res.status(500).json({ error: 'Failed to create user in Shopify' });
     }
 
-    // Update user in MongoDB
-    const mongoUpdateData = {
+    const shopifyId = shopifyResponse.customer.id; 
+
+    const newUser = new authModel({
+      email,
       modules,
       role,
-    };
-
-    const updatedUser = await authModel.findOneAndUpdate(
-      { email },
-      mongoUpdateData,
-      { new: true } // Return the updated document
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found in MongoDB' });
-    }
-
-    // Send response
-    res.status(200).json({
-      message: 'User updated successfully in both Shopify and MongoDB',
-      data: updatedUser,
+      shopifyId,
     });
+
+    await newUser.save();
+
+    res.status(201).json({
+      message: 'User created successfully in both Shopify and MongoDB',
+      data: newUser,
+    });
+
   } catch (error) {
     console.error('Error in updateUserTagsModule function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
+
+
 
 export const getUserWithModules = async (req, res) => {
   const { id } = req.params;

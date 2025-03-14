@@ -2166,7 +2166,6 @@ export const addUsedEquipments = async (req, res) => {
       description,
       price,
       compare_at_price,
-      cost_per_item,
       track_quantity,
       quantity,
       continue_selling,
@@ -2176,18 +2175,17 @@ export const addUsedEquipments = async (req, res) => {
       track_shipping,
       weight,
       weight_unit,
-      status, // "draft" or "active"
+      status,
       userId,
-      ProductType,
+      productType,
       vendor,
       keyWord
     } = req.body;
 
-    console.log(req.body);
+    console.log("Request Body:", req.body);
 
     // Validate required fields
-    if (!title)
-      return res.status(400).json({ error: 'Product title is required.' });
+    if (!title) return res.status(400).json({ error: 'Product title is required.' });
     if (!price) return res.status(400).json({ error: 'Price is required.' });
     if (!userId) return res.status(400).json({ error: 'User ID is required.' });
 
@@ -2201,83 +2199,50 @@ export const addUsedEquipments = async (req, res) => {
         title: title,
         body_html: description || '',
         vendor: vendor,
-        product_type: ProductType,
+        product_type: productType,
         status: productStatus,
         variants: [
           {
             price: price.toString(),
-            compare_at_price: compare_at_price
-              ? compare_at_price.toString()
-              : null,
-              cost_per_item: cost_per_item ? cost_per_item.toString() : null,
+            compare_at_price: compare_at_price ? compare_at_price.toString() : null,
             inventory_management: track_quantity ? 'shopify' : null,
-            inventory_quantity: track_quantity ? parseInt(quantity) : null,
+            inventory_quantity: track_quantity ? parseInt(quantity) : 0,
             sku: has_sku ? sku : null,
             barcode: has_sku ? barcode : null,
             weight: track_shipping ? parseFloat(weight) : null,
             weight_unit: track_shipping ? weight_unit : null,
           },
         ],
-        tags: [`user_${userId}`, `vendor_${user.userName}`,`vendor_${keyWord}`],
+        tags: [`user_${userId}`, `vendor_${vendor}`, ...(keyWord ? keyWord.split(',') : [])],
       },
     };
-    console.log(shopifyPayload);
+
+    console.log("Shopify Payload:", shopifyPayload);
+
     // Create product in Shopify
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUrl,
-      'POST',
-      shopifyPayload
-    );
+    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+
+    if (!productResponse?.product?.id) {
+      throw new Error('Shopify product creation failed.');
+    }
+
     productId = productResponse.product.id;
 
-    // Upload Images (if provided)
-    const images = req.files?.images || [];
-    const imagesData = [];
-
-    for (const image of images) {
-      const cloudinaryImageUrl = image.path;
-
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,
-        },
-      };
-
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(
-        imageUrl,
-        'POST',
-        imagePayload
-      );
-
-      if (imageResponse?.image) {
-        imagesData.push({
-          id: imageResponse.image.id,
-          product_id: productId,
-          position: imageResponse.image.position,
-          src: imageResponse.image.src,
-        });
-      }
-    }
-
     // Expiration date logic for active products
-    let expiresAt = null;
-    if (status === 'active') {
-      expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    }
+    const EXPIRATION_DAYS = 30;
+    let expiresAt = status === 'active' ? new Date(Date.now() + EXPIRATION_DAYS * 24 * 60 * 60 * 1000) : null;
 
     // Save product to MongoDB
     const newProduct = new listingModel({
       id: productId,
-      title: title,
+      title,
       body_html: description,
-      vendor: vendor,
-      product_type: ProductType,
+      vendor,
+      product_type: productType,
       created_at: new Date(),
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
-      images: imagesData,
       inventory: {
         track_quantity: !!track_quantity,
         quantity: track_quantity ? parseInt(quantity) : 0,
@@ -2303,6 +2268,7 @@ export const addUsedEquipments = async (req, res) => {
       product: newProduct,
       expiresAt,
     });
+
   } catch (error) {
     console.error('Error in addUsedEquipments function:', error);
 
@@ -2318,6 +2284,7 @@ export const addUsedEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const addNewEquipments = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch

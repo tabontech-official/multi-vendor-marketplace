@@ -43,7 +43,7 @@ authRouter.post('/Admin', AdminSignIn);
 authRouter.post('/webHook/delete',deleteUser)
 authRouter.post('/resetpassword',resetPassword)
 authRouter.delete('/',dbDelete)
-authRouter.patch('/updateUserTagsModule',updateUserTagsModule)
+authRouter.post('/updateUserTagsModule',updateUserTagsModule)
 authRouter.get('/getall',getAllUsersData)
 authRouter.get("/getUserWithModules/:id", getUserWithModules)
 
