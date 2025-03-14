@@ -390,7 +390,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
-export const updateUserTagsModule = async (req, res) => {
+export const CreateUserTagsModule = async (req, res) => {
   try {
     const { email, modules, role} = req.body;
 
