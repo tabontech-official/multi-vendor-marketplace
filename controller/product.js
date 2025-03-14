@@ -3,9 +3,7 @@ import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
 import { BuyCreditModel } from '../Models/buyCredit.js';
-import fs from 'fs'
 import { listingModel } from '../Models/Listing.js';
-import axios from 'axios';
 
 export const updateListing = async (req, res) => {
   const { id } = req.params; // MongoDB ID
@@ -19,15 +17,15 @@ export const updateListing = async (req, res) => {
     const user = await authModel.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const username = user.userName ; // Fallback to 'Unknown' if not available
+    const username = user.userName; // Fallback to 'Unknown' if not available
     const country = user.country;
-   const email=user.email;
-   const phoneNumber=user.phoneNumber
-    const city=user.city
-    const firstName=user.firstName
-    const lastName=user.lastName
+    const email = user.email;
+    const phoneNumber = user.phoneNumber;
+    const city = user.city;
+    const firstName = user.firstName;
+    const lastName = user.lastName;
     // Find the product by MongoDB ID
-    const product = await listingModel.findOne({id});
+    const product = await listingModel.findOne({ id });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -457,7 +455,7 @@ export const updateListing = async (req, res) => {
             namespace: 'fold_tech',
             key: 'offered_yearly_salary',
             value: updateData.offeredYearlySalary,
-            type: 'number_integer',  // Ensure this is actually an integer
+            type: 'number_integer', // Ensure this is actually an integer
           },
         },
         {
@@ -485,7 +483,6 @@ export const updateListing = async (req, res) => {
         //   },
         // },
       ];
-    
     } else if (product_type === 'Spa Room For Rent') {
       metafieldsPayload = [
         {
@@ -684,7 +681,7 @@ export const updateListing = async (req, res) => {
         //   },
         // },
       ];
-    }else if (product_type === 'Looking For') {
+    } else if (product_type === 'Looking For') {
       metafieldsPayload = [
         {
           metafield: {
@@ -744,7 +741,7 @@ export const updateListing = async (req, res) => {
         // },
       ];
     }
-console.log(metafieldsPayload)
+    console.log(metafieldsPayload);
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
@@ -753,7 +750,11 @@ console.log(metafieldsPayload)
     const shopifyPayload = {
       product: {
         title: `${updateData.name || updateData.qualificationRequested || updateData.typeOfUseAllowed} | ${country} , ${updateData.location} , ${updateData.zip}`,
-        body_html: updateData.businessDescription || updateData.description || updateData.offeredPositionDescription || updateData.otherDetails ,
+        body_html:
+          updateData.businessDescription ||
+          updateData.description ||
+          updateData.offeredPositionDescription ||
+          updateData.otherDetails,
         vendor: updateData.brand || updateData.location,
         tags: `zip_${updateData.zip}, location_${updateData.location}, username_${username}`,
         images: product.images, // Attach updated images
@@ -781,131 +782,140 @@ console.log(metafieldsPayload)
       });
     }
     const currentStatus = product.status;
-if (product_type === 'Used Equipments' || product_type === 'New Equipments' ) {
-  updateData.equipment = {
-    location: req.body.location,
-    zip: req.body.zip,
-    name: req.body.name,
-    brand: req.body.brand,
-    asking_price: req.body.asking_price,
-    accept_offers: req.body.accept_offers,
-    equipment_type: req.body.equipment_type,
-    certification: req.body.certification,
-    year_purchased: req.body.year_purchased,
-    warranty: req.body.warranty,
-    reason_for_selling: req.body.reason_for_selling,
-    shipping: req.body.shipping,
-    sale_price: req.body.sale_price,
-    year_manufactured: req.body.year_manufactured,
-    training: req.body.training,
-    description: req.body.description,
-    city:req.body.city,
-  };
-}
+    if (
+      product_type === 'Used Equipments' ||
+      product_type === 'New Equipments'
+    ) {
+      updateData.equipment = {
+        location: req.body.location,
+        zip: req.body.zip,
+        name: req.body.name,
+        brand: req.body.brand,
+        asking_price: req.body.asking_price,
+        accept_offers: req.body.accept_offers,
+        equipment_type: req.body.equipment_type,
+        certification: req.body.certification,
+        year_purchased: req.body.year_purchased,
+        warranty: req.body.warranty,
+        reason_for_selling: req.body.reason_for_selling,
+        shipping: req.body.shipping,
+        sale_price: req.body.sale_price,
+        year_manufactured: req.body.year_manufactured,
+        training: req.body.training,
+        description: req.body.description,
+        city: req.body.city,
+      };
+    }
 
-if (product_type === 'Businesses To Purchase') {
-  updateData.business = {
-    name: req.body.name,
-    location: req.body.location,
-    zip: req.body.zip,
-    businessDescription: req.body.businessDescription,
-    asking_price: req.body.asking_price,
-    establishedYear: req.body.establishedYear,
-    numberOfEmployees: req.body.numberOfEmployees,
-    locationMonthlyRent: req.body.locationMonthlyRent,
-    leaseExpirationDate: new Date(req.body.leaseExpirationDate),
-    locationSize: req.body.locationSize,
-    grossYearlyRevenue: req.body.grossYearlyRevenue,
-    cashFlow: req.body.cashFlow,
-    productsInventory: req.body.productsInventory,
-    equipmentValue: req.body.equipmentValue,
-    reasonForSelling: req.body.reasonForSelling,
-    listOfDevices: req.body.listOfDevices,
-    offeredServices: req.body.offeredServices,
-    supportAndTraining: req.body.supportAndTraining,
-  };
-}
+    if (product_type === 'Businesses To Purchase') {
+      updateData.business = {
+        name: req.body.name,
+        location: req.body.location,
+        zip: req.body.zip,
+        businessDescription: req.body.businessDescription,
+        asking_price: req.body.asking_price,
+        establishedYear: req.body.establishedYear,
+        numberOfEmployees: req.body.numberOfEmployees,
+        locationMonthlyRent: req.body.locationMonthlyRent,
+        leaseExpirationDate: new Date(req.body.leaseExpirationDate),
+        locationSize: req.body.locationSize,
+        grossYearlyRevenue: req.body.grossYearlyRevenue,
+        cashFlow: req.body.cashFlow,
+        productsInventory: req.body.productsInventory,
+        equipmentValue: req.body.equipmentValue,
+        reasonForSelling: req.body.reasonForSelling,
+        listOfDevices: req.body.listOfDevices,
+        offeredServices: req.body.offeredServices,
+        supportAndTraining: req.body.supportAndTraining,
+      };
+    }
 
-if (product_type === 'Spa Room For Rent') {
-  updateData.roomListing = [
-    {
-      location: req.body.location,
-      zip: req.body.zip,
-      roomSize: req.body.roomSize,
-      monthlyRent: req.body.monthlyRent,
-      deposit: req.body.deposit,
-      minimumInsuranceRequested: req.body.minimumInsuranceRequested,
-      typeOfUseAllowed: req.body.typeOfUseAllowed,
-      rentalTerms: req.body.rentalTerms,
-      wifiAvailable: req.body.wifiAvailable,
-      otherDetails: req.body.otherDetails,
-      images: imagesData, // Assuming imagesData is already defined
-    },
-  ];
-}
+    if (product_type === 'Spa Room For Rent') {
+      updateData.roomListing = [
+        {
+          location: req.body.location,
+          zip: req.body.zip,
+          roomSize: req.body.roomSize,
+          monthlyRent: req.body.monthlyRent,
+          deposit: req.body.deposit,
+          minimumInsuranceRequested: req.body.minimumInsuranceRequested,
+          typeOfUseAllowed: req.body.typeOfUseAllowed,
+          rentalTerms: req.body.rentalTerms,
+          wifiAvailable: req.body.wifiAvailable,
+          otherDetails: req.body.otherDetails,
+          images: imagesData, // Assuming imagesData is already defined
+        },
+      ];
+    }
 
-if (product_type === 'Provider Needed') {
-  updateData.providerListings = [
-    {
-      location: req.body.location,
-      zip: req.body.zip,
-      qualificationRequested: req.body.qualificationRequested,
-      jobType: req.body.jobType,
-      typeOfJobOffered: req.body.typeOfJobOffered,
-      offeredYearlySalary: req.body.offeredYearlySalary,
-      offeredPositionDescription: req.body.offeredPositionDescription,
-      images: imagesData, // Assuming imagesData is already defined
-    },
-  ];
-}
+    if (product_type === 'Provider Needed') {
+      updateData.providerListings = [
+        {
+          location: req.body.location,
+          zip: req.body.zip,
+          qualificationRequested: req.body.qualificationRequested,
+          jobType: req.body.jobType,
+          typeOfJobOffered: req.body.typeOfJobOffered,
+          offeredYearlySalary: req.body.offeredYearlySalary,
+          offeredPositionDescription: req.body.offeredPositionDescription,
+          images: imagesData, // Assuming imagesData is already defined
+        },
+      ];
+    }
 
-if (product_type === 'Providers Available') {
-  updateData.jobListings = [
-    {
-      location: req.body.location,
-      zip: req.body.zip,
-      name: req.body.name,
-      qualification: req.body.qualification,
-      positionRequestedDescription: req.body.positionRequestedDescription,
-      availability: req.body.availability,
-      requestedYearlySalary: req.body.requestedYearlySalary,
-      jobType:req.body.jobType,
-      availableToWorkAs:req.body.availableToWorkAs,
-      images: imagesData, // Assuming imagesData is already defined
-    },
-  ];
-}
-if (product_type === 'Looking For') {
-  updateData.looking = {
-    name: req.body.name,
-    location: req.body.location,
-    zip: req.body.zip,
-    brand: req.body.brand,
-    sale_price: req.body.sale_price,
-    description: req.body.description,
-    images:imagesData
-  };
-}
-// Set common fields for all product types
-const commonFields = {
-  title: req.body.name || req.body.qualificationRequested,
-  body_html: req.body.description || req.body.offeredPositionDescription || req.body.otherDetails,
-  vendor: req.body.brand,
-  product_type,
-  status:currentStatus,
-  created_at: new Date(),
-};
+    if (product_type === 'Providers Available') {
+      updateData.jobListings = [
+        {
+          location: req.body.location,
+          zip: req.body.zip,
+          name: req.body.name,
+          qualification: req.body.qualification,
+          positionRequestedDescription: req.body.positionRequestedDescription,
+          availability: req.body.availability,
+          requestedYearlySalary: req.body.requestedYearlySalary,
+          jobType: req.body.jobType,
+          availableToWorkAs: req.body.availableToWorkAs,
+          images: imagesData, // Assuming imagesData is already defined
+        },
+      ];
+    }
+    if (product_type === 'Looking For') {
+      updateData.looking = {
+        name: req.body.name,
+        location: req.body.location,
+        zip: req.body.zip,
+        brand: req.body.brand,
+        sale_price: req.body.sale_price,
+        description: req.body.description,
+        images: imagesData,
+      };
+    }
+    // Set common fields for all product types
+    const commonFields = {
+      title: req.body.name || req.body.qualificationRequested,
+      body_html:
+        req.body.description ||
+        req.body.offeredPositionDescription ||
+        req.body.otherDetails,
+      vendor: req.body.brand,
+      product_type,
+      status: currentStatus,
+      created_at: new Date(),
+    };
 
-// Combine common fields with the specific update data
-const updatedProduct = await listingModel.findOneAndUpdate(
-  { id },
-  { ...commonFields, ...updateData },
-  { new: true } // Option to return the updated document
-);
- 
-return res
+    // Combine common fields with the specific update data
+    const updatedProduct = await listingModel.findOneAndUpdate(
+      { id },
+      { ...commonFields, ...updateData },
+      { new: true } // Option to return the updated document
+    );
+
+    return res
       .status(200)
-      .json({ message: 'Product updated successfully', product: updatedProduct });
+      .json({
+        message: 'Product updated successfully',
+        product: updatedProduct,
+      });
   } catch (error) {
     console.error('Error updating product:', error);
     return res.status(500).json({ message: 'An error occurred', error });
@@ -983,7 +993,6 @@ const shopifyRequest = async (url, method, body) => {
     'base64'
   );
 
-  
   const response = await fetch(url, {
     method,
     headers: {
@@ -1001,7 +1010,7 @@ const shopifyRequest = async (url, method, body) => {
   return response.json();
 };
 
-export  const addProduct = async (req, res) => {
+export const addProduct = async (req, res) => {
   try {
     const { title, body_html, vendor, product_type, price } = req.body;
     const image = req.file; // Handle file upload
@@ -1102,7 +1111,6 @@ export  const addProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // export const addUsedEquipments = async (req, res) => {
 //   let productId;
@@ -1443,346 +1451,344 @@ export  const addProduct = async (req, res) => {
 //   }
 // };
 
+// export const addUsedEquipments = async (req, res) => {
+//   let productId;
+//   try {
+//     // Extract equipment details from request body
+//     const {
+//       location,
+//       zip,
+//       name, // Required field
+//       brand,
+//       asking_price,
+//       accept_offers,
+//       equipment_type,
+//       certification,
+//       year_purchased,
+//       warranty,
+//       reason_for_selling,
+//       shipping,
+//       description,
+//       city,
+//       userId,
+//       status
+//     } = req.body;
+//     console.log(req.body)
+//     // Validate required field
+//     const productStatus = status === 'publish' ? 'active' : 'draft';
+//     const user = await authModel.findById(userId);
+//     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-export const addUsedEquipments = async (req, res) => {
-  let productId;
-  try {
-    // Extract equipment details from request body
-    const {
-      location,
-      zip,
-      name, // Required field
-      brand,
-      asking_price,
-      accept_offers,
-      equipment_type,
-      certification,
-      year_purchased,
-      warranty,
-      reason_for_selling,
-      shipping,
-      description,
-      city,
-      userId,
-      status
-    } = req.body;
-    console.log(req.body)
-    // Validate required field
-    const productStatus = status === 'publish' ? 'active' : 'draft';
-    const user = await authModel.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+//     const username = user.userName; // Fetch username, default to 'Unknown' if not found
+//     const phoneNumber = user.phoneNumber;
+//     const country = user.country;
+//     const newcity = user.city;
+//     const email = user.email;
+//     const firstName=user.firstName;
+//     const lastName=user.lastName
+//     // const formattedDescription = description.replace(/\n/g, '<br>');
 
-    const username = user.userName; // Fetch username, default to 'Unknown' if not found
-    const phoneNumber = user.phoneNumber;
-    const country = user.country;
-    const newcity = user.city;
-    const email = user.email;
-    const firstName=user.firstName;
-    const lastName=user.lastName
-    // const formattedDescription = description.replace(/\n/g, '<br>');
+//     // Validate required fields
+//     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
+//     if (!accept_offers) return res.status(400).json({ error: 'Accept offers is required.' });
+//     if (!location) return res.status(400).json({ error: 'Location is required.' });
+//     if (!name) return res.status(400).json({ error: 'Name is required.' });
+//     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
+//     if (asking_price === undefined) return res.status(400).json({ error: 'asking price is required.' });
+//     if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
+//     if (!certification) return res.status(400).json({ error: 'Certification is required.' });
+//     if (year_purchased === undefined) return res.status(400).json({ error: 'Year purchased is required.' });
+//     if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
+//     if (!reason_for_selling) return res.status(400).json({ error: 'reason for selling are required.' });
+//     if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
+//     if (!description) return res.status(400).json({ error: 'Description is required.' });
+//     // if (!req.files?.images || req.files.images.length === 0) {
+//     //   return res.status(400).json({ error: 'At least one image is required.' });
+//     // }
+// // const fullLocation=`${city}_${location}`
+//     // Step 1: Create Product in Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: `${name} | ${country} , ${location} , ${zip}`,
+//         body_html: description,
+//         vendor: brand,
+//         product_type: 'Used Equipments',
+//         variants: [{ price: asking_price.toString() }],
+//         status: productStatus,
+//         tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
+//       },
+//     };
+//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+//     const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+//     productId = productResponse.product.id;
 
-    // Validate required fields
-    if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
-    if (!accept_offers) return res.status(400).json({ error: 'Accept offers is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
-    if (!name) return res.status(400).json({ error: 'Name is required.' });
-    if (!brand) return res.status(400).json({ error: 'Brand is required.' });
-    if (asking_price === undefined) return res.status(400).json({ error: 'asking price is required.' });
-    if (!equipment_type) return res.status(400).json({ error: 'Equipment type is required.' });
-    if (!certification) return res.status(400).json({ error: 'Certification is required.' });
-    if (year_purchased === undefined) return res.status(400).json({ error: 'Year purchased is required.' });
-    if (warranty === undefined) return res.status(400).json({ error: 'Warranty is required.' });
-    if (!reason_for_selling) return res.status(400).json({ error: 'reason for selling are required.' });
-    if (!shipping) return res.status(400).json({ error: 'Shipping information is required.' });
-    if (!description) return res.status(400).json({ error: 'Description is required.' });
-    // if (!req.files?.images || req.files.images.length === 0) {
-    //   return res.status(400).json({ error: 'At least one image is required.' });
-    // }
-// const fullLocation=`${city}_${location}`
-    // Step 1: Create Product in Shopify
-    const shopifyPayload = {
-      product: {
-        title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html: description,
-        vendor: brand,
-        product_type: 'Used Equipments',
-        variants: [{ price: asking_price.toString() }],
-        status: productStatus,
-        tags: [`zip_${zip}`, `location_${location}`, `username_${username}`], // Include username in tags
-      },
-    };
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
-    productId = productResponse.product.id;
+//     // Step 2: Create Structured Metafields for the Equipment Details
+//     const metafieldsPayload = [
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'zip',
+//           value: zip || 'Not specified',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'location',
+//           value: location || 'Not specified',
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'brand',
+//           value: brand,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'description',
+//           value: description,
+//           type: 'multi_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'asking_price',
+//           value: asking_price.toString(),
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'accept_offers',
+//           value: accept_offers,
+//           type: 'boolean',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'equipment_type',
+//           value: equipment_type,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'certification',
+//           value: certification,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'year_purchased',
+//           value: year_purchased.toString(),
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'warranty',
+//           value: warranty,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'reason_for_selling',
+//           value: reason_for_selling,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'shipping',
+//           value: shipping,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       {
+//         metafield: {
+//           namespace: 'fold_tech',
+//           key: 'userinformation',
+//           value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${newcity} - ${country}`,
+//           type: 'single_line_text_field',
+//         },
+//       },
+//     ];
 
-    // Step 2: Create Structured Metafields for the Equipment Details
-    const metafieldsPayload = [
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'zip',
-          value: zip || 'Not specified',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'location',
-          value: location || 'Not specified',
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'brand',
-          value: brand,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'description',
-          value: description,
-          type: 'multi_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'asking_price',
-          value: asking_price.toString(),
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'accept_offers',
-          value: accept_offers,
-          type: 'boolean',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'equipment_type',
-          value: equipment_type,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'certification',
-          value: certification,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'year_purchased',
-          value: year_purchased.toString(),
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'warranty',
-          value: warranty,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'reason_for_selling',
-          value: reason_for_selling,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'shipping',
-          value: shipping,
-          type: 'single_line_text_field',
-        },
-      },
-      {
-        metafield: {
-          namespace: 'fold_tech',
-          key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${newcity} - ${country}`,
-          type: 'single_line_text_field',
-        },
-      },
-    ];
+//     for (const metafield of metafieldsPayload) {
+//       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
+//       await shopifyRequest(metafieldsUrl, 'POST', metafield);
+//     }
 
-    for (const metafield of metafieldsPayload) {
-      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
-      await shopifyRequest(metafieldsUrl, 'POST', metafield);
-    }
+//     // Step 3: Upload Images to Shopify if provided
+//     const images = req.files?.images || [];
+//     const imagesData = [];
 
-    // Step 3: Upload Images to Shopify if provided
-    const images = req.files?.images || [];
-    const imagesData = [];
+//     for (const image of images) {
+//       const cloudinaryImageUrl = image.path; // Ensure we use the correct path
 
-    for (const image of images) {
-      const cloudinaryImageUrl = image.path; // Ensure we use the correct path
+//       const imagePayload = {
+//         image: {
+//           src: cloudinaryImageUrl,
+//         },
+//       };
 
-      const imagePayload = {
-        image: {
-          src: cloudinaryImageUrl,
-        },
-      };
+//       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+//       const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+//       if (imageResponse && imageResponse.image) {
+//         imagesData.push({
+//           id: imageResponse.image.id,
+//           product_id: productId,
+//           position: imageResponse.image.position,
+//           created_at: imageResponse.image.created_at,
+//           updated_at: imageResponse.image.updated_at,
+//           alt: 'Equipment Image',
+//           width: imageResponse.image.width,
+//           height: imageResponse.image.height,
+//           src: imageResponse.image.src,
+//         });
+//       }
+//     }
 
-      if (imageResponse && imageResponse.image) {
-        imagesData.push({
-          id: imageResponse.image.id,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: 'Equipment Image',
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        });
-      }
-    }
+//     const createdAt = new Date();
+//     const expirationDate = new Date(createdAt);
+//     expirationDate.setMonth(expirationDate.getMonth() + 6);
 
-    const createdAt = new Date();
-    const expirationDate = new Date(createdAt);
-    expirationDate.setMonth(expirationDate.getMonth() + 6);
+//     // Step 4: Save Product to MongoDB
+//     const newProduct = new listingModel({
+//       id: productId,
+//       title: name,
+//       body_html: description,
+//       vendor: brand,
+//       product_type: 'Used Equipments',
+//       created_at: new Date(),
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       // images: imagesData,
+//       equipment: {
+//         location: location || 'Not specified',
+//         zip,
+//         name,
+//         brand: brand,
+//         asking_price: asking_price,
+//         accept_offers: !!accept_offers,
+//         equipment_type: equipment_type,
+//         certification: certification,
+//         year_purchased: year_purchased,
+//         warranty: warranty,
+//         reason_for_selling: reason_for_selling,
+//         shipping: shipping,
+//         description,
+//         city,
+//       },
+//       userId,
+//       status: productStatus,
+//     });
 
-    // Step 4: Save Product to MongoDB
-    const newProduct = new listingModel({
-      id: productId,
-      title: name,
-      body_html: description,
-      vendor: brand,
-      product_type: 'Used Equipments',
-      created_at: new Date(),
-      tags: productResponse.product.tags,
-      variants: productResponse.product.variants,
-      // images: imagesData,
-      equipment: {
-        location: location || 'Not specified',
-        zip,
-        name,
-        brand: brand,
-        asking_price: asking_price,
-        accept_offers: !!accept_offers,
-        equipment_type: equipment_type,
-        certification: certification,
-        year_purchased: year_purchased,
-        warranty: warranty,
-        reason_for_selling: reason_for_selling,
-        shipping: shipping,
-        description,
-        city,
-      },
-      userId,
-      status: productStatus,
-    });
+//     await newProduct.save();
 
-    await newProduct.save();
+//     if (status === 'active') {
+//       const user = await authModel.findById(userId);
+//       if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    if (status === 'active') {
-      const user = await authModel.findById(userId);
-      if (!user) return res.status(404).json({ error: 'User not found.' });
+//       // Check subscription quantity
+//       const productConfig = await productModel.findOne({ product_type: 'Used Equipments' });
+//       if (!productConfig) {
+//         return res.status(404).json({ error: 'Product configuration not found.' });
+//       }
 
-      // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'Used Equipments' });
-      if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
-      }
+//       // if (!user.subscription || user.subscription.quantity <= 0) {
+//       //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
+//       // }
 
-      // if (!user.subscription || user.subscription.quantity <= 0) {
-      //   return res.status(400).json({ error: 'Insufficient subscription credits to publish product.' });
-      // }
+//       if (user.subscription.quantity < productConfig.credit_required) {
+//         return res.status(400).json({
+//           error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
+//         });
+//       }
 
-      if (user.subscription.quantity < productConfig.credit_required) {
-        return res.status(400).json({
-          error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
-        });
-      }
+//       // Decrement the subscription quantity
+//       user.subscription.quantity -= productConfig.credit_required;
+//       await user.save();
 
-      // Decrement the subscription quantity
-      user.subscription.quantity -= productConfig.credit_required;
-      await user.save();
+//       // Set expiration date to 30 days from now
+//       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-      // Set expiration date to 30 days from now
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+//       // Step 6: Update product status in Shopify
+//       const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//       const shopifyUpdatePayload = {
+//         product: {
+//           id: productId,
+//           status: 'active',
+//           published_scope: 'global',
+//         },
+//       };
 
-      // Step 6: Update product status in Shopify
-      const updateShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-      const shopifyUpdatePayload = {
-        product: {
-          id: productId,
-          status: 'active',
-          published_scope: 'global',
-        },
-      };
+//       const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+//       if (!shopifyResponse.product) {
+//         return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+//       }
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
-      if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
-      }
+//       // Step 7: Update product status in MongoDB
+//       const updatedProduct = await listingModel.findOneAndUpdate(
+//         { id: productId },
+//         { status: 'active', expiresAt },
+//         { new: true }
+//       );
 
-      // Step 7: Update product status in MongoDB
-      const updatedProduct = await listingModel.findOneAndUpdate(
-        { id: productId },
-        { status: 'active', expiresAt },
-        { new: true }
-      );
+//       if (!updatedProduct) {
+//         return res.status(404).json({ error: 'Product not found in database.' });
+//       }
 
-      if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
-      }
+//       // Schedule the unpublish task
+//       // scheduleUnpublish(productId, userId, expiresAt);
 
-      // Schedule the unpublish task
-      // scheduleUnpublish(productId, userId, expiresAt);
+//       // Send a successful response
+//       return res.status(201).json({
+//         message: 'Product successfully created and published.',
+//         product: updatedProduct,
+//         expiresAt,
+//       });
+//     }
 
-      // Send a successful response
-      return res.status(201).json({
-        message: 'Product successfully created and published.',
-        product: updatedProduct,
-        expiresAt,
-      });
-    }
+//     // If the product is saved as draft
+//     res.status(201).json({
+//       message: 'Product successfully created and saved as draft.',
+//       product: newProduct,
+//       expiresAt: null, // No expiration date for draft
+//     });
+//   } catch (error) {
+//     console.error('Error in addNewEquipments function:', error);
 
-    // If the product is saved as draft
-    res.status(201).json({
-      message: 'Product successfully created and saved as draft.',
-      product: newProduct,
-      expiresAt: null, // No expiration date for draft
-    });
-  } catch (error) {
-    console.error('Error in addNewEquipments function:', error);
+//     // Attempt to delete the product from Shopify if it was created
+//     if (productId) {
+//       try {
+//         const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+//         await shopifyRequest(deleteShopifyUrl, 'DELETE');
+//       } catch (deleteError) {
+//         console.error('Error deleting product from Shopify:', deleteError);
+//       }
+//     }
 
-    // Attempt to delete the product from Shopify if it was created
-    if (productId) {
-      try {
-        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-        await shopifyRequest(deleteShopifyUrl, 'DELETE');
-      } catch (deleteError) {
-        console.error('Error deleting product from Shopify:', deleteError);
-      }
-    }
-
-    res.status(500).json({ error: error.message });
-  }
-};
-
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 // export const addNewEquipments = async (req, res) => {
 //   let productId; // Declare productId outside try block for access in catch
@@ -2151,6 +2157,167 @@ export const addUsedEquipments = async (req, res) => {
 //   }
 // }
 
+export const addUsedEquipments = async (req, res) => {
+  let productId;
+  try {
+    // Extract product details from request body
+    const {
+      title,
+      description,
+      price,
+      compare_at_price,
+      cost_per_item,
+      track_quantity,
+      quantity,
+      continue_selling,
+      has_sku,
+      sku,
+      barcode,
+      track_shipping,
+      weight,
+      weight_unit,
+      status, // "draft" or "active"
+      userId,
+      ProductType,
+      vendor,
+      keyWord
+    } = req.body;
+
+    console.log(req.body);
+
+    // Validate required fields
+    if (!title)
+      return res.status(400).json({ error: 'Product title is required.' });
+    if (!price) return res.status(400).json({ error: 'Price is required.' });
+    if (!userId) return res.status(400).json({ error: 'User ID is required.' });
+
+    const productStatus = status === 'publish' ? 'active' : 'draft';
+    const user = await authModel.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Shopify product payload
+    const shopifyPayload = {
+      product: {
+        title: title,
+        body_html: description || '',
+        vendor: vendor,
+        product_type: ProductType,
+        status: productStatus,
+        variants: [
+          {
+            price: price.toString(),
+            compare_at_price: compare_at_price
+              ? compare_at_price.toString()
+              : null,
+              cost_per_item: cost_per_item ? cost_per_item.toString() : null,
+            inventory_management: track_quantity ? 'shopify' : null,
+            inventory_quantity: track_quantity ? parseInt(quantity) : null,
+            sku: has_sku ? sku : null,
+            barcode: has_sku ? barcode : null,
+            weight: track_shipping ? parseFloat(weight) : null,
+            weight_unit: track_shipping ? weight_unit : null,
+          },
+        ],
+        tags: [`user_${userId}`, `vendor_${user.userName}`,`vendor_${keyWord}`],
+      },
+    };
+    console.log(shopifyPayload);
+    // Create product in Shopify
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
+    productId = productResponse.product.id;
+
+    // Upload Images (if provided)
+    const images = req.files?.images || [];
+    const imagesData = [];
+
+    for (const image of images) {
+      const cloudinaryImageUrl = image.path;
+
+      const imagePayload = {
+        image: {
+          src: cloudinaryImageUrl,
+        },
+      };
+
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
+
+      if (imageResponse?.image) {
+        imagesData.push({
+          id: imageResponse.image.id,
+          product_id: productId,
+          position: imageResponse.image.position,
+          src: imageResponse.image.src,
+        });
+      }
+    }
+
+    // Expiration date logic for active products
+    let expiresAt = null;
+    if (status === 'active') {
+      expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    }
+
+    // Save product to MongoDB
+    const newProduct = new listingModel({
+      id: productId,
+      title: title,
+      body_html: description,
+      vendor: vendor,
+      product_type: ProductType,
+      created_at: new Date(),
+      tags: productResponse.product.tags,
+      variants: productResponse.product.variants,
+      images: imagesData,
+      inventory: {
+        track_quantity: !!track_quantity,
+        quantity: track_quantity ? parseInt(quantity) : 0,
+        continue_selling: !!continue_selling,
+        has_sku: !!has_sku,
+        sku: sku || null,
+        barcode: barcode || null,
+      },
+      shipping: {
+        track_shipping: !!track_shipping,
+        weight: track_shipping ? parseFloat(weight) : null,
+        weight_unit: track_shipping ? weight_unit : null,
+      },
+      userId,
+      status: productStatus,
+      expiresAt,
+    });
+
+    await newProduct.save();
+
+    return res.status(201).json({
+      message: 'Product successfully created.',
+      product: newProduct,
+      expiresAt,
+    });
+  } catch (error) {
+    console.error('Error in addUsedEquipments function:', error);
+
+    if (productId) {
+      try {
+        const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+        await shopifyRequest(deleteShopifyUrl, 'DELETE');
+      } catch (deleteError) {
+        console.error('Error deleting product from Shopify:', deleteError);
+      }
+    }
+
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const addNewEquipments = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
@@ -2216,8 +2383,8 @@ export const addNewEquipments = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName=user.firstName;
-    const lastName=user.lastName
+    const firstName = user.firstName;
+    const lastName = user.lastName;
     // Step 2: Create Product in Shopify
     const shopifyPayload = {
       product: {
@@ -2415,7 +2582,7 @@ export const addNewEquipments = async (req, res) => {
         warranty,
         training,
         shipping,
-        description:description,
+        description: description,
       },
       userId,
       status: productStatus,
@@ -2429,9 +2596,13 @@ export const addNewEquipments = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'New Equipments' });
+      const productConfig = await productModel.findOne({
+        product_type: 'New Equipments',
+      });
       if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
+        return res
+          .status(404)
+          .json({ error: 'Product configuration not found.' });
       }
 
       // if (!user.subscription || user.subscription.quantity <= 0) {
@@ -2517,7 +2688,7 @@ export const addNewEquipments = async (req, res) => {
 
     res.status(500).json({ error: error.message });
   }
-}
+};
 
 export const addNewBusiness = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
@@ -2559,8 +2730,8 @@ export const addNewBusiness = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName=user.firstName
-    const lastName=user.lastName
+    const firstName = user.firstName;
+    const lastName = user.lastName;
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -2774,11 +2945,11 @@ export const addNewBusiness = async (req, res) => {
         type: 'single_line_text_field',
       },
       {
-          namespace: 'fold_tech',
-          key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'userinformation',
+        value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        type: 'single_line_text_field',
+      },
     ];
 
     for (const metafield of metafieldsPayload) {
@@ -2868,9 +3039,13 @@ export const addNewBusiness = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'Businesses To Purchase' });
+      const productConfig = await productModel.findOne({
+        product_type: 'Businesses To Purchase',
+      });
       if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
+        return res
+          .status(404)
+          .json({ error: 'Product configuration not found.' });
       }
 
       // if (!user.subscription || user.subscription.quantity <= 0) {
@@ -2956,7 +3131,6 @@ export const addNewBusiness = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 // export const addNewJobListing = async (req, res) => {
 //   let productId; // Declare productId outside try block for access in catch
@@ -3261,7 +3435,6 @@ export const addNewBusiness = async (req, res) => {
 //   }
 // };
 
-
 export const addNewJobListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -3284,7 +3457,7 @@ export const addNewJobListing = async (req, res) => {
       status,
     } = req.body;
     // const formattedDescription = positionRequestedDescription.replace(/\n/g, '<br>');
-  
+
     // Handle file upload
     const files = req.files?.images || []; // Ensure we have an array of files
     const productStatus = status === 'publish' ? 'active' : 'draft';
@@ -3296,24 +3469,33 @@ export const addNewJobListing = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName=user.firstName
-    const lastName=user.lastName
+    const firstName = user.firstName;
+    const lastName = user.lastName;
 
     // Validate required field
     if (!zip) return res.status(400).json({ error: 'Zipcode is required.' });
     if (!name) return res.status(400).json({ error: 'name is required.' });
-    if (!location) return res.status(400).json({ error: 'Location is required.' });
-    if (!qualification) return res.status(400).json({ error: 'Qualification is required.' });
-    if (!positionRequestedDescription) return res.status(400).json({ error: 'Position requested description is required.' });
-    if (!availability) return res.status(400).json({ error: 'Availability is required.' });
-    if (!availableToWorkAs) return res.status(400).json({ error: 'available To Work As is required.' });
+    if (!location)
+      return res.status(400).json({ error: 'Location is required.' });
+    if (!qualification)
+      return res.status(400).json({ error: 'Qualification is required.' });
+    if (!positionRequestedDescription)
+      return res
+        .status(400)
+        .json({ error: 'Position requested description is required.' });
+    if (!availability)
+      return res.status(400).json({ error: 'Availability is required.' });
+    if (!availableToWorkAs)
+      return res
+        .status(400)
+        .json({ error: 'available To Work As is required.' });
     // if (files.length === 0) return res.status(400).json({ error: 'At least one file is required.' });
 
     // Step 1: Create Product in Shopify
     const shopifyPayload = {
       product: {
         title: `${name} | ${country} , ${location} , ${zip}`,
-        body_html:positionRequestedDescription,
+        body_html: positionRequestedDescription,
         vendor: location,
         product_type: 'Providers Available',
         variants: [{ price: requestedYearlySalary.toString() }],
@@ -3323,7 +3505,11 @@ export const addNewJobListing = async (req, res) => {
     };
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-    const productResponse = await shopifyRequest(shopifyUrl, 'POST', shopifyPayload);
+    const productResponse = await shopifyRequest(
+      shopifyUrl,
+      'POST',
+      shopifyPayload
+    );
     productId = productResponse.product.id; // Assign productId
 
     // Step 2: Create Structured Metafields for the Job Listing Details
@@ -3383,12 +3569,11 @@ export const addNewJobListing = async (req, res) => {
         type: 'number_decimal',
       },
       {
-          namespace: 'fold_tech',
-          key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-          type: 'single_line_text_field',
+        namespace: 'fold_tech',
+        key: 'userinformation',
+        value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        type: 'single_line_text_field',
       },
-
     ];
 
     // Step 3: Process Files for Images and PDFs
@@ -3407,7 +3592,11 @@ export const addNewJobListing = async (req, res) => {
         };
 
         const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
-        const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+        const imageResponse = await shopifyRequest(
+          imageUrl,
+          'POST',
+          imagePayload
+        );
 
         if (imageResponse && imageResponse.image) {
           imagesData.push({
@@ -3467,14 +3656,13 @@ export const addNewJobListing = async (req, res) => {
           requestedYearlySalary,
           availableToWorkAs,
           images: imagesData,
-       
         },
       ],
       userId,
       status: productStatus,
     });
 
-    await newJobListing.save()
+    await newJobListing.save();
 
     // Subscription management for active listings
     if (status === 'active') {
@@ -3482,9 +3670,13 @@ export const addNewJobListing = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'Providers Available' });
+      const productConfig = await productModel.findOne({
+        product_type: 'Providers Available',
+      });
       if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
+        return res
+          .status(404)
+          .json({ error: 'Product configuration not found.' });
       }
 
       if (user.subscription.quantity < productConfig.credit_required) {
@@ -3510,9 +3702,15 @@ export const addNewJobListing = async (req, res) => {
         },
       };
 
-      const shopifyResponse = await shopifyRequest(updateShopifyUrl, 'PUT', shopifyUpdatePayload);
+      const shopifyResponse = await shopifyRequest(
+        updateShopifyUrl,
+        'PUT',
+        shopifyUpdatePayload
+      );
       if (!shopifyResponse.product) {
-        return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+        return res
+          .status(400)
+          .json({ error: 'Failed to update product status in Shopify.' });
       }
 
       // Step 7: Update product status in MongoDB
@@ -3523,7 +3721,9 @@ export const addNewJobListing = async (req, res) => {
       );
 
       if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found in database.' });
+        return res
+          .status(404)
+          .json({ error: 'Product not found in database.' });
       }
 
       // Send a successful response
@@ -3556,7 +3756,7 @@ export const addNewJobListing = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
- 
+
 export const addNewProviderListing = async (req, res) => {
   let productId; // Declare productId outside try block for access in catch
   try {
@@ -3576,7 +3776,7 @@ export const addNewProviderListing = async (req, res) => {
       status,
     } = req.body;
     // const formattedDescription = offeredPositionDescription.replace(/\n/g, '<br>');
-console.log(req.body)
+    console.log(req.body);
     // Handle file upload
     const images = req.files?.images || []; // Ensure we have an array of images
     const productStatus = status === 'publish' ? 'active' : 'draft';
@@ -3588,8 +3788,8 @@ console.log(req.body)
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName=user.firstName
-    const lastName=user.lastName
+    const firstName = user.firstName;
+    const lastName = user.lastName;
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -3625,7 +3825,7 @@ console.log(req.body)
         .status(400)
         .json({ error: 'Offered position description is required.' });
     }
-   
+
     // Continue with any additional field validations as needed
 
     // Step 1: Create Product in Shopify
@@ -3694,10 +3894,10 @@ console.log(req.body)
         type: 'multi_line_text_field',
       },
       {
-          namespace: 'fold_tech',
-          key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-          type: 'single_line_text_field',
+        namespace: 'fold_tech',
+        key: 'userinformation',
+        value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        type: 'single_line_text_field',
       },
     ];
 
@@ -3773,9 +3973,13 @@ console.log(req.body)
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'Provider Needed' });
+      const productConfig = await productModel.findOne({
+        product_type: 'Provider Needed',
+      });
       if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
+        return res
+          .status(404)
+          .json({ error: 'Product configuration not found.' });
       }
 
       // if (!user.subscription || user.subscription.quantity <= 0) {
@@ -3862,7 +4066,6 @@ console.log(req.body)
   }
 };
 
-
 export const addRoomListing = async (req, res) => {
   let productId;
   try {
@@ -3895,8 +4098,8 @@ export const addRoomListing = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName=user.firstName
-    const lastName=user.lastName
+    const firstName = user.firstName;
+    const lastName = user.lastName;
 
     if (!zip) {
       return res.status(400).json({ error: 'Zipcode is required.' });
@@ -4030,11 +4233,11 @@ export const addRoomListing = async (req, res) => {
         type: 'multi_line_text_field',
       },
       {
-          namespace: 'fold_tech',
-          key: 'userinformation',
-          value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
-          type: 'single_line_text_field',
-        },
+        namespace: 'fold_tech',
+        key: 'userinformation',
+        value: `${firstName} ${lastName} | ${username} | ${email} | ${phoneNumber} | ${city} - ${country}`,
+        type: 'single_line_text_field',
+      },
     ];
     for (const metafield of metafieldsPayload) {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
@@ -4110,9 +4313,13 @@ export const addRoomListing = async (req, res) => {
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'Spa Room For Rent' });
+      const productConfig = await productModel.findOne({
+        product_type: 'Spa Room For Rent',
+      });
       if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
+        return res
+          .status(404)
+          .json({ error: 'Product configuration not found.' });
       }
 
       // if (!user.subscription || user.subscription.quantity <= 0) {
@@ -4198,8 +4405,6 @@ export const addRoomListing = async (req, res) => {
   }
 };
 
-
-
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -4225,7 +4430,9 @@ export const getProduct = async (req, res) => {
 
     // Check if products were found
     if (products.length === 0) {
-      return res.status(404).json({ message: 'No products found for this user.' });
+      return res
+        .status(404)
+        .json({ message: 'No products found for this user.' });
     }
 
     // Send the paginated products as a response
@@ -4240,7 +4447,6 @@ export const getProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const getSearchProduct = async (req, res) => {
   const { query } = req.query; // Get search query from query parameters
@@ -4279,7 +4485,6 @@ export const getSearchProduct = async (req, res) => {
   }
 };
 
-
 export const productUpdate = async (req, res) => {
   const { id, updateData } = req.body; // Shopify product ID and update data from the request body
 
@@ -4307,7 +4512,6 @@ export const productUpdate = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
-
 
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -4404,7 +4608,11 @@ export const publishProduct = async (req, res) => {
     // Check subscription quantity
     const productConfig = await productModel.findOne({ product_type });
     if (!productConfig) {
-      return res.status(404).json({ error: 'Product configuration not found for this product type.' });
+      return res
+        .status(404)
+        .json({
+          error: 'Product configuration not found for this product type.',
+        });
     }
 
     // Check subscription credits
@@ -4457,8 +4665,6 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-
-
     // Send response
     return res.status(200).json({
       message: 'Product successfully published.',
@@ -4470,7 +4676,6 @@ export const publishProduct = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 export const newPublishProduct = async (req, res) => {
   try {
@@ -4614,7 +4819,6 @@ export const unpublishProduct = async (req, res) => {
   }
 };
 
-
 export const deletAllProduct = async (req, res) => {
   try {
     listingModel.deleteMany().then((result) => {
@@ -4626,16 +4830,20 @@ export const deletAllProduct = async (req, res) => {
 };
 
 //In this api admin can change credits on the base of product type
-export const updateCredits=async(req,res)=>{
-  const { newCredit,productType } = req.body;
+export const updateCredits = async (req, res) => {
+  const { newCredit, productType } = req.body;
 
   // Validate input
   if (typeof newCredit !== 'number' || newCredit < 0) {
-    return res.status(400).json({ message: 'Invalid credit value. It must be a non-negative number.' });
+    return res
+      .status(400)
+      .json({
+        message: 'Invalid credit value. It must be a non-negative number.',
+      });
   }
 
   try {
-      await productModel.updateMany(
+    await productModel.updateMany(
       { product_type: productType },
       { credit_required: newCredit }
     );
@@ -4643,7 +4851,6 @@ export const updateCredits=async(req,res)=>{
     // Send a response
     res.json({
       message: `Updated credit for '${productType}' to require ${newCredit} credits.`,
-      
     });
   } catch (error) {
     console.error('Error updating credit requirement:', error);
@@ -4651,59 +4858,65 @@ export const updateCredits=async(req,res)=>{
   }
 };
 
-
 export const updateProductPrice = async (req, res) => {
   const { creditId, price } = req.body;
 
   try {
-      // Fetch the Shopify product details using the productId
-      const apiKey = process.env.SHOPIFY_API_KEY;
-      const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-      const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+    // Fetch the Shopify product details using the productId
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-      const shopifyProductUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${creditId}.json`;
+    const shopifyProductUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${creditId}.json`;
 
-      const productResponse = await fetch(shopifyProductUrl, {
-          method: 'GET',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
-          },
-      });
+    const productResponse = await fetch(shopifyProductUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
+      },
+    });
 
-      const shopifyProductData = await productResponse.json();
+    const shopifyProductData = await productResponse.json();
 
-      // Check if the product was fetched successfully
-      if (productResponse.status !== 200 || !shopifyProductData.product) {
-          return res.status(404).json({ message: 'Failed to fetch product from Shopify' });
-      }
+    // Check if the product was fetched successfully
+    if (productResponse.status !== 200 || !shopifyProductData.product) {
+      return res
+        .status(404)
+        .json({ message: 'Failed to fetch product from Shopify' });
+    }
 
-      // Step 2: Find the correct variant within the product
-      const variant = shopifyProductData.product.variants[0]; // Assuming a single variant for simplicity
+    // Step 2: Find the correct variant within the product
+    const variant = shopifyProductData.product.variants[0]; // Assuming a single variant for simplicity
 
-      if (!variant) {
-          return res.status(404).json({ message: 'No variants found for this product' });
-      }
+    if (!variant) {
+      return res
+        .status(404)
+        .json({ message: 'No variants found for this product' });
+    }
 
-      // Store the product info in the database
-      const product = new BuyCreditModel({
-        creditId,
-          variantId: variant.id, // Use the fetched variant ID
-          price,
-      });
+    // Store the product info in the database
+    const product = new BuyCreditModel({
+      creditId,
+      variantId: variant.id, // Use the fetched variant ID
+      price,
+    });
 
-      await product.save();
+    await product.save();
 
-      res.status(201).json({ message: 'Product updated successfully', variantId: variant.id });
+    res
+      .status(201)
+      .json({ message: 'Product updated successfully', variantId: variant.id });
   } catch (error) {
-      console.error('Error updating product:', error);
-      res.status(500).json({ message: 'Error updating product', error: error.message });
+    console.error('Error updating product:', error);
+    res
+      .status(500)
+      .json({ message: 'Error updating product', error: error.message });
   }
 };
 
-
 export const updateNewPrice = async (req, res) => {
-  const id = "670cdd8351a965e64f096390"; // MongoDB product ID
+  const id = '670cdd8351a965e64f096390'; // MongoDB product ID
   const { price, creditId } = req.body; // creditId is the Shopify product ID from the request
 
   try {
@@ -4719,21 +4932,25 @@ export const updateNewPrice = async (req, res) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
+        Authorization: `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
       },
     });
 
     const shopifyProductData = await productResponse.json();
 
     if (productResponse.status !== 200 || !shopifyProductData.product) {
-      return res.status(404).json({ message: 'Failed to fetch product from Shopify' });
+      return res
+        .status(404)
+        .json({ message: 'Failed to fetch product from Shopify' });
     }
 
     // Step 2: Find the correct variant within the product
     const variant = shopifyProductData.product.variants[0]; // Assuming a single variant for simplicity
 
     if (!variant) {
-      return res.status(404).json({ message: 'No variants found for this product' });
+      return res
+        .status(404)
+        .json({ message: 'No variants found for this product' });
     }
 
     // Step 3: Update the price for that specific variant in Shopify
@@ -4743,7 +4960,7 @@ export const updateNewPrice = async (req, res) => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
+        Authorization: `Basic ${Buffer.from(`${apiKey}:${apiPassword}`).toString('base64')}`,
       },
       body: JSON.stringify({
         variant: {
@@ -4778,41 +4995,42 @@ export const updateNewPrice = async (req, res) => {
       updatedProduct, // MongoDB response
       updatedVariant: updateData.variant, // Shopify response (updated variant)
     });
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'An error occurred', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'An error occurred', error: error.message });
   }
 };
 
-
 export const fetchPricePerCredit = async (req, res) => {
   try {
-      // Use `await` to wait for the aggregation to finish
-      const credit = await BuyCreditModel.aggregate([
-          {
-              $project: {
-                creditId:1,
-                price: 1,
-                variantId:1 // Only project the `price` field
-              }
-          }
-      ]);
+    // Use `await` to wait for the aggregation to finish
+    const credit = await BuyCreditModel.aggregate([
+      {
+        $project: {
+          creditId: 1,
+          price: 1,
+          variantId: 1, // Only project the `price` field
+        },
+      },
+    ]);
 
-      if (credit && credit.length > 0) {
-          // If data is found, send it
-          res.status(200).json(credit);
-      } else {
-          // If no data found, return a 404
-          res.status(404).json({ message: 'No data found' });
-      }
+    if (credit && credit.length > 0) {
+      // If data is found, send it
+      res.status(200).json(credit);
+    } else {
+      // If no data found, return a 404
+      res.status(404).json({ message: 'No data found' });
+    }
   } catch (error) {
-      // Handle errors gracefully
-      console.error(error);
-      res.status(500).json({ message: 'An error occurred', error: error.message });
+    // Handle errors gracefully
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: 'An error occurred', error: error.message });
   }
-}; 
-
+};
 
 export const fetchRequireCredits = async (req, res) => {
   try {
@@ -4820,17 +5038,17 @@ export const fetchRequireCredits = async (req, res) => {
     const products = await productModel.aggregate([
       {
         $group: {
-          _id: "$product_type", // Group by product_type
-          credit_required: { $first: "$credit_required" } // Get the first credit_required for each product_type
-        }
+          _id: '$product_type', // Group by product_type
+          credit_required: { $first: '$credit_required' }, // Get the first credit_required for each product_type
+        },
       },
       {
         $project: {
-          product_type: "$_id", // Rename _id to product_type
+          product_type: '$_id', // Rename _id to product_type
           credit_required: 1,
-          _id: 0 // Exclude the default _id field from the output
-        }
-      }
+          _id: 0, // Exclude the default _id field from the output
+        },
+      },
     ]);
 
     // Check if products were found
@@ -4841,14 +5059,13 @@ export const fetchRequireCredits = async (req, res) => {
     // Send response with fetched products
     res.status(200).json({
       message: 'Unique products and required credits fetched successfully.',
-      data: products
+      data: products,
     });
   } catch (error) {
     console.error('Error fetching required credits:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
-
 
 // export const lookingFor = async (req, res) => {
 //   let productId;
@@ -4872,7 +5089,7 @@ export const fetchRequireCredits = async (req, res) => {
 //     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
 //     if (!description)
 //       return res.status(400).json({ error: 'Description is required.' });
-    
+
 //     // Determine product status based on action
 //     const productStatus = status === 'publish' ? 'active' : 'draft';
 
@@ -5132,8 +5349,6 @@ export const fetchRequireCredits = async (req, res) => {
 //   }
 // };
 
-
-
 export const lookingFor = async (req, res) => {
   let productId;
   try {
@@ -5156,7 +5371,7 @@ export const lookingFor = async (req, res) => {
     if (!brand) return res.status(400).json({ error: 'Brand is required.' });
     if (!description)
       return res.status(400).json({ error: 'Description is required.' });
-    
+
     // Determine product status based on action
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
@@ -5169,8 +5384,8 @@ export const lookingFor = async (req, res) => {
     const country = user.country;
     const city = user.city;
     const email = user.email;
-    const firstName=user.firstName
-    const lastName=user.lastName
+    const firstName = user.firstName;
+    const lastName = user.lastName;
     // Step 2: Create Product in Shopify
     // const formattedDescription = description.replace(/\n/g, '<br>');
 
@@ -5259,7 +5474,7 @@ export const lookingFor = async (req, res) => {
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/metafields.json`;
       await shopifyRequest(metafieldsUrl, 'POST', metafield);
     }
-console.log(req.files)
+    console.log(req.files);
     // // Step 4: Upload Images to Shopify if provided
     // const images = req.files?.images || [];
     // const imagesData = [];
@@ -5330,9 +5545,13 @@ console.log(req.files)
       if (!user) return res.status(404).json({ error: 'User not found.' });
 
       // Check subscription quantity
-      const productConfig = await productModel.findOne({ product_type: 'Looking For' });
+      const productConfig = await productModel.findOne({
+        product_type: 'Looking For',
+      });
       if (!productConfig) {
-        return res.status(404).json({ error: 'Product configuration not found.' });
+        return res
+          .status(404)
+          .json({ error: 'Product configuration not found.' });
       }
 
       // if (!user.subscription || user.subscription.quantity <= 0) {
@@ -5422,7 +5641,7 @@ console.log(req.files)
 
 // export const updateImages = async (req, res) => {
 //   const { id } = req.params; // This will be the Shopify product ID passed in the URL
-  
+
 //   try {
 //     // Use the `id` to fetch the product from the MongoDB database
 //     const product = await listingModel.findOne({ id });
@@ -5486,7 +5705,6 @@ console.log(req.files)
 //   }
 // };
 
-
 export const updateImages = async (req, res) => {
   const { id } = req.params; // Get the product ID from URL
   const imageUrls = req.body.images; // Get the image URLs from the body
@@ -5524,8 +5742,8 @@ export const updateImages = async (req, res) => {
     // Prepare the images for Shopify API
     const shopifyImages = imageUrls.map((url, index) => ({
       src: url, // Cloudinary URL of the image
-      alt: `Image ${index + 1}`,  // Optional: Add alt text
-      position: index + 1,        // Optional: Set image position
+      alt: `Image ${index + 1}`, // Optional: Add alt text
+      position: index + 1, // Optional: Set image position
     }));
 
     // Loop through the images and upload them to Shopify
@@ -5536,14 +5754,18 @@ export const updateImages = async (req, res) => {
           src: shopifyImages[i].src,
           alt: shopifyImages[i].alt,
           position: shopifyImages[i].position,
-        }
+        },
       };
 
       // Prepare the Shopify API URL
       const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${id}/images.json`;
 
       // Use the `shopifyRequest` function to send the image data to Shopify
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload);
+      const imageResponse = await shopifyRequest(
+        imageUrl,
+        'POST',
+        imagePayload
+      );
 
       // If the image upload is successful, add the image data to the array
       if (imageResponse && imageResponse.image) {
@@ -5566,12 +5788,11 @@ export const updateImages = async (req, res) => {
       res.status(200).json({
         message: 'Product images successfully updated in database and Shopify.',
         product: updatedProduct,
-        shopifyResponse: imagesDataToPush
+        shopifyResponse: imagesDataToPush,
       });
     } else {
       res.status(500).json({ error: 'Failed to upload images to Shopify.' });
     }
-
   } catch (error) {
     console.error('Error updating images:', error);
     res.status(500).json({ error: error.message });
@@ -5593,12 +5814,13 @@ export const getAllProductData = async (req, res) => {
 
     const totalProducts = await listingModel.countDocuments(); // Get the total number of products
 
-    if (products.length > 0) { // Check if products are found
+    if (products.length > 0) {
+      // Check if products are found
       res.status(200).send({
         products,
         currentPage: page,
         totalPages: Math.ceil(totalProducts / limit),
-        totalProducts
+        totalProducts,
       });
     } else {
       res.status(400).send('No products found'); // Adjusted message for clarity
@@ -5607,10 +5829,6 @@ export const getAllProductData = async (req, res) => {
     res.status(500).send({ error: error.message });
   }
 };
-
-
-
-
 
 // export const updateImages = async (req, res) => {
 //   const { id } = req.params; // Get the product ID from URL
@@ -5656,27 +5874,3 @@ export const getAllProductData = async (req, res) => {
 //     res.status(500).json({ error: error.message });
 //   }
 // };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -32,7 +32,7 @@ import express from 'express';
 const productRouter = express.Router();
 productRouter.get('/shopify', fetchAndStoreProducts);
 // productRouter.post('/addProduct', upload.single('image'), addProduct);
-productRouter.post('/addEquipment', cpUpload, addUsedEquipments);
+productRouter.post('/addEquipment', addUsedEquipments);
 productRouter.post('/addRoom', cpUpload, addRoomListing);
 productRouter.post('/addNewEquipments', cpUpload, addNewEquipments);
 productRouter.post('/addJob', cpUpload, addNewJobListing);
