@@ -17,13 +17,11 @@ const createToken = (payLoad) => {
 
 export const signUp = async (req, res) => {
   try {
-    // Validate input data
     const { error } = registerSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    // Extract and normalize the username
     const baseUsername = req.body.email
       .split('@')[0]
       .toLowerCase()
@@ -31,7 +29,6 @@ export const signUp = async (req, res) => {
     let username = baseUsername;
     let counter = 1;
 
-    // Check if the user already exists by email
     const userExist = await authModel.findOne({ email: req.body.email });
     if (userExist) {
       return res
@@ -39,23 +36,21 @@ export const signUp = async (req, res) => {
         .json({ error: 'User already exists with this email' });
     }
 
-    // Check for existing username and create a unique one if needed
     const usernameExists = async (username) => {
       return await authModel.findOne({ userName: username });
     };
 
     while (await usernameExists(username)) {
-      username = `${baseUsername}${counter}`; // Append the counter to the base username
+      username = `${baseUsername}${counter}`;
       counter++;
     }
 
-    // Create Shopify request payload
     const shopifyPayload = {
       customer: {
         first_name: req.body.firstName,
         last_name: req.body.lastName,
         email: req.body.email,
-        password: req.body.password, // Use plain password; it will be hashed in the model
+        password: req.body.password,
         password_confirmation: req.body.password,
         tags: `Trade User, trade_${username}`,
         metafields: [
@@ -99,7 +94,6 @@ export const signUp = async (req, res) => {
       },
     };
 
-    // Basic Auth credentials
     const apiKey = process.env.SHOPIFY_API_KEY;
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
@@ -109,7 +103,6 @@ export const signUp = async (req, res) => {
     );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
-    // Save user to Shopify
     const response = await fetch(shopifyUrl, {
       method: 'POST',
       headers: {
@@ -127,31 +120,26 @@ export const signUp = async (req, res) => {
         .json({ error: 'Failed to register user with Shopify' });
     }
 
-    // Extract Shopify ID from the response
     const shopifyResponse = await response.json();
     const shopifyId = shopifyResponse.customer.id;
 
-    // Create and save new user in MongoDB with hashed password and Shopify ID
     const newUser = new authModel({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      userName: username, // Use the unique username
+      userName: username,
       email: req.body.email,
-      password: req.body.password, // This will be hashed in the pre-save hook
+      password: req.body.password,
       shopifyId: shopifyId,
-      tags: `Trade User, trade_${username}`, // Adjusted to use the unique username
+      tags: `Trade User, trade_${username}`,
       phoneNumber: req.body.phoneNumber,
       city: req.body.city,
       state: req.body.state,
       zip: req.body.zip,
       country: req.body.country,
     });
-    const savedUser = await newUser.save(); // This will trigger the pre-save hook
-
-    // Create token
+    const savedUser = await newUser.save();
     const token = createToken({ _id: savedUser._id });
 
-    // Send response
     res.status(201).send({
       message: 'Successfully registered',
       token,
@@ -188,14 +176,13 @@ const checkShopifyAdminTag = async (email) => {
     if (customers.length > 0) {
       const tags = customers[0].tags.split(',').map((tag) => tag.trim());
 
-      // Role Mapping from Shopify Tags
       if (tags.includes('DevAdmin')) return 'Dev Admin';
       if (tags.includes('MasterAdmin')) return 'Master Admin';
       if (tags.includes('Client')) return 'Client';
       if (tags.includes('Staff')) return 'Staff';
     }
 
-    return 'User'; // Default role if no customer is found
+    return 'User';
   } catch (error) {
     console.error('Error fetching Shopify customer:', error);
     throw new Error('Error checking Shopify customer');
@@ -221,14 +208,11 @@ export const signIn = async (req, res) => {
       return res.status(401).json({ message: 'Invalid password' });
     }
 
-    // Get Role from Shopify
     const userRole = await checkShopifyAdminTag(email);
 
-    // Save role in MongoDB
     user.role = userRole;
     await user.save();
 
-    // Generate JWT Token with Role
     const token = createToken({ _id: user._id, role: user.role });
 
     res.json({ token, role: user.role, user });
@@ -244,7 +228,6 @@ const hashPassword = async (password) => {
   return null;
 };
 
-// Helper function to check if the tag exists for the user in Shopify
 const tagExistsInShopify = async (shopifyId, tag) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -271,7 +254,7 @@ const tagExistsInShopify = async (shopifyId, tag) => {
     }
 
     const userData = await response.json();
-    const userTags = userData.customer.tags.split(', '); // Tags are typically a comma-separated string
+    const userTags = userData.customer.tags.split(', ');
 
     return userTags.includes(tag);
   } catch (error) {
@@ -280,7 +263,6 @@ const tagExistsInShopify = async (shopifyId, tag) => {
   }
 };
 
-// Controller function to update user data
 export const updateUser = async (req, res) => {
   try {
     const { shopifyId } = req.params;
@@ -300,8 +282,7 @@ export const updateUser = async (req, res) => {
       return res.status(400).json({ error: 'Shopify ID is required' });
     }
 
-    // Check if the specified tag exists for the user in Shopify
-    const defaultTag = 'Trade User'; // Default tag to check
+    const defaultTag = 'Trade User';
     const tagExists = await tagExistsInShopify(shopifyId, defaultTag);
 
     if (!tagExists) {
@@ -310,7 +291,6 @@ export const updateUser = async (req, res) => {
         .json({ error: 'User with the specified tag not found in Shopify' });
     }
 
-    // Prepare Shopify update payload
     const shopifyPayload = {
       customer: {
         first_name: firstName,
@@ -321,7 +301,7 @@ export const updateUser = async (req, res) => {
         phoneNumber: phoneNumber,
         zip: zip,
         address: address,
-        tags: defaultTag, // Tags are managed as default, not included in the body
+        tags: defaultTag,
       },
     };
 
@@ -334,7 +314,6 @@ export const updateUser = async (req, res) => {
     );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
-    // Update user in Shopify
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
       headers: {
@@ -352,7 +331,6 @@ export const updateUser = async (req, res) => {
         .json({ error: 'Failed to update user with Shopify' });
     }
 
-    // Hash password if provided and update in MongoDB
     const hashedPassword = await hashPassword(password);
 
     const mongoUpdateData = {
@@ -362,7 +340,6 @@ export const updateUser = async (req, res) => {
       zip,
       address,
       phoneNumber,
-      // The tags field is not included in the update payload because it's a default value
     };
 
     if (hashedPassword) {
@@ -372,14 +349,13 @@ export const updateUser = async (req, res) => {
     const updatedUser = await authModel.findOneAndUpdate(
       { shopifyId: shopifyId },
       mongoUpdateData,
-      { new: true } // Return the updated document
+      { new: true }
     );
 
     if (!updatedUser) {
       return res.status(404).json({ error: 'User not found in MongoDB' });
     }
 
-    // Send response
     res.status(200).json({
       message: 'User updated successfully',
       data: updatedUser,
@@ -392,7 +368,7 @@ export const updateUser = async (req, res) => {
 
 export const CreateUserTagsModule = async (req, res) => {
   try {
-    const { email, modules, role} = req.body;
+    const { email, modules, role } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -401,13 +377,14 @@ export const CreateUserTagsModule = async (req, res) => {
     let existingUser = await authModel.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
-    
     const shopifyPayload = {
       customer: {
-        tags: role,  
+        tags: role,
         email: email,
       },
     };
@@ -416,7 +393,9 @@ export const CreateUserTagsModule = async (req, res) => {
     const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString('base64');
+    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+      'base64'
+    );
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     const response = await fetch(shopifyUrl, {
@@ -432,10 +411,12 @@ export const CreateUserTagsModule = async (req, res) => {
 
     if (!response.ok) {
       console.error('Error creating user in Shopify:', shopifyResponse);
-      return res.status(500).json({ error: 'Failed to create user in Shopify' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to create user in Shopify' });
     }
 
-    const shopifyId = shopifyResponse.customer.id; 
+    const shopifyId = shopifyResponse.customer.id;
 
     const newUser = new authModel({
       email,
@@ -450,14 +431,11 @@ export const CreateUserTagsModule = async (req, res) => {
       message: 'User created successfully in both Shopify and MongoDB',
       data: newUser,
     });
-
   } catch (error) {
     console.error('Error in updateUserTagsModule function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
-
-
 
 export const getUserWithModules = async (req, res) => {
   const { id } = req.params;
@@ -483,173 +461,6 @@ export const getUserWithModules = async (req, res) => {
   } catch (error) {
     console.error('Error fetching user modules:', error);
     res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-export const newSignUp = async (req, res) => {
-  try {
-    // Validate request body (Optional: Uncomment if you have a validation schema)
-    // const { error } = registerValidationSchema.validate(req.body);
-    // if (error) {
-    //   return res.status(400).json({ error: error.details[0].message });
-    // }
-
-    // Check if user already exists
-    const userExist = await authModel.findOne({ email: req.body.email });
-    if (userExist) {
-      return res
-        .status(400)
-        .json({ error: 'User already exists with this email' });
-    }
-
-    // Prepare Shopify request payload
-    const shopifyPayload = {
-      customer: {
-        first_name: req.body.firstName,
-        last_name: req.body.lastName,
-        email: req.body.email,
-        password: req.body.password,
-        password_confirmation: req.body.password,
-        tags: `Trade User${req.body.additionalTags ? `, ${req.body.additionalTags}` : ''}`, // Default and additional tags
-      },
-    };
-
-    // Basic Auth credentials
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
-
-    // Save user to Shopify
-    const response = await fetch(shopifyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
-      },
-      body: JSON.stringify(shopifyPayload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error saving user to Shopify:', errorData);
-      return res
-        .status(500)
-        .json({ error: 'Failed to register user with Shopify' });
-    }
-
-    // Extract Shopify ID from the response
-    const shopifyResponse = await response.json();
-    const shopifyId = shopifyResponse.customer.id;
-
-    // Create and save new user in MongoDB with Shopify ID
-    const newUser = new authModel({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.email,
-      password: req.body.password, // Ensure password is hashed
-      shopifyId: shopifyId, // Save the Shopify ID in MongoDB
-      tags: `Trade User${req.body.additionalTags ? `, ${req.body.additionalTags}` : ''}`, // Default and additional tags
-    });
-    const savedUser = await newUser.save();
-
-    // Create token
-    const token = createToken({ _id: savedUser._id });
-
-    // Send response
-    res.status(201).send({
-      message: 'Successfully registered',
-      token,
-      data: savedUser,
-    });
-  } catch (error) {
-    console.error('Error in signUp function:', error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-export const updateUserInShopify = async (req, res) => {
-  try {
-    y;
-    const { email, firstName, lastName, password, additionalTags } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
-
-    // Find the user by email
-    const user = await authModel.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Prepare Shopify request payload
-    const shopifyPayload = {
-      customer: {
-        first_name: firstName || user.firstName,
-        last_name: lastName || user.lastName,
-        email: email,
-        password: password || user.password,
-        password_confirmation: password || user.password,
-        tags: `Trade User${additionalTags ? `, ${additionalTags}` : ''}`, // Update tags
-      },
-    };
-
-    // Basic Auth credentials
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
-
-    // Prepare Shopify update URL
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${user.shopifyId}.json`;
-
-    // Update user in Shopify
-    const response = await fetch(shopifyUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
-      },
-      body: JSON.stringify(shopifyPayload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error updating user in Shopify:', errorData);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update user with Shopify' });
-    }
-
-    // Update user in MongoDB
-    const updateData = {
-      firstName: firstName || user.firstName,
-      lastName: lastName || user.lastName,
-      email: email,
-      password: password || user.password,
-      tags: `Trade User${additionalTags ? `, ${additionalTags}` : ''}`, // Update tags
-    };
-
-    const updatedUser = await authModel.findOneAndUpdate(
-      { email },
-      updateData,
-      { new: true }
-    );
-
-    // Send response
-    res.status(200).json({
-      message: 'User updated successfully',
-      data: updatedUser,
-    });
-  } catch (error) {
-    console.error('Error in updateUser function:', error);
-    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -698,7 +509,7 @@ export const webHook = async (req, res) => {
 };
 
 export const editProfile = async (req, res) => {
-  const { userId } = req.params; // Get userId from request parameters
+  const { userId } = req.params;
   const {
     email,
     phoneNumber,
@@ -709,7 +520,7 @@ export const editProfile = async (req, res) => {
     firstName,
     lastName,
   } = req.body;
-  const images = req.files?.images || []; // Handle multiple file uploads
+  const images = req.files?.images || [];
   const requiredFields = [
     email,
     phoneNumber,
@@ -731,7 +542,6 @@ export const editProfile = async (req, res) => {
     'lastName',
   ];
 
-  // Validate required fields
   for (let i = 0; i < requiredFields.length; i++) {
     if (!requiredFields[i]) {
       return res.status(400).json({ error: `${fieldNames[i]} is required.` });
@@ -743,13 +553,11 @@ export const editProfile = async (req, res) => {
       return res.status(400).json({ error: 'User ID is required.' });
     }
 
-    // Find user by ID
     const user = await authModel.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Update user fields
     user.email = email;
     user.phoneNumber = phoneNumber;
     user.address = address;
@@ -759,23 +567,19 @@ export const editProfile = async (req, res) => {
     user.firstName = firstName;
     user.lastName = lastName;
 
-    // Handle image upload
     const imagesData = [];
     if (Array.isArray(images) && images.length > 0) {
       for (const image of images) {
-        const imageUrl = image.path; // Assuming image.path is the URL
-        imagesData.push(imageUrl); // Store the full URL
+        const imageUrl = image.path;
+        imagesData.push(imageUrl);
       }
-      user.avatar = imagesData; // Assuming `avatar` is an array of image URLs
+      user.avatar = imagesData;
     }
 
-    // Save the updated user
     await user.save();
 
-    // Update Shopify user (if applicable)
-    const shopifyCustomerId = user.shopifyId; // Assuming you store the Shopify customer ID in the user record
+    const shopifyCustomerId = user.shopifyId;
     if (shopifyCustomerId) {
-      // Update Shopify user details
       const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
       const shopifyPayload = {
         customer: {
@@ -788,7 +592,7 @@ export const editProfile = async (req, res) => {
             {
               address1: address,
               city: city,
-              province: country, // Adjust if necessary
+              province: country,
               zip: zip,
               country: country,
             },
@@ -796,21 +600,18 @@ export const editProfile = async (req, res) => {
         },
       };
 
-      // Update Shopify customer
       await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
 
-      // Now, handle the metafield for images
       const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
       const metafieldsPayload = {
         metafield: {
           namespace: 'custom',
           key: 'profileimages',
-          value: imagesData.join(','), // Store images as JSON
-          type: 'single_line_text_field', // Store as JSON string
+          value: imagesData.join(','),
+          type: 'single_line_text_field',
         },
       };
 
-      // Create or update the metafield
       await shopifyRequest(metafieldsUrl, 'POST', metafieldsPayload);
     }
 
@@ -821,7 +622,6 @@ export const editProfile = async (req, res) => {
   }
 };
 
-// Function to make Shopify API request
 const shopifyRequest = async (url, method, body) => {
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -846,169 +646,10 @@ const shopifyRequest = async (url, method, body) => {
   return response.json();
 };
 
-export const fetchUserData = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const response = await authModel.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(id) } },
-    ]);
-    if (response.length > 0) {
-      res.status(200).json(response[0]);
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while fetching user data' });
-  }
-};
-
-export const getUserSubscriptionQuantity = async (req, res) => {
-  const { id } = req.params;
-
-  // Validate userId format
-
-  try {
-    // Fetch the user by userId
-    const user = await authModel.findById(id);
-
-    // Check if user exists
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    // Check if subscription exists
-    if (!user.subscription.quantity) {
-      return res.status(400).json({
-        message: 'Insuffcient credits',
-      });
-    }
-
-    // Return the quantity and expiry date from the user's subscription
-    return res.status(200).json({
-      quantity: user.subscription.quantity,
-      // expiresAt: user.subscription.expiresAt,
-    });
-  } catch (error) {
-    console.error('Error fetching user subscription quantity:', error);
-    return res
-      .status(500)
-      .json({ error: 'Internal server error. Please try again later.' });
-  }
-};
-
-export const AdminSignIn = async (req, res) => {
-  try {
-    // Validate the request body
-    const { error } = loginSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
-
-    const { email, password } = req.body;
-
-    // Check if user exists in your database
-    let user = await authModel.findOne({ email });
-    if (!user) {
-      return res
-        .status(404)
-        .json({ error: 'User does not exist with this email' });
-    }
-
-    // Verify password
-    const isPasswordMatch = await user.comparePassword(password);
-    if (!isPasswordMatch) {
-      return res.status(401).json({ error: 'Password does not match' });
-    }
-
-    // Check Shopify credentials
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
-
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json?query=email:${email}`;
-
-    const response = await fetch(shopifyUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.status !== 200 || !data.customers.length) {
-      return res.status(404).json({ error: 'User does not exist in Shopify' });
-    }
-
-    const shopifyCustomer = data.customers[0];
-
-    // Check if "isAdmin" tag is present
-    if (!shopifyCustomer.tags.split(',').includes('isAdmin')) {
-      return res.status(403).json({ error: 'You do not have admin access' });
-    }
-
-    // Update MongoDB to set isAdmin to true
-    user.isAdmin = true;
-    user.shopifyId = shopifyCustomer.id; // Save Shopify ID for reference
-    await user.save();
-
-    // Create a JWT token for your application, including isAdmin flag
-    const token = createToken({ _id: user._id, isAdmin: true });
-
-    res.json({
-      message: 'Successfully logged in as admin',
-      token,
-      data: user,
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-export const getUserData = async (req, res) => {
-  try {
-    const data = await authModel.find();
-
-    if (data.length > 0) {
-      res.status(200).send({
-        message: 'Successfully fetched',
-        data: data,
-      });
-    } else {
-      res.status(404).send({ message: 'No users found' });
-    }
-  } catch (error) {
-    res.status(500).send({ message: error.message });
-  }
-};
-
-//webhook Api for customer update
-export const updateCustomer = async (req, res) => {
-  const customerData = req.body;
-
-  // Update or create customer in MongoDB
-  await authModel.findOneAndUpdate(
-    { shopifyId: customerData.id }, // Assuming `id` is the unique identifier
-    customerData,
-    { upsert: true, new: true }
-  );
-
-  res.sendStatus(200);
-};
-
 export const deleteUser = async (req, res) => {
-  const customerId = req.body.id; // Get the customer ID from the webhook data
+  const customerId = req.body.id;
 
   try {
-    // Delete from MongoDB
     await authModel.deleteOne({ shopifyId: customerId });
 
     res.status(200).send('Customer deleted successfully.');
@@ -1024,9 +665,9 @@ const transporter = nodemailer.createTransport({
     user: 'medsparecovery@gmail.com',
     pass: 'vfqm uxah oapw qnka',
   },
-  secure: true, // Use true if using 465 port and secure connection
+  secure: true,
   tls: {
-    rejectUnauthorized: false, // This might help with some connection issues
+    rejectUnauthorized: false,
   },
 });
 
@@ -1040,13 +681,10 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Generate a reset token using the createToken function
     const token = createToken(user._id);
 
-    // Create the reset link
     const resetLink = `${'https://medspa-frntend.vercel.app/Reset'}?token=${token}`;
     console.log(resetLink);
-    // Send the email
     await transporter.sendMail({
       to: email,
       subject: 'Password Reset',
@@ -1064,25 +702,21 @@ export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
   try {
-    // Verify the token and decode the user ID
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const userId = decoded.payLoad; // Accessing payLoad instead of id
+    const userId = decoded.payLoad;
     console.log('Decoded token:', decoded);
 
-    const user = await authModel.findById(userId); // Find user by userId
+    const user = await authModel.findById(userId);
     console.log('User fetched from database:', user);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Set the new password directly (will be hashed in the pre-save hook)
     user.password = newPassword;
 
-    // Update the user in MongoDB (this will trigger the pre-save hook)
     await user.save();
 
-    // Update the password in Shopify
     await updateShopifyPassword(user.shopifyId, newPassword);
 
     res.status(200).json({ message: 'Password has been reset successfully' });
@@ -1123,62 +757,5 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
       error.response ? error.response.data : error.message
     );
     throw new Error('Failed to update password in Shopify');
-  }
-};
-
-export const updateSubscriptionQuantity = async (req, res) => {
-  const { email, quantity } = req.body; // Get email and new quantity from the request body
-
-  // Validate the quantity
-  if (typeof quantity !== 'number' || quantity < 0) {
-    return res
-      .status(400)
-      .json({ error: 'Quantity must be a non-negative number.' });
-  }
-
-  try {
-    // Find the user by email
-    const user = await authModel.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-    const currentQuantity = user.subscription.quantity || 0; // Use 0 if undefined
-
-    // Add the new quantity to the current quantity
-    const updatedQuantity = currentQuantity + quantity;
-    // Update the subscription quantity
-    user.subscription.quantity = updatedQuantity;
-    await user.save();
-
-    res.json({
-      message: `Subscription quantity for ${email} updated to ${quantity}.`,
-      data: user.subscription, // Optionally return the updated subscription data
-    });
-  } catch (error) {
-    console.error('Error updating subscription quantity:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-export const dbDelete = (req, res) => {
-  authModel.deleteMany().then((result) => {
-    if (result) {
-      res.send('successfully deleted');
-    }
-  });
-};
-
-export const getAllUsersData = async (req, res) => {
-  try {
-    await authModel.find().then((result) => {
-      if (result) {
-        res.status(200).send(result);
-      } else {
-        res.status(400).send('unable to fetch');
-      }
-    });
-  } catch (error) {
-    res.send(error.message);
   }
 };
