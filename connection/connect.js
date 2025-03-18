@@ -15,7 +15,7 @@ const disconnected = red;
 
 //   });
 const Connect = () => {
-  mongoose.connect(process.env.DB_URL, {
+  mongoose.connect("mongodb+srv://multivendor:test123@cluster0.k1cc1.mongodb.net", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     serverSelectionTimeoutMS: 10000, // 10 seconds timeout

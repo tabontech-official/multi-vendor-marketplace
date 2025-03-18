@@ -1,3 +1,4 @@
+import { timeStamp } from 'console';
 import mongoose from 'mongoose';
 
 const listingSchema = new mongoose.Schema({
@@ -96,7 +97,11 @@ const listingSchema = new mongoose.Schema({
     enum: ["active", "draft"],
     default: "draft",
   },
-});
+},
+{
+  timeStamp:true
+}
+);
 
 
 export const listingModel = mongoose.model('listings', listingSchema);
