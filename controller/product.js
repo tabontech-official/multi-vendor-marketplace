@@ -768,7 +768,7 @@ export const getAllProductData = async (req, res) => {
         $sort: { created_at: -1 },
       },
       {
-        $skip: (page - 1 * limit) ,
+        $skip: (page - 1 ) * limit,
       },
       {
         $limit: limit,
