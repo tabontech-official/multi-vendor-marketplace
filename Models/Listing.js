@@ -3,23 +3,18 @@ import mongoose from 'mongoose';
 const listingSchema = new mongoose.Schema({
   id: {
     type: String,
-    required: true,
-    unique: true,
   },
   title: {
     type: String,
-    required: true,
   },
   body_html: {
     type: String,
   },
   vendor: {
     type: String,
-    required: true,
   },
   product_type: {
     type: String,
-    required: true,
   },
   created_at: {
     type: Date,
@@ -95,7 +90,6 @@ const listingSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
   },
   status: {
     type: String,

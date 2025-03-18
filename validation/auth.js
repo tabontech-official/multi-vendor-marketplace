@@ -10,6 +10,7 @@ export const registerSchema = Joi.object({
   .required(),
   tags: Joi.string().optional(),
 //   shopifyId: Joi.string().optional(),
+zip: Joi.string().required(), // Ensure zip is included
 
 
 //   profileImage: Joi.string().optional(),

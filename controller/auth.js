@@ -17,10 +17,10 @@ const createToken = (payLoad) => {
 
 export const signUp = async (req, res) => {
   try {
-    const { error } = registerSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
+    // const { error } = registerSchema.validate(req.body);
+    // if (error) {
+    //   return res.status(400).json({ error: error.details[0].message });
+    // }
 
     const baseUsername = req.body.email
       .split('@')[0]

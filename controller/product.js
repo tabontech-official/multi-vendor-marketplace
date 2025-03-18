@@ -29,147 +29,6 @@ const shopifyRequest = async (url, method, body) => {
   return response.json();
 };
 
-// export const addUsedEquipments = async (req, res) => {
-//   let productId;
-//   try {
-//     // Extract product details from request body
-//     const {
-//       title,
-//       description,
-//       price,
-//       compare_at_price,
-//       track_quantity,
-//       quantity,
-//       continue_selling,
-//       has_sku,
-//       sku,
-//       barcode,
-//       track_shipping,
-//       weight,
-//       weight_unit,
-//       status,
-//       userId,
-//       productType,
-//       vendor,
-//       keyWord,
-//     } = req.body;
-
-//     console.log('Request Body:', req.body);
-
-//     // Validate required fields
-//     if (!title)
-//       return res.status(400).json({ error: 'Product title is required.' });
-//     if (!price) return res.status(400).json({ error: 'Price is required.' });
-//     if (!userId) return res.status(400).json({ error: 'User ID is required.' });
-
-//     const productStatus = status === 'publish' ? 'active' : 'draft';
-//     const user = await authModel.findById(userId);
-//     if (!user) return res.status(404).json({ error: 'User not found.' });
-
-//     // Shopify product payload
-//     const shopifyPayload = {
-//       product: {
-//         title: title,
-//         body_html: description || '',
-//         vendor: vendor,
-//         product_type: productType,
-//         status: productStatus,
-//         variants: [
-//           {
-//             price: price.toString(),
-//             compare_at_price: compare_at_price
-//               ? compare_at_price.toString()
-//               : null,
-//             inventory_management: track_quantity ? 'shopify' : null,
-//             inventory_quantity: track_quantity ? parseInt(quantity) : 0,
-//             sku: has_sku ? sku : null,
-//             barcode: has_sku ? barcode : null,
-//             weight: track_shipping ? parseFloat(weight) : null,
-//             weight_unit: track_shipping ? weight_unit : null,
-//           },
-//         ],
-//         tags: [
-//           `user_${userId}`,
-//           `vendor_${vendor}`,
-//           ...(keyWord ? keyWord.split(',') : []),
-//         ],
-//       },
-//     };
-
-//     console.log('Shopify Payload:', shopifyPayload);
-
-//     // Create product in Shopify
-//     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
-//     const productResponse = await shopifyRequest(
-//       shopifyUrl,
-//       'POST',
-//       shopifyPayload
-//     );
-
-//     if (!productResponse?.product?.id) {
-//       throw new Error('Shopify product creation failed.');
-//     }
-
-//     productId = productResponse.product.id;
-
-//     // Expiration date logic for active products
-//     const EXPIRATION_DAYS = 30;
-//     let expiresAt =
-//       status === 'active'
-//         ? new Date(Date.now() + EXPIRATION_DAYS * 24 * 60 * 60 * 1000)
-//         : null;
-
-//     // Save product to MongoDB
-//     const newProduct = new listingModel({
-//       id: productId,
-//       title,
-//       body_html: description,
-//       vendor,
-//       product_type: productType,
-//       created_at: new Date(),
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       inventory: {
-//         track_quantity: !!track_quantity,
-//         quantity: track_quantity ? parseInt(quantity) : 0,
-//         continue_selling: !!continue_selling,
-//         has_sku: !!has_sku,
-//         sku: sku || null,
-//         barcode: barcode || null,
-//       },
-//       shipping: {
-//         track_shipping: !!track_shipping,
-//         weight: track_shipping ? parseFloat(weight) : null,
-//         weight_unit: track_shipping ? weight_unit : null,
-//       },
-//       userId,
-//       status: productStatus,
-//       expiresAt,
-//     });
-
-//     await newProduct.save();
-
-//     return res.status(201).json({
-//       message: 'Product successfully created.',
-//       product: newProduct,
-//       expiresAt,
-//     });
-//   } catch (error) {
-//     console.error('Error in addUsedEquipments function:', error);
-
-//     if (productId) {
-//       try {
-//         const deleteShopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
-//         await shopifyRequest(deleteShopifyUrl, 'DELETE');
-//       } catch (deleteError) {
-//         console.error('Error deleting product from Shopify:', deleteError);
-//       }
-//     }
-
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
 export const addUsedEquipments = async (req, res) => {
   let productId;
   try {
@@ -234,7 +93,7 @@ export const addUsedEquipments = async (req, res) => {
       price: price.toString(),
       compare_at_price: compare_at_price ? compare_at_price.toString() : null,
       inventory_management: track_quantity ? "shopify" : null,
-      inventory_quantity: track_quantity ? parseInt(quantity) : 0,
+      inventory_quantity: track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
       sku: has_sku ? `${sku}-${index + 1}` : null,
       barcode: has_sku ? `${barcode}-${index + 1}` : null,
       weight: track_shipping ? parseFloat(weight) : null,
@@ -320,7 +179,7 @@ export const addUsedEquipments = async (req, res) => {
       images: imagesDataToPush ,
       inventory: {
         track_quantity: !!track_quantity,
-        quantity: track_quantity ? parseInt(quantity) : 0,
+        quantity: track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0, // Fix for NaN
         continue_selling: !!continue_selling,
         has_sku: !!has_sku,
         sku: sku || null,
@@ -495,29 +354,29 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    const { userId, product_type } = localProduct;
+    // const { userId, product_type } = localProduct;
 
-    const user = await authModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
+    // const user = await authModel.findById(userId);
+    // if (!user) {
+    //   return res.status(404).json({ error: 'User not found.' });
+    // }
 
-    const productConfig = await productModel.findOne({ product_type });
-    if (!productConfig) {
-      return res.status(404).json({
-        error: 'Product configuration not found for this product type.',
-      });
-    }
+    // const productConfig = await productModel.findOne({ product_type });
+    // if (!productConfig) {
+    //   return res.status(404).json({
+    //     error: 'Product configuration not found for this product type.',
+    //   });
+    // }
 
-    if (user.subscription.quantity < productConfig.credit_required) {
-      return res.status(400).json({
-        error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
-      });
-    }
+    // if (user.subscription.quantity < productConfig.credit_required) {
+    //   return res.status(400).json({
+    //     error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
+    //   });
+    // }
 
-    // Decrement the subscription quantity
-    user.subscription.quantity -= productConfig.credit_required;
-    await user.save();
+    // // Decrement the subscription quantity
+    // user.subscription.quantity -= productConfig.credit_required;
+    // await user.save();
 
     // Update product status in Shopify
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
@@ -540,10 +399,8 @@ export const publishProduct = async (req, res) => {
         .json({ error: 'Failed to update product status in Shopify.' });
     }
 
-    // Set expiration date to 30 days from now
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    // Update product status in MongoDB
     const updatedProduct = await listingModel.findOneAndUpdate(
       { id: productId },
       { status: 'active', expiresAt },
