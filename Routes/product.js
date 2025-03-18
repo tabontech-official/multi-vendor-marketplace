@@ -7,6 +7,7 @@ import {
   unpublishProduct,
   productUpdate,
   getAllProductData,
+  updateProductData,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -20,6 +21,7 @@ productRouter.get('/getProduct/:userId', getProduct);
 productRouter.get('/getAllData', getAllProductData);
 productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
+productRouter.put("/updateProducts/:id", updateProductData);
 
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 
