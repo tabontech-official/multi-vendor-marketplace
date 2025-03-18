@@ -97,6 +97,8 @@ const listingSchema = new mongoose.Schema({
     enum: ["active", "draft"],
     default: "draft",
   },
+  expiresAt: { type: Date },
+
 },
 {
   timeStamp:true
