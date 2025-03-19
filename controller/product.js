@@ -296,8 +296,12 @@ export const productUpdate = async (req, res) => {
 };
 
 export const updateProductData = async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params; // Ye MongoDB ki _id hai
   try {
+    if (!id) {
+      return res.status(400).json({ error: "Product ID is required for updating." });
+    }
+
     const {
       title,
       description,
@@ -319,35 +323,35 @@ export const updateProductData = async (req, res) => {
       keyWord,
     } = req.body;
 
-    if (!id) {
-      return res
-        .status(400)
-        .json({ error: 'Product ID is required for updating.' });
-    }
+    const productStatus = status === "publish" ? "active" : "draft";
 
-    const productStatus = status === 'publish' ? 'active' : 'draft';
-    const product = await listingModel.findOne({ id });
+    const product = await listingModel.findById(id);
 
     if (!product) {
-      return res.status(404).json({ error: 'Product not found in database.' });
+      return res.status(404).json({ error: "Product not found in database." });
     }
 
-    const shopifyFetchUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
-    const existingProduct = await shopifyRequest(shopifyFetchUrl, 'GET');
+
+    const shopifyProductId = product.id; 
+
+    if (!shopifyProductId) {
+      return res.status(400).json({ error: "Shopify Product ID not found in database." });
+    }
+
+    const shopifyFetchUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyProductId}.json`;
+    const existingProduct = await shopifyRequest(shopifyFetchUrl, "GET");
 
     if (!existingProduct?.product) {
-      return res.status(404).json({ error: 'Product not found on Shopify.' });
+      return res.status(404).json({ error: "Product not found on Shopify." });
     }
+
 
     const shopifyVariants = [
       {
         price: parseFloat(price).toFixed(2),
-        compare_at_price: compare_at_price
-          ? parseFloat(compare_at_price).toFixed(2)
-          : null,
-        inventory_management: track_quantity ? 'shopify' : null,
-        inventory_quantity:
-          track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
+        compare_at_price: compare_at_price ? parseFloat(compare_at_price).toFixed(2) : null,
+        inventory_management: track_quantity ? "shopify" : null,
+        inventory_quantity: track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
         sku: has_sku ? sku : null,
         barcode: has_sku ? barcode : null,
         weight: track_shipping ? parseFloat(weight) : null,
@@ -358,29 +362,23 @@ export const updateProductData = async (req, res) => {
     const shopifyPayload = {
       product: {
         title,
-        body_html: description || '',
+        body_html: description || "",
         vendor,
         product_type: productType,
         status: productStatus,
         variants: shopifyVariants,
-        tags: [
-          `user_${userId}`,
-          `vendor_${vendor}`,
-          ...(keyWord ? keyWord.split(',') : []),
-        ],
+        tags: [`user_${userId}`, `vendor_${vendor}`, ...(keyWord ? keyWord.split(",") : [])],
       },
     };
 
-    const shopifyUpdateUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
-    const productResponse = await shopifyRequest(
-      shopifyUpdateUrl,
-      'PUT',
-      shopifyPayload
-    );
+
+    const shopifyUpdateUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyProductId}.json`;
+    const productResponse = await shopifyRequest(shopifyUpdateUrl, "PUT", shopifyPayload);
 
     if (!productResponse?.product?.id) {
-      throw new Error('Shopify product update failed.');
+      throw new Error("Shopify product update failed.");
     }
+
 
     const images = req.files?.images
       ? Array.isArray(req.files.images)
@@ -400,14 +398,10 @@ export const updateProductData = async (req, res) => {
         },
       };
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}/images.json`;
+      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyProductId}/images.json`;
 
       try {
-        const imageResponse = await shopifyRequest(
-          imageUrl,
-          'POST',
-          imagePayload
-        );
+        const imageResponse = await shopifyRequest(imageUrl, "POST", imagePayload);
 
         if (imageResponse?.image) {
           imagesDataToPush.push({
@@ -427,8 +421,9 @@ export const updateProductData = async (req, res) => {
       }
     }
 
-    const updatedProduct = await listingModel.findOneAndUpdate(
-      { id },
+
+    const updatedProduct = await listingModel.findByIdAndUpdate(
+      id,
       {
         title,
         body_html: description,
@@ -437,13 +432,10 @@ export const updateProductData = async (req, res) => {
         updated_at: new Date(),
         tags: productResponse.product.tags,
         variants: productResponse.product.variants,
-        images: imagesDataToPush.length > 0 ? imagesDataToPush : undefined,
+        images: imagesDataToPush.length > 0 ? imagesDataToPush : product.images, 
         inventory: {
           track_quantity: !!track_quantity,
-          quantity:
-            track_quantity && !isNaN(parseInt(quantity))
-              ? parseInt(quantity)
-              : 0,
+          quantity: track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
           continue_selling: !!continue_selling,
           has_sku: !!has_sku,
           sku: sku || null,
@@ -461,18 +453,19 @@ export const updateProductData = async (req, res) => {
     );
 
     if (!updatedProduct) {
-      return res.status(404).json({ error: 'Product not found in database.' });
+      return res.status(404).json({ error: "Product not found in database." });
     }
 
     return res.status(200).json({
-      message: 'Product successfully updated.',
+      message: "Product successfully updated.",
       product: updatedProduct,
     });
   } catch (error) {
-    console.error('Error in updateProductData function:', error);
+    console.error("Error in updateProductData function:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
