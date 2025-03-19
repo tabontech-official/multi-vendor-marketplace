@@ -532,6 +532,12 @@ export const editProfile = async (req, res) => {
     city,
     firstName,
     lastName,
+    gstRegistered,
+    sellerGst,
+    dispatchzip,
+    dispatchCountry,
+    dispatchCity,
+    dispatchAddress,
   } = req.body;
   const images = req.files?.images || [];
   const requiredFields = [
@@ -579,6 +585,12 @@ export const editProfile = async (req, res) => {
     user.city = city;
     user.firstName = firstName;
     user.lastName = lastName;
+    user.gstRegistered = gstRegistered;
+    user.sellerGst = sellerGst;
+    user.dispatchzip = dispatchzip;
+    user.dispatchCountry = dispatchCountry;
+    user.dispatchCity = dispatchCity;
+    user.dispatchAddress = dispatchAddress;
 
     const imagesData = [];
     if (Array.isArray(images) && images.length > 0) {
@@ -615,17 +627,17 @@ export const editProfile = async (req, res) => {
 
       await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
 
-      const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
-      const metafieldsPayload = {
-        metafield: {
-          namespace: 'custom',
-          key: 'profileimages',
-          value: imagesData.join(','),
-          type: 'single_line_text_field',
-        },
-      };
+      // const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
+      // const metafieldsPayload = {
+      //   metafield: {
+      //     namespace: 'custom',
+      //     key: 'profileimages',
+      //     value: imagesData.join(','),
+      //     type: 'single_line_text_field',
+      //   },
+      // };
 
-      await shopifyRequest(metafieldsUrl, 'POST', metafieldsPayload);
+      // await shopifyRequest(metafieldsUrl, 'POST', metafieldsPayload);
     }
 
     res.status(200).json({ message: 'Profile updated successfully.', user });
@@ -824,5 +836,24 @@ export const getAllUsersData = async (req, res) => {
   } catch (error) {
     console.error("Error fetching users:", error);
     return res.status(500).json({ error: error.message });
+  }
+};
+
+export const fetchUserData = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const response = await authModel.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    ]);
+    if (response.length > 0) {
+      res.status(200).json(response[0]);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching user data' });
   }
 };

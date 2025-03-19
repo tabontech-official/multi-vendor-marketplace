@@ -1,85 +1,91 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
-const authSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-  },
-  lastName: {
-    type: String,
-  },
-  userName: {
-    type: String,
-  },
-  email: {
-    type: String,
-  },
-  password: {
-    type: String,
-  },
-  passwordConfirmation: {
-    type: String,
-  },
-  tags: {
-    type: String,
-  },
-  shopifyId: { type: String },
-  phoneNumber: {
-    type: Number,
-  },
-  address: {
-    type: String,
-  },
-  zip: {
-    type: Number,
-  },
-  country: {
-    type: String,
-  },
-  city: {
-    type: String,
-  },
-  state: {
-    type: String,
-  },
-
-  avatar: { type: [String], default: [] },
-  token: String,
-  hasPaidSubscription: {
-    type: Boolean,
-    default: false,
-  },
-  subscription: {
-    id: {
-      type: String, // Subscription ID from payment service
-    },
-    status: {
+const authSchema = new mongoose.Schema(
+  {
+    firstName: {
       type: String,
-      enum: ['active', 'inactive', 'canceled', 'pending'],
     },
-    startDate: {
-      type: Date,
+    lastName: {
+      type: String,
     },
-    expiresAt: {
-      type: Date,
+    userName: {
+      type: String,
     },
-    quantity: {
+    email: {
+      type: String,
+    },
+    password: {
+      type: String,
+    },
+    passwordConfirmation: {
+      type: String,
+    },
+    tags: {
+      type: String,
+    },
+    shopifyId: { type: String },
+    phoneNumber: {
       type: Number,
-      default: 0,
     },
+    address: {
+      type: String,
+    },
+    zip: {
+      type: Number,
+    },
+    country: {
+      type: String,
+    },
+    city: {
+      type: String,
+    },
+    state: {
+      type: String,
+    },
+
+    avatar: { type: [String], default: [] },
+    token: String,
+    hasPaidSubscription: {
+      type: Boolean,
+      default: false,
+    },
+    subscription: {
+      id: {
+        type: String, // Subscription ID from payment service
+      },
+      status: {
+        type: String,
+        enum: ['active', 'inactive', 'canceled', 'pending'],
+      },
+      startDate: {
+        type: Date,
+      },
+      expiresAt: {
+        type: Date,
+      },
+      quantity: {
+        type: Number,
+        default: 0,
+      },
+    },
+    isAdmin: {
+      type: Boolean,
+    },
+    role: {
+      type: String,
+    },
+    modules: [String],
+    gstRegistered: String,
+    sellerGst: String,
+    dispatchzip: Number,
+    dispatchCountry: String,
+    dispatchCity: String,
+    dispatchAddress: String,
   },
-  isAdmin: {
-    type: Boolean,
-  },
-  role: {
-    type: String,
-  },
-  modules: [String]
-    
-  
-},
-{
-  timestamps:true
-});
+  {
+    timestamps: true,
+  }
+);
 authSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next(); // Only hash the password if it's new or modified
 

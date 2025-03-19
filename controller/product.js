@@ -232,7 +232,6 @@ export const addUsedEquipments = async (req, res) => {
 };
 
 
-
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -866,5 +865,66 @@ export const getAllProductData = async (req, res) => {
   } catch (error) {
     console.error('Aggregation error:', error);
     res.status(500).send({ error: error.message });
+  }
+};
+
+export const updateAllProductsStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["active", "draft"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status provided." });
+    }
+
+    const localProducts = await listingModel.find();
+    if (!localProducts.length) {
+      return res.status(404).json({ error: "No products found in the database." });
+    }
+
+    const updateProductStatus = async (product) => {
+      const productId = product.id; // Shopify Product ID
+      if (!productId) return { error: "Missing Shopify Product ID", product };
+
+      const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+
+      const shopifyPayload = {
+        product: {
+          id: productId,
+          status,
+          published_scope: status === "active" ? "global" : "web",
+        },
+      };
+
+      try {
+        const shopifyResponse = await shopifyRequest(shopifyUrl, "PUT", shopifyPayload);
+
+        if (!shopifyResponse.product) {
+          return { error: `Failed to update product ${productId} in Shopify.` };
+        }
+
+        // Update status in the database
+        const updatedProduct = await listingModel.findOneAndUpdate(
+          { id: productId },
+          { status },
+          { new: true }
+        );
+
+        return { success: true, product: updatedProduct };
+      } catch (error) {
+        console.error(`Error updating product ${productId}:`, error);
+        return { error: error.message, productId };
+      }
+    };
+
+    // Process all products concurrently
+    const results = await Promise.all(localProducts.map(updateProductStatus));
+
+    return res.status(200).json({
+      message: `All products updated to ${status}.`,
+      results,
+    });
+  } catch (error) {
+    console.error("Error in updateAllProductsStatus function:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
