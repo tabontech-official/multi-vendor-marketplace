@@ -14,7 +14,8 @@ const listingSchema = new mongoose.Schema(
     template_suffix: { type: String },
     tags: {
       type: [String],
-    },    created_at: {
+    },
+    created_at: {
       type: Date,
       default: Date.now,
     },
@@ -33,7 +34,6 @@ const listingSchema = new mongoose.Schema(
         weight_unit: String,
       },
     ],
-
 
     images: [
       {
@@ -86,21 +86,18 @@ const listingSchema = new mongoose.Schema(
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
     status: {
       type: String,
-      enum: ["active", "draft"],
-      default: "draft",
+      enum: ['active', 'draft'],
+      default: 'draft',
     },
-
- 
 
     shopifyId: String,
 
     expiresAt: { type: Date },
     credit_required: { type: Number },
- 
   },
   {
     timestamps: true,

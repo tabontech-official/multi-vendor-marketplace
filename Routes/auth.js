@@ -11,6 +11,7 @@ import {
   getUserWithModules,
   CreateUserTagsModule,
   createPassword,
+  getAllUsersData,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -28,5 +29,7 @@ authRouter.post('/resetpassword', resetPassword);
 authRouter.post('/createpassword', createPassword);
 authRouter.post('/createUserTagsModule', CreateUserTagsModule);
 authRouter.get('/getUserWithModules/:id', getUserWithModules);
+authRouter.get('/getAllUsers', getAllUsersData);
+
 
 export default authRouter;

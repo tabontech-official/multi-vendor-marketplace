@@ -804,3 +804,25 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
     throw new Error('Failed to update password in Shopify');
   }
 };
+
+export const getAllUsersData = async (req, res) => {
+  try {
+    const result = await authModel.aggregate([
+      {
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          role: 1,
+          country: 1,
+          city: 1,
+        },
+      },
+    ]);
+
+    return res.status(200).json(result); 
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};

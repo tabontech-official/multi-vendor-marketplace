@@ -216,27 +216,46 @@ async function checkProductExists(productId) {
   
   
 
+// export const getOrderById = async (req, res) => {
+//     const { email } = req.params; // Get the email from the request parameters
+
+//     try {
+//         // Use find to fetch all orders associated with the provided email
+//         const orders = await orderModel.find({ 'customer.email': email }); // Adjusted to match the structure
+
+//         if (orders.length > 0) {
+//             res.status(200).send({
+//                 message: 'Successfully fetched orders',
+//                 data: orders
+//             });
+//         } else {
+//             res.status(404).send({ message: 'No orders found for this email' });
+//         }
+//     } catch (error) {
+//         console.error('Error fetching orders:', error);
+//         res.status(500).send({ message: 'Error fetching orders' });
+//     }
+// };
+
 export const getOrderById = async (req, res) => {
-    const { email } = req.params; // Get the email from the request parameters
 
-    try {
-        // Use find to fetch all orders associated with the provided email
-        const orders = await orderModel.find({ 'customer.email': email }); // Adjusted to match the structure
+  try {
+      // Use find to fetch all orders associated with the provided email
+      const orders = await orderModel.find(); // Adjusted to match the structure
 
-        if (orders.length > 0) {
-            res.status(200).send({
-                message: 'Successfully fetched orders',
-                data: orders
-            });
-        } else {
-            res.status(404).send({ message: 'No orders found for this email' });
-        }
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).send({ message: 'Error fetching orders' });
-    }
+      if (orders.length > 0) {
+          res.status(200).send({
+              message: 'Successfully fetched orders',
+              data: orders
+          });
+      } else {
+          res.status(404).send({ message: 'No orders found for this email' });
+      }
+  } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).send({ message: 'Error fetching orders' });
+  }
 };
-
 
 export const deleteUser=async(req,res)=>{
   orderModel.deleteMany().then(result=>{
