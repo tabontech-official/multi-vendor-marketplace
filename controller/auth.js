@@ -150,6 +150,7 @@ export const signUp = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 const checkShopifyAdminTag = async (email) => {
   try {
     const credentials = `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`;
@@ -382,6 +383,17 @@ export const CreateUserTagsModule = async (req, res) => {
         .json({ error: 'User already exists with this email' });
     }
 
+    const token = createToken(email);
+    const resetLink = `http://localhost:3006/New?token=${token}`;
+
+    console.log(resetLink);
+
+    await transporter.sendMail({
+      to: email,
+      subject: 'Password Reset',
+      html: `<p>Click <a href="${resetLink}">here</a> to create your password.</p>`,
+    });
+
     const shopifyPayload = {
       customer: {
         tags: role,
@@ -389,20 +401,20 @@ export const CreateUserTagsModule = async (req, res) => {
       },
     };
 
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
+    if (!shopifyAccessToken || !shopifyStoreUrl) {
+      return res.status(500).json({ error: 'Shopify credentials are missing' });
+    }
+
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     const response = await fetch(shopifyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
+        'X-Shopify-Access-Token': shopifyAccessToken,
       },
       body: JSON.stringify(shopifyPayload),
     });
@@ -411,9 +423,10 @@ export const CreateUserTagsModule = async (req, res) => {
 
     if (!response.ok) {
       console.error('Error creating user in Shopify:', shopifyResponse);
-      return res
-        .status(500)
-        .json({ error: 'Failed to create user in Shopify' });
+      return res.status(500).json({
+        error: 'Failed to create user in Shopify',
+        details: shopifyResponse,
+      });
     }
 
     const shopifyId = shopifyResponse.customer.id;
@@ -432,7 +445,7 @@ export const CreateUserTagsModule = async (req, res) => {
       data: newUser,
     });
   } catch (error) {
-    console.error('Error in updateUserTagsModule function:', error);
+    console.error('Error in CreateUserTagsModule function:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -683,7 +696,7 @@ export const forgotPassword = async (req, res) => {
 
     const token = createToken(user._id);
 
-    const resetLink = `${'https://medspa-frntend.vercel.app/Reset'}?token=${token}`;
+    const resetLink = `${'https://medspa-frntend.vercel.app/New'}?token=${token}`;
     console.log(resetLink);
     await transporter.sendMail({
       to: email,
@@ -703,7 +716,7 @@ export const resetPassword = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const userId = decoded.payLoad;
+    const userId = decoded.payLoad._id;
     console.log('Decoded token:', decoded);
 
     const user = await authModel.findById(userId);
@@ -715,6 +728,38 @@ export const resetPassword = async (req, res) => {
 
     user.password = newPassword;
 
+    await user.save();
+
+    await updateShopifyPassword(user.shopifyId, newPassword);
+
+    res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res
+      .status(500)
+      .json({ message: 'Error resetting password', error: error.message });
+  }
+};
+
+export const createPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    console.log('Decoded token:', decoded);
+
+    const userEmail = decoded.payLoad;
+
+    console.log('Searching for user with email:', userEmail);
+
+    const user = await authModel.findOne({ email: userEmail });
+    console.log('User fetched from database:', user);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.password = newPassword;
     await user.save();
 
     await updateShopifyPassword(user.shopifyId, newPassword);

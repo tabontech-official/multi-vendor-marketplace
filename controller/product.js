@@ -795,6 +795,7 @@ export const getAllProductData = async (req, res) => {
               { $ifNull: ['$user.lastName', ''] },
             ],
           },
+          email:"$user.email"
         },
       },
     ]);
