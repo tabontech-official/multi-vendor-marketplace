@@ -51,7 +51,6 @@ const listingSchema = new mongoose.Schema(
     inventory: {
       track_quantity: {
         type: Boolean,
-        default: false,
       },
       quantity: {
         type: Number,
