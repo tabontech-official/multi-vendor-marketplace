@@ -527,9 +527,6 @@ export const editProfile = async (req, res) => {
     email,
     phoneNumber,
     address,
-    zip,
-    country,
-    city,
     firstName,
     lastName,
     gstRegistered,
@@ -540,26 +537,8 @@ export const editProfile = async (req, res) => {
     dispatchAddress,
   } = req.body;
   const images = req.files?.images || [];
-  const requiredFields = [
-    email,
-    phoneNumber,
-    address,
-    zip,
-    country,
-    city,
-    firstName,
-    lastName,
-  ];
-  const fieldNames = [
-    'email',
-    'phoneNumber',
-    'address',
-    'zip',
-    'country',
-    'city',
-    'firstName',
-    'lastName',
-  ];
+  const requiredFields = [email, phoneNumber, firstName, lastName];
+  const fieldNames = ['email', 'phoneNumber', 'firstName', 'lastName'];
 
   for (let i = 0; i < requiredFields.length; i++) {
     if (!requiredFields[i]) {
@@ -578,11 +557,9 @@ export const editProfile = async (req, res) => {
     }
 
     user.email = email;
-    user.phoneNumber = phoneNumber;
     user.address = address;
-    user.zip = zip;
-    user.country = country;
-    user.city = city;
+
+    // user.phoneNumber = phoneNumber;
     user.firstName = firstName;
     user.lastName = lastName;
     user.gstRegistered = gstRegistered;
@@ -612,16 +589,6 @@ export const editProfile = async (req, res) => {
           first_name: firstName,
           last_name: lastName,
           email: email,
-          phone: phoneNumber,
-          addresses: [
-            {
-              address1: address,
-              city: city,
-              province: country,
-              zip: zip,
-              country: country,
-            },
-          ],
         },
       };
 
@@ -832,9 +799,9 @@ export const getAllUsersData = async (req, res) => {
       },
     ]);
 
-    return res.status(200).json(result); 
+    return res.status(200).json(result);
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error('Error fetching users:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -855,5 +822,58 @@ export const fetchUserData = async (req, res) => {
     res
       .status(500)
       .json({ error: 'An error occurred while fetching user data' });
+  }
+};
+
+export const getUserByRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+
+    const currentUser = await authModel.findById(id);
+    if (!currentUser) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    const userRole = currentUser.role; 
+    let roleFilter = {}; 
+
+    if (userRole === "Dev Admin") {
+      roleFilter = { role: { $in: ["Master Admin", "Client", "Dev Admin", "Staff"] } };
+    } else if (userRole === "Master Admin") {
+      roleFilter = { role: { $in: ["Client", "Staff"] } }; 
+    } else if (userRole === "Client") {
+      roleFilter = { role: "Staff" };
+    } else if (userRole === "Staff") {
+      return res.status(403).json({ error: "Staff cannot see any users." });
+    }
+
+    const users = await authModel.aggregate([
+      { $match: roleFilter }, 
+      { 
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          role: 1,
+          country: 1,
+          city: 1,
+          userName:1
+        },
+      }
+    ]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users found based on your role." });
+    }
+
+    return res.status(200).json({
+      message: "Users retrieved successfully.",
+      users,
+    });
+
+  } catch (error) {
+    console.error("Error fetching users by role:", error);
+    return res.status(500).json({ error: "Server error." });
   }
 };

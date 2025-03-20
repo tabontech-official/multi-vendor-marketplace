@@ -13,6 +13,7 @@ import {
   createPassword,
   getAllUsersData,
   fetchUserData,
+  getUserByRole,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -32,6 +33,8 @@ authRouter.post('/createUserTagsModule', CreateUserTagsModule);
 authRouter.get('/getUserWithModules/:id', getUserWithModules);
 authRouter.get('/getAllUsers', getAllUsersData);
 authRouter.get('/user/:id', fetchUserData);
+authRouter.get('/getUserByRole/:id', getUserByRole);
+
 
 
 export default authRouter;
