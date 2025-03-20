@@ -593,40 +593,15 @@ export const publishProduct = async (req, res) => {
   const { productId } = req.params;
 
   try {
-    const localProduct = await listingModel.findOne({ id: productId });
+    const localProduct = await listingModel.findById(productId);
     if (!localProduct) {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    // const { userId, product_type } = localProduct;
-
-    // const user = await authModel.findById(userId);
-    // if (!user) {
-    //   return res.status(404).json({ error: 'User not found.' });
-    // }
-
-    // const productConfig = await productModel.findOne({ product_type });
-    // if (!productConfig) {
-    //   return res.status(404).json({
-    //     error: 'Product configuration not found for this product type.',
-    //   });
-    // }
-
-    // if (user.subscription.quantity < productConfig.credit_required) {
-    //   return res.status(400).json({
-    //     error: `Insufficient subscription credits to publish product. Requires ${productConfig.credit_required} credits.`,
-    //   });
-    // }
-
-    // // Decrement the subscription quantity
-    // user.subscription.quantity -= productConfig.credit_required;
-    // await user.save();
-
-    // Update product status in Shopify
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${localProduct.id}.json`;
     const shopifyPayload = {
       product: {
-        id: productId,
+        id: localProduct.id,
         status: 'active',
         published_scope: 'global',
       },
@@ -645,8 +620,8 @@ export const publishProduct = async (req, res) => {
 
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    const updatedProduct = await listingModel.findOneAndUpdate(
-      { id: productId },
+    const updatedProduct = await listingModel.findByIdAndUpdate(
+      productId,
       { status: 'active', expiresAt },
       { new: true }
     );
@@ -746,14 +721,22 @@ export const newPublishProduct = async (req, res) => {
   }
 };
 
+
 export const unpublishProduct = async (req, res) => {
   const { productId } = req.params;
 
   try {
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+   
+
+    const product = await listingModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found in database.' });
+    }
+
+    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
     const shopifyPayload = {
       product: {
-        id: productId,
+        id: product.id,
         status: 'draft',
       },
     };
@@ -763,6 +746,7 @@ export const unpublishProduct = async (req, res) => {
       'PUT',
       shopifyPayload
     );
+
     if (!shopifyResponse.product) {
       return res
         .status(400)
@@ -770,7 +754,7 @@ export const unpublishProduct = async (req, res) => {
     }
 
     const updatedProduct = await listingModel.findOneAndUpdate(
-      { id: productId },
+      { _id: productId },
       { status: 'draft' },
       { new: true }
     );
@@ -788,6 +772,7 @@ export const unpublishProduct = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 export const getAllProductData = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
