@@ -2,8 +2,8 @@ import { productModel } from '../Models/product.js';
 import fetch from 'node-fetch';
 import { authModel } from '../Models/auth.js';
 import mongoose from 'mongoose';
-import { BuyCreditModel } from '../Models/buyCredit.js';
 import { listingModel } from '../Models/Listing.js';
+import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 
 // const shopifyRequest = async (url, method, body) => {
 //   const apiKey = process.env.SHOPIFY_API_KEY;
@@ -290,11 +290,15 @@ export const addUsedEquipments = async (req, res) => {
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
     // 1. Get user and Shopify credentials from DB
-    const user = await authModel.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found.' });
-
-    const shopifyApiKey = user.shopifyApiKey;
-    const shopifyAccessToken = user.shopifyAccessToken;
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+    
+    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+    
+    console.log(shopifyApiKey)
     if (!shopifyApiKey || !shopifyAccessToken) {
       return res
         .status(400)
@@ -457,9 +461,9 @@ export const addUsedEquipments = async (req, res) => {
           deleteUrl,
           'DELETE',
           null,
-          user?.shopifyApiKey,
-          user?.shopifyAccessToken
-        );
+          shopifyApiKey,
+          shopifyAccessToken
+        )
       } catch (deleteError) {
         console.error('Error deleting product from Shopify:', deleteError);
       }
@@ -764,11 +768,13 @@ export const updateProductData = async (req, res) => {
       return res.status(400).json({ error: 'Invalid product options format.' });
     }
 
-    const user = await authModel.findById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found.' });
-
-    const shopifyApiKey = user.shopifyApiKey;
-    const shopifyAccessToken = user.shopifyAccessToken;
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+    
+    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     if (!shopifyApiKey || !shopifyAccessToken) {
       return res
         .status(400)
@@ -921,15 +927,13 @@ export const deleteProduct = async (req, res) => {
         .json({ message: 'Shopify ID is not available for this product' });
     }
 
-    const user = await authModel.findById(product.userId);
-    if (!user || !user.shopifyApiKey || !user.shopifyAccessToken) {
-      return res
-        .status(400)
-        .json({ message: 'Missing Shopify credentials for this user' });
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
     }
-
-    const apiKey = user.shopifyApiKey;
-    const accessToken = user.shopifyAccessToken;
+    
+    const apiKey = shopifyConfiguration.shopifyApiKey;
+    const accessToken = shopifyConfiguration.shopifyAccessToken;
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${product.id}.json`;
 
@@ -991,13 +995,13 @@ export const publishProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
 
-    const user = await authModel.findById(localProduct.userId);
-    if (!user || !user.shopifyApiKey || !user.shopifyAccessToken) {
-      return res.status(400).json({ error: 'Missing Shopify credentials for this user.' });
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
     }
-
-    const shopifyApiKey = user.shopifyApiKey;
-    const shopifyAccessToken = user.shopifyAccessToken;
+    
+    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${localProduct.id}.json`;
     const shopifyPayload = {
@@ -1130,13 +1134,13 @@ export const unpublishProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ error: 'Product not found in database.' });
     }
-    const user = await authModel.findById(product.userId);
-    if (!user || !user.shopifyApiKey || !user.shopifyAccessToken) {
-      return res.status(400).json({ error: 'Missing Shopify credentials for this user.' });
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
     }
-
-    const shopifyApiKey = user.shopifyApiKey;
-    const shopifyAccessToken = user.shopifyAccessToken;
+    
+    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
 
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
@@ -1280,13 +1284,13 @@ export const updateAllProductsStatus = async (req, res) => {
       if (!productId) return { error: 'Missing Shopify Product ID', product };
 
       try {
-        const user = await authModel.findById(userId);
-        if (!user || !user.shopifyApiKey || !user.shopifyAccessToken) {
-          return { error: `Missing Shopify credentials for user ${userId}`, productId };
+        const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+        if (!shopifyConfiguration) {
+          return res.status(404).json({ error: 'Shopify configuration not found.' });
         }
-
-        const apiKey = user.shopifyApiKey;
-        const accessToken = user.shopifyAccessToken;
+        
+        const apiKey = shopifyConfiguration.shopifyApiKey;
+        const accessToken = shopifyConfiguration.shopifyAccessToken;;
 
         const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
 

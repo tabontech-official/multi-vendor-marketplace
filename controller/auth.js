@@ -7,6 +7,7 @@ import { registerSchema, loginSchema } from '../validation/auth.js';
 import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
+import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -94,8 +95,15 @@ export const signUp = async (req, res) => {
       },
     };
 
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
+    }
+
+    const apiKey = shopifyConfiguration.shopifyApiKey;
+    const apiPassword = shopifyConfiguration.shopifyAccessToken;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
@@ -151,9 +159,17 @@ export const signUp = async (req, res) => {
   }
 };
 
-const checkShopifyAdminTag = async (email) => {
+export const checkShopifyAdminTag = async (email) => {
+  const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+  if (!shopifyConfiguration) {
+    throw new Error('Shopify configuration not found.');
+  }
+
+  const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+  const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+
   try {
-    const credentials = `${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}`;
+    const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
     const base64Credentials = Buffer.from(credentials).toString('base64');
 
     const response = await fetch(
@@ -230,13 +246,19 @@ const hashPassword = async (password) => {
 };
 
 const tagExistsInShopify = async (shopifyId, tag) => {
-  const apiKey = process.env.SHOPIFY_API_KEY;
-  const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+  const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+  if (!shopifyConfiguration) {
+    throw new Error('Shopify configuration not found.');
+  }
+
+  const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+  const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+
   const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-    'base64'
-  );
+  const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
+  const base64Credentials = Buffer.from(credentials).toString('base64');
+
   const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
   try {
@@ -306,13 +328,17 @@ export const updateUser = async (req, res) => {
       },
     };
 
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      throw new Error('Shopify configuration not found.');
+    }
+
+    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
+    const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
+    const base64Credentials = Buffer.from(credentials).toString('base64');
     const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
     const response = await fetch(shopifyUrl, {
@@ -400,8 +426,14 @@ export const CreateUserTagsModule = async (req, res) => {
         email: email,
       },
     };
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
+    }
 
-    const shopifyAccessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
 
     if (!shopifyAccessToken || !shopifyStoreUrl) {
@@ -592,7 +624,13 @@ export const editProfile = async (req, res) => {
         },
       };
 
-      await shopifyRequest(shopifyUrl, 'PUT', shopifyPayload);
+     await shopifyRequest(
+      shopifyUrl,
+          'PUT',
+          shopifyPayload,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
 
       // const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
       // const metafieldsPayload = {
@@ -614,10 +652,15 @@ export const editProfile = async (req, res) => {
   }
 };
 
-const shopifyRequest = async (url, method, body) => {
-  const apiKey = process.env.SHOPIFY_API_KEY;
-  const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
-  const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+
+export const shopifyRequest = async (
+  url,
+  method,
+  body,
+  apiKey,
+  accessToken
+) => {
+  const base64Credentials = Buffer.from(`${apiKey}:${accessToken}`).toString(
     'base64'
   );
 
@@ -627,16 +670,17 @@ const shopifyRequest = async (url, method, body) => {
       'Content-Type': 'application/json',
       Authorization: `Basic ${base64Credentials}`,
     },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : null,
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Shopify API request failed: ${errorText}`);
+    throw new Error(`Request failed: ${errorText}`);
   }
 
   return response.json();
 };
+
 
 export const deleteUser = async (req, res) => {
   const customerId = req.body.id;
@@ -675,7 +719,7 @@ export const forgotPassword = async (req, res) => {
 
     const token = createToken(user._id);
 
-    const resetLink = `${'https://medspa-frntend.vercel.app/New'}?token=${token}`;
+    const resetLink = `${'http://localhost:3006/New'}?token=${token}`;
     console.log(resetLink);
     await transporter.sendMail({
       to: email,
@@ -754,8 +798,13 @@ export const createPassword = async (req, res) => {
 
 const updateShopifyPassword = async (shopifyId, newPassword) => {
   const shopifyDomain = 'wasiq-test.myshopify.com';
-  const apiKey = process.env.SHOPIFY_API_KEY;
-  const apiPassword = process.env.SHOPIFY_ACCESS_TOKEN;
+  const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+    
+    const apiKey = shopifyConfiguration.shopifyApiKey;
+    const apiPassword = shopifyConfiguration.shopifyAccessToken;
 
   const url = `https://${apiKey}:${apiPassword}@${shopifyDomain}/admin/api/2023-04/customers/${shopifyId}.json`;
 
@@ -829,28 +878,29 @@ export const getUserByRole = async (req, res) => {
   try {
     const { id } = req.params;
 
-
     const currentUser = await authModel.findById(id);
     if (!currentUser) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: 'User not found.' });
     }
 
-    const userRole = currentUser.role; 
-    let roleFilter = {}; 
+    const userRole = currentUser.role;
+    let roleFilter = {};
 
-    if (userRole === "Dev Admin") {
-      roleFilter = { role: { $in: ["Master Admin", "Client", "Dev Admin", "Staff"] } };
-    } else if (userRole === "Master Admin") {
-      roleFilter = { role: { $in: ["Client", "Staff"] } }; 
-    } else if (userRole === "Client") {
-      roleFilter = { role: "Staff" };
-    } else if (userRole === "Staff") {
-      return res.status(403).json({ error: "Staff cannot see any users." });
+    if (userRole === 'Dev Admin') {
+      roleFilter = {
+        role: { $in: ['Master Admin', 'Client', 'Dev Admin', 'Staff'] },
+      };
+    } else if (userRole === 'Master Admin') {
+      roleFilter = { role: { $in: ['Client', 'Staff'] } };
+    } else if (userRole === 'Client') {
+      roleFilter = { role: 'Staff' };
+    } else if (userRole === 'Staff') {
+      return res.status(403).json({ error: 'Staff cannot see any users.' });
     }
 
     const users = await authModel.aggregate([
-      { $match: roleFilter }, 
-      { 
+      { $match: roleFilter },
+      {
         $project: {
           firstName: 1,
           lastName: 1,
@@ -858,26 +908,26 @@ export const getUserByRole = async (req, res) => {
           role: 1,
           country: 1,
           city: 1,
-          userName:1
+          userName: 1,
         },
-      }
+      },
     ]);
 
     if (users.length === 0) {
-      return res.status(404).json({ message: "No users found based on your role." });
+      return res
+        .status(404)
+        .json({ message: 'No users found based on your role.' });
     }
 
     return res.status(200).json({
-      message: "Users retrieved successfully.",
+      message: 'Users retrieved successfully.',
       users,
     });
-
   } catch (error) {
-    console.error("Error fetching users by role:", error);
-    return res.status(500).json({ error: "Server error." });
+    console.error('Error fetching users by role:', error);
+    return res.status(500).json({ error: 'Server error.' });
   }
 };
-
 
 export const saveShopifyCredentials = async (req, res) => {
   try {
@@ -887,18 +937,22 @@ export const saveShopifyCredentials = async (req, res) => {
       return res.status(400).json({ message: 'Missing required credentials.' });
     }
 
-    const result = await authModel.updateMany(
-      {}, 
+    const result = await shopifyConfigurationModel.updateMany(
+      {},
       { $set: { shopifyAccessToken, shopifyApiKey } }
     );
 
     if (result.modifiedCount > 0) {
-      return res.status(200).json({ message: 'Credentials updated successfully.' });
+      return res
+        .status(200)
+        .json({ message: 'Credentials updated successfully.' });
     } else {
       return res.status(404).json({ message: 'No documents were updated.' });
     }
   } catch (error) {
     console.error('Error updating credentials:', error);
-    return res.status(500).json({ message: 'Server error while updating credentials.' });
+    return res
+      .status(500)
+      .json({ message: 'Server error while updating credentials.' });
   }
 };

@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
 
-const buyCreditSchema = new mongoose.Schema({
-  creditId: { type: String, required: true },
-  price: { type: Number, required: true },
-  variantId:{ type: String }
-}, { timestamps: true }); // This will add createdAt and updatedAt fields
+const shopifyConfigurationSchema = new mongoose.Schema({
+  shopifyAccessToken: { type: String, required: true },
+  shopifyApiKey: { type: String, required: true },
+}, { timestamps: true }); 
 
-export const BuyCreditModel = mongoose.model('BuyCredit', buyCreditSchema);
+export const shopifyConfigurationModel = mongoose.model('shopifyConfiguration', shopifyConfigurationSchema);
 
