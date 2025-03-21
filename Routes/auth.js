@@ -14,6 +14,7 @@ import {
   getAllUsersData,
   fetchUserData,
   getUserByRole,
+  saveShopifyCredentials,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -26,6 +27,7 @@ authRouter.post('/forgot', forgotPassword);
 authRouter.post('/logout/:userId', logout);
 authRouter.post('/webHook', verifyShopifyWebhook, webHook);
 authRouter.put('/editProfile/:userId', cpUpload, editProfile);
+authRouter.put('/shopifyConfigurations', saveShopifyCredentials);
 authRouter.post('/webHook/delete', deleteUser);
 authRouter.post('/resetpassword', resetPassword);
 authRouter.post('/createpassword', createPassword);

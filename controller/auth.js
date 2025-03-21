@@ -877,3 +877,28 @@ export const getUserByRole = async (req, res) => {
     return res.status(500).json({ error: "Server error." });
   }
 };
+
+
+export const saveShopifyCredentials = async (req, res) => {
+  try {
+    const { shopifyAccessToken, shopifyApiKey } = req.body;
+
+    if (!shopifyAccessToken || !shopifyApiKey) {
+      return res.status(400).json({ message: 'Missing required credentials.' });
+    }
+
+    const result = await authModel.updateMany(
+      {}, 
+      { $set: { shopifyAccessToken, shopifyApiKey } }
+    );
+
+    if (result.modifiedCount > 0) {
+      return res.status(200).json({ message: 'Credentials updated successfully.' });
+    } else {
+      return res.status(404).json({ message: 'No documents were updated.' });
+    }
+  } catch (error) {
+    console.error('Error updating credentials:', error);
+    return res.status(500).json({ message: 'Server error while updating credentials.' });
+  }
+};
