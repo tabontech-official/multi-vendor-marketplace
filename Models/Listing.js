@@ -94,7 +94,7 @@ const listingSchema = new mongoose.Schema(
     },
 
     shopifyId: String,
-
+    promoPrice:String,
     expiresAt: { type: Date },
     credit_required: { type: Number },
   },

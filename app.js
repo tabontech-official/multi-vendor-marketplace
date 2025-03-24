@@ -10,6 +10,7 @@ import orderRouter from './Routes/order.js';
 import Connect from './connection/connect.js'; // Import the Connect function
 import setupSwagger from './swaggerConfig.js';
 import { productSubscriptionExpiration } from './controller/scheduleFunction.js';
+import promoRouter from './Routes/promotion.js';
 
 const app = express();
 // Setup Swagger documentation
@@ -33,6 +34,8 @@ app.use(express.json({limit:"5000000mb"}));
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
 app.use('/order', orderRouter);
+app.use('/promo', promoRouter);
+
 app.use((req, res, next) => {
   res.setTimeout(300000, () => {  // 300000 ms = 5 minutes
     res.status(504).send('Request timed out');

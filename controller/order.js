@@ -240,8 +240,7 @@ async function checkProductExists(productId) {
 export const getOrderById = async (req, res) => {
 
   try {
-      // Use find to fetch all orders associated with the provided email
-      const orders = await orderModel.find(); // Adjusted to match the structure
+      const orders = await orderModel.find(); 
 
       if (orders.length > 0) {
           res.status(200).send({
