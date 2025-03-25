@@ -1,6 +1,6 @@
-import { authModel } from "../Models/auth.js";
-import { orderModel } from "../Models/order.js";
-import axios from 'axios'
+import { authModel } from '../Models/auth.js';
+import { orderModel } from '../Models/order.js';
+import axios from 'axios';
 
 // export const createOrder = async (req, res) => {
 //     const orderData = req.body;
@@ -145,76 +145,153 @@ import axios from 'axios'
 // };
 
 async function checkProductExists(productId) {
-    const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
-    
-    try {
-      const response = await axios.get(url);
-      return response.data.product ? true : false;
-    } catch (error) {
-      console.error('Error checking product existence:', error);
-      return false; // Product doesn't exist or an error occurred
-    }
-  }
+  const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
 
-  export const createOrder = async (req, res) => {
-    try {
-      const orderData = req.body;
-      const productId = orderData.line_items[0].product_id; // Assuming single product per order
-  
-      // Check if product exists in Shopify
-      const productExists = await checkProductExists(productId);
-      if (!productExists) {
-        return res.status(404).send('Product does not exist');
-      }
-  
-      // Calculate expiration date based on quantity
-       const quantity = orderData.line_items[0].quantity;
-      // const expirationDate = new Date();
-      // expirationDate.setMonth(expirationDate.getMonth() + quantity); // Extend by quantity months
-  
-      // Save order to MongoDB
-      const order = new orderModel({
-        orderId: orderData.id,
-        customer: orderData.customer,
-        lineItems: orderData.line_items,
-        createdAt: orderData.created_at,
-       // expiresAt: expirationDate, // Add expiration date field
-      });
-  
-      await order.save();
-  
-      // Find user by email
-      const user = await authModel.findOne({ email: orderData.customer.email });
-      if (!user) {
-        return res.status(404).send('User not found');
-      }
-  
-      // Update user's subscription
-      if (user.subscription) {
-        user.subscription.quantity = (user.subscription.quantity || 0) + quantity; // Add to existing quantity
-        //user.subscription.expiresAt = expirationDate; // Update the expiration date
-      } else {
-        user.subscription = {
-          quantity,
-         // expiresAt: expirationDate, // Set expiration date if subscription doesn't exist
-        };
-      }
-  
-      await user.save(); // Save the updated user
-  
-      // Respond with order details including expiresAt
-      res.status(200).json({
-        message: 'Order saved and user updated',
-        //expiresAt: expirationDate,
-        orderId: orderData.id
-      });
-    } catch (error) {
-      console.error('Error saving order:', error);
-      res.status(500).send('Error saving order');
+  try {
+    const response = await axios.get(url);
+    return response.data.product ? true : false;
+  } catch (error) {
+    console.error('Error checking product existence:', error);
+    return false;
+  }
+}
+
+export const createOrder = async (req, res) => {
+  try {
+    const orderData = req.body;
+    const productId = orderData.line_items[0].product_id;
+
+    const productExists = await checkProductExists(productId);
+    if (!productExists) {
+      return res.status(404).send('Product does not exist');
     }
-  };
-  
-  
+
+    const quantity = orderData.line_items[0].quantity;
+
+    const order = new orderModel({
+      orderId: orderData.id,
+      customer: orderData.customer,
+      lineItems: orderData.line_items,
+      createdAt: orderData.created_at,
+    });
+
+    await order.save();
+
+    const user = await authModel.findOne({ email: orderData.customer.email });
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    if (user.subscription) {
+      user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
+    } else {
+      user.subscription = {
+        quantity,
+      };
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: 'Order saved and user updated',
+      orderId: orderData.id,
+    });
+  } catch (error) {
+    console.error('Error saving order:', error);
+    res.status(500).send('Error saving order');
+  }
+};
+
+export const getFinanceSummary = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const startOfLastYear = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+    const endOfLastYear = new Date(now.getFullYear() - 1, now.getMonth() + 1, 0);
+
+    const currentOrders = await orderModel.find({
+      createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+    });
+
+    const lastYearOrders = await orderModel.find({
+      createdAt: { $gte: startOfLastYear, $lte: endOfLastYear },
+    });
+
+    const getOrderTotals = (order) => {
+      return order.lineItems.reduce(
+        (totals, item) => {
+          const price = parseFloat(item.price || '0');
+          const cost = parseFloat(item.cost || '0'); // ✅ cost field
+          const qty = parseFloat(item.quantity || '1');
+
+          totals.income += price * qty;
+          totals.spend += cost * qty;
+
+          return totals;
+        },
+        { income: 0, spend: 0 }
+      );
+    };
+
+    // Calculate totals for current month
+    let totalIncome = 0;
+    let totalSpend = 0;
+    currentOrders.forEach((order) => {
+      const { income, spend } = getOrderTotals(order);
+      totalIncome += income;
+      totalSpend += spend;
+    });
+
+    // Calculate totals for last year
+    let lastYearIncome = 0;
+    let lastYearSpend = 0;
+    lastYearOrders.forEach((order) => {
+      const { income, spend } = getOrderTotals(order);
+      lastYearIncome += income;
+      lastYearSpend += spend;
+    });
+
+    const mrr = currentOrders
+      .filter((order) => {
+        const item = order.lineItems[0];
+        return (
+          item.name?.toLowerCase()?.includes('subscription') ||
+          item.title?.toLowerCase()?.includes('subscription') ||
+          item.vendor?.toLowerCase()?.includes('recurring')
+        );
+      })
+      .reduce((sum, order) => sum + getOrderTotals(order).income, 0);
+
+    const incomeGrowth =
+      lastYearIncome > 0
+        ? ((totalIncome - lastYearIncome) / lastYearIncome) * 100
+        : 100;
+
+    const spendGrowth =
+      lastYearSpend > 0
+        ? ((totalSpend - lastYearSpend) / lastYearSpend) * 100
+        : 100;
+
+    const netProfit = totalIncome - totalSpend;
+
+    res.status(200).json({
+      totalIncome: totalIncome.toFixed(2),
+      lastYearIncome: lastYearIncome.toFixed(2),
+      incomeGrowth: incomeGrowth.toFixed(2),
+      spend: totalSpend.toFixed(2),
+      lastYearSpend: lastYearSpend.toFixed(2),
+      spendGrowth: spendGrowth.toFixed(2),
+      netProfit: netProfit.toFixed(2),
+      mrr: mrr.toFixed(2),
+    });
+  } catch (error) {
+    console.error("Finance summary error:", error);
+    res.status(500).json({ message: "Error calculating finance summary" });
+  }
+};
 
 // export const getOrderById = async (req, res) => {
 //     const { email } = req.params; // Get the email from the request parameters
@@ -238,28 +315,27 @@ async function checkProductExists(productId) {
 // };
 
 export const getOrderById = async (req, res) => {
-
   try {
-      const orders = await orderModel.find(); 
+    const orders = await orderModel.find();
 
-      if (orders.length > 0) {
-          res.status(200).send({
-              message: 'Successfully fetched orders',
-              data: orders
-          });
-      } else {
-          res.status(404).send({ message: 'No orders found for this email' });
-      }
+    if (orders.length > 0) {
+      res.status(200).send({
+        message: 'Successfully fetched orders',
+        data: orders,
+      });
+    } else {
+      res.status(404).send({ message: 'No orders found for this email' });
+    }
   } catch (error) {
-      console.error('Error fetching orders:', error);
-      res.status(500).send({ message: 'Error fetching orders' });
+    console.error('Error fetching orders:', error);
+    res.status(500).send({ message: 'Error fetching orders' });
   }
 };
 
-export const deleteUser=async(req,res)=>{
-  orderModel.deleteMany().then(result=>{
-    if(result){
-      res.status(200).send('delted')
+export const deleteUser = async (req, res) => {
+  orderModel.deleteMany().then((result) => {
+    if (result) {
+      res.status(200).send('delted');
     }
-  })
-}
+  });
+};

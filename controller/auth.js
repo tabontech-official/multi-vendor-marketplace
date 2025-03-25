@@ -956,3 +956,70 @@ export const saveShopifyCredentials = async (req, res) => {
       .json({ message: 'Server error while updating credentials.' });
   }
 };
+
+
+export const createShopifyCollection = async (req, res) => {
+  try {
+    const { description } = req.body;
+
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+
+    const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
+    const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
+
+    // Handle uploaded images
+    const images = req.files?.images
+      ? Array.isArray(req.files.images)
+        ? req.files.images
+        : [req.files.images]
+      : [];
+
+    const firstImageUrl = images.length > 0 ? images[0].path : null;
+
+    // Create custom collection with first image
+    const collectionPayload = {
+      custom_collection: {
+        title: "Brand Asset Upload",
+        body_html: description,
+      },
+    };
+
+    if (firstImageUrl) {
+      collectionPayload.custom_collection.image = {
+        src: firstImageUrl,
+      };
+    }
+
+    const createCollection = await axios.post(
+      `https://${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections.json`,
+      collectionPayload,
+      {
+        headers: {
+          "X-Shopify-Access-Token": ACCESS_TOKEN,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return res.status(200).json({
+      message: "Collection created successfully",
+      collection: createCollection.data.custom_collection,
+    });
+
+  } catch (error) {
+    if (error.response) {
+      console.error(" Shopify API Error:");
+      console.error("Status:", error.response.status);
+      console.error("Data:", JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error(" General Error:", error.message);
+    }
+
+    res.status(500).json({ message: "Failed to create collection", error: error.message });
+  }
+};
+
+

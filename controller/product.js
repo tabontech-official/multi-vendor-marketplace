@@ -74,7 +74,6 @@ const generateVariantCombinations = (options, index = 0, current = {}) => {
   return variants;
 };
 
-
 export const addUsedEquipments = async (req, res) => {
   let productId; // to be used in catch block
   try {
@@ -108,13 +107,15 @@ export const addUsedEquipments = async (req, res) => {
     // 1. Get user and Shopify credentials from DB
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
-    
+
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-    
-    console.log(shopifyApiKey)
+
+    console.log(shopifyApiKey);
     if (!shopifyApiKey || !shopifyAccessToken) {
       return res
         .status(400)
@@ -279,7 +280,7 @@ export const addUsedEquipments = async (req, res) => {
           null,
           shopifyApiKey,
           shopifyAccessToken
-        )
+        );
       } catch (deleteError) {
         console.error('Error deleting product from Shopify:', deleteError);
       }
@@ -586,9 +587,11 @@ export const updateProductData = async (req, res) => {
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
-    
+
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     if (!shopifyApiKey || !shopifyAccessToken) {
@@ -745,9 +748,11 @@ export const deleteProduct = async (req, res) => {
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
-    
+
     const apiKey = shopifyConfiguration.shopifyApiKey;
     const accessToken = shopifyConfiguration.shopifyAccessToken;
 
@@ -813,9 +818,11 @@ export const publishProduct = async (req, res) => {
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
-    
+
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
 
@@ -837,7 +844,9 @@ export const publishProduct = async (req, res) => {
     );
 
     if (!shopifyResponse.product) {
-      return res.status(400).json({ error: 'Failed to update product status in Shopify.' });
+      return res
+        .status(400)
+        .json({ error: 'Failed to update product status in Shopify.' });
     }
 
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -952,12 +961,13 @@ export const unpublishProduct = async (req, res) => {
     }
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
-    
+
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-
 
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
     const shopifyPayload = {
@@ -967,7 +977,7 @@ export const unpublishProduct = async (req, res) => {
       },
     };
 
-     const shopifyResponse = await shopifyRequest(
+    const shopifyResponse = await shopifyRequest(
       shopifyUrl,
       'PUT',
       shopifyPayload,
@@ -1090,11 +1100,13 @@ export const updateAllProductsStatus = async (req, res) => {
 
     const localProducts = await listingModel.find();
     if (!localProducts.length) {
-      return res.status(404).json({ error: 'No products found in the database.' });
+      return res
+        .status(404)
+        .json({ error: 'No products found in the database.' });
     }
 
     const updateProductStatus = async (product) => {
-      const productId = product.id; 
+      const productId = product.id;
       const userId = product.userId;
 
       if (!productId) return { error: 'Missing Shopify Product ID', product };
@@ -1102,11 +1114,13 @@ export const updateAllProductsStatus = async (req, res) => {
       try {
         const shopifyConfiguration = await shopifyConfigurationModel.findOne();
         if (!shopifyConfiguration) {
-          return res.status(404).json({ error: 'Shopify configuration not found.' });
+          return res
+            .status(404)
+            .json({ error: 'Shopify configuration not found.' });
         }
-        
+
         const apiKey = shopifyConfiguration.shopifyApiKey;
-        const accessToken = shopifyConfiguration.shopifyAccessToken;;
+        const accessToken = shopifyConfiguration.shopifyAccessToken;
 
         const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
 
@@ -1152,5 +1166,20 @@ export const updateAllProductsStatus = async (req, res) => {
   } catch (error) {
     console.error('Error in updateAllProductsStatus function:', error);
     return res.status(500).json({ error: error.message });
+  }
+};
+
+export const fetchProductCount = async (req, res) => {
+  try {
+    const result = await listingModel.aggregate([
+      { $match: { status: 'active' } },
+
+      { $count: 'totalProducts' },
+    ]);
+    const count = result[0]?.totalProducts || '0';
+    res.status(200).send({ count });
+  } catch (error) {
+    console.error('Error in fetchProductCount:', error);
+    res.status(500).json({ message: 'Failed to fetch product count.' });
   }
 };

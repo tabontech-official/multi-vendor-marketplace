@@ -28,6 +28,12 @@ const promotionSchema=new mongoose.Schema({
     },
     status:{
         type:String
+    },
+    userId:{
+        type:mongoose.Schema.Types.ObjectId
+    },
+    createdRole:{
+        type:String
     }
     
 })
