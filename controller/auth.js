@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
+import { brandAssetModel } from '../Models/brandAsset.js';
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -624,13 +625,13 @@ export const editProfile = async (req, res) => {
         },
       };
 
-     await shopifyRequest(
-      shopifyUrl,
-          'PUT',
-          shopifyPayload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
+      await shopifyRequest(
+        shopifyUrl,
+        'PUT',
+        shopifyPayload,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
 
       // const metafieldsUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}/metafields.json`;
       // const metafieldsPayload = {
@@ -651,7 +652,6 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
-
 
 export const shopifyRequest = async (
   url,
@@ -680,7 +680,6 @@ export const shopifyRequest = async (
 
   return response.json();
 };
-
 
 export const deleteUser = async (req, res) => {
   const customerId = req.body.id;
@@ -799,12 +798,12 @@ export const createPassword = async (req, res) => {
 const updateShopifyPassword = async (shopifyId, newPassword) => {
   const shopifyDomain = 'wasiq-test.myshopify.com';
   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
-    }
-    
-    const apiKey = shopifyConfiguration.shopifyApiKey;
-    const apiPassword = shopifyConfiguration.shopifyAccessToken;
+  if (!shopifyConfiguration) {
+    return res.status(404).json({ error: 'Shopify configuration not found.' });
+  }
+
+  const apiKey = shopifyConfiguration.shopifyApiKey;
+  const apiPassword = shopifyConfiguration.shopifyAccessToken;
 
   const url = `https://${apiKey}:${apiPassword}@${shopifyDomain}/admin/api/2023-04/customers/${shopifyId}.json`;
 
@@ -957,20 +956,20 @@ export const saveShopifyCredentials = async (req, res) => {
   }
 };
 
-
 export const createShopifyCollection = async (req, res) => {
   try {
     const { description } = req.body;
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
     const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
     const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
 
-    // Handle uploaded images
     const images = req.files?.images
       ? Array.isArray(req.files.images)
         ? req.files.images
@@ -979,10 +978,9 @@ export const createShopifyCollection = async (req, res) => {
 
     const firstImageUrl = images.length > 0 ? images[0].path : null;
 
-    // Create custom collection with first image
     const collectionPayload = {
       custom_collection: {
-        title: "Brand Asset Upload",
+        title: 'Brand Asset Upload',
         body_html: description,
       },
     };
@@ -998,28 +996,47 @@ export const createShopifyCollection = async (req, res) => {
       collectionPayload,
       {
         headers: {
-          "X-Shopify-Access-Token": ACCESS_TOKEN,
-          "Content-Type": "application/json",
+          'X-Shopify-Access-Token': ACCESS_TOKEN,
+          'Content-Type': 'application/json',
         },
       }
     );
-
+    const saveBrandData = new brandAssetModel({
+      images: firstImageUrl || '',
+      description,
+    });
+    await saveBrandData.save();
     return res.status(200).json({
-      message: "Collection created successfully",
+      message: 'Collection created successfully',
       collection: createCollection.data.custom_collection,
     });
-
   } catch (error) {
     if (error.response) {
-      console.error(" Shopify API Error:");
-      console.error("Status:", error.response.status);
-      console.error("Data:", JSON.stringify(error.response.data, null, 2));
+      console.error(' Shopify API Error:');
+      console.error('Status:', error.response.status);
+      console.error('Data:', JSON.stringify(error.response.data, null, 2));
     } else {
-      console.error(" General Error:", error.message);
+      console.error(' General Error:', error.message);
     }
 
-    res.status(500).json({ message: "Failed to create collection", error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Failed to create collection', error: error.message });
   }
 };
 
 
+export const getLatestBrandAsset=async(req,res)=>{
+  try {
+    const data=await brandAssetModel.aggregate([
+      {
+        $sort:{
+          createdAt:-1
+        }
+      }
+    ])
+    res.status(200).send(data)
+  } catch (error) {
+    
+  }
+}
