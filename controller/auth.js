@@ -481,7 +481,7 @@ export const CreateUserTagsModule = async (req, res) => {
     console.error('Error in CreateUserTagsModule function:', error);
     return res.status(500).json({ error: error.message });
   }
-};
+}
 
 export const getUserWithModules = async (req, res) => {
   const { id } = req.params;
