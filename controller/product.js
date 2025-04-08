@@ -58,7 +58,6 @@ export const shopifyRequest = async (
 
   return response.json();
 };
-
 const generateVariantCombinations = (options, index = 0, current = {}) => {
   if (index === options.length) return [current];
   const key = options[index].name;
@@ -75,7 +74,7 @@ const generateVariantCombinations = (options, index = 0, current = {}) => {
 };
 
 export const addUsedEquipments = async (req, res) => {
-  let productId; // to be used in catch block
+  let productId;
   try {
     console.log('Received Data:', req.body);
 
@@ -104,7 +103,6 @@ export const addUsedEquipments = async (req, res) => {
 
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
-    // 1. Get user and Shopify credentials from DB
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
       return res
@@ -115,7 +113,6 @@ export const addUsedEquipments = async (req, res) => {
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
 
-    console.log(shopifyApiKey);
     if (!shopifyApiKey || !shopifyAccessToken) {
       return res
         .status(400)
@@ -153,6 +150,23 @@ export const addUsedEquipments = async (req, res) => {
       weight_unit: track_shipping ? weight_unit : null,
     }));
 
+    const variantsToSave = variantCombinations.map((variant, index) => ({
+      option1: variant[parsedOptions[0].name] || null,
+      option2: parsedOptions.length > 1 ? variant[parsedOptions[1].name] : null,
+      option3: parsedOptions.length > 2 ? variant[parsedOptions[2].name] : null,
+      price: price.toString(),
+      compare_at_price: compare_at_price ? compare_at_price.toString() : null,
+      inventory_management: track_quantity ? 'shopify' : null,
+      inventory_quantity:
+        track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
+      sku: has_sku ? `${sku}-${index + 1}` : null,
+      barcode: has_sku ? `${barcode}-${index + 1}` : null,
+      weight: track_shipping ? parseFloat(weight) : null,
+      weight_unit: track_shipping ? weight_unit : null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }));
+
     const shopifyPayload = {
       product: {
         title,
@@ -170,7 +184,6 @@ export const addUsedEquipments = async (req, res) => {
       },
     };
 
-    // 2. Create product in Shopify
     const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(
       shopifyUrl,
@@ -240,9 +253,10 @@ export const addUsedEquipments = async (req, res) => {
       body_html: description,
       vendor,
       product_type: productType,
+      options:shopifyOptions,
       created_at: new Date(),
       tags: productResponse.product.tags,
-      variants: productResponse.product.variants,
+      // variants: variantsToSave, 
       images: imagesDataToPush,
       inventory: {
         track_quantity: !!track_quantity,
@@ -343,6 +357,7 @@ export const getProduct = async (req, res) => {
           created_at: 1,
           tags: 1,
           variants: 1,
+          options:1,
           images: 1,
           inventory: 1,
           shipping: 1,
@@ -1055,6 +1070,7 @@ export const getAllProductData = async (req, res) => {
           created_at: 1,
           tags: 1,
           variants: 1,
+          options:1,
           images: 1,
           inventory: 1,
           shipping: 1,
@@ -1181,5 +1197,52 @@ export const fetchProductCount = async (req, res) => {
   } catch (error) {
     console.error('Error in fetchProductCount:', error);
     res.status(500).json({ message: 'Failed to fetch product count.' });
+  }
+};
+
+export const getProductDataFromShopify = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await listingModel.findById(id);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found in DB' });
+    }
+
+    const shopifyProductId = product.id;
+
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+
+    // const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    // const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+
+    // if (!shopifyApiKey || !shopifyAccessToken) {
+    //   return res.status(400).json({ error: 'Missing Shopify credentials' });
+    // }
+
+    // const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyProductId}.json`;
+    // const shopifyResponse = await shopifyRequest(
+    //   shopifyUrl,
+    //   'GET',
+    //   null,
+    //   shopifyApiKey,
+    //   shopifyAccessToken
+    // );
+
+    // if (!shopifyResponse?.product) {
+    //   return res.status(404).json({ error: 'Product not found on Shopify' });
+    // }
+
+    return res.status(200).json({
+      message: 'Product fetched from Shopify successfully',
+      product: product,
+    });
+
+  } catch (error) {
+    console.error('Error in getProductDataFromShopify:', error);
+    return res.status(500).json({ error: error.message });
   }
 };

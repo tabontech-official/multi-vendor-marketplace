@@ -21,6 +21,7 @@ const listingSchema = new mongoose.Schema(
     },
     variants: [
       {
+        title: { type: String },
         option1: String,
         option2: String,
         option3: String,
@@ -94,9 +95,15 @@ const listingSchema = new mongoose.Schema(
     },
 
     shopifyId: String,
-    promoPrice:String,
+    promoPrice: String,
     expiresAt: { type: Date },
     credit_required: { type: Number },
+    options: [
+      {
+        name: { type: String, required: true },
+        values: { type: [String], required: true },
+      },
+    ]
   },
   {
     timestamps: true,

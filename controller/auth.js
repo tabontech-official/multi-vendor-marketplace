@@ -930,7 +930,7 @@ export const getUserByRole = async (req, res) => {
 
 export const saveShopifyCredentials = async (req, res) => {
   try {
-    const { shopifyAccessToken, shopifyApiKey } = req.body;
+    const { shopifyAccessToken, shopifyApiKey,shopifyStoreUrl } = req.body;
 
     if (!shopifyAccessToken || !shopifyApiKey) {
       return res.status(400).json({ message: 'Missing required credentials.' });
@@ -938,7 +938,7 @@ export const saveShopifyCredentials = async (req, res) => {
 
     const result = await shopifyConfigurationModel.updateMany(
       {},
-      { $set: { shopifyAccessToken, shopifyApiKey } }
+      { $set: { shopifyAccessToken, shopifyApiKey,shopifyStoreUrl } }
     );
 
     if (result.modifiedCount > 0) {
