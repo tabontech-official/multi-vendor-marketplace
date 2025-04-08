@@ -219,12 +219,13 @@ export const getFinanceSummary = async (req, res) => {
     const lastYearOrders = await orderModel.find({
       createdAt: { $gte: startOfLastYear, $lte: endOfLastYear },
     });
+    const totalOrdersInDb = await orderModel.countDocuments(); 
 
     const getOrderTotals = (order) => {
       return order.lineItems.reduce(
         (totals, item) => {
           const price = parseFloat(item.price || '0');
-          const cost = parseFloat(item.cost || '0'); // ✅ cost field
+          const cost = parseFloat(item.cost || '0');d
           const qty = parseFloat(item.quantity || '1');
 
           totals.income += price * qty;
@@ -286,6 +287,7 @@ export const getFinanceSummary = async (req, res) => {
       spendGrowth: spendGrowth.toFixed(2),
       netProfit: netProfit.toFixed(2),
       mrr: mrr.toFixed(2),
+      totalOrdersInDb
     });
   } catch (error) {
     console.error("Finance summary error:", error);

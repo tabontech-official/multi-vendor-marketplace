@@ -570,8 +570,8 @@ export const editProfile = async (req, res) => {
     dispatchAddress,
   } = req.body;
   const images = req.files?.images || [];
-  const requiredFields = [email, phoneNumber, firstName, lastName];
-  const fieldNames = ['email', 'phoneNumber', 'firstName', 'lastName'];
+  const requiredFields = [email, firstName, lastName];
+  const fieldNames = ['email',  'firstName', 'lastName'];
 
   for (let i = 0; i < requiredFields.length; i++) {
     if (!requiredFields[i]) {
@@ -622,7 +622,9 @@ export const editProfile = async (req, res) => {
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+    console.log(shopifyStoreUrl)
     const shopifyCustomerId = user.shopifyId;
+    console.log(shopifyCustomerId)
     if (shopifyCustomerId) {
       const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
       const shopifyPayload = {
