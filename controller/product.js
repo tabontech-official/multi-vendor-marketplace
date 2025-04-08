@@ -599,6 +599,7 @@ export const updateProductData = async (req, res) => {
 
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+    const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
     if (!shopifyApiKey || !shopifyAccessToken) {
       return res
         .status(400)
@@ -617,7 +618,7 @@ export const updateProductData = async (req, res) => {
         .json({ error: 'Shopify Product ID not found in database.' });
     }
 
-    const shopifyFetchUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyProductId}.json`;
+    const shopifyFetchUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}.json`;
 
     let existingProduct;
     try {
@@ -680,7 +681,7 @@ export const updateProductData = async (req, res) => {
       },
     };
 
-    const shopifyUpdateUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${shopifyProductId}.json`;
+    const shopifyUpdateUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}.json`;
 
     const productResponse = await shopifyRequest(
       shopifyUpdateUrl,
