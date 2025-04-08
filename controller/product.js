@@ -112,8 +112,9 @@ export const addUsedEquipments = async (req, res) => {
 
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-
-    if (!shopifyApiKey || !shopifyAccessToken) {
+    const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
+    console.log(shopifyStoreUrl)
+    if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl) {
       return res
         .status(400)
         .json({ error: 'Missing Shopify credentials for user.' });
@@ -184,7 +185,7 @@ export const addUsedEquipments = async (req, res) => {
       },
     };
 
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products.json`;
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/products.json`;
     const productResponse = await shopifyRequest(
       shopifyUrl,
       'POST',
@@ -218,7 +219,7 @@ export const addUsedEquipments = async (req, res) => {
         },
       };
 
-      const imageUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`;
 
       try {
         const imageResponse = await shopifyRequest(
@@ -256,7 +257,7 @@ export const addUsedEquipments = async (req, res) => {
       options:shopifyOptions,
       created_at: new Date(),
       tags: productResponse.product.tags,
-      // variants: variantsToSave, 
+      variants: variantsToSave, 
       images: imagesDataToPush,
       inventory: {
         track_quantity: !!track_quantity,
@@ -287,7 +288,7 @@ export const addUsedEquipments = async (req, res) => {
 
     if (productId) {
       try {
-        const deleteUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+        const deleteUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`;
         await shopifyRequest(
           deleteUrl,
           'DELETE',
