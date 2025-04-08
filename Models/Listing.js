@@ -33,6 +33,8 @@ const listingSchema = new mongoose.Schema(
         barcode: String,
         weight: Number,
         weight_unit: String,
+        isParent: { type: Boolean, required: true, default: false }, 
+
       },
     ],
 

@@ -136,38 +136,27 @@ export const addUsedEquipments = async (req, res) => {
 
     const variantCombinations = generateVariantCombinations(parsedOptions);
 
-    const shopifyVariants = variantCombinations.map((variant, index) => ({
-      option1: variant[parsedOptions[0].name] || null,
-      option2: parsedOptions.length > 1 ? variant[parsedOptions[1].name] : null,
-      option3: parsedOptions.length > 2 ? variant[parsedOptions[2].name] : null,
-      price: price.toString(),
-      compare_at_price: compare_at_price ? compare_at_price.toString() : null,
-      inventory_management: track_quantity ? 'shopify' : null,
-      inventory_quantity:
-        track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
-      sku: has_sku ? `${sku}-${index + 1}` : null,
-      barcode: has_sku ? `${barcode}-${index + 1}` : null,
-      weight: track_shipping ? parseFloat(weight) : null,
-      weight_unit: track_shipping ? weight_unit : null,
-    }));
+    const shopifyVariants = variantCombinations.map((variant, index) => {
+      const isParentVariant = index === 0;
+    
+      return {
+        option1: variant[parsedOptions[0].name] || null,
+        option2: parsedOptions.length > 1 ? variant[parsedOptions[1].name] : null,
+        option3: parsedOptions.length > 2 ? variant[parsedOptions[2].name] : null,
+        price: price.toString(),
+        compare_at_price: compare_at_price ? compare_at_price.toString() : null,
+        inventory_management: track_quantity ? 'shopify' : null,
+        inventory_quantity:
+          track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
+        sku: has_sku ? `${sku}-${index + 1}` : null,
+        barcode: has_sku ? `${barcode}-${index + 1}` : null,
+        weight: track_shipping ? parseFloat(weight) : null,
+        weight_unit: track_shipping ? weight_unit : null,
+        isParent: isParentVariant, // Mark if it's a parent variant
+      };
+    });
 
-    const variantsToSave = variantCombinations.map((variant, index) => ({
-      option1: variant[parsedOptions[0].name] || null,
-      option2: parsedOptions.length > 1 ? variant[parsedOptions[1].name] : null,
-      option3: parsedOptions.length > 2 ? variant[parsedOptions[2].name] : null,
-      price: price.toString(),
-      compare_at_price: compare_at_price ? compare_at_price.toString() : null,
-      inventory_management: track_quantity ? 'shopify' : null,
-      inventory_quantity:
-        track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
-      sku: has_sku ? `${sku}-${index + 1}` : null,
-      barcode: has_sku ? `${barcode}-${index + 1}` : null,
-      weight: track_shipping ? parseFloat(weight) : null,
-      weight_unit: track_shipping ? weight_unit : null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }));
-
+   
     const shopifyPayload = {
       product: {
         title,
@@ -219,7 +208,7 @@ export const addUsedEquipments = async (req, res) => {
         },
       };
 
-      const imageUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`;
+      const imageUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`;
 
       try {
         const imageResponse = await shopifyRequest(
@@ -257,7 +246,7 @@ export const addUsedEquipments = async (req, res) => {
       options:shopifyOptions,
       created_at: new Date(),
       tags: productResponse.product.tags,
-      variants: variantsToSave, 
+      variants: productResponse.product.variants , 
       images: imagesDataToPush,
       inventory: {
         track_quantity: !!track_quantity,
@@ -288,7 +277,7 @@ export const addUsedEquipments = async (req, res) => {
 
     if (productId) {
       try {
-        const deleteUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`;
+        const deleteUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`;
         await shopifyRequest(
           deleteUrl,
           'DELETE',
