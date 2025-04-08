@@ -113,7 +113,7 @@ export const addUsedEquipments = async (req, res) => {
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
-    console.log(shopifyStoreUrl)
+
     if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl) {
       return res
         .status(400)
@@ -771,8 +771,9 @@ export const deleteProduct = async (req, res) => {
 
     const apiKey = shopifyConfiguration.shopifyApiKey;
     const accessToken = shopifyConfiguration.shopifyAccessToken;
+    const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
 
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/products/${product.id}.json`;
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/products/${product.id}.json`;
 
     const response = await fetch(shopifyUrl, {
       method: 'DELETE',
@@ -841,8 +842,8 @@ export const publishProduct = async (req, res) => {
 
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${localProduct.id}.json`;
+    const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${localProduct.id}.json`;
     const shopifyPayload = {
       product: {
         id: localProduct.id,
@@ -984,8 +985,8 @@ export const unpublishProduct = async (req, res) => {
 
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-
-    const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${product.id}.json`;
+    const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${product.id}.json`;
     const shopifyPayload = {
       product: {
         id: product.id,
@@ -1138,8 +1139,8 @@ export const updateAllProductsStatus = async (req, res) => {
 
         const apiKey = shopifyConfiguration.shopifyApiKey;
         const accessToken = shopifyConfiguration.shopifyAccessToken;
-
-        const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/products/${productId}.json`;
+const shopifyStoreUrl=shopifyConfiguration.shopifyStoreUrl
+        const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`;
 
         const shopifyPayload = {
           product: {

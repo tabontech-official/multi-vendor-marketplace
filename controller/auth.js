@@ -105,12 +105,12 @@ export const signUp = async (req, res) => {
 
     const apiKey = shopifyConfiguration.shopifyApiKey;
     const apiPassword = shopifyConfiguration.shopifyAccessToken;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+    const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
 
     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
       'base64'
     );
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     const response = await fetch(shopifyUrl, {
       method: 'POST',
@@ -168,13 +168,13 @@ export const checkShopifyAdminTag = async (email) => {
 
   const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
   const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-
+  const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
   try {
     const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
     const base64Credentials = Buffer.from(credentials).toString('base64');
 
     const response = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2023-10/customers.json?email=${email}`,
+      `${shopifyStoreUrl}/admin/api/2023-10/customers.json?email=${email}`,
       {
         method: 'GET',
         headers: {
@@ -255,12 +255,12 @@ const tagExistsInShopify = async (shopifyId, tag) => {
   const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
   const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
 
-  const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+  const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
 
   const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
   const base64Credentials = Buffer.from(credentials).toString('base64');
 
-  const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
+  const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
   try {
     const response = await fetch(shopifyUrl, {
@@ -336,11 +336,11 @@ export const updateUser = async (req, res) => {
 
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+    const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
 
     const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
     const base64Credentials = Buffer.from(credentials).toString('base64');
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyId}.json`;
 
     const response = await fetch(shopifyUrl, {
       method: 'PUT',
@@ -435,13 +435,13 @@ export const CreateUserTagsModule = async (req, res) => {
     }
 
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-    const shopifyStoreUrl = process.env.SHOPIFY_STORE_URL;
+    const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
 
     if (!shopifyAccessToken || !shopifyStoreUrl) {
       return res.status(500).json({ error: 'Shopify credentials are missing' });
     }
 
-    const shopifyUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     const response = await fetch(shopifyUrl, {
       method: 'POST',
@@ -612,10 +612,19 @@ export const editProfile = async (req, res) => {
     }
 
     await user.save();
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
+    }
 
+    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+    const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
     const shopifyCustomerId = user.shopifyId;
     if (shopifyCustomerId) {
-      const shopifyUrl = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
+      const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
       const shopifyPayload = {
         customer: {
           id: shopifyCustomerId,
@@ -796,7 +805,6 @@ export const createPassword = async (req, res) => {
 };
 
 const updateShopifyPassword = async (shopifyId, newPassword) => {
-  const shopifyDomain = 'wasiq-test.myshopify.com';
   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
   if (!shopifyConfiguration) {
     return res.status(404).json({ error: 'Shopify configuration not found.' });
@@ -804,7 +812,7 @@ const updateShopifyPassword = async (shopifyId, newPassword) => {
 
   const apiKey = shopifyConfiguration.shopifyApiKey;
   const apiPassword = shopifyConfiguration.shopifyAccessToken;
-
+  const shopifyDomain = new URL(shopifyConfiguration.shopifyStoreUrl).hostname;
   const url = `https://${apiKey}:${apiPassword}@${shopifyDomain}/admin/api/2023-04/customers/${shopifyId}.json`;
 
   console.log(`Requesting Shopify URL: ${url}`);
@@ -930,7 +938,7 @@ export const getUserByRole = async (req, res) => {
 
 export const saveShopifyCredentials = async (req, res) => {
   try {
-    const { shopifyAccessToken, shopifyApiKey,shopifyStoreUrl } = req.body;
+    const { shopifyAccessToken, shopifyApiKey, shopifyStoreUrl } = req.body;
 
     if (!shopifyAccessToken || !shopifyApiKey) {
       return res.status(400).json({ message: 'Missing required credentials.' });
@@ -938,7 +946,7 @@ export const saveShopifyCredentials = async (req, res) => {
 
     const result = await shopifyConfigurationModel.updateMany(
       {},
-      { $set: { shopifyAccessToken, shopifyApiKey,shopifyStoreUrl } }
+      { $set: { shopifyAccessToken, shopifyApiKey, shopifyStoreUrl } }
     );
 
     if (result.modifiedCount > 0) {
@@ -968,7 +976,8 @@ export const createShopifyCollection = async (req, res) => {
     }
 
     const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
-    const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
+    // const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
+    const SHOPIFY_STORE_URL = shopifyConfiguration.shopifyStoreUrl;
 
     const images = req.files?.images
       ? Array.isArray(req.files.images)
@@ -992,7 +1001,7 @@ export const createShopifyCollection = async (req, res) => {
     }
 
     const createCollection = await axios.post(
-      `https://${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections.json`,
+      `${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections.json`,
       collectionPayload,
       {
         headers: {
@@ -1025,18 +1034,15 @@ export const createShopifyCollection = async (req, res) => {
   }
 };
 
-
-export const getLatestBrandAsset=async(req,res)=>{
+export const getLatestBrandAsset = async (req, res) => {
   try {
-    const data=await brandAssetModel.aggregate([
+    const data = await brandAssetModel.aggregate([
       {
-        $sort:{
-          createdAt:-1
-        }
-      }
-    ])
-    res.status(200).send(data)
-  } catch (error) {
-    
-  }
-}
+        $sort: {
+          createdAt: -1,
+        },
+      },
+    ]);
+    res.status(200).send(data);
+  } catch (error) {}
+};
