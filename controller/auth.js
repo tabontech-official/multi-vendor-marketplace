@@ -149,6 +149,33 @@ export const signUp = async (req, res) => {
     const savedUser = await newUser.save();
     const token = createToken({ _id: savedUser._id });
 
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'aydimarketplace@gmail.com',
+        pass: 'ijeg fypl llry kftw',
+      },
+    });
+
+    const mailOptions = {
+      from: `${req.body.firstName} <${req.body.email}>`,
+      to: 'aydimarketplace@gmail.com',
+      subject: 'New User Signup',
+      html: `
+        <h2>New User Registered</h2>
+        <p><strong>Name:</strong> ${req.body.firstName} ${req.body.lastName}</p>
+        <p><strong>Email:</strong> ${req.body.email}</p>
+       
+      `,
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.error('Signup mail failed:', err);
+      } else {
+        console.log('Signup mail sent:', info.response);
+      }
+    });
     res.status(201).send({
       message: 'Successfully registered',
       token,
@@ -160,6 +187,54 @@ export const signUp = async (req, res) => {
   }
 };
 
+// export const checkShopifyAdminTag = async (email) => {
+//   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//   if (!shopifyConfiguration) {
+//     throw new Error('Shopify configuration not found.');
+//   }
+
+//   const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+//   const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+//   const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+//   try {
+//     const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
+//     const base64Credentials = Buffer.from(credentials).toString('base64');
+
+//     const response = await fetch(
+//       `${shopifyStoreUrl}/admin/api/2023-10/customers.json?email=${email}`,
+//       {
+//         method: 'GET',
+//         headers: {
+//           'Content-Type': 'application/json',
+//           Authorization: `Basic ${base64Credentials}`,
+//         },
+//       }
+//     );
+
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+
+//     const data = await response.json();
+//     const customers = data.customers;
+
+//     if (customers.length > 0) {
+//       const tags = customers[0].tags.split(',').map((tag) => tag.trim());
+
+//       if (tags.includes('DevAdmin')) return 'Dev Admin';
+//       if (tags.includes('MasterAdmin')) return 'Master Admin';
+//       if (tags.includes('Client')) return 'Client';
+//       if (tags.includes('Staff')) return 'Staff';
+//       if (tags.includes('approved')) return 'Client';
+//     }
+
+//     return 'User';
+//   } catch (error) {
+//     console.error('Error fetching Shopify customer:', error);
+//     throw new Error('Error checking Shopify customer');
+//   }
+// };
+
 export const checkShopifyAdminTag = async (email) => {
   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
   if (!shopifyConfiguration) {
@@ -169,6 +244,22 @@ export const checkShopifyAdminTag = async (email) => {
   const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
   const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
   const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+  
+  const modules = [
+    'Dashboard',
+    'Products',
+    'Manage Product',
+    'Add Product',
+    'Inventory',
+    'Orders',
+    'ManageOrders',
+    'Promotions',
+    'All Promotions',
+    'Reports',
+    'Catalog Performance',
+    'eCommerce Consultation'
+  ];
+
   try {
     const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
     const base64Credentials = Buffer.from(credentials).toString('base64');
@@ -193,19 +284,39 @@ export const checkShopifyAdminTag = async (email) => {
 
     if (customers.length > 0) {
       const tags = customers[0].tags.split(',').map((tag) => tag.trim());
+      const shopifyId = customers[0].id; 
 
       if (tags.includes('DevAdmin')) return 'Dev Admin';
       if (tags.includes('MasterAdmin')) return 'Master Admin';
+      
+      if (tags.includes('approved')) {
+        const existingUser = await authModel.findOne({ email });
+
+        if (existingUser) {
+          existingUser.modules = modules;
+          existingUser.role = 'Client'; 
+          existingUser.shopifyId = shopifyId;  
+          await existingUser.save(); 
+        } else {
+          console.log('User not found to update.');
+        }
+
+        return 'Client';
+      }
+
       if (tags.includes('Client')) return 'Client';
       if (tags.includes('Staff')) return 'Staff';
     }
 
-    return 'User';
+    return 'User';  
   } catch (error) {
     console.error('Error fetching Shopify customer:', error);
     throw new Error('Error checking Shopify customer');
   }
 };
+
+
+
 
 export const signIn = async (req, res) => {
   try {
