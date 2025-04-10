@@ -244,7 +244,7 @@ export const checkShopifyAdminTag = async (email) => {
   const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
   const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
   const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
-  
+
   const modules = [
     'Dashboard',
     'Products',
@@ -257,7 +257,7 @@ export const checkShopifyAdminTag = async (email) => {
     'All Promotions',
     'Reports',
     'Catalog Performance',
-    'eCommerce Consultation'
+    'eCommerce Consultation',
   ];
 
   try {
@@ -284,19 +284,19 @@ export const checkShopifyAdminTag = async (email) => {
 
     if (customers.length > 0) {
       const tags = customers[0].tags.split(',').map((tag) => tag.trim());
-      const shopifyId = customers[0].id; 
+      const shopifyId = customers[0].id;
 
       if (tags.includes('DevAdmin')) return 'Dev Admin';
       if (tags.includes('MasterAdmin')) return 'Master Admin';
-      
+
       if (tags.includes('approved')) {
         const existingUser = await authModel.findOne({ email });
 
         if (existingUser) {
           existingUser.modules = modules;
-          existingUser.role = 'Client'; 
-          existingUser.shopifyId = shopifyId;  
-          await existingUser.save(); 
+          existingUser.role = 'Client';
+          existingUser.shopifyId = shopifyId;
+          await existingUser.save();
         } else {
           console.log('User not found to update.');
         }
@@ -308,15 +308,12 @@ export const checkShopifyAdminTag = async (email) => {
       if (tags.includes('Staff')) return 'Staff';
     }
 
-    return 'User';  
+    return 'User';
   } catch (error) {
     console.error('Error fetching Shopify customer:', error);
     throw new Error('Error checking Shopify customer');
   }
 };
-
-
-
 
 export const signIn = async (req, res) => {
   try {
@@ -592,7 +589,7 @@ export const CreateUserTagsModule = async (req, res) => {
     console.error('Error in CreateUserTagsModule function:', error);
     return res.status(500).json({ error: error.message });
   }
-}
+};
 
 export const getUserWithModules = async (req, res) => {
   const { id } = req.params;
@@ -682,7 +679,7 @@ export const editProfile = async (req, res) => {
   } = req.body;
   const images = req.files?.images || [];
   const requiredFields = [email, firstName, lastName];
-  const fieldNames = ['email',  'firstName', 'lastName'];
+  const fieldNames = ['email', 'firstName', 'lastName'];
 
   for (let i = 0; i < requiredFields.length; i++) {
     if (!requiredFields[i]) {
@@ -733,9 +730,9 @@ export const editProfile = async (req, res) => {
     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
-    console.log(shopifyStoreUrl)
+    console.log(shopifyStoreUrl);
     const shopifyCustomerId = user.shopifyId;
-    console.log(shopifyCustomerId)
+    console.log(shopifyCustomerId);
     if (shopifyCustomerId) {
       const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyCustomerId}.json`;
       const shopifyPayload = {
