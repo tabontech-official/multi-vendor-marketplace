@@ -95,6 +95,8 @@ const listingSchema = new mongoose.Schema(
       enum: ['active', 'draft'],
       default: 'draft',
     },
+    oldPrice: Number, 
+
 
     shopifyId: String,
     promoPrice: String,
