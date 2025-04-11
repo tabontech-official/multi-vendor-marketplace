@@ -399,7 +399,7 @@ export const addUsedEquipments = async (req, res) => {
       typeof options === 'string' ? JSON.parse(options) : options;
 
     if (!Array.isArray(parsedOptions) || parsedOptions.length === 0) {
-      parsedOptions = [{ name: 'Title', values: ['Default Option'] }];
+      parsedOptions = [{ name: 'Title', values: ['Default'] }];
     }
 
     const shopifyOptions = parsedOptions.map((option) => ({
@@ -684,6 +684,8 @@ export const getProduct = async (req, res) => {
           shipping: 1,
           status: 1,
           userId: 1,
+          oldPrice:1,
+
           username: {
             $concat: [
               { $ifNull: ['$user.firstName', ''] },
@@ -1614,6 +1616,7 @@ export const getAllProductData = async (req, res) => {
           shipping: 1,
           status: 1,
           userId: 1,
+          oldPrice:1,
           username: {
             $concat: [
               { $ifNull: ['$user.firstName', ''] },
