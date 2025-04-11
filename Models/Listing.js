@@ -21,7 +21,7 @@ const listingSchema = new mongoose.Schema(
     },
     variants: [
       {
-        id:{type:String},
+        id: { type: String },
         title: { type: String },
         option1: String,
         option2: String,
@@ -95,9 +95,8 @@ const listingSchema = new mongoose.Schema(
       enum: ['active', 'draft'],
       default: 'draft',
     },
-    oldPrice: Number, 
-
-
+    oldPrice: Number,
+    promotionStatus: { type: String,default:"inactive" },
     shopifyId: String,
     promoPrice: String,
     expiresAt: { type: Date },

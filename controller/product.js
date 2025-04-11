@@ -684,7 +684,7 @@ export const getProduct = async (req, res) => {
           shipping: 1,
           status: 1,
           userId: 1,
-          oldPrice:1,
+          oldPrice: 1,
 
           username: {
             $concat: [
@@ -1616,7 +1616,7 @@ export const getAllProductData = async (req, res) => {
           shipping: 1,
           status: 1,
           userId: 1,
-          oldPrice:1,
+          oldPrice: 1,
           username: {
             $concat: [
               { $ifNull: ['$user.firstName', ''] },
@@ -1786,5 +1786,200 @@ export const getProductDataFromShopify = async (req, res) => {
   } catch (error) {
     console.error('Error in getProductDataFromShopify:', error);
     return res.status(500).json({ error: error.message });
+  }
+};
+export const getAllProductPromotionStatus = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  try {
+    const products = await listingModel.aggregate([
+      {
+        $match: {
+          promotionStatus: 'active',
+        },
+      },
+      {
+        $sort:{
+          createtedAt:-1
+        }
+      },
+      {
+        $addFields: {
+          userId: { $toObjectId: '$userId' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: { created_at: -1 },
+      },
+      {
+        $skip: (page - 1) * limit,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          tags: 1,
+          variants: 1,
+          options: 1,
+          images: 1,
+          inventory: 1,
+          shipping: 1,
+          status: 1,
+          userId: 1,
+          oldPrice: 1,
+          username: {
+            $concat: [
+              { $ifNull: ['$user.firstName', ''] },
+              ' ',
+              { $ifNull: ['$user.lastName', ''] },
+            ],
+          },
+          email: '$user.email',
+        },
+      },
+    ]);
+
+    const totalProducts = await listingModel.countDocuments();
+
+    if (products.length > 0) {
+      res.status(200).send({
+        products,
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+      });
+    } else {
+      res.status(400).send('No products found');
+    }
+  } catch (error) {
+    console.error('Aggregation error:', error);
+    res.status(500).send({ error: error.message });
+  }
+};
+
+export const getPromotionProduct = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required.' });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const objectIdUserId = new mongoose.Types.ObjectId(userId);
+
+    const products = await listingModel.aggregate([
+      {
+        $match: {
+          promotionStatus: 'inactive',
+        },
+      },
+      {
+        $sort:{
+          createtedAt:-1
+        }
+      },
+      {
+        $match: {
+          userId: objectIdUserId,
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: { created_at: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          tags: 1,
+          variants: 1,
+          options: 1,
+          images: 1,
+          inventory: 1,
+          shipping: 1,
+          status: 1,
+          userId: 1,
+          oldPrice: 1,
+
+          username: {
+            $concat: [
+              { $ifNull: ['$user.firstName', ''] },
+              ' ',
+              { $ifNull: ['$user.lastName', ''] },
+            ],
+          },
+          email: '$user.email',
+        },
+      },
+    ]);
+
+    const totalProducts = await listingModel.countDocuments({
+      userId: objectIdUserId,
+    });
+
+    if (products.length === 0) {
+      return res
+        .status(404)
+        .json({ message: 'No products found for this user.' });
+    }
+
+    res.status(200).json({
+      products,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+    });
+  } catch (error) {
+    console.error('Error in getProductsByUserId function:', error);
+    res.status(500).json({ error: error.message });
   }
 };

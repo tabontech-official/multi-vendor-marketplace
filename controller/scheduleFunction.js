@@ -1,65 +1,38 @@
-import { listingModel } from "../Models/Listing.js";
 import cron from 'node-cron';
+import { listingModel } from '../Models/Listing.js';
+import { PromoModel } from '../Models/Promotions.js';
+
 export const productSubscriptionExpiration = () => {
-    cron.schedule('0 */2 * * *', async () => {
-      try {
-        const currentDate = new Date();
-  
-        // Update products with expired subscriptions
-        const result = await listingModel.updateMany(
-          { expiresAt: { $lte: currentDate }, status: 'active' }, // Check for active products only
-          { $set: { status: 'draft' } }
+  cron.schedule('* * * * *', async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const promotionsToUpdate = await PromoModel.find({
+        startDate: { $lte: today },
+      });
+
+      if (promotionsToUpdate.length > 0) {
+        const promoUpdateResult = await PromoModel.updateMany(
+          { startDate: { $lte: today } },
+          { $set: { status: 'inactive' } }
         );
-  
-        console.log(`Updated ${result.modifiedCount} products to inactive status.`);
-      } catch (error) {
-        console.error('Error updating product statuses:', error);
+
+        for (const promo of promotionsToUpdate) {
+          await listingModel.updateOne(
+            { sku: promo.productSku },
+            { $set: { promotionStatus: 'inactive' } }
+          );
+        }
+
+        console.log(
+          `${promoUpdateResult.modifiedCount} promotions and listings activated.`
+        );
+      } else {
+        console.log('No promotions to activate today.');
       }
-    });
-  };
-
-// import cron from 'node-cron';
-// import { productModel } from '../Models/product.js';
-// // Schedule unpublishing task
-// // export const scheduleUnpublish = () => {
-//   cron.schedule('0 */2 * * *', async () => { // Change frequency as needed
-//     try {
-//       const products = await productModel.find({ status: 'active' });
-//       const currentDate = new Date();
-      
-//       for (const product of products) {
-//         const expiresAt = product.expiresAt;
-//         if (currentDate >= expiresAt) {
-//           await productModel.findOneAndUpdate(
-//             { id: product.id },
-//             { status: 'draft' }
-//           );
-//           console.log(`Product ${product.id} status updated to draft.`);
-//         }
-//       }
-//     } catch (error) {
-//       console.error(`Error in scheduled unpublish: ${error.message}`);
-//     }
-//   });
-// };
-
-// const testUnpublishProduct = async (productId) => {
-//   const product = await productModel.findOne({ id: productId });
-//   const currentDate = new Date();
-//   const expiresAt = product.expiresAt;
-
-//   console.log(`Current Date: ${currentDate}, Expires At: ${expiresAt}`);
-  
-//   if (currentDate >= expiresAt) {
-//     await productModel.findOneAndUpdate(
-//       { id: productId },
-//       { status: 'draft' }
-//     );
-//     console.log(`Product ${productId} status updated to draft.`);
-//   } else {
-//     console.log(`Product ${productId} not yet expired.`);
-//   }
-// };
-
-// // Call this function for testing
-// testUnpublishProduct('8725777088765');
+    } catch (error) {
+      console.error('Error in cron job:', error);
+    }
+  });
+};

@@ -137,6 +137,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
     const variant = product.variants?.[0];
     const oldPrice = variant.price;
     product.oldPrice = oldPrice;
+    product.promotionStatus="active"
 
     if (!variant)
       return res
@@ -161,7 +162,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
         .status(400)
         .json({ error: 'Missing Shopify credentials for user.' });
     }
-    
+
     const promo = new PromoModel({
       promoPrice,
       productName: product.title,
