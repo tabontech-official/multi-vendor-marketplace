@@ -21,6 +21,7 @@ const listingSchema = new mongoose.Schema(
     },
     variants: [
       {
+        id:{type:String},
         title: { type: String },
         option1: String,
         option2: String,
@@ -33,8 +34,7 @@ const listingSchema = new mongoose.Schema(
         barcode: String,
         weight: Number,
         weight_unit: String,
-        isParent: { type: Boolean, required: true, default: false }, 
-
+        isParent: { type: Boolean, required: true, default: false },
       },
     ],
 
@@ -105,7 +105,7 @@ const listingSchema = new mongoose.Schema(
         name: { type: String, required: true },
         values: { type: [String], required: true },
       },
-    ]
+    ],
   },
   {
     timestamps: true,

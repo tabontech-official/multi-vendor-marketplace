@@ -37,8 +37,6 @@ authRouter.get('/getUserWithModules/:id', getUserWithModules);
 authRouter.get('/getAllUsers', getAllUsersData);
 authRouter.get('/user/:id', fetchUserData);
 authRouter.get('/getUserByRole/:id', getUserByRole);
-authRouter.post('/addBrandAsset',cpUpload, createShopifyCollection);
-
-
+authRouter.post('/addBrandAsset', cpUpload, createShopifyCollection);
 
 export default authRouter;
