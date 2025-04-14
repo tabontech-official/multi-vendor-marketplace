@@ -32,8 +32,6 @@ productRouter.get('/getProductCount', fetchProductCount);
 productRouter.get('/getProductDataFromShopify/:id', getProductDataFromShopify);
 productRouter.get('/getAllDataForPromotion', getAllProductPromotionStatus);
 productRouter.get('/getPromotionProduct/:userId', getPromotionProduct);
-
-
 productRouter.delete('/deleteProduct/:id', deleteProduct);
 
 export default productRouter;

@@ -137,7 +137,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
     const variant = product.variants?.[0];
     const oldPrice = variant.price;
     product.oldPrice = oldPrice;
-    product.promotionStatus="active"
+    product.promotionStatus = 'active';
 
     if (!variant)
       return res
@@ -220,5 +220,91 @@ export const addPromotionDataFromProductDb = async (req, res) => {
   } catch (error) {
     console.error('Error in addPromotionDataFromProductDb:', error);
     res.status(500).json({ message: 'Server error while creating promotion.' });
+  }
+};
+
+export const endPromotions = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedPromotion = await PromoModel.findByIdAndDelete(id);
+    if (!deletedPromotion) {
+      return res.status(404).json({ message: 'Promotion not found.' });
+    }
+
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res
+        .status(500)
+        .json({ message: 'Shopify configuration missing.' });
+    }
+
+    const {
+      shopifyApiKey,
+      shopifyAccessToken,
+      shopifyStoreUrl: SHOP,
+    } = shopifyConfig;
+
+    const product = await listingModel.findOne({
+      'variants.sku': deletedPromotion.productSku,
+    });
+
+    if (!product) {
+      console.warn(` No product found for SKU: ${deletedPromotion.productSku}`);
+      return res
+        .status(404)
+        .json({ message: 'Product not found for the promotion SKU.' });
+    }
+
+    const variant = product.variants.find(
+      (v) => v.sku === deletedPromotion.productSku
+    );
+    if (!variant) {
+      console.warn(
+        ` Variant not found in product for SKU: ${deletedPromotion.productSku}`
+      );
+      return res.status(404).json({ message: 'Variant not found in product.' });
+    }
+
+    const oldPrice = product.oldPrice;
+    if (!oldPrice) {
+      console.warn(
+        ` No old price found for SKU: ${deletedPromotion.productSku}`
+      );
+      return res
+        .status(400)
+        .json({ message: 'Old price not available for this product.' });
+    }
+
+    variant.price = oldPrice;
+    product.promotionStatus = 'inactive';
+    await product.save();
+
+    const shopifyURL = `${SHOP}/admin/api/2024-01/variants/${variant.id}.json`;
+
+    try {
+      await shopifyRequest(
+        shopifyURL,
+        'PUT',
+        { variant: { id: variant.id, price: oldPrice } },
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+      console.log(` Shopify variant updated for SKU: ${variant.sku}`);
+    } catch (shopifyErr) {
+      console.error(
+        ` Shopify update failed for SKU ${variant.sku}: ${shopifyErr.message}`
+      );
+      return res
+        .status(500)
+        .json({ message: 'Failed to update price on Shopify.' });
+    }
+
+    return res.status(200).json({
+      message: 'Promotion deleted and product price restored successfully.',
+    });
+  } catch (error) {
+    console.error(' Error in endPromotions API:', error.message || error);
+    return res.status(500).json({ message: 'Internal server error.' });
   }
 };
