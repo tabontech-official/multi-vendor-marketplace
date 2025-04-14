@@ -490,8 +490,8 @@ export const addUsedEquipments = async (req, res) => {
         options: shopifyOptions,
         variants: shopifyVariants,
         tags: [
-          `user_${userId}`,
-          `vendor_${vendor}`,
+          // `user_${userId}`,
+          // `vendor_${vendor}`,
           ...(keyWord ? keyWord.split(',') : []),
         ],
       },
@@ -1800,9 +1800,9 @@ export const getAllProductPromotionStatus = async (req, res) => {
         },
       },
       {
-        $sort:{
-          createtedAt:-1
-        }
+        $sort: {
+          createtedAt: -1,
+        },
       },
       {
         $addFields: {
@@ -1900,9 +1900,9 @@ export const getPromotionProduct = async (req, res) => {
         },
       },
       {
-        $sort:{
-          createtedAt:-1
-        }
+        $sort: {
+          createtedAt: -1,
+        },
       },
       {
         $match: {
