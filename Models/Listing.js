@@ -35,6 +35,19 @@ const listingSchema = new mongoose.Schema(
         weight: Number,
         weight_unit: String,
         isParent: { type: Boolean, required: true, default: false },
+        images: [
+          {
+            id: String,
+            product_id: String,
+            position: Number,
+            created_at: Date,
+            updated_at: Date,
+            alt: String,
+            width: Number,
+            height: Number,
+            src: String,
+          },
+        ],
       },
     ],
 
