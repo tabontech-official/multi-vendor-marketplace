@@ -26,8 +26,8 @@ app.use(helmet());
 app.use(compression());
 // app.use(cors());
 app.use(cors({
-  origin: true, // Allow all origins
-  credentials: true, // Allow cookies if needed
+  origin: true, 
+  credentials: true, 
 }));
 
 app.use('/uploads', express.static('uploads'));
