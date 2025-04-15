@@ -35,7 +35,7 @@ const listingSchema = new mongoose.Schema(
         weight: Number,
         weight_unit: String,
         isParent: { type: Boolean, required: true, default: false },
-        images: [
+        image: [
           {
             id: String,
             product_id: String,
