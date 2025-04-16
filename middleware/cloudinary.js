@@ -3,13 +3,20 @@ import cloudinary from 'cloudinary';
 import multer from 'multer';
 
 
-cloudinary.v2.config({
-    cloud_name: 'djocrwprs', 
-    api_key: '433555789235653',
-    api_secret: 'YuzeR8ryVZNJ2jPowPxPb3YXWvY', 
-  });
+// cloudinary.v2.config({
+//     cloud_name: 'djocrwprs', 
+//     api_key: '433555789235653',
+//     api_secret: 'YuzeR8ryVZNJ2jPowPxPb3YXWvY', 
+//   });
  
-  const storage = new CloudinaryStorage({
+cloudinary.v2.config({
+  cloud_name: 'dt2fvngtp', 
+  api_key: '331996837589612',
+  api_secret: 'xNC1A5jDlmrfAx3TuAvyf-LFmG4', 
+});
+
+
+const storage = new CloudinaryStorage({
     cloudinary: cloudinary.v2,
     params: {
       folder: 'uploads',

@@ -485,6 +485,7 @@ export const addUsedEquipments = async (req, res) => {
                 variant.compare_at_price || compare_at_price || null,
               inventory_management: track_quantity ? 'shopify' : null,
               inventory_quantity:
+              
                 track_quantity && !isNaN(parseInt(quantity))
                   ? parseInt(quantity)
                   : 0,
