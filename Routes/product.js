@@ -13,6 +13,7 @@ import {
   getProductDataFromShopify,
   getAllProductPromotionStatus,
   getPromotionProduct,
+  updateImages,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -28,6 +29,8 @@ productRouter.get('/getAllData', getAllProductData);
 productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
 productRouter.put("/updateProducts/:id",cpUpload, updateProductData);
+productRouter.put("/updateImages/:id", updateImages);
+
 productRouter.get('/getProductCount', fetchProductCount);
 productRouter.get('/getProductDataFromShopify/:id', getProductDataFromShopify);
 productRouter.get('/getAllDataForPromotion', getAllProductPromotionStatus);
