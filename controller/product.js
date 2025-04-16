@@ -1948,7 +1948,7 @@ export const updateImages = async (req, res) => {
         },
       };
 
-      const imageUrl = `https://${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`;
+      const imageUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`;
 
       const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload, shopifyApiKey, shopifyAccessToken);
 
@@ -1974,7 +1974,7 @@ export const updateImages = async (req, res) => {
       };
 
       const variantImageUploadResponse = await shopifyRequest(
-        `https://${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+        `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
         'POST',
         variantImagePayload,
         shopifyApiKey,
@@ -1987,7 +1987,7 @@ export const updateImages = async (req, res) => {
     }
 
     const productResponse = await shopifyRequest(
-      `https://${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
+      `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
       'GET',
       null,
       shopifyApiKey,
@@ -2002,7 +2002,7 @@ export const updateImages = async (req, res) => {
 
       if (variant && image) {
         await shopifyRequest(
-          `https://${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+          `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
           'PUT',
           {
             variant: {
@@ -2016,7 +2016,6 @@ export const updateImages = async (req, res) => {
       }
     }
 
-    // ✅ Final response
     res.status(200).json({
       message: 'Product and variant images successfully updated.',
       product: updatedProduct,
