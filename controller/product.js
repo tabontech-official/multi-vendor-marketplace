@@ -73,7 +73,6 @@ const generateVariantCombinations = (options, index = 0, current = {}) => {
   return variants;
 };
 
-
 export const addUsedEquipments = async (req, res) => {
   let productId;
   try {
@@ -98,6 +97,7 @@ export const addUsedEquipments = async (req, res) => {
       vendor,
       keyWord,
       options,
+      variantPrices
     } = req.body;
 
     const productStatus = status === 'publish' ? 'active' : 'draft';
@@ -124,53 +124,64 @@ export const addUsedEquipments = async (req, res) => {
 
     const variantCombinations = generateVariantCombinations(parsedOptions);
     const formatPrice = (value) => {
-      if (!value) return "0.00";
+      if (!value) return '0.00';
       const num = parseFloat(value);
-      return isNaN(num) ? "0.00" : num.toFixed(2);
+      return isNaN(num) ? '0.00' : num.toFixed(2);
     };
     const shopifyVariants =
-      variantCombinations.length === 0
-        ? [
-            {
-              option1: parsedOptions[0].values[0] || null,
-              option2: parsedOptions[1] ? parsedOptions[1].values[0] : null,
-              option3: parsedOptions[2] ? parsedOptions[2].values[0] : null,
-              price: formatPrice(price),
-              compare_at_price: compare_at_price || null,
-              inventory_management: track_quantity ? 'shopify' : null,
-              inventory_quantity:
-                track_quantity && !isNaN(parseInt(quantity))
-                  ? parseInt(quantity)
-                  : 0,
-              sku: has_sku ? `${sku}-1` : null,
-              barcode: has_sku ? `${barcode}-1` : null,
-              weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-              weight_unit: track_shipping ? weight_unit : null,
-              isParent: true,
-            },
-          ]
-        : variantCombinations.map((variant, index) => {
-            return {
-              option1: variant[parsedOptions[0].name] || null,
-              option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
-              option3: parsedOptions[2] ? variant[parsedOptions[2].name] : null,
-              price: formatPrice(variant.price || price),
-              compare_at_price:
-                variant.compare_at_price || compare_at_price || null,
-              inventory_management: track_quantity ? 'shopify' : null,
-              inventory_quantity:
-              
-                track_quantity && !isNaN(parseInt(quantity))
-                  ? parseInt(quantity)
-                  : 0,
-              sku: has_sku ? `${sku}-${index + 1}` : null,
-              barcode: has_sku ? `${barcode}-${index + 1}` : null,
-              weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-              weight_unit: track_shipping ? weight_unit : null,
-              isParent: index === 0,
-            };
-          });
-
+    variantCombinations.length === 0
+      ? [
+          {
+            option1: parsedOptions[0].values[0] || null,
+            option2: parsedOptions[1] ? parsedOptions[1].values[0] : null,
+            option3: parsedOptions[2] ? parsedOptions[2].values[0] : null,
+            price: formatPrice(variantPrices || price),
+            compare_at_price: compare_at_price || null,
+            inventory_management: track_quantity ? 'shopify' : null,
+            inventory_quantity:
+              track_quantity && !isNaN(parseInt(quantity))
+                ? parseInt(quantity)
+                : 0,
+            sku: has_sku ? `${sku}-1` : null,
+            barcode: has_sku ? `${barcode}-1` : null,
+            weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
+            weight_unit: track_shipping ? weight_unit : null,
+            isParent: true,
+          },
+        ]
+      : variantCombinations.map((variant, index) => {
+          let variantPrice = price; 
+          
+          if (Array.isArray(variantPrices) && variantPrices.length > index) {
+            if (variantPrices[index] !== null && variantPrices[index] !== undefined && variantPrices[index] !== '') {
+              variantPrice = variantPrices[index];
+            }
+          }
+          
+          // Alternative approach if variantPrices is an object with option combinations as keys
+          // const variantKey = Object.values(variant).join('-');
+          // if (variantPrices && variantPrices[variantKey]) {
+          //   variantPrice = variantPrices[variantKey];
+          // }
+          
+          return {
+            option1: variant[parsedOptions[0].name] || null,
+            option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
+            option3: parsedOptions[2] ? variant[parsedOptions[2].name] : null,
+            price: formatPrice(variantPrice),
+            compare_at_price: compare_at_price || null,
+            inventory_management: track_quantity ? 'shopify' : null,
+            inventory_quantity:
+              track_quantity && !isNaN(parseInt(quantity))
+                ? parseInt(quantity)
+                : 0,
+            sku: has_sku ? `${sku}-${index + 1}` : null,
+            barcode: has_sku ? `${barcode}-${index + 1}` : null,
+            weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
+            weight_unit: track_shipping ? weight_unit : null,
+            isParent: index === 0,
+          };
+        });
     const shopifyPayload = {
       product: {
         title,
@@ -191,102 +202,127 @@ export const addUsedEquipments = async (req, res) => {
       shopifyApiKey,
       shopifyAccessToken
     );
-
+ 
     if (!productResponse?.product?.id)
       throw new Error('Shopify product creation failed.');
     productId = productResponse.product.id;
-
-    const images = req.files?.images
-      ? Array.isArray(req.files.images)
-        ? req.files.images
-        : [req.files.images]
-      : [];
-    const imagesDataToPush = [];
-
-    for (let i = 0; i < images.length; i++) {
-      const imagePayload = {
-        image: {
-          src: images[i].path,
-          alt: `Product Image ${i + 1}`,
-          position: i + 1,
-        },
-      };
-
-      const imageResponse = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+    const metafieldsPayload = [
+      {
+        namespace: 'Aydi',
+        key: 'Aydi_Information',
+        value: title || 'Not specified',
+        type: 'single_line_text_field',
+      },
+    ];
+    
+    for (const metafield of metafieldsPayload) {
+      const metafieldsUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`;
+      
+      const metafieldResponse = await shopifyRequest(
+        metafieldsUrl,
         'POST',
-        imagePayload,
+        { metafield },
         shopifyApiKey,
         shopifyAccessToken
       );
-
-      if (imageResponse?.image) {
-        imagesDataToPush.push({
-          id: imageResponse.image.id,
-          product_id: productId,
-          position: imageResponse.image.position,
-          created_at: imageResponse.image.created_at,
-          updated_at: imageResponse.image.updated_at,
-          alt: imageResponse.image.alt,
-          width: imageResponse.image.width,
-          height: imageResponse.image.height,
-          src: imageResponse.image.src,
-        });
+    
+      if (metafieldResponse?.metafield) {
+        console.log('Metafield created successfully:', metafieldResponse.metafield);
+      } else {
+        console.log('Error creating metafield:', metafieldResponse);
       }
     }
+    // const images = req.files?.images
+    //   ? Array.isArray(req.files.images)
+    //     ? req.files.images
+    //     : [req.files.images]
+    //   : [];
+    // const imagesDataToPush = [];
 
-    const variantImages = req.files?.variantImages
-      ? Array.isArray(req.files.variantImages)
-        ? req.files.variantImages
-        : [req.files.variantImages]
-      : [];
-    const uploadedVariantImages = [];
+    // for (let i = 0; i < images.length; i++) {
+    //   const imagePayload = {
+    //     image: {
+    //       src: images[i].path,
+    //       alt: `Product Image ${i + 1}`,
+    //       position: i + 1,
+    //     },
+    //   };
 
-    for (let i = 0; i < variantImages.length; i++) {
-      const variantImagePayload = {
-        image: {
-          src: variantImages[i].path,
-          alt: `Variant Image ${i + 1}`,
-        },
-      };
+    //   const imageResponse = await shopifyRequest(
+    //     `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+    //     'POST',
+    //     imagePayload,
+    //     shopifyApiKey,
+    //     shopifyAccessToken
+    //   );
 
-      const variantImageResponse = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
-        'POST',
-        variantImagePayload,
-        shopifyApiKey,
-        shopifyAccessToken
-      );
+    //   if (imageResponse?.image) {
+    //     imagesDataToPush.push({
+    //       id: imageResponse.image.id,
+    //       product_id: productId,
+    //       position: imageResponse.image.position,
+    //       created_at: imageResponse.image.created_at,
+    //       updated_at: imageResponse.image.updated_at,
+    //       alt: imageResponse.image.alt,
+    //       width: imageResponse.image.width,
+    //       height: imageResponse.image.height,
+    //       src: imageResponse.image.src,
+    //     });
+    //   }
+    // }
 
-      if (variantImageResponse?.image) {
-        uploadedVariantImages.push(variantImageResponse.image);
-      }
-    }
+    // const variantImages = req.files?.variantImages
+    //   ? Array.isArray(req.files.variantImages)
+    //     ? req.files.variantImages
+    //     : [req.files.variantImages]
+    //   : [];
+    // const uploadedVariantImages = [];
 
-    for (let i = 0; i < productResponse.product.variants.length; i++) {
-      const variant = productResponse.product.variants[i];
-      const image = uploadedVariantImages[i];
+    // for (let i = 0; i < variantImages.length; i++) {
+    //   const variantImagePayload = {
+    //     image: {
+    //       src: variantImages[i].path,
+    //       alt: `Variant Image ${i + 1}`,
+    //     },
+    //   };
 
-      if (image) {
-        await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-          'PUT',
-          {
-            variant: {
-              id: variant.id,
-              image_id: image.id,
-            },
-          },
-          shopifyApiKey,
-          shopifyAccessToken
-        );
+    //   const variantImageResponse = await shopifyRequest(
+    //     `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+    //     'POST',
+    //     variantImagePayload,
+    //     shopifyApiKey,
+    //     shopifyAccessToken
+    //   );
 
-        productResponse.product.variants[i].image = {
-          src: image.src,
-          alt: image.alt,
-        };
-      }
-    }
+    //   if (variantImageResponse?.image) {
+    //     uploadedVariantImages.push(variantImageResponse.image);
+    //   }
+    // }
+
+    // for (let i = 0; i < productResponse.product.variants.length; i++) {
+    //   const variant = productResponse.product.variants[i];
+    //   const image = uploadedVariantImages[i];
+
+    //   if (image) {
+    //     await shopifyRequest(
+    //       `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+    //       'PUT',
+    //       {
+    //         variant: {
+    //           id: variant.id,
+    //           image_id: image.id,
+    //         },
+    //       },
+    //       shopifyApiKey,
+    //       shopifyAccessToken
+    //     );
+
+    //     productResponse.product.variants[i].image = {
+    //       src: image.src,
+    //       alt: image.alt,
+    //     };
+    //   }
+    // }
 
     const newProduct = new listingModel({
       id: productId,
@@ -343,186 +379,6 @@ export const addUsedEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-// export const addUsedEquipments = async (req, res) => {
-//   let productId;
-//   try {
-//     const {
-//       title,
-//       description,
-//       price,
-//       compare_at_price,
-//       track_quantity,
-//       trackQuantity,
-//       quantity,
-//       continue_selling,
-//       has_sku,
-//       sku,
-//       barcode,
-//       track_shipping,
-//       weight,
-//       weight_unit,
-//       status,
-//       userId,
-//       productType,
-//       vendor,
-//       keyWord,
-//       options,
-//     } = req.body;
-
-//     const productStatus = status === 'publish' ? 'active' : 'draft';
-
-//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-//     if (!shopifyConfiguration)
-//       return res
-//         .status(404)
-//         .json({ error: 'Shopify configuration not found.' });
-
-//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-//       shopifyConfiguration;
-
-//     let parsedOptions =
-//       typeof options === 'string' ? JSON.parse(options) : options;
-//     if (!Array.isArray(parsedOptions) || parsedOptions.length === 0) {
-//       parsedOptions = [{ name: 'Title', values: ['Default'] }];
-//     }
-
-//     const shopifyOptions = parsedOptions.map((option) => ({
-//       name: option.name,
-//       values: option.values,
-//     }));
-
-//     const variantCombinations = generateVariantCombinations(parsedOptions);
-//     const formatPrice = (value) => {
-//       if (!value) return "0.00";
-//       const num = parseFloat(value);
-//       return isNaN(num) ? "0.00" : num.toFixed(2);
-//     };
-
-//     const shopifyVariants =
-//       variantCombinations.length === 0
-//         ? [
-//             {
-//               option1: parsedOptions[0].values[0] || null,
-//               option2: parsedOptions[1] ? parsedOptions[1].values[0] : null,
-//               option3: parsedOptions[2] ? parsedOptions[2].values[0] : null,
-//               price: formatPrice(price),
-//               compare_at_price: compare_at_price || null,
-//               inventory_management: track_quantity ? 'shopify' : null,
-//               inventory_quantity:
-//                 track_quantity && !isNaN(parseInt(quantity))
-//                   ? parseInt(quantity)
-//                   : 0,
-//               sku: has_sku ? `${sku}-1` : null,
-//               barcode: has_sku ? `${barcode}-1` : null,
-//               weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-//               weight_unit: track_shipping ? weight_unit : null,
-//               isParent: true,
-//             },
-//           ]
-//         : variantCombinations.map((variant, index) => {
-//             return {
-//               option1: variant[parsedOptions[0].name] || null,
-//               option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
-//               option3: parsedOptions[2] ? variant[parsedOptions[2].name] : null,
-//               price: formatPrice(variant.price || price),
-//               compare_at_price:
-//                 variant.compare_at_price || compare_at_price || null,
-//               inventory_management: track_quantity ? 'shopify' : null,
-//               inventory_quantity:
-//                 track_quantity && !isNaN(parseInt(quantity))
-//                   ? parseInt(quantity)
-//                   : 0,
-//               sku: has_sku ? `${sku}-${index + 1}` : null,
-//               barcode: has_sku ? `${barcode}-${index + 1}` : null,
-//               weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-//               weight_unit: track_shipping ? weight_unit : null,
-//               isParent: index === 0,
-//             };
-//           });
-
-//     const shopifyPayload = {
-//       product: {
-//         title,
-//         body_html: description || '',
-//         vendor,
-//         product_type: productType,
-//         status: productStatus,
-//         options: shopifyOptions,
-//         variants: shopifyVariants,
-//         tags: [...(keyWord ? keyWord.split(',') : [])],
-//       },
-//     };
-
-//     const productResponse = await shopifyRequest(
-//       `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
-//       'POST',
-//       shopifyPayload,
-//       shopifyApiKey,
-//       shopifyAccessToken
-//     );
-
-//     if (!productResponse?.product?.id)
-//       throw new Error('Shopify product creation failed.');
-
-//     productId = productResponse.product.id;
-
-//     // Image upload SKIPPED HERE
-
-//     const newProduct = new listingModel({
-//       id: productId,
-//       title,
-//       body_html: description,
-//       vendor,
-//       product_type: productType,
-//       options: shopifyOptions,
-//       created_at: new Date(),
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       inventory: {
-//         track_quantity: !!track_quantity || false,
-//         quantity:
-//           track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
-//         continue_selling: continue_selling || true,
-//         has_sku: !!has_sku || false,
-//         sku: sku,
-//         barcode: barcode,
-//       },
-//       shipping: {
-//         track_shipping: track_shipping || false,
-//         weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-//         weight_unit: weight_unit || 'kg',
-//       },
-//       userId,
-//       status: productStatus,
-//     });
-
-//     await newProduct.save();
-
-//     return res.status(201).json({
-//       message: 'Product successfully created.',
-//       product: newProduct,
-//     });
-//   } catch (error) {
-//     console.error('Error in addUsedEquipments function:', error);
-
-//     if (productId) {
-//       try {
-//         await shopifyRequest(
-//           `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
-//           'DELETE',
-//           null,
-//           shopifyApiKey,
-//           shopifyAccessToken
-//         );
-//       } catch (deleteError) {
-//         console.error('Error deleting product from Shopify:', deleteError);
-//       }
-//     }
-
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 export const getProduct = async (req, res) => {
   try {
@@ -936,7 +792,10 @@ export const updateProductData = async (req, res) => {
   const { id } = req.params;
 
   try {
-    if (!id) return res.status(400).json({ error: 'Product ID is required for updating.' });
+    if (!id)
+      return res
+        .status(400)
+        .json({ error: 'Product ID is required for updating.' });
 
     const {
       title,
@@ -962,7 +821,8 @@ export const updateProductData = async (req, res) => {
 
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
-    const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
+    const parsedOptions =
+      typeof options === 'string' ? JSON.parse(options) : options;
 
     const shopifyOptions = parsedOptions.map((option) => ({
       name: option.name,
@@ -970,15 +830,21 @@ export const updateProductData = async (req, res) => {
     }));
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) return res.status(404).json({ error: 'Shopify config not found.' });
+    if (!shopifyConfiguration)
+      return res.status(404).json({ error: 'Shopify config not found.' });
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
 
     const product = await listingModel.findById(id);
-    if (!product) return res.status(404).json({ error: 'Product not found in DB.' });
+    if (!product)
+      return res.status(404).json({ error: 'Product not found in DB.' });
 
     const shopifyProductId = product.id;
-    if (!shopifyProductId) return res.status(400).json({ error: 'Shopify Product ID not stored in DB.' });
+    if (!shopifyProductId)
+      return res
+        .status(400)
+        .json({ error: 'Shopify Product ID not stored in DB.' });
 
     const productUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}.json`;
 
@@ -989,7 +855,8 @@ export const updateProductData = async (req, res) => {
       shopifyApiKey,
       shopifyAccessToken
     );
-    if (!existingProduct?.product) return res.status(404).json({ error: 'Product not found on Shopify.' });
+    if (!existingProduct?.product)
+      return res.status(404).json({ error: 'Product not found on Shopify.' });
 
     const variantCombinations = generateVariantCombinations(parsedOptions);
     const dbVariants = product.variants || [];
@@ -1011,8 +878,10 @@ export const updateProductData = async (req, res) => {
       return {
         id: variantId || undefined,
         option1: variant[parsedOptions[0]?.name] || null,
-        option2: parsedOptions.length > 1 ? variant[parsedOptions[1]?.name] : null,
-        option3: parsedOptions.length > 2 ? variant[parsedOptions[2]?.name] : null,
+        option2:
+          parsedOptions.length > 1 ? variant[parsedOptions[1]?.name] : null,
+        option3:
+          parsedOptions.length > 2 ? variant[parsedOptions[2]?.name] : null,
         price: price.toString(),
         compare_at_price: compare_at_price || null,
         inventory_management: track_quantity ? 'shopify' : null,
@@ -1193,7 +1062,7 @@ export const updateProductData = async (req, res) => {
         },
         userId,
         status: productStatus,
-        options:shopifyOptions
+        options: shopifyOptions,
       },
       { new: true }
     );
@@ -1207,7 +1076,6 @@ export const updateProductData = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -1907,14 +1775,143 @@ export const getPromotionProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// export const updateImages = async (req, res) => {
+//   const { id } = req.params;
+//   const imageUrls = req.body.images;
+
+//   try {
+//     const product = await listingModel.findOne({ id });
+//     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+    // const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    // if (!shopifyConfiguration)
+    //   return res.status(404).json({ error: 'Shopify configuration not found.' });
+
+    // const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
+
+//     if (!imageUrls || imageUrls.length === 0) {
+//       return res.status(400).json({ error: 'No images provided to update.' });
+//     }
+
+//     // Handle product images
+//     const imagesData = imageUrls.map((url, index) => ({
+//       src: url,
+//       position: index + 1,
+//       alt: `Image ${index + 1}`,
+//     }));
+
+//     const updatedProduct = await listingModel.findOneAndUpdate(
+//       { id },
+//       { images: imagesData },
+//       { new: true }
+//     );
+
+//     const imagesDataToPush = [];
+
+//     for (let i = 0; i < imageUrls.length; i++) {
+//       const imagePayload = {
+//         image: {
+//           src: imageUrls[i],
+//           alt: `Image ${i + 1}`,
+//           position: i + 1,
+//         },
+//       };
+
+//       const imageUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`;
+
+      // const imageResponse = await shopifyRequest(
+      //   imageUrl,
+      //   'POST',
+      //   imagePayload,
+      //   shopifyApiKey,
+      //   shopifyAccessToken
+      // );
+
+//       if (imageResponse?.image) {
+//         imagesDataToPush.push(imageResponse.image);
+//       }
+//     }
+
+//     // Handle variant images (assuming they are passed as URLs)
+//     const variantImages = req.body.variantImages; // Expect variant images to be URLs in body
+//     const uploadedVariantImages = [];
+
+//     if (variantImages && variantImages.length > 0) {
+//       for (let i = 0; i < variantImages.length; i++) {
+//         const variantImagePayload = {
+//           image: {
+//             src: variantImages[i], // Use URL directly
+//             alt: `Variant Image ${i + 1}`,
+//           },
+//         };
+
+//         const variantImageUploadResponse = await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+//           'POST',
+//           variantImagePayload,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+
+//         if (variantImageUploadResponse?.image) {
+//           uploadedVariantImages.push(variantImageUploadResponse.image);
+//         }
+//       }
+//     }
+
+//     // Update variant image associations
+//     const productResponse = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
+//       'GET',
+//       null,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const variants = productResponse?.product?.variants || [];
+
+//     for (let i = 0; i < variants.length; i++) {
+//       const variant = variants[i];
+//       const image = uploadedVariantImages[i];
+
+//       if (variant && image) {
+//         await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+//           'PUT',
+//           {
+//             variant: {
+//               id: variant.id,
+//               image_id: image.id,
+//             },
+//           },
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+//       }
+//     }
+
+//     res.status(200).json({
+//       message: 'Product and variant images successfully updated.',
+//       product: updatedProduct,
+//       shopifyImages: imagesDataToPush,
+//       variantImages: uploadedVariantImages,
+//     });
+//   } catch (error) {
+//     console.error('Error updating images:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
 export const updateImages = async (req, res) => {
-  const { id } = req.params;
-  const imageUrls = req.body.images;
+  const { id } = req.params; 
+  const imageUrls = req.body.images; 
+
 
   try {
+    
     const product = await listingModel.findOne({ id });
     if (!product) return res.status(404).json({ error: 'Product not found.' });
-
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration)
       return res.status(404).json({ error: 'Shopify configuration not found.' });
@@ -1926,102 +1923,71 @@ export const updateImages = async (req, res) => {
     }
 
     const imagesData = imageUrls.map((url, index) => ({
-      src: url,
-      position: index + 1,
-      alt: `Image ${index + 1}`,
+      src: url, 
+      position: index + 1, 
+      alt: `Image ${index + 1}`, 
     }));
 
     const updatedProduct = await listingModel.findOneAndUpdate(
       { id },
       { images: imagesData },
-      { new: true }
+      { new: true } 
     );
 
-    const imagesDataToPush = [];
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found in database.' });
+    }
 
-    for (let i = 0; i < imageUrls.length; i++) {
+    const shopifyImages = imageUrls.map((url, index) => ({
+      src: url, 
+      alt: `Image ${index + 1}`,  
+      position: index + 1,       
+    }));
+
+    const imagesDataToPush = [];
+    for (let i = 0; i < shopifyImages.length; i++) {
       const imagePayload = {
         image: {
-          src: imageUrls[i],
-          alt: `Image ${i + 1}`,
-          position: i + 1,
-        },
+          src: shopifyImages[i].src,
+          alt: shopifyImages[i].alt,
+          position: shopifyImages[i].position,
+        }
       };
 
       const imageUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`;
 
-      const imageResponse = await shopifyRequest(imageUrl, 'POST', imagePayload, shopifyApiKey, shopifyAccessToken);
-
-      if (imageResponse?.image) {
-        imagesDataToPush.push(imageResponse.image);
-      }
-    }
-
-    const variantImages = req.files?.variantImages
-      ? Array.isArray(req.files.variantImages)
-        ? req.files.variantImages
-        : [req.files.variantImages]
-      : [];
-
-    const uploadedVariantImages = [];
-
-    for (let i = 0; i < variantImages.length; i++) {
-      const variantImagePayload = {
-        image: {
-          src: variantImages[i].path,
-          alt: `Variant Image ${i + 1}`,
-        },
-      };
-
-      const variantImageUploadResponse = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+      const imageResponse = await shopifyRequest(
+        imageUrl,
         'POST',
-        variantImagePayload,
+        imagePayload,
         shopifyApiKey,
         shopifyAccessToken
       );
 
-      if (variantImageUploadResponse?.image) {
-        uploadedVariantImages.push(variantImageUploadResponse.image);
+      if (imageResponse && imageResponse.image) {
+        imagesDataToPush.push({
+          id: imageResponse.image.id,
+          product_id: id,
+          position: imageResponse.image.position,
+          created_at: imageResponse.image.created_at,
+          updated_at: imageResponse.image.updated_at,
+          alt: imageResponse.image.alt,
+          width: imageResponse.image.width,
+          height: imageResponse.image.height,
+          src: imageResponse.image.src,
+        });
       }
     }
 
-    const productResponse = await shopifyRequest(
-      `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
-      'GET',
-      null,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-
-    const variants = productResponse?.product?.variants || [];
-
-    for (let i = 0; i < variants.length; i++) {
-      const variant = variants[i];
-      const image = uploadedVariantImages[i];
-
-      if (variant && image) {
-        await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-          'PUT',
-          {
-            variant: {
-              id: variant.id,
-              image_id: image.id,
-            },
-          },
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-      }
+    if (imagesDataToPush.length > 0) {
+      res.status(200).json({
+        message: 'Product images successfully updated in database and Shopify.',
+        product: updatedProduct,
+        shopifyResponse: imagesDataToPush
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to upload images to Shopify.' });
     }
-
-    res.status(200).json({
-      message: 'Product and variant images successfully updated.',
-      product: updatedProduct,
-      shopifyImages: imagesDataToPush,
-      variantImages: uploadedVariantImages,
-    });
 
   } catch (error) {
     console.error('Error updating images:', error);
