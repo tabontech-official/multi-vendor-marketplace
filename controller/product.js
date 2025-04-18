@@ -341,6 +341,7 @@ export const getProduct = async (req, res) => {
       {
         $project: {
           _id: 1,
+          id: 1,
           title: 1,
           body_html: 1,
           vendor: 1,
@@ -1512,5 +1513,146 @@ export const updateVariantImages = async (req, res) => {
   } catch (error) {
     console.error('Error updating variant images:', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getSingleVariantData = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+
+    const result = await listingModel.aggregate([
+      {
+        $match: {
+          id: productId,
+        },
+      },
+      {
+        $unwind: '$variants',
+      },
+      {
+        $match: {
+          'variants.id': variantId,
+        },
+      },
+      {
+        $project: {
+          'variants.id': 1,
+          'variants.title': 1,
+          'variants.option1': 1,
+          'variants.option2': 1,
+          'variants.option3': 1,
+          'variants.price': 1,
+          'variants.compare_at_price': 1,
+          'variants.inventory_quantity': 1,
+          'variants.sku': 1,
+          'variants.barcode': 1,
+          'variants.weight': 1,
+          'variants.weight_unit': 1,
+          options: {
+            $map: {
+              input: '$options',
+              as: 'option',
+              in: '$$option.name',
+            },
+          },
+          _id: 0,
+        },
+      },
+    ]);
+
+    if (!result.length) {
+      return res.status(404).json({ message: 'Variant not found' });
+    }
+
+    const responseData = {
+      ...result[0].variants,
+      options: result[0].options,
+    };
+
+    return res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Error fetching variant data:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const updateSingleVariant = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    const {
+      price,
+      inventoryQuantity,
+      sku,
+      option1,
+      option2,
+      option3,
+      weight,
+      compareAtPrice,
+      inventoryPolicy,
+    } = req.body;
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration)
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
+
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}/variants/${variantId}.json`;
+
+    const body = {
+      variant: {
+        id: variantId,
+        price,
+        inventory_quantity: inventoryQuantity,
+        sku,
+        option1,
+        option2,
+        option3,
+        weight,
+        compare_at_price: compareAtPrice,
+        inventory_policy: inventoryPolicy,
+      },
+    };
+
+    const updatedVariant = await shopifyRequest(
+      shopifyUrl,
+      'PUT',
+      body,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const updatedProduct = await listingModel.updateOne(
+      { 'variants.variantId': variantId },
+      {
+        $set: {
+          'variants.$.price': price,
+          'variants.$.inventoryQuantity': inventoryQuantity,
+          'variants.$.sku': sku,
+          'variants.$.option1': option1,
+          'variants.$.option2': option2,
+          'variants.$.option3': option3,
+          'variants.$.weight': weight,
+          'variants.$.compareAtPrice': compareAtPrice,
+          'variants.$.inventoryPolicy': inventoryPolicy,
+        },
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Variant updated successfully in both Shopify and the database.',
+      shopifyResponse: updatedVariant,
+      dbResponse: updatedProduct,
+    });
+  } catch (error) {
+    console.error('Error updating variant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating variant.',
+      error: error.message,
+    });
   }
 };

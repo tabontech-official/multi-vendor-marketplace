@@ -15,6 +15,8 @@ import {
   getPromotionProduct,
   updateImages,
   updateVariantImages,
+  getSingleVariantData,
+  updateSingleVariant,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -32,11 +34,12 @@ productRouter.put('/unpublished/:productId', unpublishProduct);
 productRouter.put("/updateProducts/:id",cpUpload, updateProductData);
 productRouter.put("/updateImages/:id", updateImages);
 productRouter.put("/updateVariantImages/:id", updateVariantImages);
-
 productRouter.get('/getProductCount', fetchProductCount);
 productRouter.get('/getProductDataFromShopify/:id', getProductDataFromShopify);
 productRouter.get('/getAllDataForPromotion', getAllProductPromotionStatus);
 productRouter.get('/getPromotionProduct/:userId', getPromotionProduct);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
+productRouter.get('/getSingleVariant/:productId/variants/:variantId' , getSingleVariantData)
+productRouter.put("/updateVariant/:productId/:variantId", updateSingleVariant);
 
 export default productRouter;
