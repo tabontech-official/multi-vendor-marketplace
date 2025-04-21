@@ -162,7 +162,6 @@ export const addUsedEquipments = async (req, res) => {
               }
             }
 
-            
             return {
               option1: variant[parsedOptions[0].name] || null,
               option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
@@ -1576,23 +1575,25 @@ export const updateSingleVariant = async (req, res) => {
     const { productId, variantId } = req.params;
     const {
       price,
-      inventory_quantity: inventoryQuantity,
+      inventory_quantity,
       sku,
       option1,
       option2,
       option3,
       weight,
-      compare_at_price: compareAtPrice,
+      compare_at_price,
+      barcode,
       inventory_policy: inventoryPolicy,
     } = req.body.variant || {};
 
-   
-
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration)
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
 
     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}/variants/${variantId}.json`;
 
@@ -1600,18 +1601,20 @@ export const updateSingleVariant = async (req, res) => {
       variant: {
         id: variantId,
         price: price?.toString(),
-        inventory_quantity: inventoryQuantity,
+        compare_at_price: compare_at_price?.toString(),
+        inventory_quantity,
+        inventory_policy: inventoryPolicy,
+        inventory_management: "shopify", 
         sku,
+        barcode,
         option1,
         option2,
         option3,
         weight,
-        compare_at_price: compareAtPrice?.toString(),
-        inventory_policy: inventoryPolicy,
       },
     };
-
-    console.log("Payload Sent to Shopify:", body);
+    
+    console.log('Payload Sent to Shopify:', body);
 
     const updatedVariant = await shopifyRequest(
       shopifyUrl,
@@ -1620,7 +1623,6 @@ export const updateSingleVariant = async (req, res) => {
       shopifyApiKey,
       shopifyAccessToken
     );
-
 
     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
     const productResponse = await shopifyRequest(
@@ -1642,25 +1644,27 @@ export const updateSingleVariant = async (req, res) => {
             id: variantId,
             price: updatedVariant.variant.price,
             title: updatedVariant.variant.title,
-            inventoryQuantity: updatedVariant.variant.inventory_quantity,
+            inventory_quantity: updatedVariant.variant.inventory_quantity,
             sku: updatedVariant.variant.sku,
             option1: updatedVariant.variant.option1,
             option2: updatedVariant.variant.option2,
             option3: updatedVariant.variant.option3,
             weight: updatedVariant.variant.weight,
-            compareAtPrice: updatedVariant.variant.compare_at_price,
-            inventoryPolicy: updatedVariant.variant.inventory_policy,
+            compare_at_price: updatedVariant.variant.compare_at_price,
+            inventory_management: updatedVariant.variant.inventory_policy,
             productId: updatedVariant.variant.product_id,
+            barcode:updatedVariant.variant.barcode,
             updatedAt: updatedVariant.variant.updated_at,
           },
-          'options': updatedProductOptions,  
+          options: updatedProductOptions,
         },
       }
     );
 
     res.status(200).json({
       success: true,
-      message: 'Variant and options updated successfully in both Shopify and the database.',
+      message:
+        'Variant and options updated successfully in both Shopify and the database.',
       shopifyResponse: updatedVariant,
       dbResponse: updatedProductInDb,
     });
@@ -1673,5 +1677,3 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
-
-
