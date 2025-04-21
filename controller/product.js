@@ -162,12 +162,7 @@ export const addUsedEquipments = async (req, res) => {
               }
             }
 
-            // Alternative approach if variantPrices is an object with option combinations as keys
-            // const variantKey = Object.values(variant).join('-');
-            // if (variantPrices && variantPrices[variantKey]) {
-            //   variantPrice = variantPrices[variantKey];
-            // }
-
+            
             return {
               option1: variant[parsedOptions[0].name] || null,
               option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
@@ -1581,40 +1576,42 @@ export const updateSingleVariant = async (req, res) => {
     const { productId, variantId } = req.params;
     const {
       price,
-      inventoryQuantity,
+      inventory_quantity: inventoryQuantity,
       sku,
       option1,
       option2,
       option3,
       weight,
-      compareAtPrice,
-      inventoryPolicy,
-    } = req.body;
+      compare_at_price: compareAtPrice,
+      inventory_policy: inventoryPolicy,
+    } = req.body.variant || {};
+
+   
+
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration)
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
 
     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}/variants/${variantId}.json`;
 
     const body = {
       variant: {
         id: variantId,
-        price,
+        price: price?.toString(),
         inventory_quantity: inventoryQuantity,
         sku,
         option1,
         option2,
         option3,
         weight,
-        compare_at_price: compareAtPrice,
+        compare_at_price: compareAtPrice?.toString(),
         inventory_policy: inventoryPolicy,
       },
     };
+
+    console.log("Payload Sent to Shopify:", body);
 
     const updatedVariant = await shopifyRequest(
       shopifyUrl,
@@ -1624,28 +1621,48 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    const updatedProduct = await listingModel.updateOne(
-      { 'variants.variantId': variantId },
+
+    const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
+    const productResponse = await shopifyRequest(
+      productUrl,
+      'GET',
+      null,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const updatedProduct = productResponse.product;
+
+    const updatedProductOptions = updatedProduct.options || [];
+    const updatedProductInDb = await listingModel.updateOne(
+      { 'variants.id': variantId },
       {
         $set: {
-          'variants.$.price': price,
-          'variants.$.inventoryQuantity': inventoryQuantity,
-          'variants.$.sku': sku,
-          'variants.$.option1': option1,
-          'variants.$.option2': option2,
-          'variants.$.option3': option3,
-          'variants.$.weight': weight,
-          'variants.$.compareAtPrice': compareAtPrice,
-          'variants.$.inventoryPolicy': inventoryPolicy,
+          'variants.$': {
+            id: variantId,
+            price: updatedVariant.variant.price,
+            title: updatedVariant.variant.title,
+            inventoryQuantity: updatedVariant.variant.inventory_quantity,
+            sku: updatedVariant.variant.sku,
+            option1: updatedVariant.variant.option1,
+            option2: updatedVariant.variant.option2,
+            option3: updatedVariant.variant.option3,
+            weight: updatedVariant.variant.weight,
+            compareAtPrice: updatedVariant.variant.compare_at_price,
+            inventoryPolicy: updatedVariant.variant.inventory_policy,
+            productId: updatedVariant.variant.product_id,
+            updatedAt: updatedVariant.variant.updated_at,
+          },
+          'options': updatedProductOptions,  
         },
       }
     );
 
     res.status(200).json({
       success: true,
-      message: 'Variant updated successfully in both Shopify and the database.',
+      message: 'Variant and options updated successfully in both Shopify and the database.',
       shopifyResponse: updatedVariant,
-      dbResponse: updatedProduct,
+      dbResponse: updatedProductInDb,
     });
   } catch (error) {
     console.error('Error updating variant:', error);
@@ -1656,3 +1673,5 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
+
+

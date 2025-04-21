@@ -237,7 +237,6 @@ export const getFinanceSummary = async (req, res) => {
       );
     };
 
-    // Calculate totals for current month
     let totalIncome = 0;
     let totalSpend = 0;
     currentOrders.forEach((order) => {
@@ -246,7 +245,6 @@ export const getFinanceSummary = async (req, res) => {
       totalSpend += spend;
     });
 
-    // Calculate totals for last year
     let lastYearIncome = 0;
     let lastYearSpend = 0;
     lastYearOrders.forEach((order) => {

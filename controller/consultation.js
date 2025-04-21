@@ -4,8 +4,8 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'medsparecovery@gmail.com',
-    pass: 'vfqm uxah oapw qnka',
+    user: 'aydimarketplace@gmail.com',
+    pass: 'ijeg fypl llry kftw',
   },
   secure: true,
   tls: {
