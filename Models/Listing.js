@@ -35,22 +35,36 @@ const listingSchema = new mongoose.Schema(
         weight: Number,
         weight_unit: String,
         isParent: { type: Boolean, required: true, default: false },
-        image: [
-          {
-            id: String,
-            product_id: String,
-            position: Number,
-            created_at: Date,
-            updated_at: Date,
-            alt: String,
-            width: Number,
-            height: Number,
-            src: String,
-          },
-        ],
+        image_id:String,
+        src:String
+        // image: [
+        //   {
+        //     id: String,
+        //     product_id: String,
+        //     position: Number,
+        //     created_at: Date,
+        //     updated_at: Date,
+        //     alt: String,
+        //     width: Number,
+        //     height: Number,
+        //     src: String,
+        //   },
+        // ],
       },
     ],
-
+    variantImages: [
+      {
+        id: String,
+        alt: String,
+        position: Number,
+        product_id: String,
+        created_at: Date,
+        updated_at: Date,
+        width: Number,
+        height: Number,
+        src: String,
+      }
+  ],
     images: [
       {
         id: String,
