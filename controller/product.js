@@ -1398,7 +1398,7 @@ export const updateImages = async (req, res) => {
     );
 
     const variants = productResponse?.product?.variants || [];
-
+    console.log(variants);
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];
       const image = uploadedVariantImages[i];
@@ -1433,7 +1433,7 @@ export const updateImages = async (req, res) => {
     await listingModel.updateOne(
       { id },
       {
-        variants: productResponse.product.variants,
+        variants: variants,
         variantImages: uploadedVariantImages,
       }
     );
