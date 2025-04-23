@@ -18,6 +18,7 @@ import {
   getSingleVariantData,
   updateSingleVariant,
   getsingleProduct,
+  fetchVariantsWithImages,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -43,4 +44,6 @@ productRouter.delete('/deleteProduct/:id', deleteProduct);
 productRouter.get('/getSingleVariant/:productId/variants/:variantId' , getSingleVariantData)
 productRouter.put("/updateVariant/:productId/:variantId", updateSingleVariant);
 productRouter.get('/getSingleProductForVariants/:productId',getsingleProduct)
+productRouter.get('/fetchvarinatimages/:id',fetchVariantsWithImages)
+
 export default productRouter;

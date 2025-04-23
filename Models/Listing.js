@@ -37,19 +37,6 @@ const listingSchema = new mongoose.Schema(
         isParent: { type: Boolean, required: true, default: false },
         image_id:String,
         src:String
-        // image: [
-        //   {
-        //     id: String,
-        //     product_id: String,
-        //     position: Number,
-        //     created_at: Date,
-        //     updated_at: Date,
-        //     alt: String,
-        //     width: Number,
-        //     height: Number,
-        //     src: String,
-        //   },
-        // ],
       },
     ],
     variantImages: [
