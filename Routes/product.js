@@ -49,6 +49,6 @@ productRouter.put("/updateVariant/:productId/:variantId", updateSingleVariant);
 productRouter.get('/getSingleProductForVariants/:productId',getsingleProduct)
 productRouter.get('/fetchvarinatimages/:id',fetchVariantsWithImages)
 productRouter.post('/addImageGallery',addImagesGallery)
-productRouter.get('/getImageGallery/:userId',getImageGallery)
+productRouter.get('/getImageGallery/:userId/:productId',getImageGallery)
 productRouter.delete('/',deleteImageGallery)
 export default productRouter;

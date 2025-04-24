@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 
 const imageGallerySchema = new mongoose.Schema({
+  productId: {
+    type: String,
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
   },
@@ -15,6 +18,8 @@ const imageGallerySchema = new mongoose.Schema({
       width: Number,
       height: Number,
       src: String,
+      productId: String, // ✅ required for what you're doing
+
     },
   ],
 });

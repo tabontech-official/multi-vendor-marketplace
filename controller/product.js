@@ -1665,6 +1665,43 @@ const transformCloudinaryToShopifyCdn = (url) => {
     return url;
   }
 };
+
+const updateGalleryUrls = async (cloudinaryUrls, productId) => {
+  try {
+    console.log('Cloudinary URLs to update:', cloudinaryUrls);
+    console.log('Product ID to assign (per image):', productId);
+
+    const shopifyCdnUrl = transformCloudinaryToShopifyCdn(cloudinaryUrls[0]);
+
+    const updateResult = await imageGalleryModel.updateMany(
+      {
+        'images.src': { $in: cloudinaryUrls },
+      },
+      {
+        $set: {
+          'images.$[img].src': shopifyCdnUrl,
+          'images.$[img].productId': productId,
+        },
+      },
+      {
+        arrayFilters: [
+          {
+            'img.src': { $in: cloudinaryUrls },
+          },
+        ],
+        multi: true,
+      }
+    );
+
+    console.log('Image and productId update result:', updateResult);
+  } catch (error) {
+    console.error(
+      '❌ Failed to update imageGallery images with productId:',
+      error
+    );
+  }
+};
+
 // export const updateImages = async (req, res) => {
 //   const { id } = req.params;
 //   const imageUrls = req.body.images;
@@ -1801,6 +1838,7 @@ const transformCloudinaryToShopifyCdn = (url) => {
 //     res.status(500).json({ error: error.message });
 //   }
 // };
+
 export const updateImages = async (req, res) => {
   const { id } = req.params;
   const imageUrls = req.body.images;
@@ -1900,15 +1938,32 @@ export const updateImages = async (req, res) => {
         await shopifyRequest(
           `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
           'PUT',
-          { variant: { id: variant.id, image_id: image.id } },
+          {
+            variant: {
+              id: variant.id,
+              image_id: image.id,
+            },
+          },
           shopifyApiKey,
           shopifyAccessToken
         );
 
-        updatedVariants.push({ ...variant, image_id: image.id });
+        updatedVariants.push({
+          ...variant,
+          image_id: image.id,
+        });
       } else {
         updatedVariants.push(variant);
       }
+    }
+
+    const allCloudinaryUrls = [
+      ...imageUrls,
+      ...variantImages.map((img) => img?.url),
+    ].filter((url) => url?.includes('cloudinary.com'));
+    const productId = product.id;
+    if (allCloudinaryUrls.length > 0) {
+      await updateGalleryUrls(allCloudinaryUrls, productId);
     }
 
     const updatedProduct = await listingModel.findOneAndUpdate(
@@ -2334,7 +2389,8 @@ export const addImagesGallery = async (req, res) => {
 };
 
 export const getImageGallery = async (req, res) => {
-  const { userId } = req.params;
+  const { userId, productId } = req.params;
+
   try {
     const result = await imageGalleryModel.aggregate([
       {
@@ -2344,9 +2400,17 @@ export const getImageGallery = async (req, res) => {
       },
       {
         $project: {
+          id: '$_id',
           _id: 0,
-          id: 1,
-          images: 1,
+          images: {
+            $filter: {
+              input: "$images",
+              as: "image",
+              cond: productId && productId !== "null"
+                ? { $eq: ["$$image.productId", productId] }
+                : { $regexMatch: { input: "$$image.src", regex: "^https://res\\.cloudinary\\.com" } }
+            }
+          }
         },
       },
     ]);
@@ -2357,6 +2421,7 @@ export const getImageGallery = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 export const deleteImageGallery = async (req, res) => {
   try {
