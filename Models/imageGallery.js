@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 
 const imageGallerySchema = new mongoose.Schema({
-  id: {
-    type: String,
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
   },
   images: [
     {
