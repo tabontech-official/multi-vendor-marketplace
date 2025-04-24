@@ -6,6 +6,7 @@ import { listingModel } from '../Models/Listing.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import fs from 'fs';
 import csv from 'csv-parser';
+import { imageGalleryModel } from '../Models/imageGallery.js';
 
 // const shopifyRequest = async (url, method, body) => {
 //   const apiKey = process.env.SHOPIFY_API_KEY;
@@ -1511,6 +1512,151 @@ export const getPromotionProduct = async (req, res) => {
   }
 };
 
+// export const updateImages = async (req, res) => {
+//   const { id } = req.params;
+//   const imageUrls = req.body.images;
+//   const variantImages = req.body.variantImages;
+
+//   try {
+//     const product = await listingModel.findOne({ id });
+//     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration)
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfiguration;
+
+//     const imagesData = imageUrls.map((url, index) => ({
+//       src: url,
+//       position: index + 1,
+//       alt: `Image ${index + 1}`,
+//     }));
+
+//     const updatedProduct = await listingModel.findOneAndUpdate(
+//       { id },
+//       { images: imagesData },
+//       { new: true }
+//     );
+
+//     const imagesDataToPush = [];
+
+//     for (let i = 0; i < imageUrls.length; i++) {
+//       const imagePayload = {
+//         image: {
+//           src: imageUrls[i],
+//           alt: `Image ${i + 1}`,
+//           position: i + 1,
+//         },
+//       };
+
+//       const imageUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`;
+
+//       const imageResponse = await shopifyRequest(
+//         imageUrl,
+//         'POST',
+//         imagePayload,
+//         shopifyApiKey,
+//         shopifyAccessToken
+//       );
+
+//       if (imageResponse?.image) {
+//         imagesDataToPush.push(imageResponse.image);
+//       }
+//     }
+
+//     const uploadedVariantImages = [];
+//     if (variantImages && variantImages.length > 0) {
+//       for (let i = 0; i < variantImages.length; i++) {
+//         const variantImageUrl = variantImages[i]?.url;
+
+//         if (variantImageUrl) {
+//           const variantImagePayload = {
+//             image: {
+//               src: variantImageUrl,
+//               alt: `Variant Image ${i + 1}`,
+//             },
+//           };
+
+//           const variantImageUploadResponse = await shopifyRequest(
+//             `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+//             'POST',
+//             variantImagePayload,
+//             shopifyApiKey,
+//             shopifyAccessToken
+//           );
+
+//           if (variantImageUploadResponse?.image) {
+//             uploadedVariantImages.push(variantImageUploadResponse.image);
+//           }
+//         }
+//       }
+//     }
+
+//     const productResponse = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
+//       'GET',
+//       null,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const variants = productResponse?.product?.variants || [];
+//     console.log(variants);
+//     for (let i = 0; i < variants.length; i++) {
+//       const variant = variants[i];
+//       const image = uploadedVariantImages[i];
+
+//       if (variant && image) {
+//         await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+//           'PUT',
+//           {
+//             variant: {
+//               id: variant.id,
+//               image_id: image.id,
+//             },
+//           },
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+//       }
+//     }
+
+//     const updatedVariants = product.variants.map((variant) => {
+//       const uploadedImage = uploadedVariantImages.find(
+//         (img) => img.variantId === variant.id
+//       );
+//       console.log('uploaded images', uploadedImage);
+//       if (uploadedImage) {
+//         variant.image = [{ id: uploadedImage.id }];
+//       }
+//       return variant;
+//     });
+
+//     await listingModel.updateOne(
+//       { id },
+//       {
+//         variants: productResponse.product.variants,
+//         variantImages: uploadedVariantImages,
+//         images:productResponse.product.images
+//       }
+//     );
+//     res.status(200).json({
+//       message: 'Product and variant images successfully updated.',
+//       product: updatedProduct,
+//       shopifyImages: imagesDataToPush,
+//       variantImages: uploadedVariantImages,
+//     });
+//   } catch (error) {
+//     console.error('Error updating images:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const updateImages = async (req, res) => {
   const { id } = req.params;
   const imageUrls = req.body.images;
@@ -1521,26 +1667,13 @@ export const updateImages = async (req, res) => {
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration)
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
 
-    const imagesData = imageUrls.map((url, index) => ({
-      src: url,
-      position: index + 1,
-      alt: `Image ${index + 1}`,
-    }));
-
-    const updatedProduct = await listingModel.findOneAndUpdate(
-      { id },
-      { images: imagesData },
-      { new: true }
-    );
-
+    // 1. Upload Product Images
     const imagesDataToPush = [];
 
     for (let i = 0; i < imageUrls.length; i++) {
@@ -1563,10 +1696,14 @@ export const updateImages = async (req, res) => {
       );
 
       if (imageResponse?.image) {
-        imagesDataToPush.push(imageResponse.image);
+        imagesDataToPush.push({
+          ...imageResponse.image,
+          image_id: imageResponse.image.id, // explicitly add image_id
+        });
       }
     }
 
+    // 2. Upload Variant Images
     const uploadedVariantImages = [];
     if (variantImages && variantImages.length > 0) {
       for (let i = 0; i < variantImages.length; i++) {
@@ -1595,6 +1732,7 @@ export const updateImages = async (req, res) => {
       }
     }
 
+    // 3. Assign image_id to variants on Shopify
     const productResponse = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
       'GET',
@@ -1603,10 +1741,11 @@ export const updateImages = async (req, res) => {
       shopifyAccessToken
     );
 
-    const variants = productResponse?.product?.variants || [];
-    console.log(variants);
-    for (let i = 0; i < variants.length; i++) {
-      const variant = variants[i];
+    const variantsFromShopify = productResponse?.product?.variants || [];
+    const updatedVariants = [];
+
+    for (let i = 0; i < variantsFromShopify.length; i++) {
+      const variant = variantsFromShopify[i];
       const image = uploadedVariantImages[i];
 
       if (variant && image) {
@@ -1622,28 +1761,27 @@ export const updateImages = async (req, res) => {
           shopifyApiKey,
           shopifyAccessToken
         );
+
+        updatedVariants.push({
+          ...variant,
+          image_id: image.id, // save image_id to DB variant
+        });
+      } else {
+        updatedVariants.push(variant);
       }
     }
 
-    const updatedVariants = product.variants.map((variant) => {
-      const uploadedImage = uploadedVariantImages.find(
-        (img) => img.variantId === variant.id
-      );
-      console.log('uploaded images', uploadedImage);
-      if (uploadedImage) {
-        variant.image = [{ id: uploadedImage.id }];
-      }
-      return variant;
-    });
-
-    await listingModel.updateOne(
+    // 4. Update MongoDB
+    const updatedProduct = await listingModel.findOneAndUpdate(
       { id },
       {
-        variants: productResponse.product.variants,
+        images: imagesDataToPush,
         variantImages: uploadedVariantImages,
-        images:productResponse.product.images
-      }
+        variants: updatedVariants,
+      },
+      { new: true }
     );
+
     res.status(200).json({
       message: 'Product and variant images successfully updated.',
       product: updatedProduct,
@@ -1913,7 +2051,8 @@ export const getsingleProduct = async (req, res) => {
         $project: {
           title: 1,
           variants: 1,
-          images:1
+          images:1,
+          variantImages:1
         },
       },
     ]);
@@ -1963,5 +2102,103 @@ export const fetchVariantsWithImages = async (req, res) => {
   } catch (error) {
     console.error('Error fetching variant images:', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+// export const updateImagesGallery = async (req, res) => {
+//   const { id } = req.params;
+//   const imageUrls = req.body.images;
+
+//   try {
+//     const product = await listingModel.findOne({ id });
+//     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+//     const imagesData = imageUrls.map((url, index) => ({
+//       src: url,
+//       position: index + 1,
+//       alt: `Image ${index + 1}`,
+//     }));
+
+//     const updatedProduct = await listingModel.findOneAndUpdate(
+//       { id },
+//       { images: imagesData },
+//       { new: true }
+//     );
+
+//     res.status(200).json({
+//       message: 'Product images successfully updated in DB.',
+//       product: updatedProduct,
+//     });
+//   } catch (error) {
+//     console.error('Error updating images:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+export const addImagesGallery = async (req, res) => {
+  const { id, images: imageUrls } = req.body;
+
+  if (!Array.isArray(imageUrls)) {
+    return res.status(400).json({ error: 'Invalid request. Product ID and images are required.' });
+  }
+
+  try {
+    const imagesData = imageUrls.map((url, index) => ({
+      src: url,
+      position: index + 1,
+      alt: `Image ${index + 1}`,
+    }));
+
+    let product = await imageGalleryModel.findOne({ id });
+
+    if (product) {
+      const updatedImages = [...product.images, ...imagesData];
+
+      product = await imageGalleryModel.findOneAndUpdate(
+        { id },
+        { images: updatedImages },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        message: 'Images appended to existing product.',
+        product,
+      });
+    } else {
+      const newProduct = new imageGalleryModel({
+        id,
+        images: imagesData,
+      });
+
+      await newProduct.save();
+
+      return res.status(201).json({
+        message: 'New product created with images.',
+        product: newProduct,
+      });
+    }
+  } catch (error) {
+    console.error('Error adding images:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const getImageGallery = async (req, res) => {
+  try {
+    const result = await imageGalleryModel.aggregate([
+      {
+        $project: {
+          _id: 0,
+          id: 1,
+          images: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching image gallery:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

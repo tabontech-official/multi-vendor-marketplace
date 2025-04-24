@@ -19,6 +19,8 @@ import {
   updateSingleVariant,
   getsingleProduct,
   fetchVariantsWithImages,
+  addImagesGallery,
+  getImageGallery,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -45,5 +47,6 @@ productRouter.get('/getSingleVariant/:productId/variants/:variantId' , getSingle
 productRouter.put("/updateVariant/:productId/:variantId", updateSingleVariant);
 productRouter.get('/getSingleProductForVariants/:productId',getsingleProduct)
 productRouter.get('/fetchvarinatimages/:id',fetchVariantsWithImages)
-
+productRouter.post('/addImageGallery',addImagesGallery)
+productRouter.get('/getImageGallery',getImageGallery)
 export default productRouter;
