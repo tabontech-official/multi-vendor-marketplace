@@ -2398,7 +2398,22 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               options: product.options,
               userId: userId,
             });
-
+            await imageGalleryModel.create({
+              productId: productId.toString(),
+              userId: userId,
+              images: product.images.map(img => ({
+                id: img.id?.toString(),
+                product_id: img.product_id?.toString(),
+                position: img.position,
+                created_at: img.created_at,
+                updated_at: img.updated_at,
+                alt: img.alt,
+                width: img.width,
+                height: img.height,
+                src: img.src,
+                productId: productId.toString()
+              }))
+            });
             results.push({ success: true, productId, title: product.title });
           } catch (error) {
             console.error(`Error creating product ${handle}:`, error.message);
