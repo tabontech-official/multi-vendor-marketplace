@@ -33,6 +33,6 @@ const storage = new CloudinaryStorage({
   });
     
 
-export  const cpUpload = upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 10 } ,{name:'files',maxCount:10},{ name: 'variantImages', maxCount: 10 }])
+export  const cpUpload = upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 10 } ,{name:'file',maxCount:10},{ name: 'variantImages', maxCount: 10 },{ name: 'files', maxCount: 10 }])
 
 

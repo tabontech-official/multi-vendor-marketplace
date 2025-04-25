@@ -22,11 +22,12 @@ import {
   addImagesGallery,
   getImageGallery,
   deleteImageGallery,
+  addCsvfileForProductFromBody,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
-
+import { Csvuplaods } from '../middleware/multer.js';
 const productRouter = express.Router();
 productRouter.post('/addEquipment',cpUpload, addUsedEquipments);
 productRouter.post('/webhooks/delete', productDelete);
@@ -51,4 +52,6 @@ productRouter.get('/fetchvarinatimages/:id',fetchVariantsWithImages)
 productRouter.post('/addImageGallery',addImagesGallery)
 productRouter.get('/getImageGallery/:userId/:productId',getImageGallery)
 productRouter.delete('/',deleteImageGallery)
+productRouter.post('/upload-csv-body',Csvuplaods,addCsvfileForProductFromBody)
+
 export default productRouter;
