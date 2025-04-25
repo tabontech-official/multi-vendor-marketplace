@@ -57,6 +57,7 @@
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.15",
     "openai": "^4.57.0",
+    "papaparse": "^5.5.2",
     "passport": "^0.7.0",
     "path": "^0.12.7",
     "sharp": "^0.33.5",
