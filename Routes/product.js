@@ -23,6 +23,7 @@ import {
   getImageGallery,
   deleteImageGallery,
   addCsvfileForProductFromBody,
+  updateProductWebhook,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -60,5 +61,6 @@ productRouter.post(
   Csvuplaods,
   addCsvfileForProductFromBody
 );
+productRouter.post('/productUpdateWebhook',updateProductWebhook)
 
 export default productRouter;

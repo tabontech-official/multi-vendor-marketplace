@@ -2562,3 +2562,98 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
+
+export const updateProductWebhook = async (req, res) => {
+  try {
+    const productData = req.body;
+
+    const existingProduct = await listingModel.findOne({ id: productData.id });
+
+    if (existingProduct) {
+      existingProduct.title = productData.title;
+      existingProduct.body_html = productData.body_html;
+      existingProduct.vendor = productData.vendor;
+      existingProduct.product_type = productData.product_type;
+      existingProduct.handle = productData.handle;
+      existingProduct.updated_at = productData.updated_at;
+      existingProduct.published_at = productData.published_at;
+      existingProduct.template_suffix = productData.template_suffix;
+      existingProduct.tags = productData.tags ? productData.tags.split(',').map(tag => tag.trim()) : [];
+      existingProduct.variants = productData.variants.map(variant => ({
+        id: variant.id,
+        title: variant.title,
+        option1: variant.option1,
+        option2: variant.option2,
+        option3: variant.option3,
+        price: variant.price,
+        compare_at_price: variant.compare_at_price,
+        inventory_management: variant.inventory_management,
+        inventory_quantity: variant.inventory_quantity,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        weight: variant.weight,
+        weight_unit: variant.weight_unit,
+        isParent: false, 
+        image_id: variant.image_id,
+        src: null,
+      }));
+      existingProduct.images = productData.images;
+      existingProduct.variantImages = productData.images;
+      existingProduct.options = productData.options.map(option => ({
+        name: option.name,
+        values: option.values,
+      }));
+
+      await existingProduct.save();
+    } else {
+      const newProduct = new listingModel({
+        id: productData.id,
+        title: productData.title,
+        body_html: productData.body_html,
+        vendor: productData.vendor,
+        product_type: productData.product_type,
+        handle: productData.handle,
+        created_at: productData.created_at,
+        updated_at: productData.updated_at,
+        published_at: productData.published_at,
+        template_suffix: productData.template_suffix,
+        tags: productData.tags ? productData.tags.split(',').map(tag => tag.trim()) : [],
+        variants: productData.variants.map(variant => ({
+          id: variant.id,
+          title: variant.title,
+          option1: variant.option1,
+          option2: variant.option2,
+          option3: variant.option3,
+          price: variant.price,
+          compare_at_price: variant.compare_at_price,
+          inventory_management: variant.inventory_management,
+          inventory_quantity: variant.inventory_quantity,
+          sku: variant.sku,
+          barcode: variant.barcode,
+          weight: variant.weight,
+          weight_unit: variant.weight_unit,
+          isParent: false,
+          image_id: variant.image_id,
+          src: null,
+        })),
+        images: productData.images,
+        variantImages: productData.images,
+        options: productData.options.map(option => ({
+          name: option.name,
+          values: option.values,
+        })),
+      });
+
+      await newProduct.save();
+    }
+
+    res.status(200).json({
+      message: 'Product saved/updated successfully in database',
+      productId: productData.id,
+    });
+  } catch (error) {
+    console.error('Error saving/updating product:', error);
+    res.status(500).send('Error saving/updating product');
+  }
+};

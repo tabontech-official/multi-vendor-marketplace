@@ -294,11 +294,10 @@ export const getFinanceSummary = async (req, res) => {
 };
 
 export const getOrderById = async (req, res) => {
-    const { email } = req.params; // Get the email from the request parameters
+    const { email } = req.params;
 
     try {
-        // Use find to fetch all orders associated with the provided email
-        const orders = await orderModel.find({ 'customer.email': email }); // Adjusted to match the structure
+        const orders = await orderModel.find({ 'customer.email': email });
 
         if (orders.length > 0) {
             res.status(200).send({
