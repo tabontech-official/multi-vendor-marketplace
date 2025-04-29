@@ -79,10 +79,10 @@ const productSchema = new mongoose.Schema(
         src: { type: String },
       },
     ],
-    files:[
+    files: [
       {
-        type:String
-      }
+        type: String,
+      },
     ],
 
     metafields: [
@@ -116,7 +116,7 @@ const productSchema = new mongoose.Schema(
       year_manufactured: { type: String },
       training: { type: String },
       description: { type: String },
-      city:{type:String},
+      city: { type: String },
       shopifyId: String,
     },
     business: {
@@ -152,8 +152,7 @@ const productSchema = new mongoose.Schema(
         image: { type: String }, // URL to the uploaded image
         availableToWorkAs: { type: String },
         jobType: { type: String },
-      }
-    
+      },
     ],
     providerListings: [
       {
@@ -164,7 +163,7 @@ const productSchema = new mongoose.Schema(
         typeOfJobOffered: { type: String },
         offeredYearlySalary: { type: Number },
         offeredPositionDescription: { type: String },
-        city:{type:String},
+        city: { type: String },
         image: { type: String }, // Store the image URL
       },
     ],
@@ -195,8 +194,8 @@ const productSchema = new mongoose.Schema(
     },
     expiresAt: { type: Date },
     credit_required: { type: Number },
-    buy_credits:{
-      price:Number
+    buy_credits: {
+      price: Number,
     },
     looking: {
       location: { type: String },

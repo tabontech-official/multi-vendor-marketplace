@@ -16,6 +16,7 @@ import {
   getUserByRole,
   saveShopifyCredentials,
   createShopifyCollection,
+  getSingleUser,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -38,5 +39,6 @@ authRouter.get('/getAllUsers', getAllUsersData);
 authRouter.get('/user/:id', fetchUserData);
 authRouter.get('/getUserByRole/:id', getUserByRole);
 authRouter.post('/addBrandAsset', cpUpload, createShopifyCollection);
+authRouter.get('/getSingleUser/:id', getSingleUser);
 
 export default authRouter;

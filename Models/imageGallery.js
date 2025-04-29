@@ -18,8 +18,7 @@ const imageGallerySchema = new mongoose.Schema({
       width: Number,
       height: Number,
       src: String,
-      productId: String, // ✅ required for what you're doing
-
+      productId: String,
     },
   ],
 });

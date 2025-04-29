@@ -29,7 +29,7 @@ import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import express from 'express';
 import { Csvuplaods } from '../middleware/multer.js';
 const productRouter = express.Router();
-productRouter.post('/addEquipment',cpUpload, addUsedEquipments);
+productRouter.post('/addEquipment', cpUpload, addUsedEquipments);
 productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/holiday', updateAllProductsStatus);
 productRouter.post('/webhook/product/update', productUpdate);
@@ -37,21 +37,28 @@ productRouter.get('/getProduct/:userId', getProduct);
 productRouter.get('/getAllData', getAllProductData);
 productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
-productRouter.put("/updateProducts/:id",cpUpload, updateProductData);
-productRouter.put("/updateImages/:id", updateImages);
-productRouter.put("/updateVariantImages/:id", updateVariantImages);
+productRouter.put('/updateProducts/:id', cpUpload, updateProductData);
+productRouter.put('/updateImages/:id', updateImages);
+productRouter.put('/updateVariantImages/:id', updateVariantImages);
 productRouter.get('/getProductCount', fetchProductCount);
 productRouter.get('/getProductDataFromShopify/:id', getProductDataFromShopify);
 productRouter.get('/getAllDataForPromotion', getAllProductPromotionStatus);
 productRouter.get('/getPromotionProduct/:userId', getPromotionProduct);
 productRouter.delete('/deleteProduct/:id', deleteProduct);
-productRouter.get('/getSingleVariant/:productId/variants/:variantId' , getSingleVariantData)
-productRouter.put("/updateVariant/:productId/:variantId", updateSingleVariant);
-productRouter.get('/getSingleProductForVariants/:productId',getsingleProduct)
-productRouter.get('/fetchvarinatimages/:id',fetchVariantsWithImages)
-productRouter.post('/addImageGallery',addImagesGallery)
-productRouter.get('/getImageGallery/:userId/:productId',getImageGallery)
-productRouter.delete('/',deleteImageGallery)
-productRouter.post('/upload-csv-body',Csvuplaods,addCsvfileForProductFromBody)
+productRouter.get(
+  '/getSingleVariant/:productId/variants/:variantId',
+  getSingleVariantData
+);
+productRouter.put('/updateVariant/:productId/:variantId', updateSingleVariant);
+productRouter.get('/getSingleProductForVariants/:productId', getsingleProduct);
+productRouter.get('/fetchvarinatimages/:id', fetchVariantsWithImages);
+productRouter.post('/addImageGallery', addImagesGallery);
+productRouter.get('/getImageGallery/:userId/:productId', getImageGallery);
+productRouter.delete('/', deleteImageGallery);
+productRouter.post(
+  '/upload-csv-body',
+  Csvuplaods,
+  addCsvfileForProductFromBody
+);
 
 export default productRouter;

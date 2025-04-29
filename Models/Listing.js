@@ -35,8 +35,8 @@ const listingSchema = new mongoose.Schema(
         weight: Number,
         weight_unit: String,
         isParent: { type: Boolean, required: true, default: false },
-        image_id:String,
-        src:String
+        image_id: String,
+        src: String,
       },
     ],
     variantImages: [
@@ -50,8 +50,8 @@ const listingSchema = new mongoose.Schema(
         width: Number,
         height: Number,
         src: String,
-      }
-  ],
+      },
+    ],
     images: [
       {
         id: String,
@@ -110,7 +110,7 @@ const listingSchema = new mongoose.Schema(
       default: 'draft',
     },
     oldPrice: Number,
-    promotionStatus: { type: String,default:"inactive" },
+    promotionStatus: { type: String, default: 'inactive' },
     shopifyId: String,
     promoPrice: String,
     expiresAt: { type: Date },

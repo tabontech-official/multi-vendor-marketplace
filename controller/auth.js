@@ -961,6 +961,7 @@ export const getAllUsersData = async (req, res) => {
           role: 1,
           country: 1,
           city: 1,
+          shopifyId:1
         },
       },
     ]);
@@ -1026,6 +1027,7 @@ export const getUserByRole = async (req, res) => {
           country: 1,
           city: 1,
           userName: 1,
+          shopifyId:1
         },
       },
     ]);
@@ -1155,4 +1157,19 @@ export const getLatestBrandAsset = async (req, res) => {
     ]);
     res.status(200).send(data);
   } catch (error) {}
+};
+
+export const getSingleUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await authModel.findById(id);
+
+    if (user) {
+      res.status(200).json(user);
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
