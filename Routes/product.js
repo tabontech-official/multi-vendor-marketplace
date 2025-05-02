@@ -24,7 +24,8 @@ import {
   deleteImageGallery,
   addCsvfileForProductFromBody,
   updateProductWebhook,
-  updateInventory,
+  updateInventoryPrice,
+  updateInventoryQuantity,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -63,6 +64,7 @@ productRouter.post(
   addCsvfileForProductFromBody
 );
 productRouter.post('/productUpdateWebhook',updateProductWebhook)
-productRouter.put('/updateInventory/:id',updateInventory)
+productRouter.put('/updateInventoryPrice/:id',updateInventoryPrice)
+productRouter.put('/updateInventoryQuantity/:id',updateInventoryQuantity)
 
 export default productRouter;

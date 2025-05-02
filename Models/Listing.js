@@ -32,6 +32,8 @@ const listingSchema = new mongoose.Schema(
         inventory_quantity: Number,
         sku: String,
         barcode: String,
+        location_id:String,
+        inventory_item_id:String,
         weight: Number,
         weight_unit: String,
         isParent: { type: Boolean, required: true, default: false },

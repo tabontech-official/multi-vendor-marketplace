@@ -2481,23 +2481,16 @@ export const updateProductWebhook = async (req, res) => {
 };
 
 
-export const updateInventory = async (req, res) => {
+export const updateInventoryPrice = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      price,
-      compareAtPrice,
-      quantity,
-    } = req.body;
+    const { price, compareAtPrice } = req.body;
 
     const product = await listingModel.findById(id);
-    if (!product)
-      return res.status(404).json({ message: 'Product not found.' });
+    if (!product) return res.status(404).json({ message: 'Product not found.' });
 
     const skuToMatch = product.variants?.[0]?.sku;
-    if (!skuToMatch)
-      return res.status(400).json({ message: 'SKU not found in product variants.' });
-
+    if (!skuToMatch) return res.status(400).json({ message: 'SKU not found in product variants.' });
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration)
@@ -2513,7 +2506,6 @@ export const updateInventory = async (req, res) => {
       if (variant.sku === skuToMatch) {
         variant.price = price;
         variant.compare_at_price = compareAtPrice;
-        variant.inventory_quantity = quantity;
 
         matchedVariants.push(variant);
 
@@ -2522,7 +2514,6 @@ export const updateInventory = async (req, res) => {
             id: variant.id,
             price,
             compare_at_price: compareAtPrice,
-            inventory_quantity: quantity,
             sku: variant.sku,
           },
         };
@@ -2539,10 +2530,99 @@ export const updateInventory = async (req, res) => {
     await product.save();
 
     res.status(200).json({
-      message: `Updated ${matchedVariants.length} variant(s) with SKU: ${skuToMatch}`,
+      message: `Updated price and compare_at_price for ${matchedVariants.length} variant(s).`,
     });
   } catch (error) {
-    console.error('Error in updateInventory:', error);
-    res.status(500).json({ message: 'Server error while updating product.' });
+    console.error('Error in updateInventoryPrice:', error);
+    res.status(500).json({ message: 'Server error while updating price.' });
   }
 };
+
+
+export const updateInventoryQuantity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity } = req.body;
+
+    const product = await listingModel.findById(id);
+    if (!product) return res.status(404).json({ message: 'Product not found.' });
+
+    const skuToMatch = product.variants?.[0]?.sku;
+    if (!skuToMatch) return res.status(400).json({ message: 'SKU not found in product variants.' });
+
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration)
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
+    if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl)
+      return res.status(400).json({ error: 'Missing Shopify credentials for user.' });
+
+    const matchedVariants = [];
+    const shopifyResponses = [];
+
+    for (let variant of product.variants) {
+      if (variant.sku === skuToMatch) {
+        const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+        const variantResponse = await shopifyRequest(variantDetailsUrl, 'GET', null, shopifyApiKey, shopifyAccessToken);
+        const inventoryItemId = variantResponse?.variant?.inventory_item_id;
+
+        if (!inventoryItemId) {
+          return res.status(400).json({ message: 'Missing inventory_item_id for variant.' });
+        }
+
+        const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+        const inventoryLevelsRes = await shopifyRequest(inventoryLevelsUrl, 'GET', null, shopifyApiKey, shopifyAccessToken);
+
+        const currentInventoryLevel = inventoryLevelsRes?.inventory_levels?.[0];
+        if (!currentInventoryLevel) {
+          return res.status(400).json({ message: 'No inventory level found for this item.' });
+        }
+
+        const locationId = currentInventoryLevel.location_id;
+
+        const inventorySetUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`;
+        const inventoryPayload = {
+          location_id: locationId,
+          inventory_item_id: inventoryItemId,
+          available: quantity,
+        };
+
+        const shopifyRes = await shopifyRequest(inventorySetUrl, 'POST', inventoryPayload, shopifyApiKey, shopifyAccessToken);
+
+        // Update variant fields
+        variant.inventory_quantity = quantity;
+        variant.inventory_item_id = inventoryItemId;
+        variant.location_id = locationId;
+
+        matchedVariants.push(variant);
+        shopifyResponses.push({
+          variant_id: variant.id,
+          inventory_item_id: inventoryItemId,
+          location_id: locationId,
+          response: shopifyRes,
+          updatedAt: new Date(),
+        });
+      }
+    }
+
+    if (matchedVariants.length === 0) {
+      return res.status(404).json({ message: `No variants found with SKU: ${skuToMatch}` });
+    }
+
+    // Attach the response to the product (make sure your schema supports this field or ignore this line)
+    product.shopifyResponse = shopifyResponses;
+
+    await product.save();
+
+    res.status(200).json({
+      message: `Updated quantity for ${matchedVariants.length} variant(s).`,
+      shopifyResponse: shopifyResponses,
+    });
+  } catch (error) {
+    console.error('Error in updateInventoryQuantity:', error?.response?.data || error.message);
+    res.status(500).json({ message: 'Server error while updating quantity.' });
+  }
+};
+
+
