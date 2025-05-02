@@ -27,6 +27,8 @@ import {
   updateInventoryPrice,
   updateInventoryQuantity,
   exportProducts,
+  updateInventoryFromCsv,
+  exportInventoryCsv,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -68,5 +70,11 @@ productRouter.post('/productUpdateWebhook',updateProductWebhook)
 productRouter.put('/updateInventoryPrice/:id',updateInventoryPrice)
 productRouter.put('/updateInventoryQuantity/:id',updateInventoryQuantity)
 productRouter.get('/csvEportFile', exportProducts);
+productRouter.get('/csvInventoryEportFile', exportInventoryCsv);
 
+productRouter.post(
+  '/upload-csv-for-inventory',
+  Csvuplaods,
+  updateInventoryFromCsv
+);
 export default productRouter;

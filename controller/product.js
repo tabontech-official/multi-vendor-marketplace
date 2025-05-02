@@ -2746,3 +2746,260 @@ export const exportProducts = async (req, res) => {
   }
 };
 
+
+export const updateInventoryFromCsv = async (req, res) => {
+  const file = req.file;
+  const userId = req.body.userId;
+
+  if (!file || !file.buffer) {
+    return res.status(400).json({ error: 'No file uploaded.' });
+  }
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: 'Invalid or missing userId.' });
+  }
+
+  try {
+    const config = await shopifyConfigurationModel.findOne();
+    if (!config) {
+      return res.status(404).json({ error: 'Shopify config not found.' });
+    }
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+
+    const allRows = [];
+    const stream = Readable.from(file.buffer);
+
+    stream
+      .pipe(csv())
+      .on('data', (row) => {
+        allRows.push(row);
+      })
+      .on('end', async () => {
+        const updateResults = [];
+
+        for (const row of allRows) {
+          const sku = row['Variant SKU']?.trim();
+          const quantity = row['Variant Inventory Qty']?.trim();
+          const price = row['Variant Price']?.trim();
+          const compareAtPrice = row['Variant Compare At Price']?.trim();
+
+          if (!sku) continue;
+
+          const products = await listingModel.find({
+            userId,
+            'variants.sku': sku,
+          });
+
+          if (!products.length) {
+            updateResults.push({ sku, status: 'product_not_found' });
+            continue;
+          }
+
+          for (const product of products) {
+            let variantUpdated = false;
+
+            for (let variant of product.variants) {
+              if (variant.sku !== sku) continue;
+
+              try {
+                console.log(`🔄 Updating SKU: ${sku} (Variant ID: ${variant.id})`);
+
+                if (price || compareAtPrice) {
+                  const pricePayload = {
+                    variant: {
+                      id: variant.id,
+                      ...(price && { price }),
+                      ...(compareAtPrice && { compare_at_price: compareAtPrice }),
+                    },
+                  };
+
+                  console.log(`💰 Updating price for SKU: ${sku}`, pricePayload);
+
+                  await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`,
+                    'PUT',
+                    pricePayload,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+
+                  updateResults.push({
+                    sku,
+                    variantId: variant.id,
+                    status: 'price_updated',
+                  });
+                }
+
+                if (quantity) {
+                  const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+                  const variantResponse = await shopifyRequest(
+                    variantDetailsUrl,
+                    'GET',
+                    null,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+
+                  const inventoryItemId = variantResponse?.variant?.inventory_item_id;
+
+                  if (!inventoryItemId) {
+                    updateResults.push({ sku, status: 'missing_inventory_item_id' });
+                    continue;
+                  }
+
+                  const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+                  const inventoryLevelsRes = await shopifyRequest(
+                    inventoryLevelsUrl,
+                    'GET',
+                    null,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+
+                  const currentInventoryLevel = inventoryLevelsRes?.inventory_levels?.[0];
+
+                  if (!currentInventoryLevel) {
+                    updateResults.push({ sku, status: 'no_inventory_level_found' });
+                    continue;
+                  }
+
+                  const locationId = currentInventoryLevel.location_id;
+
+                  const inventoryPayload = {
+                    location_id: locationId,
+                    inventory_item_id: inventoryItemId,
+                    available: parseInt(quantity),
+                  };
+
+                  console.log(`📦 Updating inventory for SKU: ${sku}`, inventoryPayload);
+
+                  const shopifyRes = await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`,
+                    'POST',
+                    inventoryPayload,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+
+                  variant.inventory_quantity = parseInt(quantity);
+                  variant.inventory_item_id = inventoryItemId;
+                  variant.location_id = locationId;
+
+                  updateResults.push({
+                    sku,
+                    variantId: variant.id,
+                    status: 'quantity_updated',
+                    response: shopifyRes,
+                    updatedAt: new Date(),
+                  });
+                }
+
+                variantUpdated = true;
+              } catch (err) {
+                console.error(`❌ Failed to update SKU: ${sku}`, err.message);
+                updateResults.push({
+                  sku,
+                  variantId: variant.id,
+                  status: 'error',
+                  message: err.message,
+                });
+              }
+            }
+
+            if (variantUpdated) {
+              await product.save();
+            }
+          }
+        }
+
+        return res.status(200).json({
+          message: 'CSV processing completed.',
+          results: updateResults,
+        });
+      });
+  } catch (error) {
+    console.error('🔥 Server error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Unexpected error during CSV update.',
+      error: error?.message || 'Unknown error',
+    });
+  }
+};
+
+
+
+export const exportInventoryCsv = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'Missing userId parameter.' });
+    }
+
+    const products = await listingModel.find({ userId });
+
+    if (!products.length) {
+      return res.status(404).json({ message: 'No products found.' });
+    }
+
+    const config = await shopifyConfigurationModel.findOne();
+    if (!config) return res.status(400).json({ message: 'Shopify config not found.' });
+
+    const { shopifyStoreUrl, shopifyAccessToken, shopifyApiKey } = config;
+
+    const rows = [];
+
+    for (const dbProduct of products) {
+      const shopifyProductId = dbProduct.id;
+      if (!shopifyProductId) continue;
+
+      const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/products/${shopifyProductId}.json`;
+
+      const response = await shopifyRequest(
+        shopifyUrl,
+        'GET',
+        null,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+
+      const product = response?.product;
+      if (!product) continue;
+
+      product.variants.forEach((variant) => {
+        rows.push({
+          'Variant SKU': variant.sku || '',
+          'Variant Price': variant.price || '',
+          'Variant Compare At Price': variant.compare_at_price || '',
+          'Variant Inventory Qty': variant.inventory_quantity || 0,
+        });
+      });
+    }
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No Shopify variant data found.' });
+    }
+
+    const fields = ['Variant SKU', 'Variant Price', 'Variant Compare At Price', 'Variant Inventory Qty'];
+    const parser = new Parser({ fields });
+    const csv = parser.parse(rows);
+
+    const filename = `shopify-variant-inventory-${Date.now()}.csv`;
+    const filePath = path.join(process.cwd(), 'exports', filename);
+
+    fs.writeFileSync(filePath, csv);
+
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        res.status(500).send('Error downloading file');
+      }
+      fs.unlinkSync(filePath); 
+    });
+  } catch (error) {
+    console.error('Export Error:', error);
+    res.status(500).json({ message: 'Server error during export.' });
+  }
+};
