@@ -3158,6 +3158,91 @@ export const updateInventoryFromCsv = async (req, res) => {
   }
 };
 
+// export const exportInventoryCsv = async (req, res) => {
+//   try {
+//     const { userId } = req.query;
+
+//     if (!userId) {
+//       return res.status(400).json({ message: 'Missing userId parameter.' });
+//     }
+
+//     const products = await listingModel.find({ userId });
+
+//     if (!products.length) {
+//       return res.status(404).json({ message: 'No products found.' });
+//     }
+
+//     const config = await shopifyConfigurationModel.findOne();
+//     if (!config)
+//       return res.status(400).json({ message: 'Shopify config not found.' });
+
+//     const { shopifyStoreUrl, shopifyAccessToken, shopifyApiKey } = config;
+
+//     const rows = [];
+
+//     for (const dbProduct of products) {
+//       const shopifyProductId = dbProduct.id;
+//       if (!shopifyProductId) continue;
+
+//       const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/products/${shopifyProductId}.json`;
+
+//       const response = await shopifyRequest(
+//         shopifyUrl,
+//         'GET',
+//         null,
+//         shopifyApiKey,
+//         shopifyAccessToken
+//       );
+
+//       const product = response?.product;
+//       if (!product) continue;
+
+//       product.variants.forEach((variant) => {
+//         rows.push({
+//           'Variant SKU': variant.sku || '',
+//           'Variant Price': variant.price || '',
+//           'Variant Compare At Price': variant.compare_at_price || '',
+//           'Variant Inventory Qty': variant.inventory_quantity || 0,
+//         });
+//       });
+//     }
+
+//     if (rows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: 'No Shopify variant data found.' });
+//     }
+
+//     const fields = [
+//       'Variant SKU',
+//       'Variant Price',
+//       'Variant Compare At Price',
+//       'Variant Inventory Qty',
+//     ];
+//     const parser = new Parser({ fields });
+//     const csv = parser.parse(rows);
+
+//     const filename = `shopify-variant-inventory-${Date.now()}.csv`;
+//     const filePath = path.join(process.cwd(), 'exports', filename);
+
+//     fs.writeFileSync(filePath, csv);
+
+//     res.download(filePath, filename, (err) => {
+//       if (err) {
+//         console.error('Download error:', err);
+//         res.status(500).send('Error downloading file');
+//       }
+//       fs.unlinkSync(filePath);
+//     });
+//   } catch (error) {
+//     console.error('Export Error:', error);
+//     res.status(500).json({ message: 'Server error during export.' });
+//   }
+// };
+
+
+
+
 export const exportInventoryCsv = async (req, res) => {
   try {
     const { userId } = req.query;
@@ -3173,8 +3258,9 @@ export const exportInventoryCsv = async (req, res) => {
     }
 
     const config = await shopifyConfigurationModel.findOne();
-    if (!config)
+    if (!config) {
       return res.status(400).json({ message: 'Shopify config not found.' });
+    }
 
     const { shopifyStoreUrl, shopifyAccessToken, shopifyApiKey } = config;
 
@@ -3208,9 +3294,7 @@ export const exportInventoryCsv = async (req, res) => {
     }
 
     if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No Shopify variant data found.' });
+      return res.status(404).json({ message: 'No Shopify variant data found.' });
     }
 
     const fields = [
@@ -3219,21 +3303,37 @@ export const exportInventoryCsv = async (req, res) => {
       'Variant Compare At Price',
       'Variant Inventory Qty',
     ];
+
     const parser = new Parser({ fields });
     const csv = parser.parse(rows);
 
     const filename = `shopify-variant-inventory-${Date.now()}.csv`;
-    const filePath = path.join(process.cwd(), 'exports', filename);
 
+    // ✅ Detect if running on Vercel
+    const isVercel = process.env.VERCEL === '1';
+
+    // ✅ Set export directory
+    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+
+    // ✅ Create directory if local
+    if (!isVercel && !fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true });
+    }
+
+    const filePath = path.join(exportDir, filename);
+
+    // ✅ Write CSV to file
     fs.writeFileSync(filePath, csv);
 
+    // ✅ Send file as response
     res.download(filePath, filename, (err) => {
       if (err) {
         console.error('Download error:', err);
         res.status(500).send('Error downloading file');
       }
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(filePath); // Clean up file
     });
+
   } catch (error) {
     console.error('Export Error:', error);
     res.status(500).json({ message: 'Server error during export.' });
