@@ -10,6 +10,8 @@ import { imageGalleryModel } from '../Models/imageGallery.js';
 import { Readable } from 'stream';
 import Papa from 'papaparse';
 import { PromoModel } from '../Models/Promotions.js';
+import { Parser } from 'json2csv';
+import path from 'path';
 
 
 
@@ -2590,7 +2592,6 @@ export const updateInventoryQuantity = async (req, res) => {
 
         const shopifyRes = await shopifyRequest(inventorySetUrl, 'POST', inventoryPayload, shopifyApiKey, shopifyAccessToken);
 
-        // Update variant fields
         variant.inventory_quantity = quantity;
         variant.inventory_item_id = inventoryItemId;
         variant.location_id = locationId;
@@ -2610,7 +2611,6 @@ export const updateInventoryQuantity = async (req, res) => {
       return res.status(404).json({ message: `No variants found with SKU: ${skuToMatch}` });
     }
 
-    // Attach the response to the product (make sure your schema supports this field or ignore this line)
     product.shopifyResponse = shopifyResponses;
 
     await product.save();
@@ -2625,4 +2625,124 @@ export const updateInventoryQuantity = async (req, res) => {
   }
 };
 
+
+export const exportProducts = async (req, res) => {
+  try {
+    const { userId, type, page = 1, limit = 10 } = req.query;
+
+    if (!userId || !type) {
+      return res.status(400).json({ message: 'Missing required query parameters.' });
+    }
+
+    const query = { userId: userId };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const products = type === 'current'
+      ? await listingModel.find(query).skip(skip).limit(parseInt(limit))
+      : await listingModel.find(query);
+
+    if (!products.length) {
+      return res.status(404).json({ message: 'No products found.' });
+    }
+
+    const config = await shopifyConfigurationModel.findOne();
+    if (!config) return res.status(400).json({ message: 'Shopify config not found.' });
+
+    const { shopifyStoreUrl, shopifyAccessToken } = config;
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': shopifyAccessToken
+    };
+
+    const rows = [];
+
+    for (const dbProduct of products) {
+      const shopifyProductId = dbProduct.id; 
+      if (!shopifyProductId) continue;
+
+      const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/products/${shopifyProductId}.json`;
+
+      const response = await shopifyRequest(shopifyUrl, 'GET', null, config.shopifyApiKey, shopifyAccessToken);
+      const product = response?.product;
+      if (!product) continue;
+
+      product.variants.forEach((variant, index) => {
+        rows.push({
+          Handle: product.handle || '',
+          Title: index === 0 ? product.title : '',
+          'Body (HTML)': index === 0 ? product.body_html || '' : '',
+          Vendor: index === 0 ? product.vendor || '' : '',
+          'Product Category': '',
+          Type: index === 0 ? product.product_type || '' : '',
+          Tags: index === 0 ? (product.tags || '').toString() : '',
+          Published: index === 0 ? String(product.published_at !== null).toUpperCase() : '',
+          'Option1 Name': product.options?.[0]?.name || '',
+          'Option1 Value': variant.option1 || '',
+          'Option2 Name': product.options?.[1]?.name || '',
+          'Option2 Value': variant.option2 || '',
+          'Option3 Name': product.options?.[2]?.name || '',
+          'Option3 Value': variant.option3 || '',
+          'Variant SKU': variant.sku || '',
+          'Variant Grams': variant.grams || 0,
+          'Variant Inventory Tracker': variant.inventory_management || 'shopify',
+          'Variant Inventory Qty': variant.inventory_quantity || 0,
+          'Variant Inventory Policy': variant.inventory_policy || 'deny',
+          'Variant Fulfillment Service': variant.fulfillment_service || 'manual',
+          'Variant Price': variant.price || '',
+          'Variant Compare At Price': variant.compare_at_price || '',
+          'Variant Requires Shipping': variant.requires_shipping ? 'TRUE' : 'FALSE',
+          'Variant Taxable': variant.taxable ? 'TRUE' : 'FALSE',
+          'Variant Barcode': variant.barcode || '',
+          'Image Src': product.image?.src || '',
+          'Image Position': index + 1,
+          'Image Alt Text': '',
+          'Gift Card': 'FALSE',
+          'SEO Title': '',
+          'SEO Description': '',
+          'Google Shopping / Google Product Category': '',
+          'Google Shopping / Gender': '',
+          'Google Shopping / Age Group': '',
+          'Google Shopping / MPN': '',
+          'Google Shopping / Condition': '',
+          'Google Shopping / Custom Product': '',
+          'Google Shopping / Custom Label 0': '',
+          'Google Shopping / Custom Label 1': '',
+          'Google Shopping / Custom Label 2': '',
+          'Google Shopping / Custom Label 3': '',
+          'Google Shopping / Custom Label 4': '',
+          'Variant Image': variant.image_id ? product.images.find(img => img.id === variant.image_id)?.src : '',
+          'Variant Weight Unit': variant.weight_unit || 'kg',
+          'Variant Tax Code': '',
+          'Cost per item': '',
+          Status: product.status || 'active'
+        });
+      });
+    }
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No Shopify product data found.' });
+    }
+
+    const fields = Object.keys(rows[0]);
+    const parser = new Parser({ fields });
+    const csv = parser.parse(rows);
+
+    const filename = `shopify-products-${type}-${Date.now()}.csv`;
+    const filePath = path.join(process.cwd(), 'exports', filename);
+
+    fs.writeFileSync(filePath, csv);
+
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        res.status(500).send('Error downloading file');
+      }
+      fs.unlinkSync(filePath); 
+    });
+
+  } catch (error) {
+    console.error('Export Error:', error);
+    res.status(500).json({ message: 'Server error during export.' });
+  }
+};
 
