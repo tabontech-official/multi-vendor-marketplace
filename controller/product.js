@@ -2481,199 +2481,245 @@ export const updateProductWebhook = async (req, res) => {
   }
 };
 
+// export const updateInventoryPrice = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { price, compareAtPrice } = req.body;
+
+//     const product = await listingModel.findById(id);
+//     if (!product)
+//       return res.status(404).json({ message: 'Product not found.' });
+
+//     const skuToMatch = product.variants?.[0]?.sku;
+//     if (!skuToMatch)
+//       return res
+//         .status(400)
+//         .json({ message: 'SKU not found in product variants.' });
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration)
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfiguration;
+//     if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl)
+//       return res
+//         .status(400)
+//         .json({ error: 'Missing Shopify credentials for user.' });
+
+//     let matchedVariants = [];
+
+//     for (let variant of product.variants) {
+//       if (variant.sku === skuToMatch) {
+//         variant.price = price;
+//         variant.compare_at_price = compareAtPrice;
+
+//         matchedVariants.push(variant);
+
+//         const updatedVariantPayload = {
+//           variant: {
+//             id: variant.id,
+//             price,
+//             compare_at_price: compareAtPrice,
+//             sku: variant.sku,
+//           },
+//         };
+
+//         const updateVariantUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+//         await shopifyRequest(
+//           updateVariantUrl,
+//           'PUT',
+//           updatedVariantPayload,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+//       }
+//     }
+
+//     if (matchedVariants.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: `No variants found with SKU: ${skuToMatch}` });
+//     }
+
+//     await product.save();
+
+//     res.status(200).json({
+//       message: `Updated price and compare_at_price for ${matchedVariants.length} variant(s).`,
+//     });
+//   } catch (error) {
+//     console.error('Error in updateInventoryPrice:', error);
+//     res.status(500).json({ message: 'Server error while updating price.' });
+//   }
+// };
+
 export const updateInventoryPrice = async (req, res) => {
   try {
-    const { id } = req.params;
+    const variantId = req.params.id; 
     const { price, compareAtPrice } = req.body;
 
-    const product = await listingModel.findById(id);
-    if (!product)
-      return res.status(404).json({ message: 'Product not found.' });
-
-    const skuToMatch = product.variants?.[0]?.sku;
-    if (!skuToMatch)
-      return res
-        .status(400)
-        .json({ message: 'SKU not found in product variants.' });
-
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration)
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
-
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
-    if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl)
-      return res
-        .status(400)
-        .json({ error: 'Missing Shopify credentials for user.' });
-
-    let matchedVariants = [];
-
-    for (let variant of product.variants) {
-      if (variant.sku === skuToMatch) {
-        variant.price = price;
-        variant.compare_at_price = compareAtPrice;
-
-        matchedVariants.push(variant);
-
-        const updatedVariantPayload = {
-          variant: {
-            id: variant.id,
-            price,
-            compare_at_price: compareAtPrice,
-            sku: variant.sku,
-          },
-        };
-
-        const updateVariantUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
-        await shopifyRequest(
-          updateVariantUrl,
-          'PUT',
-          updatedVariantPayload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-      }
+    const product = await listingModel.findOne({ "variants.id": variantId });
+    if (!product) {
+      return res.status(404).json({ message: "Product with this variant not found." });
     }
 
-    if (matchedVariants.length === 0) {
-      return res
-        .status(404)
-        .json({ message: `No variants found with SKU: ${skuToMatch}` });
+    const variant = product.variants.find(v => v.id === variantId);
+    if (!variant) {
+      return res.status(404).json({ message: "Variant not found." });
     }
+
+    variant.price = price;
+    variant.compare_at_price = compareAtPrice;
+
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(404).json({ error: "Shopify configuration not found." });
+    }
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+    const updatedPayload = {
+      variant: {
+        id: variant.id,
+        price,
+        compare_at_price: compareAtPrice,
+        sku: variant.sku,
+      },
+    };
+
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+    await shopifyRequest(shopifyUrl, "PUT", updatedPayload, shopifyApiKey, shopifyAccessToken);
 
     await product.save();
 
-    res.status(200).json({
-      message: `Updated price and compare_at_price for ${matchedVariants.length} variant(s).`,
-    });
+    res.status(200).json({ message: "Variant price and compare_at_price updated successfully." });
   } catch (error) {
-    console.error('Error in updateInventoryPrice:', error);
-    res.status(500).json({ message: 'Server error while updating price.' });
+    console.error("Error in updateInventoryPrice:", error);
+    res.status(500).json({ message: "Server error while updating price." });
   }
 };
 
-export const updateInventoryQuantity = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { quantity } = req.body;
+// export const updateInventoryQuantity = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { quantity } = req.body;
 
-    const product = await listingModel.findById(id);
-    if (!product)
-      return res.status(404).json({ message: 'Product not found.' });
+//     const product = await listingModel.findById(id);
+//     if (!product)
+//       return res.status(404).json({ message: 'Product not found.' });
 
-    const skuToMatch = product.variants?.[0]?.sku;
-    if (!skuToMatch)
-      return res
-        .status(400)
-        .json({ message: 'SKU not found in product variants.' });
+//     const skuToMatch = product.variants?.[0]?.sku;
+//     if (!skuToMatch)
+//       return res
+//         .status(400)
+//         .json({ message: 'SKU not found in product variants.' });
 
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration)
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration)
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
-    if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl)
-      return res
-        .status(400)
-        .json({ error: 'Missing Shopify credentials for user.' });
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfiguration;
+//     if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl)
+//       return res
+//         .status(400)
+//         .json({ error: 'Missing Shopify credentials for user.' });
 
-    const matchedVariants = [];
-    const shopifyResponses = [];
+//     const matchedVariants = [];
+//     const shopifyResponses = [];
 
-    for (let variant of product.variants) {
-      if (variant.sku === skuToMatch) {
-        const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
-        const variantResponse = await shopifyRequest(
-          variantDetailsUrl,
-          'GET',
-          null,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-        const inventoryItemId = variantResponse?.variant?.inventory_item_id;
+//     for (let variant of product.variants) {
+//       if (variant.sku === skuToMatch) {
+//         const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+//         const variantResponse = await shopifyRequest(
+//           variantDetailsUrl,
+//           'GET',
+//           null,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+//         const inventoryItemId = variantResponse?.variant?.inventory_item_id;
 
-        if (!inventoryItemId) {
-          return res
-            .status(400)
-            .json({ message: 'Missing inventory_item_id for variant.' });
-        }
+//         if (!inventoryItemId) {
+//           return res
+//             .status(400)
+//             .json({ message: 'Missing inventory_item_id for variant.' });
+//         }
 
-        const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
-        const inventoryLevelsRes = await shopifyRequest(
-          inventoryLevelsUrl,
-          'GET',
-          null,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
+//         const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+//         const inventoryLevelsRes = await shopifyRequest(
+//           inventoryLevelsUrl,
+//           'GET',
+//           null,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
 
-        const currentInventoryLevel = inventoryLevelsRes?.inventory_levels?.[0];
-        if (!currentInventoryLevel) {
-          return res
-            .status(400)
-            .json({ message: 'No inventory level found for this item.' });
-        }
+//         const currentInventoryLevel = inventoryLevelsRes?.inventory_levels?.[0];
+//         if (!currentInventoryLevel) {
+//           return res
+//             .status(400)
+//             .json({ message: 'No inventory level found for this item.' });
+//         }
 
-        const locationId = currentInventoryLevel.location_id;
+//         const locationId = currentInventoryLevel.location_id;
 
-        const inventorySetUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`;
-        const inventoryPayload = {
-          location_id: locationId,
-          inventory_item_id: inventoryItemId,
-          available: quantity,
-        };
+//         const inventorySetUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`;
+//         const inventoryPayload = {
+//           location_id: locationId,
+//           inventory_item_id: inventoryItemId,
+//           available: quantity,
+//         };
 
-        const shopifyRes = await shopifyRequest(
-          inventorySetUrl,
-          'POST',
-          inventoryPayload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
+//         const shopifyRes = await shopifyRequest(
+//           inventorySetUrl,
+//           'POST',
+//           inventoryPayload,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
 
-        variant.inventory_quantity = quantity;
-        variant.inventory_item_id = inventoryItemId;
-        variant.location_id = locationId;
+//         variant.inventory_quantity = quantity;
+//         variant.inventory_item_id = inventoryItemId;
+//         variant.location_id = locationId;
 
-        matchedVariants.push(variant);
-        shopifyResponses.push({
-          variant_id: variant.id,
-          inventory_item_id: inventoryItemId,
-          location_id: locationId,
-          response: shopifyRes,
-          updatedAt: new Date(),
-        });
-      }
-    }
+//         matchedVariants.push(variant);
+//         shopifyResponses.push({
+//           variant_id: variant.id,
+//           inventory_item_id: inventoryItemId,
+//           location_id: locationId,
+//           response: shopifyRes,
+//           updatedAt: new Date(),
+//         });
+//       }
+//     }
 
-    if (matchedVariants.length === 0) {
-      return res
-        .status(404)
-        .json({ message: `No variants found with SKU: ${skuToMatch}` });
-    }
+//     if (matchedVariants.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: `No variants found with SKU: ${skuToMatch}` });
+//     }
 
-    product.shopifyResponse = shopifyResponses;
+//     product.shopifyResponse = shopifyResponses;
 
-    await product.save();
+//     await product.save();
 
-    res.status(200).json({
-      message: `Updated quantity for ${matchedVariants.length} variant(s).`,
-      shopifyResponse: shopifyResponses,
-    });
-  } catch (error) {
-    console.error(
-      'Error in updateInventoryQuantity:',
-      error?.response?.data || error.message
-    );
-    res.status(500).json({ message: 'Server error while updating quantity.' });
-  }
-};
+//     res.status(200).json({
+//       message: `Updated quantity for ${matchedVariants.length} variant(s).`,
+//       shopifyResponse: shopifyResponses,
+//     });
+//   } catch (error) {
+//     console.error(
+//       'Error in updateInventoryQuantity:',
+//       error?.response?.data || error.message
+//     );
+//     res.status(500).json({ message: 'Server error while updating quantity.' });
+//   }
+// };
 
 // export const exportProducts = async (req, res) => {
 //   try {
@@ -2816,12 +2862,98 @@ export const updateInventoryQuantity = async (req, res) => {
 // };
 
 
+export const updateInventoryQuantity = async (req, res) => {
+  try {
+    const variantId = req.params.id; 
+    const { quantity } = req.body;
+
+    const product = await listingModel.findOne({ "variants.id": variantId });
+    if (!product) {
+      return res.status(404).json({ message: "Product with this variant not found." });
+    }
+
+    const variant = product.variants.find(v => v.id === variantId);
+    if (!variant) {
+      return res.status(404).json({ message: "Variant not found." });
+    }
+
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(404).json({ error: "Shopify configuration not found." });
+    }
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+    const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+    const variantResponse = await shopifyRequest(
+      variantDetailsUrl,
+      "GET",
+      null,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const inventoryItemId = variantResponse?.variant?.inventory_item_id;
+    if (!inventoryItemId) {
+      return res.status(400).json({ message: "Missing inventory_item_id for variant." });
+    }
+
+    const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+    const inventoryLevelsRes = await shopifyRequest(
+      inventoryLevelsUrl,
+      "GET",
+      null,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const currentInventoryLevel = inventoryLevelsRes?.inventory_levels?.[0];
+    if (!currentInventoryLevel) {
+      return res.status(400).json({ message: "No inventory level found for this item." });
+    }
+
+    const locationId = currentInventoryLevel.location_id;
+
+    const inventorySetUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`;
+    const inventoryPayload = {
+      location_id: locationId,
+      inventory_item_id: inventoryItemId,
+      available: quantity,
+    };
+
+    const shopifyRes = await shopifyRequest(
+      inventorySetUrl,
+      "POST",
+      inventoryPayload,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    variant.inventory_quantity = quantity;
+    variant.inventory_item_id = inventoryItemId;
+    variant.location_id = locationId;
+
+    await product.save();
+
+    res.status(200).json({
+      message: "Inventory quantity updated successfully.",
+      shopifyResponse: shopifyRes,
+    });
+  } catch (error) {
+    console.error("Error in updateInventoryQuantity:", error?.response?.data || error.message);
+    res.status(500).json({ message: "Server error while updating quantity." });
+  }
+};
+
+
 export const exportProducts = async (req, res) => {
   try {
     const { userId, type, page = 1, limit = 10 } = req.query;
 
     if (!userId || !type) {
-      return res.status(400).json({ message: 'Missing required query parameters.' });
+      return res
+        .status(400)
+        .json({ message: 'Missing required query parameters.' });
     }
 
     const query = { userId: userId };
@@ -2871,7 +3003,10 @@ export const exportProducts = async (req, res) => {
           'Product Category': '',
           Type: index === 0 ? product.product_type || '' : '',
           Tags: index === 0 ? (product.tags || '').toString() : '',
-          Published: index === 0 ? String(product.published_at !== null).toUpperCase() : '',
+          Published:
+            index === 0
+              ? String(product.published_at !== null).toUpperCase()
+              : '',
           'Option1 Name': product.options?.[0]?.name || '',
           'Option1 Value': variant.option1 || '',
           'Option2 Name': product.options?.[1]?.name || '',
@@ -2880,13 +3015,17 @@ export const exportProducts = async (req, res) => {
           'Option3 Value': variant.option3 || '',
           'Variant SKU': variant.sku || '',
           'Variant Grams': variant.grams || 0,
-          'Variant Inventory Tracker': variant.inventory_management || 'shopify',
+          'Variant Inventory Tracker':
+            variant.inventory_management || 'shopify',
           'Variant Inventory Qty': variant.inventory_quantity || 0,
           'Variant Inventory Policy': variant.inventory_policy || 'deny',
-          'Variant Fulfillment Service': variant.fulfillment_service || 'manual',
+          'Variant Fulfillment Service':
+            variant.fulfillment_service || 'manual',
           'Variant Price': variant.price || '',
           'Variant Compare At Price': variant.compare_at_price || '',
-          'Variant Requires Shipping': variant.requires_shipping ? 'TRUE' : 'FALSE',
+          'Variant Requires Shipping': variant.requires_shipping
+            ? 'TRUE'
+            : 'FALSE',
           'Variant Taxable': variant.taxable ? 'TRUE' : 'FALSE',
           'Variant Barcode': variant.barcode || '',
           'Image Src': product.image?.src || '',
@@ -2918,7 +3057,9 @@ export const exportProducts = async (req, res) => {
     }
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'No Shopify product data found.' });
+      return res
+        .status(404)
+        .json({ message: 'No Shopify product data found.' });
     }
 
     const fields = Object.keys(rows[0]);
@@ -2927,30 +3068,24 @@ export const exportProducts = async (req, res) => {
 
     const filename = `shopify-products-${type}-${Date.now()}.csv`;
 
-    // ✅ Detect if running on Vercel
     const isVercel = process.env.VERCEL === '1';
 
-    // ✅ Set export directory based on environment
     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
 
-    // ✅ Create local directory if needed
     if (!isVercel && !fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
 
     const filePath = path.join(exportDir, filename);
 
-    // ✅ Write CSV file
     fs.writeFileSync(filePath, csv);
 
-    // ✅ Send file as response
     res.download(filePath, filename, (err) => {
       if (err) {
         console.error('Download error:', err);
         res.status(500).send('Error downloading file');
       }
 
-      // ✅ Clean up file afterward
       fs.unlinkSync(filePath);
     });
   } catch (error) {
@@ -3240,9 +3375,6 @@ export const updateInventoryFromCsv = async (req, res) => {
 //   }
 // };
 
-
-
-
 export const exportInventoryCsv = async (req, res) => {
   try {
     const { userId } = req.query;
@@ -3294,7 +3426,9 @@ export const exportInventoryCsv = async (req, res) => {
     }
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'No Shopify variant data found.' });
+      return res
+        .status(404)
+        .json({ message: 'No Shopify variant data found.' });
     }
 
     const fields = [
@@ -3309,33 +3443,109 @@ export const exportInventoryCsv = async (req, res) => {
 
     const filename = `shopify-variant-inventory-${Date.now()}.csv`;
 
-    // ✅ Detect if running on Vercel
     const isVercel = process.env.VERCEL === '1';
 
-    // ✅ Set export directory
     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
 
-    // ✅ Create directory if local
     if (!isVercel && !fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
     }
 
     const filePath = path.join(exportDir, filename);
 
-    // ✅ Write CSV to file
     fs.writeFileSync(filePath, csv);
 
-    // ✅ Send file as response
     res.download(filePath, filename, (err) => {
       if (err) {
         console.error('Download error:', err);
         res.status(500).send('Error downloading file');
       }
-      fs.unlinkSync(filePath); // Clean up file
+      fs.unlinkSync(filePath);
     });
-
   } catch (error) {
     console.error('Export Error:', error);
     res.status(500).json({ message: 'Server error during export.' });
+  }
+};
+
+export const getAllVariants = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required.' });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const objectIdUserId = new mongoose.Types.ObjectId(userId);
+
+    const products = await listingModel.aggregate([
+      {
+        $match: {
+          userId: objectIdUserId,
+        },
+      },
+      {
+        $sort: { created_at: -1 },
+      },
+      {
+        $project: {
+          variants: 1,
+          status: 1,
+          shopifyId: 1,
+          productId: "$_id",
+        },
+      },
+      {
+        $unwind: "$variants",
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: ["$variants", {
+              productId: "$productId",
+              status: "$status",
+              shopifyId: "$shopifyId"
+            }]
+          }
+        }
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+
+    const productCount = await listingModel.aggregate([
+      { $match: { userId: objectIdUserId } },
+      { $project: { variantsCount: { $size: "$variants" } } },
+      {
+        $group: {
+          _id: null,
+          totalVariants: { $sum: "$variantsCount" },
+        },
+      },
+    ]);
+
+    const totalVariants = productCount[0]?.totalVariants || 0;
+
+    if (products.length === 0) {
+      return res.status(404).json({ message: "No variants found for this user." });
+    }
+
+    res.status(200).json({
+      variants: products,
+      currentPage: page,
+      totalPages: Math.ceil(totalVariants / limit),
+      totalVariants,
+    });
+  } catch (error) {
+    console.error("Error in getAllVariants function:", error);
+    res.status(500).json({ error: error.message });
   }
 };

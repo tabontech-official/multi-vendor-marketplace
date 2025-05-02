@@ -29,6 +29,7 @@ import {
   exportProducts,
   updateInventoryFromCsv,
   exportInventoryCsv,
+  getAllVariants,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -40,6 +41,8 @@ productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/holiday', updateAllProductsStatus);
 productRouter.post('/webhook/product/update', productUpdate);
 productRouter.get('/getProduct/:userId', getProduct);
+productRouter.get('/getAllVariants/:userId', getAllVariants);
+
 productRouter.get('/getAllData', getAllProductData);
 productRouter.put('/publishedProduct/:productId', publishProduct);
 productRouter.put('/unpublished/:productId', unpublishProduct);
