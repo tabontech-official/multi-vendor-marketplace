@@ -2557,17 +2557,19 @@ export const updateProductWebhook = async (req, res) => {
 
 export const updateInventoryPrice = async (req, res) => {
   try {
-    const variantId = req.params.id; 
+    const variantId = req.params.id;
     const { price, compareAtPrice } = req.body;
 
-    const product = await listingModel.findOne({ "variants.id": variantId });
+    const product = await listingModel.findOne({ 'variants.id': variantId });
     if (!product) {
-      return res.status(404).json({ message: "Product with this variant not found." });
+      return res
+        .status(404)
+        .json({ message: 'Product with this variant not found.' });
     }
 
-    const variant = product.variants.find(v => v.id === variantId);
+    const variant = product.variants.find((v) => v.id === variantId);
     if (!variant) {
-      return res.status(404).json({ message: "Variant not found." });
+      return res.status(404).json({ message: 'Variant not found.' });
     }
 
     variant.price = price;
@@ -2575,10 +2577,13 @@ export const updateInventoryPrice = async (req, res) => {
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
     if (!shopifyConfig) {
-      return res.status(404).json({ error: "Shopify configuration not found." });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfig;
 
     const updatedPayload = {
       variant: {
@@ -2590,14 +2595,22 @@ export const updateInventoryPrice = async (req, res) => {
     };
 
     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
-    await shopifyRequest(shopifyUrl, "PUT", updatedPayload, shopifyApiKey, shopifyAccessToken);
+    await shopifyRequest(
+      shopifyUrl,
+      'PUT',
+      updatedPayload,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
 
     await product.save();
 
-    res.status(200).json({ message: "Variant price and compare_at_price updated successfully." });
+    res.status(200).json({
+      message: 'Variant price and compare_at_price updated successfully.',
+    });
   } catch (error) {
-    console.error("Error in updateInventoryPrice:", error);
-    res.status(500).json({ message: "Server error while updating price." });
+    console.error('Error in updateInventoryPrice:', error);
+    res.status(500).json({ message: 'Server error while updating price.' });
   }
 };
 
@@ -2861,33 +2874,37 @@ export const updateInventoryPrice = async (req, res) => {
 //   }
 // };
 
-
 export const updateInventoryQuantity = async (req, res) => {
   try {
-    const variantId = req.params.id; 
+    const variantId = req.params.id;
     const { quantity } = req.body;
 
-    const product = await listingModel.findOne({ "variants.id": variantId });
+    const product = await listingModel.findOne({ 'variants.id': variantId });
     if (!product) {
-      return res.status(404).json({ message: "Product with this variant not found." });
+      return res
+        .status(404)
+        .json({ message: 'Product with this variant not found.' });
     }
 
-    const variant = product.variants.find(v => v.id === variantId);
+    const variant = product.variants.find((v) => v.id === variantId);
     if (!variant) {
-      return res.status(404).json({ message: "Variant not found." });
+      return res.status(404).json({ message: 'Variant not found.' });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
     if (!shopifyConfig) {
-      return res.status(404).json({ error: "Shopify configuration not found." });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfig;
 
     const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
     const variantResponse = await shopifyRequest(
       variantDetailsUrl,
-      "GET",
+      'GET',
       null,
       shopifyApiKey,
       shopifyAccessToken
@@ -2895,13 +2912,15 @@ export const updateInventoryQuantity = async (req, res) => {
 
     const inventoryItemId = variantResponse?.variant?.inventory_item_id;
     if (!inventoryItemId) {
-      return res.status(400).json({ message: "Missing inventory_item_id for variant." });
+      return res
+        .status(400)
+        .json({ message: 'Missing inventory_item_id for variant.' });
     }
 
     const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
     const inventoryLevelsRes = await shopifyRequest(
       inventoryLevelsUrl,
-      "GET",
+      'GET',
       null,
       shopifyApiKey,
       shopifyAccessToken
@@ -2909,7 +2928,9 @@ export const updateInventoryQuantity = async (req, res) => {
 
     const currentInventoryLevel = inventoryLevelsRes?.inventory_levels?.[0];
     if (!currentInventoryLevel) {
-      return res.status(400).json({ message: "No inventory level found for this item." });
+      return res
+        .status(400)
+        .json({ message: 'No inventory level found for this item.' });
     }
 
     const locationId = currentInventoryLevel.location_id;
@@ -2923,7 +2944,7 @@ export const updateInventoryQuantity = async (req, res) => {
 
     const shopifyRes = await shopifyRequest(
       inventorySetUrl,
-      "POST",
+      'POST',
       inventoryPayload,
       shopifyApiKey,
       shopifyAccessToken
@@ -2936,15 +2957,17 @@ export const updateInventoryQuantity = async (req, res) => {
     await product.save();
 
     res.status(200).json({
-      message: "Inventory quantity updated successfully.",
+      message: 'Inventory quantity updated successfully.',
       shopifyResponse: shopifyRes,
     });
   } catch (error) {
-    console.error("Error in updateInventoryQuantity:", error?.response?.data || error.message);
-    res.status(500).json({ message: "Server error while updating quantity." });
+    console.error(
+      'Error in updateInventoryQuantity:',
+      error?.response?.data || error.message
+    );
+    res.status(500).json({ message: 'Server error while updating quantity.' });
   }
 };
-
 
 export const exportProducts = async (req, res) => {
   try {
@@ -3494,24 +3517,30 @@ export const getAllVariants = async (req, res) => {
       {
         $project: {
           variants: 1,
+          images: 1,
           status: 1,
           shopifyId: 1,
-          productId: "$_id",
+          variantImages: 1,
+          productId: '$_id',
         },
       },
       {
-        $unwind: "$variants",
+        $unwind: '$variants',
       },
       {
         $replaceRoot: {
           newRoot: {
-            $mergeObjects: ["$variants", {
-              productId: "$productId",
-              status: "$status",
-              shopifyId: "$shopifyId"
-            }]
-          }
-        }
+            $mergeObjects: [
+              '$variants',
+              {
+                productId: '$productId',
+                status: '$status',
+                shopifyId: '$shopifyId',
+                variantImages: '$images',
+              },
+            ],
+          },
+        },
       },
       {
         $skip: skip,
@@ -3523,11 +3552,11 @@ export const getAllVariants = async (req, res) => {
 
     const productCount = await listingModel.aggregate([
       { $match: { userId: objectIdUserId } },
-      { $project: { variantsCount: { $size: "$variants" } } },
+      { $project: { variantsCount: { $size: '$variants' } } },
       {
         $group: {
           _id: null,
-          totalVariants: { $sum: "$variantsCount" },
+          totalVariants: { $sum: '$variantsCount' },
         },
       },
     ]);
@@ -3535,7 +3564,9 @@ export const getAllVariants = async (req, res) => {
     const totalVariants = productCount[0]?.totalVariants || 0;
 
     if (products.length === 0) {
-      return res.status(404).json({ message: "No variants found for this user." });
+      return res
+        .status(404)
+        .json({ message: 'No variants found for this user.' });
     }
 
     res.status(200).json({
@@ -3545,7 +3576,7 @@ export const getAllVariants = async (req, res) => {
       totalVariants,
     });
   } catch (error) {
-    console.error("Error in getAllVariants function:", error);
+    console.error('Error in getAllVariants function:', error);
     res.status(500).json({ error: error.message });
   }
 };

@@ -69,9 +69,9 @@ productRouter.post(
   Csvuplaods,
   addCsvfileForProductFromBody
 );
-productRouter.post('/productUpdateWebhook',updateProductWebhook)
-productRouter.put('/updateInventoryPrice/:id',updateInventoryPrice)
-productRouter.put('/updateInventoryQuantity/:id',updateInventoryQuantity)
+productRouter.post('/productUpdateWebhook', updateProductWebhook);
+productRouter.put('/updateInventoryPrice/:id', updateInventoryPrice);
+productRouter.put('/updateInventoryQuantity/:id', updateInventoryQuantity);
 productRouter.get('/csvEportFile', exportProducts);
 productRouter.get('/csvInventoryEportFile', exportInventoryCsv);
 
