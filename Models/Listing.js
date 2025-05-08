@@ -126,6 +126,7 @@ const listingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    optimisticConcurrency: false 
   }
 );
 
