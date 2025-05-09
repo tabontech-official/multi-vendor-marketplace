@@ -10,7 +10,9 @@ import axios from 'axios';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { brandAssetModel } from '../Models/brandAsset.js';
 import {apiCredentialModel} from '../Models/apicredential.js'
-
+import crypto from 'crypto';
+const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
+const generateApiSecretKey = () => `shpsk_${crypto.randomBytes(16).toString('hex')}`;
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
     expiresIn: '1d',
@@ -316,6 +318,39 @@ export const checkShopifyAdminTag = async (email) => {
   }
 };
 
+// export const signIn = async (req, res) => {
+//   try {
+//     const { error } = loginSchema.validate(req.body);
+//     if (error) {
+//       return res.status(400).json({ error: error.details[0].message });
+//     }
+
+//     const { email, password } = req.body;
+
+//     const user = await authModel.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(401).json({ message: 'Invalid password' });
+//     }
+
+//     const userRole = await checkShopifyAdminTag(email);
+
+//     user.role = userRole;
+//     await user.save();
+
+//     const token = createToken({ _id: user._id, role: user.role });
+
+//     res.json({ token, role: user.role, user });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// };
+
+
 export const signIn = async (req, res) => {
   try {
     const { error } = loginSchema.validate(req.body);
@@ -336,19 +371,37 @@ export const signIn = async (req, res) => {
     }
 
     const userRole = await checkShopifyAdminTag(email);
-
     user.role = userRole;
     await user.save();
 
     const token = createToken({ _id: user._id, role: user.role });
 
-    res.json({ token, role: user.role, user });
+    let credentials = await apiCredentialModel.findOne({ userId: user._id });
+
+    if (!credentials) {
+      const apiKey = generateApiKey();
+      const apiSecretKey = generateApiSecretKey();
+
+      credentials = await apiCredentialModel.create({
+        userId: user._id,
+        apiKey,
+        apiSecretKey
+      });
+    }
+
+    res.json({
+      token,
+      role: user.role,
+      user,
+      apiKey: credentials.apiKey,
+      apiSecretKey: credentials.apiSecretKey,
+      userId: user._id
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
-
 
 
 const hashPassword = async (password) => {
