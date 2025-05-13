@@ -13,6 +13,7 @@ import { productSubscriptionExpiration } from './controller/scheduleFunction.js'
 import promoRouter from './Routes/promotion.js';
 import consultationRouter from './Routes/consultation.js';
 import apiCredentialsRouter from './Routes/apiCredentials.js';
+import notificationRouter from './Routes/notification.js';
 
 const app = express();
 // Setup Swagger documentation
@@ -39,6 +40,7 @@ app.use('/order', orderRouter);
 app.use('/promo', promoRouter);
 app.use('/consultation', consultationRouter);
 app.use('/generateAcessKeys', apiCredentialsRouter);
+app.use('/notifications', notificationRouter);
 
 
 app.use((req, res, next) => {
