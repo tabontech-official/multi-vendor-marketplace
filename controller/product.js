@@ -3117,7 +3117,6 @@ export const exportProducts = async (req, res) => {
   }
 };
 
-
 // export const updateInventoryFromCsv = async (req, res) => {
 //   const file = req.file;
 //   const userId = req.body.userId;
@@ -3277,7 +3276,6 @@ export const exportProducts = async (req, res) => {
 //   }
 // };
 
-
 // export const exportInventoryCsv = async (req, res) => {
 //   try {
 //     const { userId } = req.query;
@@ -3371,9 +3369,6 @@ export const exportProducts = async (req, res) => {
 //   }
 // };
 
-
-
-
 export const updateInventoryFromCsv = async (req, res) => {
   const file = req.file;
   const userId = req.body.userId;
@@ -3409,6 +3404,8 @@ export const updateInventoryFromCsv = async (req, res) => {
           const sku = row['Variant SKU']?.trim();
           const quantity = row['Variant Inventory Qty']?.trim();
           const status = row['Status']?.trim()?.toLowerCase();
+          const price = row['Variant Price']?.trim();
+          const compareAtPrice = row['Variant Compare At Price']?.trim();
 
           if (!sku) continue;
 
@@ -3430,6 +3427,7 @@ export const updateInventoryFromCsv = async (req, res) => {
               if (variant.sku !== sku) continue;
 
               try {
+                // ✅ Inventory Update
                 if (quantity) {
                   const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
                   const variantResponse = await shopifyRequest(
@@ -3477,7 +3475,7 @@ export const updateInventoryFromCsv = async (req, res) => {
                     available: parseInt(quantity),
                   };
 
-                  const shopifyRes = await shopifyRequest(
+                  await shopifyRequest(
                     `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`,
                     'POST',
                     inventoryPayload,
@@ -3498,18 +3496,53 @@ export const updateInventoryFromCsv = async (req, res) => {
 
                   variantUpdated = true;
                 }
+
+                // ✅ Price & Compare at Price Update
+                if (price || compareAtPrice) {
+                  const variantUpdatePayload = {
+                    variant: {
+                      id: variant.id,
+                      ...(price && { price: parseFloat(price) }),
+                      ...(compareAtPrice && { compare_at_price: parseFloat(compareAtPrice) }),
+                    },
+                  };
+
+                  const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+
+                  await shopifyRequest(
+                    variantUpdateUrl,
+                    'PUT',
+                    variantUpdatePayload,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+
+                  if (price) variant.price = parseFloat(price);
+                  if (compareAtPrice) variant.compare_at_price = parseFloat(compareAtPrice);
+
+                  updateResults.push({
+                    sku,
+                    variantId: variant.id,
+                    status: 'price_updated',
+                    newPrice: price,
+                    newCompareAtPrice: compareAtPrice,
+                    updatedAt: new Date(),
+                  });
+
+                  variantUpdated = true;
+                }
               } catch (err) {
-                console.error(`Inventory update failed for SKU: ${sku}`, err.message);
+                console.error(`Inventory or price update failed for SKU: ${sku}`, err.message);
                 updateResults.push({
                   sku,
                   variantId: variant.id,
-                  status: 'inventory_update_failed',
+                  status: 'update_failed',
                   message: err.message,
                 });
               }
             }
 
-            // ✅ Update product status if valid
+            // ✅ Status Update
             if (status && ['active', 'draft', 'archived'].includes(status)) {
               try {
                 const productUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-10/products/${product.id}.json`;
@@ -3520,7 +3553,7 @@ export const updateInventoryFromCsv = async (req, res) => {
                   },
                 };
 
-                const statusUpdateRes = await shopifyRequest(
+                await shopifyRequest(
                   productUpdateUrl,
                   'PUT',
                   updatePayload,
@@ -3529,6 +3562,7 @@ export const updateInventoryFromCsv = async (req, res) => {
                 );
 
                 product.status = status;
+
                 updateResults.push({
                   sku,
                   productId: product.id,
@@ -3549,8 +3583,19 @@ export const updateInventoryFromCsv = async (req, res) => {
               }
             }
 
+            // ✅ Safe save with version conflict handling
             if (variantUpdated || statusUpdated) {
-              await product.save();
+              try {
+                await product.save({ optimisticConcurrency: false });
+              } catch (saveError) {
+                console.error(`Failed to save product with SKU: ${sku}`, saveError.message);
+                updateResults.push({
+                  sku,
+                  productId: product.id,
+                  status: 'local_save_failed',
+                  message: saveError.message,
+                });
+              }
             }
           }
         }
@@ -3569,8 +3614,6 @@ export const updateInventoryFromCsv = async (req, res) => {
     });
   }
 };
-
-
 
 export const exportInventoryCsv = async (req, res) => {
   try {
@@ -3620,7 +3663,7 @@ export const exportInventoryCsv = async (req, res) => {
           'Variant Price': variant.price || '',
           'Variant Compare At Price': variant.compare_at_price || '',
           'Variant Inventory Qty': variant.inventory_quantity || 0,
-          'Status': status,
+          Status: status,
         });
       });
     }
@@ -3666,7 +3709,6 @@ export const exportInventoryCsv = async (req, res) => {
     res.status(500).json({ message: 'Server error during export.' });
   }
 };
-
 
 export const getAllVariants = async (req, res) => {
   try {
