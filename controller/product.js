@@ -1776,6 +1776,113 @@ export const getSingleVariantData = async (req, res) => {
   }
 };
 
+// export const updateSingleVariant = async (req, res) => {
+//   try {
+//     const { productId, variantId } = req.params;
+//     const {
+//       price,
+//       inventory_quantity,
+//       sku,
+//       option1,
+//       option2,
+//       option3,
+//       weight,
+//       compare_at_price,
+//       barcode,
+//       inventory_policy: inventoryPolicy,
+//     } = req.body.variant || {};
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration)
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfiguration;
+
+//     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}/variants/${variantId}.json`;
+
+//     const body = {
+//       variant: {
+//         id: variantId,
+//         price: price?.toString(),
+//         compare_at_price: compare_at_price?.toString(),
+//         inventory_quantity,
+//         inventory_policy: inventoryPolicy,
+//         inventory_management: 'shopify',
+//         sku,
+//         barcode,
+//         option1,
+//         option2,
+//         option3,
+//         weight,
+//       },
+//     };
+
+//     console.log('Payload Sent to Shopify:', body);
+
+//     const updatedVariant = await shopifyRequest(
+//       shopifyUrl,
+//       'PUT',
+//       body,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
+//     const productResponse = await shopifyRequest(
+//       productUrl,
+//       'GET',
+//       null,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const updatedProduct = productResponse.product;
+
+//     const updatedProductOptions = updatedProduct.options || [];
+//     const updatedProductInDb = await listingModel.updateOne(
+//       { 'variants.id': variantId },
+//       {
+//         $set: {
+//           'variants.$': {
+//             id: variantId,
+//             price: updatedVariant.variant.price,
+//             title: updatedVariant.variant.title,
+//             inventory_quantity: updatedVariant.variant.inventory_quantity,
+//             sku: updatedVariant.variant.sku,
+//             option1: updatedVariant.variant.option1,
+//             option2: updatedVariant.variant.option2,
+//             option3: updatedVariant.variant.option3,
+//             weight: updatedVariant.variant.weight,
+//             compare_at_price: updatedVariant.variant.compare_at_price,
+//             inventory_management: updatedVariant.variant.inventory_policy,
+//             productId: updatedVariant.variant.product_id,
+//             barcode: updatedVariant.variant.barcode,
+//             updatedAt: updatedVariant.variant.updated_at,
+//           },
+//           options: updatedProductOptions,
+//         },
+//       }
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       message:
+//         'Variant and options updated successfully in both Shopify and the database.',
+//       shopifyResponse: updatedVariant,
+//       dbResponse: updatedProductInDb,
+//     });
+//   } catch (error) {
+//     console.error('Error updating variant:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error updating variant.',
+//       error: error.message,
+//     });
+//   }
+// };
 export const updateSingleVariant = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
@@ -1793,22 +1900,20 @@ export const updateSingleVariant = async (req, res) => {
     } = req.body.variant || {};
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration)
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
 
-    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}/variants/${variantId}.json`;
+    // Step 1: Update variant fields (price, SKU, etc.)
+    const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/variants/${variantId}.json`;
 
-    const body = {
+    const variantPayload = {
       variant: {
         id: variantId,
         price: price?.toString(),
         compare_at_price: compare_at_price?.toString(),
-        inventory_quantity,
         inventory_policy: inventoryPolicy,
         inventory_management: 'shopify',
         sku,
@@ -1820,16 +1925,55 @@ export const updateSingleVariant = async (req, res) => {
       },
     };
 
-    console.log('Payload Sent to Shopify:', body);
-
     const updatedVariant = await shopifyRequest(
-      shopifyUrl,
+      variantUpdateUrl,
       'PUT',
-      body,
+      variantPayload,
       shopifyApiKey,
       shopifyAccessToken
     );
 
+    // Step 2: Update inventory quantity (MUST be done separately)
+    const inventoryItemId = updatedVariant?.variant?.inventory_item_id;
+
+    if (!inventoryItemId) {
+      return res.status(400).json({ error: 'Missing inventory_item_id from variant.' });
+    }
+
+    // Get inventory location
+    const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+    const inventoryLevelsRes = await shopifyRequest(
+      inventoryLevelsUrl,
+      'GET',
+      null,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const locationId = inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+
+    if (!locationId) {
+      return res.status(400).json({ error: 'Unable to determine location_id for inventory update.' });
+    }
+
+    if (inventory_quantity !== undefined) {
+      const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
+      const inventoryPayload = {
+        location_id: locationId,
+        inventory_item_id: inventoryItemId,
+        available: parseInt(inventory_quantity),
+      };
+
+      await shopifyRequest(
+        inventoryUpdateUrl,
+        'POST',
+        inventoryPayload,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+    }
+
+    // Step 3: Update your local DB
     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
     const productResponse = await shopifyRequest(
       productUrl,
@@ -1840,8 +1984,8 @@ export const updateSingleVariant = async (req, res) => {
     );
 
     const updatedProduct = productResponse.product;
-
     const updatedProductOptions = updatedProduct.options || [];
+
     const updatedProductInDb = await listingModel.updateOne(
       { 'variants.id': variantId },
       {
@@ -1850,7 +1994,7 @@ export const updateSingleVariant = async (req, res) => {
             id: variantId,
             price: updatedVariant.variant.price,
             title: updatedVariant.variant.title,
-            inventory_quantity: updatedVariant.variant.inventory_quantity,
+            inventory_quantity: parseInt(inventory_quantity),
             sku: updatedVariant.variant.sku,
             option1: updatedVariant.variant.option1,
             option2: updatedVariant.variant.option2,
@@ -1869,8 +2013,7 @@ export const updateSingleVariant = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message:
-        'Variant and options updated successfully in both Shopify and the database.',
+      message: 'Variant and inventory updated successfully in Shopify and database.',
       shopifyResponse: updatedVariant,
       dbResponse: updatedProductInDb,
     });
@@ -1883,6 +2026,7 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
+
 
 export const getsingleProduct = async (req, res) => {
   try {
