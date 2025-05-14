@@ -2039,10 +2039,32 @@ export const getsingleProduct = async (req, res) => {
       },
       {
         $project: {
+          _id: 1,
+          id:1,
           title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          tags: 1,
           variants: 1,
+          options: 1,
           images: 1,
-          variantImages: 1,
+          inventory: 1,
+          shipping: 1,
+          status: 1,
+          variantImages:1,
+          userId: 1,
+          oldPrice: 1,
+          shopifyId: 1,
+          username: {
+            $concat: [
+              { $ifNull: ['$user.firstName', ''] },
+              ' ',
+              { $ifNull: ['$user.lastName', ''] },
+            ],
+          },
+          email: '$user.email',
         },
       },
     ]);
