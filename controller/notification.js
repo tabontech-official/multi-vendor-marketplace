@@ -39,10 +39,23 @@ export const getNotificationByUserId = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userInfo',
+        },
+      },
+      {
+        $unwind: '$userInfo',
+      },
+      {
         $project: {
           userId: 1,
           message: 1,
           createdAt: 1,
+          firstName: '$userInfo.firstName',
+          lastName:"$userInfo.lastName"
         },
       },
     ]);
