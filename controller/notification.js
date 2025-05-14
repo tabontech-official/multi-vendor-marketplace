@@ -3,7 +3,7 @@ import { notificationModel } from '../Models/Notifications.js';
 
 export const addNotification = async (req, res) => {
   try {
-    const { userId, message } = req.body;
+    const { userId, message,source } = req.body;
 
     if (!userId || !message) {
       return res.status(400).json({ error: 'userId and message are required' });
@@ -12,6 +12,7 @@ export const addNotification = async (req, res) => {
     const saveNotification = new notificationModel({
       message,
       userId,
+      source,
     });
 
     const saved = await saveNotification.save();
@@ -55,7 +56,8 @@ export const getNotificationByUserId = async (req, res) => {
           message: 1,
           createdAt: 1,
           firstName: '$userInfo.firstName',
-          lastName:"$userInfo.lastName"
+          lastName:"$userInfo.lastName",
+          source:1,
         },
       },
     ]);

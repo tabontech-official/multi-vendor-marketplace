@@ -1349,7 +1349,7 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
     console.log('Image and productId update result:', updateResult);
   } catch (error) {
     console.error(
-      '❌ Failed to update imageGallery images with productId:',
+      ' Failed to update imageGallery images with productId:',
       error
     );
   }
