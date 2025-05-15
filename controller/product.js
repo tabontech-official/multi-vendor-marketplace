@@ -3135,34 +3135,189 @@ export const updateInventoryQuantity = async (req, res) => {
   }
 };
 
+// export const exportProducts = async (req, res) => {
+//   try {
+//     const { userId, type, page = 1, limit = 10 } = req.query;
+
+//     if (!userId || !type) {
+//       return res
+//         .status(400)
+//         .json({ message: 'Missing required query parameters.' });
+//     }
+
+//     const query = { userId: userId };
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+//     const products =
+//       type === 'current'
+//         ? await listingModel.find(query).skip(skip).limit(parseInt(limit))
+//         : await listingModel.find(query);
+
+//     if (!products.length) {
+//       return res.status(404).json({ message: 'No products found.' });
+//     }
+
+//     const config = await shopifyConfigurationModel.findOne();
+//     if (!config) {
+//       return res.status(400).json({ message: 'Shopify config not found.' });
+//     }
+
+//     const { shopifyStoreUrl, shopifyAccessToken } = config;
+
+//     const rows = [];
+
+//     for (const dbProduct of products) {
+//       const shopifyProductId = dbProduct.id;
+//       if (!shopifyProductId) continue;
+
+//       const shopifyUrl = `${shopifyStoreUrl}/admin/api/2023-10/products/${shopifyProductId}.json`;
+
+//       const response = await shopifyRequest(
+//         shopifyUrl,
+//         'GET',
+//         null,
+//         config.shopifyApiKey,
+//         shopifyAccessToken
+//       );
+
+//       const product = response?.product;
+//       if (!product) continue;
+
+//       product.variants.forEach((variant, index) => {
+//         rows.push({
+//           Handle: product.handle || '',
+//           Title: index === 0 ? product.title : '',
+//           'Body (HTML)': index === 0 ? product.body_html || '' : '',
+//           Vendor: index === 0 ? product.vendor || '' : '',
+//           'Product Category': '',
+//           Type: index === 0 ? product.product_type || '' : '',
+//           Tags: index === 0 ? (product.tags || '').toString() : '',
+//           Published:
+//             index === 0
+//               ? String(product.published_at !== null).toUpperCase()
+//               : '',
+//           'Option1 Name': product.options?.[0]?.name || '',
+//           'Option1 Value': variant.option1 || '',
+//           'Option2 Name': product.options?.[1]?.name || '',
+//           'Option2 Value': variant.option2 || '',
+//           'Option3 Name': product.options?.[2]?.name || '',
+//           'Option3 Value': variant.option3 || '',
+//           'Variant SKU': variant.sku || '',
+//           'Variant Grams': variant.grams || 0,
+//           'Variant Inventory Tracker':
+//             variant.inventory_management || 'shopify',
+//           'Variant Inventory Qty': variant.inventory_quantity || 0,
+//           'Variant Inventory Policy': variant.inventory_policy || 'deny',
+//           'Variant Fulfillment Service':
+//             variant.fulfillment_service || 'manual',
+//           'Variant Price': variant.price || '',
+//           'Variant Compare At Price': variant.compare_at_price || '',
+//           'Variant Requires Shipping': variant.requires_shipping
+//             ? 'TRUE'
+//             : 'FALSE',
+//           'Variant Taxable': variant.taxable ? 'TRUE' : 'FALSE',
+//           'Variant Barcode': variant.barcode || '',
+//           'Image Src': product.image?.src || '',
+//           'Image Position': index + 1,
+//           'Image Alt Text': '',
+//           'Gift Card': 'FALSE',
+//           'SEO Title': '',
+//           'SEO Description': '',
+//           'Google Shopping / Google Product Category': '',
+//           'Google Shopping / Gender': '',
+//           'Google Shopping / Age Group': '',
+//           'Google Shopping / MPN': '',
+//           'Google Shopping / Condition': '',
+//           'Google Shopping / Custom Product': '',
+//           'Google Shopping / Custom Label 0': '',
+//           'Google Shopping / Custom Label 1': '',
+//           'Google Shopping / Custom Label 2': '',
+//           'Google Shopping / Custom Label 3': '',
+//           'Google Shopping / Custom Label 4': '',
+//           'Variant Image': variant.image_id
+//             ? product.images.find((img) => img.id === variant.image_id)?.src
+//             : '',
+//           'Variant Weight Unit': variant.weight_unit || 'kg',
+//           'Variant Tax Code': '',
+//           'Cost per item': '',
+//           Status: product.status || 'active',
+//         });
+//       });
+//     }
+
+//     if (rows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: 'No Shopify product data found.' });
+//     }
+
+//     const fields = Object.keys(rows[0]);
+//     const parser = new Parser({ fields });
+//     const csv = parser.parse(rows);
+
+//     const filename = `shopify-products-${type}-${Date.now()}.csv`;
+
+//     const isVercel = process.env.VERCEL === '1';
+
+//     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+
+//     if (!isVercel && !fs.existsSync(exportDir)) {
+//       fs.mkdirSync(exportDir, { recursive: true });
+//     }
+
+//     const filePath = path.join(exportDir, filename);
+
+//     fs.writeFileSync(filePath, csv);
+
+//     res.download(filePath, filename, (err) => {
+//       if (err) {
+//         console.error('Download error:', err);
+//         res.status(500).send('Error downloading file');
+//       }
+
+//       fs.unlinkSync(filePath);
+//     });
+//   } catch (error) {
+//     console.error('Export Error:', error);
+//     res.status(500).json({ message: 'Server error during export.' });
+//   }
+// };
+
+
+
 export const exportProducts = async (req, res) => {
   try {
-    const { userId, type, page = 1, limit = 10 } = req.query;
+    const { userId, type, page = 1, limit = 10, productIds } = req.query;
 
     if (!userId || !type) {
-      return res
-        .status(400)
-        .json({ message: 'Missing required query parameters.' });
+      return res.status(400).json({ message: "Missing required query parameters." });
     }
 
-    const query = { userId: userId };
+    const productIdsArray = productIds ? productIds.split(",") : [];
+
+    const query = { userId };
+
+    if (productIdsArray.length > 0) {
+      query._id = { $in: productIdsArray };
+    }
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const products =
-      type === 'current'
+      type === "current"
         ? await listingModel.find(query).skip(skip).limit(parseInt(limit))
         : await listingModel.find(query);
 
     if (!products.length) {
-      return res.status(404).json({ message: 'No products found.' });
+      return res.status(404).json({ message: "No products found." });
     }
 
     const config = await shopifyConfigurationModel.findOne();
     if (!config) {
-      return res.status(400).json({ message: 'Shopify config not found.' });
+      return res.status(400).json({ message: "Shopify config not found." });
     }
 
-    const { shopifyStoreUrl, shopifyAccessToken } = config;
+    const { shopifyStoreUrl, shopifyAccessToken, shopifyApiKey } = config;
 
     const rows = [];
 
@@ -3174,9 +3329,9 @@ export const exportProducts = async (req, res) => {
 
       const response = await shopifyRequest(
         shopifyUrl,
-        'GET',
+        "GET",
         null,
-        config.shopifyApiKey,
+        shopifyApiKey,
         shopifyAccessToken
       );
 
@@ -3185,70 +3340,68 @@ export const exportProducts = async (req, res) => {
 
       product.variants.forEach((variant, index) => {
         rows.push({
-          Handle: product.handle || '',
-          Title: index === 0 ? product.title : '',
-          'Body (HTML)': index === 0 ? product.body_html || '' : '',
-          Vendor: index === 0 ? product.vendor || '' : '',
-          'Product Category': '',
-          Type: index === 0 ? product.product_type || '' : '',
-          Tags: index === 0 ? (product.tags || '').toString() : '',
+          Handle: product.handle || "",
+          Title: index === 0 ? product.title : "",
+          "Body (HTML)": index === 0 ? product.body_html || "" : "",
+          Vendor: index === 0 ? product.vendor || "" : "",
+          "Product Category": "",
+          Type: index === 0 ? product.product_type || "" : "",
+          Tags: index === 0 ? (product.tags || "").toString() : "",
           Published:
             index === 0
               ? String(product.published_at !== null).toUpperCase()
-              : '',
-          'Option1 Name': product.options?.[0]?.name || '',
-          'Option1 Value': variant.option1 || '',
-          'Option2 Name': product.options?.[1]?.name || '',
-          'Option2 Value': variant.option2 || '',
-          'Option3 Name': product.options?.[2]?.name || '',
-          'Option3 Value': variant.option3 || '',
-          'Variant SKU': variant.sku || '',
-          'Variant Grams': variant.grams || 0,
-          'Variant Inventory Tracker':
-            variant.inventory_management || 'shopify',
-          'Variant Inventory Qty': variant.inventory_quantity || 0,
-          'Variant Inventory Policy': variant.inventory_policy || 'deny',
-          'Variant Fulfillment Service':
-            variant.fulfillment_service || 'manual',
-          'Variant Price': variant.price || '',
-          'Variant Compare At Price': variant.compare_at_price || '',
-          'Variant Requires Shipping': variant.requires_shipping
-            ? 'TRUE'
-            : 'FALSE',
-          'Variant Taxable': variant.taxable ? 'TRUE' : 'FALSE',
-          'Variant Barcode': variant.barcode || '',
-          'Image Src': product.image?.src || '',
-          'Image Position': index + 1,
-          'Image Alt Text': '',
-          'Gift Card': 'FALSE',
-          'SEO Title': '',
-          'SEO Description': '',
-          'Google Shopping / Google Product Category': '',
-          'Google Shopping / Gender': '',
-          'Google Shopping / Age Group': '',
-          'Google Shopping / MPN': '',
-          'Google Shopping / Condition': '',
-          'Google Shopping / Custom Product': '',
-          'Google Shopping / Custom Label 0': '',
-          'Google Shopping / Custom Label 1': '',
-          'Google Shopping / Custom Label 2': '',
-          'Google Shopping / Custom Label 3': '',
-          'Google Shopping / Custom Label 4': '',
-          'Variant Image': variant.image_id
+              : "",
+          "Option1 Name": product.options?.[0]?.name || "",
+          "Option1 Value": variant.option1 || "",
+          "Option2 Name": product.options?.[1]?.name || "",
+          "Option2 Value": variant.option2 || "",
+          "Option3 Name": product.options?.[2]?.name || "",
+          "Option3 Value": variant.option3 || "",
+          "Variant SKU": variant.sku || "",
+          "Variant Grams": variant.grams || 0,
+          "Variant Inventory Tracker":
+            variant.inventory_management || "shopify",
+          "Variant Inventory Qty": variant.inventory_quantity || 0,
+          "Variant Inventory Policy": variant.inventory_policy || "deny",
+          "Variant Fulfillment Service":
+            variant.fulfillment_service || "manual",
+          "Variant Price": variant.price || "",
+          "Variant Compare At Price": variant.compare_at_price || "",
+          "Variant Requires Shipping": variant.requires_shipping
+            ? "TRUE"
+            : "FALSE",
+          "Variant Taxable": variant.taxable ? "TRUE" : "FALSE",
+          "Variant Barcode": variant.barcode || "",
+          "Image Src": product.image?.src || "",
+          "Image Position": index + 1,
+          "Image Alt Text": "",
+          "Gift Card": "FALSE",
+          "SEO Title": "",
+          "SEO Description": "",
+          "Google Shopping / Google Product Category": "",
+          "Google Shopping / Gender": "",
+          "Google Shopping / Age Group": "",
+          "Google Shopping / MPN": "",
+          "Google Shopping / Condition": "",
+          "Google Shopping / Custom Product": "",
+          "Google Shopping / Custom Label 0": "",
+          "Google Shopping / Custom Label 1": "",
+          "Google Shopping / Custom Label 2": "",
+          "Google Shopping / Custom Label 3": "",
+          "Google Shopping / Custom Label 4": "",
+          "Variant Image": variant.image_id
             ? product.images.find((img) => img.id === variant.image_id)?.src
-            : '',
-          'Variant Weight Unit': variant.weight_unit || 'kg',
-          'Variant Tax Code': '',
-          'Cost per item': '',
-          Status: product.status || 'active',
+            : "",
+          "Variant Weight Unit": variant.weight_unit || "kg",
+          "Variant Tax Code": "",
+          "Cost per item": "",
+          Status: product.status || "active",
         });
       });
     }
 
     if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No Shopify product data found.' });
+      return res.status(404).json({ message: "No Shopify product data found." });
     }
 
     const fields = Object.keys(rows[0]);
@@ -3257,9 +3410,9 @@ export const exportProducts = async (req, res) => {
 
     const filename = `shopify-products-${type}-${Date.now()}.csv`;
 
-    const isVercel = process.env.VERCEL === '1';
+    const isVercel = process.env.VERCEL === "1";
 
-    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+    const exportDir = isVercel ? "/tmp" : path.join(process.cwd(), "exports");
 
     if (!isVercel && !fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
@@ -3271,17 +3424,18 @@ export const exportProducts = async (req, res) => {
 
     res.download(filePath, filename, (err) => {
       if (err) {
-        console.error('Download error:', err);
-        res.status(500).send('Error downloading file');
+        console.error("Download error:", err);
+        res.status(500).send("Error downloading file");
       }
 
       fs.unlinkSync(filePath);
     });
   } catch (error) {
-    console.error('Export Error:', error);
-    res.status(500).json({ message: 'Server error during export.' });
+    console.error("Export Error:", error);
+    res.status(500).json({ message: "Server error during export." });
   }
 };
+
 
 // export const updateInventoryFromCsv = async (req, res) => {
 //   const file = req.file;
@@ -3783,21 +3937,23 @@ export const updateInventoryFromCsv = async (req, res) => {
 
 export const exportInventoryCsv = async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, variantIds } = req.query;
 
     if (!userId) {
-      return res.status(400).json({ message: 'Missing userId parameter.' });
+      return res.status(400).json({ message: "Missing userId parameter." });
     }
+
+    const variantIdsArray = variantIds ? variantIds.split(",") : [];
 
     const products = await listingModel.find({ userId });
 
     if (!products.length) {
-      return res.status(404).json({ message: 'No products found.' });
+      return res.status(404).json({ message: "No products found." });
     }
 
     const config = await shopifyConfigurationModel.findOne();
     if (!config) {
-      return res.status(400).json({ message: 'Shopify config not found.' });
+      return res.status(400).json({ message: "Shopify config not found." });
     }
 
     const { shopifyStoreUrl, shopifyAccessToken, shopifyApiKey } = config;
@@ -3812,7 +3968,7 @@ export const exportInventoryCsv = async (req, res) => {
 
       const response = await shopifyRequest(
         shopifyUrl,
-        'GET',
+        "GET",
         null,
         shopifyApiKey,
         shopifyAccessToken
@@ -3821,31 +3977,36 @@ export const exportInventoryCsv = async (req, res) => {
       const product = response?.product;
       if (!product) continue;
 
-      const status = product.status || 'unknown';
+      const status = product.status || "unknown";
 
       product.variants.forEach((variant) => {
+        if (
+          variantIdsArray.length > 0 &&
+          !variantIdsArray.includes(String(variant.id))
+        ) {
+          return;
+        }
+
         rows.push({
-          'Variant SKU': variant.sku || '',
-          'Variant Price': variant.price || '',
-          'Variant Compare At Price': variant.compare_at_price || '',
-          'Variant Inventory Qty': variant.inventory_quantity || 0,
+          "Variant SKU": variant.sku || "",
+          "Variant Price": variant.price || "",
+          "Variant Compare At Price": variant.compare_at_price || "",
+          "Variant Inventory Qty": variant.inventory_quantity || 0,
           Status: status,
         });
       });
     }
 
     if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No Shopify variant data found.' });
+      return res.status(404).json({ message: "No Shopify variant data found." });
     }
 
     const fields = [
-      'Variant SKU',
-      'Variant Price',
-      'Variant Compare At Price',
-      'Variant Inventory Qty',
-      'Status',
+      "Variant SKU",
+      "Variant Price",
+      "Variant Compare At Price",
+      "Variant Inventory Qty",
+      "Status",
     ];
 
     const parser = new Parser({ fields });
@@ -3853,8 +4014,8 @@ export const exportInventoryCsv = async (req, res) => {
 
     const filename = `shopify-variant-inventory-${Date.now()}.csv`;
 
-    const isVercel = process.env.VERCEL === '1';
-    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+    const isVercel = process.env.VERCEL === "1";
+    const exportDir = isVercel ? "/tmp" : path.join(process.cwd(), "exports");
 
     if (!isVercel && !fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
@@ -3865,14 +4026,14 @@ export const exportInventoryCsv = async (req, res) => {
 
     res.download(filePath, filename, (err) => {
       if (err) {
-        console.error('Download error:', err);
-        res.status(500).send('Error downloading file');
+        console.error("Download error:", err);
+        res.status(500).send("Error downloading file");
       }
       fs.unlinkSync(filePath);
     });
   } catch (error) {
-    console.error('Export Error:', error);
-    res.status(500).json({ message: 'Server error during export.' });
+    console.error("Export Error:", error);
+    res.status(500).json({ message: "Server error during export." });
   }
 };
 
