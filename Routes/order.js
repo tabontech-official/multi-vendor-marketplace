@@ -7,7 +7,7 @@ import {
 import express from 'express';
 const orderRouter = express.Router();
 orderRouter.post('/addOrder', createOrder);
-orderRouter.get('/order/:email', getOrderById)
+orderRouter.get('/order/:userId', getOrderById)
 // orderRouter.get('/order', getOrderById);
 orderRouter.get('/recurringFinance', getFinanceSummary);
 

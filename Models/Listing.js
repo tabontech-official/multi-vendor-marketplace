@@ -39,6 +39,11 @@ const listingSchema = new mongoose.Schema(
         isParent: { type: Boolean, required: true, default: false },
         image_id: String,
         src: String,
+        VariantStatus: {
+          type: String,
+          enum: ['inactive', 'active'],
+          default: 'inactive',
+        },
       },
     ],
     variantImages: [
@@ -126,7 +131,7 @@ const listingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    optimisticConcurrency: false 
+    optimisticConcurrency: false,
   }
 );
 

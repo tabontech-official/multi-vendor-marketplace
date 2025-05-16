@@ -1,7 +1,8 @@
 import { authModel } from '../Models/auth.js';
 import { orderModel } from '../Models/order.js';
 import axios from 'axios';
-
+import mongoose from 'mongoose';
+import {listingModel} from "../Models/Listing.js"
 // export const createOrder = async (req, res) => {
 //     const orderData = req.body;
 //     console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
@@ -293,43 +294,107 @@ export const getFinanceSummary = async (req, res) => {
   }
 };
 
+// export const getOrderById = async (req, res) => {
+//     const { email } = req.params;
+
+//     try {
+//         const orders = await orderModel.find({ 'customer.email': email });
+
+//         if (orders.length > 0) {
+//             res.status(200).send({
+//                 message: 'Successfully fetched orders',
+//                 data: orders
+//             });
+//         } else {
+//             res.status(404).send({ message: 'No orders found for this email' });
+//         }
+//     } catch (error) {
+//         console.error('Error fetching orders:', error);
+//         res.status(500).send({ message: 'Error fetching orders' });
+//     }
+// };
+
+
+
+
 export const getOrderById = async (req, res) => {
-    const { email } = req.params;
+  try {
+    const userId = req.params.userId;
 
-    try {
-        const orders = await orderModel.find({ 'customer.email': email });
-
-        if (orders.length > 0) {
-            res.status(200).send({
-                message: 'Successfully fetched orders',
-                data: orders
-            });
-        } else {
-            res.status(404).send({ message: 'No orders found for this email' });
-        }
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).send({ message: 'Error fetching orders' });
+    if (!userId) {
+      return res.status(400).send({ message: 'User ID is required' });
     }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).send({ message: 'Invalid user ID' });
+    }
+
+    const allOrders = await orderModel.find({});
+    console.log('🔍 Total Orders Found:', allOrders.length);
+
+    const matchedOrders = [];
+
+    for (const order of allOrders) {
+      console.log('🧾 Checking Order ID:', order._id);
+      let includeOrder = false;
+
+      for (const item of order.lineItems || []) {
+        const variantId = item.variant_id?.toString();
+
+        if (!variantId) {
+          console.log('❌ Skipping item, no variantId');
+          continue;
+        }
+
+        console.log('🔗 Looking up product for variantId:', variantId);
+
+        // Get full product (don't limit fields)
+        const product = await listingModel.findOne({ 'variants.id': variantId });
+
+        if (product) {
+          console.log('✅ Found product:', product._id);
+          console.log('👤 product.userId:', product.userId);
+
+          if (
+            product?.userId &&
+            typeof product.userId.toString === 'function' &&
+            product.userId.toString() === userId
+          ) {
+            console.log('✅ Order includes a product owned by this user');
+            includeOrder = true;
+            break;
+          } else {
+            console.log('❌ Product userId does not match or is missing');
+          }
+        } else {
+          console.log('❌ No product found for this variant');
+        }
+      }
+
+      if (includeOrder) {
+        matchedOrders.push(order);
+      }
+    }
+
+    console.log('✅ Total matched orders for user:', matchedOrders.length);
+
+    if (matchedOrders.length > 0) {
+      return res.status(200).send({
+        message: 'Orders found for user',
+        data: matchedOrders,
+      });
+    } else {
+      return res.status(404).send({
+        message: 'No orders found for this user\'s products',
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error fetching user orders:', error);
+    res.status(500).send({ message: 'Internal Server Error' });
+  }
 };
 
-// export const getOrderById = async (req, res) => {
-//   try {
-//     const orders = await orderModel.find();
 
-//     if (orders.length > 0) {
-//       res.status(200).send({
-//         message: 'Successfully fetched orders',
-//         data: orders,
-//       });
-//     } else {
-//       res.status(404).send({ message: 'No orders found for this email' });
-//     }
-//   } catch (error) {
-//     console.error('Error fetching orders:', error);
-//     res.status(500).send({ message: 'Error fetching orders' });
-//   }
-// };
 
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {

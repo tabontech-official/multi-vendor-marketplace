@@ -89,20 +89,38 @@ export const deletePromotion = async (req, res) => {
 //     const { promoPrice, startDate, endDate, userId } = req.body;
 
 //     const product = await listingModel.findById(id);
-//     if (!product) {
+//     if (!product)
 //       return res.status(404).json({ message: 'Product not found.' });
-//     }
-
 //     const variant = product.variants?.[0];
-//     if (!variant) {
+//     const oldPrice = variant.price;
+//     product.oldPrice = oldPrice;
+//     product.promotionStatus = 'active';
+
+//     if (!variant)
 //       return res
 //         .status(400)
 //         .json({ message: 'No variants found for this product.' });
-//     }
-//     const user = await authModel.findById(userId);
-//     const createdRole = user.role;
 
-//     const result = new PromoModel({
+//     const user = await authModel.findById(userId);
+//     const createdRole = user?.role;
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration) {
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+//     }
+
+//     const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+//     const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+//     const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+
+//     if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl) {
+//       return res
+//         .status(400)
+//         .json({ error: 'Missing Shopify credentials for user.' });
+//     }
+
+//     const promo = new PromoModel({
 //       promoPrice,
 //       productName: product.title,
 //       productSku: variant.sku,
@@ -113,39 +131,81 @@ export const deletePromotion = async (req, res) => {
 //       status: 'active',
 //       createdRole,
 //       userId,
+//       shopifyProductId: product.id,
+//       shopifyVariantId: variant.id,
+//       oldPrice: oldPrice,
 //     });
+//     await promo.save();
 
-//     await result.save();
+//     variant.price = promoPrice;
+//     await product.save();
 
-//     res
-//       .status(201)
-//       .json({ message: 'Promotion created successfully.', data: result });
+//     const url = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
+
+//     await shopifyRequest(
+//       url,
+//       'PUT',
+//       {
+//         variant: {
+//           id: variant.id,
+//           price: promoPrice,
+//         },
+//       },
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+//     const metafieldsUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${product.id}/metafields.json`;
+//     await shopifyRequest(
+//       metafieldsUrl,
+//       'POST',
+//       {
+//         metafield: {
+//           namespace: 'Fold_Tech',
+//           key: 'promo_price',
+//           value: String(promoPrice),
+//           type: 'single_line_text_field',
+//         },
+//       },
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     res.status(201).json({
+//       message: 'Promotion applied and Shopify updated.',
+//       data: promo,
+//     });
 //   } catch (error) {
 //     console.error('Error in addPromotionDataFromProductDb:', error);
 //     res.status(500).json({ message: 'Server error while creating promotion.' });
 //   }
 // };
 
+
 export const addPromotionDataFromProductDb = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id: variantId } = req.params;
     const { promoPrice, startDate, endDate, userId } = req.body;
 
-    const product = await listingModel.findById(id);
+    const product = await listingModel.findOne({
+      'variants.id': variantId,
+    });
+
     if (!product)
-      return res.status(404).json({ message: 'Product not found.' });
-    const variant = product.variants?.[0];
+      return res.status(404).json({ message: 'Product not found for this variant.' });
+
+    const variant = product.variants.find((v) => v.id === variantId);
+    if (!variant)
+      return res
+        .status(400)
+        .json({ message: 'Variant not found in product.' });
+
     const oldPrice = variant.price;
     product.oldPrice = oldPrice;
     product.promotionStatus = 'active';
 
-    if (!variant)
-      return res
-        .status(400)
-        .json({ message: 'No variants found for this product.' });
-
     const user = await authModel.findById(userId);
     const createdRole = user?.role;
+
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
       return res
@@ -153,14 +213,13 @@ export const addPromotionDataFromProductDb = async (req, res) => {
         .json({ error: 'Shopify configuration not found.' });
     }
 
-    const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
-    const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-    const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
 
     if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl) {
       return res
         .status(400)
-        .json({ error: 'Missing Shopify credentials for user.' });
+        .json({ error: 'Missing Shopify credentials.' });
     }
 
     const promo = new PromoModel({
@@ -176,17 +235,20 @@ export const addPromotionDataFromProductDb = async (req, res) => {
       userId,
       shopifyProductId: product.id,
       shopifyVariantId: variant.id,
-      oldPrice: oldPrice,
+      oldPrice,
+      variantId: variantId,
+      variantName:variant.title,
+      variantQuantity:variant.inventory_quantity
     });
     await promo.save();
 
     variant.price = promoPrice;
+    variant.VariantStatus = 'active';
     await product.save();
 
-    const url = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
-
+    const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
     await shopifyRequest(
-      url,
+      variantUpdateUrl,
       'PUT',
       {
         variant: {
@@ -197,6 +259,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
       shopifyApiKey,
       shopifyAccessToken
     );
+
     const metafieldsUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${product.id}/metafields.json`;
     await shopifyRequest(
       metafieldsUrl,
@@ -222,6 +285,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
     res.status(500).json({ message: 'Server error while creating promotion.' });
   }
 };
+
 
 export const endPromotions = async (req, res) => {
   try {

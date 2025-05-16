@@ -41,6 +41,15 @@ const promotionSchema = new mongoose.Schema({
   oldPrice: {
     type: Number,
   },
+  variantId:{
+    type:String
+  },
+  variantName:{
+    type:String
+  },
+  variantQuantity:{
+    type:String
+  }
 });
 
 export const PromoModel = mongoose.model('promotions', promotionSchema);
