@@ -2,7 +2,7 @@ import { authModel } from '../Models/auth.js';
 import { orderModel } from '../Models/order.js';
 import axios from 'axios';
 import mongoose from 'mongoose';
-import {listingModel} from "../Models/Listing.js"
+import { listingModel } from '../Models/Listing.js';
 // export const createOrder = async (req, res) => {
 //     const orderData = req.body;
 //     console.log("Incoming order data:", JSON.stringify(orderData, null, 2));
@@ -211,7 +211,11 @@ export const getFinanceSummary = async (req, res) => {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     const startOfLastYear = new Date(now.getFullYear() - 1, now.getMonth(), 1);
-    const endOfLastYear = new Date(now.getFullYear() - 1, now.getMonth() + 1, 0);
+    const endOfLastYear = new Date(
+      now.getFullYear() - 1,
+      now.getMonth() + 1,
+      0
+    );
 
     const currentOrders = await orderModel.find({
       createdAt: { $gte: startOfMonth, $lte: endOfMonth },
@@ -220,13 +224,14 @@ export const getFinanceSummary = async (req, res) => {
     const lastYearOrders = await orderModel.find({
       createdAt: { $gte: startOfLastYear, $lte: endOfLastYear },
     });
-    const totalOrdersInDb = await orderModel.countDocuments(); 
+    const totalOrdersInDb = await orderModel.countDocuments();
 
     const getOrderTotals = (order) => {
       return order.lineItems.reduce(
         (totals, item) => {
           const price = parseFloat(item.price || '0');
-          const cost = parseFloat(item.cost || '0');d
+          const cost = parseFloat(item.cost || '0');
+          d;
           const qty = parseFloat(item.quantity || '1');
 
           totals.income += price * qty;
@@ -286,11 +291,11 @@ export const getFinanceSummary = async (req, res) => {
       spendGrowth: spendGrowth.toFixed(2),
       netProfit: netProfit.toFixed(2),
       mrr: mrr.toFixed(2),
-      totalOrdersInDb
+      totalOrdersInDb,
     });
   } catch (error) {
-    console.error("Finance summary error:", error);
-    res.status(500).json({ message: "Error calculating finance summary" });
+    console.error('Finance summary error:', error);
+    res.status(500).json({ message: 'Error calculating finance summary' });
   }
 };
 
@@ -314,9 +319,6 @@ export const getFinanceSummary = async (req, res) => {
 //     }
 // };
 
-
-
-
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -332,49 +334,46 @@ export const getOrderById = async (req, res) => {
     const allOrders = await orderModel.find({});
     console.log('🔍 Total Orders Found:', allOrders.length);
 
-    const matchedOrders = [];
+    const ordersGroupedByOrderId = new Map();
 
     for (const order of allOrders) {
-      console.log('🧾 Checking Order ID:', order._id);
-      let includeOrder = false;
+      const filteredLineItems = [];
 
       for (const item of order.lineItems || []) {
         const variantId = item.variant_id?.toString();
 
-        if (!variantId) {
-          console.log('❌ Skipping item, no variantId');
-          continue;
-        }
+        if (!variantId) continue;
 
-        console.log('🔗 Looking up product for variantId:', variantId);
-
-        // Get full product (don't limit fields)
         const product = await listingModel.findOne({ 'variants.id': variantId });
 
-        if (product) {
-          console.log('✅ Found product:', product._id);
-          console.log('👤 product.userId:', product.userId);
-
-          if (
-            product?.userId &&
-            typeof product.userId.toString === 'function' &&
-            product.userId.toString() === userId
-          ) {
-            console.log('✅ Order includes a product owned by this user');
-            includeOrder = true;
-            break;
-          } else {
-            console.log('❌ Product userId does not match or is missing');
-          }
-        } else {
-          console.log('❌ No product found for this variant');
+        if (
+          product &&
+          product.userId &&
+          product.userId.toString() === userId
+        ) {
+          filteredLineItems.push(item);
         }
       }
 
-      if (includeOrder) {
-        matchedOrders.push(order);
+      if (filteredLineItems.length > 0) {
+        const orderForUser = order.toObject();
+        orderForUser.lineItems = filteredLineItems;
+
+        if (ordersGroupedByOrderId.has(order.orderId)) {
+          const existingOrder = ordersGroupedByOrderId.get(order.orderId);
+          existingOrder.lineItems.push(...filteredLineItems);
+
+          // Remove duplicate lineItems by variant_id
+          existingOrder.lineItems = Array.from(
+            new Map(existingOrder.lineItems.map(item => [item.variant_id, item]))
+          ).map(([_, item]) => item);
+        } else {
+          ordersGroupedByOrderId.set(order.orderId, orderForUser);
+        }
       }
     }
+
+    const matchedOrders = Array.from(ordersGroupedByOrderId.values());
 
     console.log('✅ Total matched orders for user:', matchedOrders.length);
 
@@ -385,7 +384,7 @@ export const getOrderById = async (req, res) => {
       });
     } else {
       return res.status(404).send({
-        message: 'No orders found for this user\'s products',
+        message: "No orders found for this user's products",
       });
     }
   } catch (error) {
@@ -394,12 +393,25 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-
-
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {
     if (result) {
       res.status(200).send('delted');
     }
   });
+};
+
+
+export const getOrderByOrderId = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await orderModel.findOne({ orderId: id }); 
+    if (!result) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    res.status(200).json({ data: result }); 
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 };

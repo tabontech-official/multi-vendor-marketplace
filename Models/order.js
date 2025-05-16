@@ -5,5 +5,7 @@ const orderSchema = new mongoose.Schema({
   lineItems: Array,
   createdAt: Date,
   expiresAt: Date,
+},{
+  timestamps:true
 });
 export const orderModel = mongoose.model('orders', orderSchema);
