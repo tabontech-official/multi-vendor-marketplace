@@ -241,7 +241,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
       variantQuantity:variant.inventory_quantity
     });
     await promo.save();
-
+console.log('promo results',promo)
     variant.price = promoPrice;
     variant.VariantStatus = 'active';
     await product.save();

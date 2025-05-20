@@ -75,6 +75,12 @@ const authSchema = new mongoose.Schema(
       type: String,
     },
     modules: [String],
+    organizationId: { 
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
     gstRegistered: String,
     sellerGst: String,
     dispatchzip: Number,

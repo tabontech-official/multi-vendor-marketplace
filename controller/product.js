@@ -2497,7 +2497,6 @@ export const updateInventoryQuantity = async (req, res) => {
     const variantId = req.params.id;
     const { quantity } = req.body;
 
-    // Find product first (no update yet)
     const product = await listingModel.findOne({ 'variants.id': variantId });
     if (!product) {
       return res.status(404).json({ message: 'Product with this variant not found.' });
