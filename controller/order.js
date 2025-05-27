@@ -101,19 +101,32 @@ export const createOrder = async (req, res) => {
 
     const quantity = orderData.line_items[0].quantity;
 
-    // ✅ Use upsert to avoid duplicate order
+    // Check if order already exists
+    let order = await orderModel.findOne({ orderId: orderData.id });
+
+    let serialNumber = order?.serialNumber;
+
+    // If order does not exist, assign new serial number
+    if (!order) {
+      const lastOrder = await orderModel.findOne().sort({ serialNumber: -1 });
+      serialNumber = lastOrder ? lastOrder.serialNumber + 1 : 101;
+    }
+
+    // Upsert the order with serialNumber preserved or newly assigned
     await orderModel.updateOne(
-      { orderId: orderData.id }, // condition to check duplicate
+      { orderId: orderData.id },
       {
         $set: {
           customer: orderData.customer,
           lineItems: orderData.line_items,
           createdAt: orderData.created_at,
+          serialNumber,
         }
       },
       { upsert: true }
     );
 
+    // Update user subscription
     const user = await authModel.findOne({ email: orderData.customer.email });
     if (!user) {
       return res.status(404).send('User not found');
@@ -132,12 +145,14 @@ export const createOrder = async (req, res) => {
     res.status(200).json({
       message: 'Order saved (or updated) and user updated',
       orderId: orderData.id,
+      serialNumber,
     });
   } catch (error) {
     console.error('Error saving order:', error);
     res.status(500).send('Error saving order');
   }
 };
+
 
 
 export const getFinanceSummary = async (req, res) => {
@@ -518,16 +533,20 @@ export const getOrderByOrderId = async (req, res) => {
 
 export const fulfillOrder = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { orderId, itemsToFulfill, trackingInfo } = req.body;
 
-    console.log('[Request Received] orderId:', orderId);
+    console.log("📦 Incoming Fulfillment Request:", {
+      orderId,
+      trackingInfo,
+      itemsToFulfill,
+    });
 
-    if (!orderId) {
-      return res.status(400).json({ error: 'Order ID is required.' });
+    if (!orderId || !Array.isArray(itemsToFulfill)) {
+      return res.status(400).json({ error: 'Order ID and fulfillment items are required.' });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
-    console.log('[Shopify Config]', shopifyConfig);
+    console.log("🔑 Shopify Config:", shopifyConfig);
 
     if (!shopifyConfig) {
       return res.status(404).json({ error: 'Shopify configuration not found.' });
@@ -535,8 +554,14 @@ export const fulfillOrder = async (req, res) => {
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
 
-    const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
+    const order = await orderModel.findOne({ orderId });
+    console.log("📄 MongoDB Order:", order);
 
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found in MongoDB.' });
+    }
+
+    const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
     const fulfillmentOrdersRes = await shopifyRequest(
       fulfillmentOrdersUrl,
       'GET',
@@ -545,17 +570,49 @@ export const fulfillOrder = async (req, res) => {
       shopifyAccessToken
     );
 
-    console.log('[Fulfillment Orders Response]', fulfillmentOrdersRes);
-
     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
-    console.log('[Selected Fulfillment Order]', fulfillmentOrder);
+    console.log("📦 Shopify Fulfillment Order:", fulfillmentOrder);
+    console.log("📋 Fulfillment Order Line Items from Shopify:", fulfillmentOrder.line_items);
 
     if (!fulfillmentOrder?.id) {
       return res.status(400).json({ error: 'No fulfillment order found for this order.' });
     }
 
-    const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
+    const fulfillmentLineItems = [];
 
+    itemsToFulfill.forEach((itemToFulfill) => {
+      const fulfillable = fulfillmentOrder.line_items.find(
+        (f) => Number(f.line_item_id) === Number(itemToFulfill.lineItemId)
+      );
+
+      if (!fulfillable) {
+        console.warn(`⚠️ Line item ${itemToFulfill.lineItemId} not found in Shopify fulfillment order.`);
+        return;
+      }
+
+      const remainingQty = fulfillable.fulfillable_quantity || 0;
+      const requestedQty = itemToFulfill.quantity;
+
+      console.log(`🔍 Checking line item ${itemToFulfill.lineItemId}: requested ${requestedQty}, remaining ${remainingQty}`);
+
+      if (requestedQty > 0 && requestedQty <= remainingQty) {
+        fulfillmentLineItems.push({
+          fulfillmentOrderLineItemId: fulfillable.id,
+          quantity: requestedQty,
+        });
+        console.log(`✅ Added to fulfillment: lineItemId ${itemToFulfill.lineItemId}`);
+      } else {
+        console.warn(`⚠️ Skipping line item ${itemToFulfill.lineItemId}: requested ${requestedQty}, remaining ${remainingQty}`);
+      }
+    });
+
+    console.log("📦 Final fulfillment line items to send:", fulfillmentLineItems);
+
+    if (fulfillmentLineItems.length === 0) {
+      return res.status(400).json({ error: 'No valid line items to fulfill. Check remaining quantities.' });
+    }
+
+    const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
     const query = `
       mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {
         fulfillmentCreateV2(fulfillment: $fulfillment) {
@@ -575,62 +632,89 @@ export const fulfillOrder = async (req, res) => {
       fulfillment: {
         lineItemsByFulfillmentOrder: [
           {
-            fulfillmentOrderId: `gid://shopify/FulfillmentOrder/${fulfillmentOrder.id}`
-          }
+            fulfillmentOrderId: `gid://shopify/FulfillmentOrder/${fulfillmentOrder.id}`,
+            fulfillmentOrderLineItems: fulfillmentLineItems.map((item) => ({
+              id: `gid://shopify/FulfillmentOrderLineItem/${item.fulfillmentOrderLineItemId}`,
+              quantity: item.quantity,
+            })),
+          },
         ],
         notifyCustomer: true,
         trackingInfo: {
-          number: null,
-          url: null,
-          company: null
-        }
-      }
+          number: trackingInfo?.number || null,
+          url: trackingInfo?.url || null,
+          company: trackingInfo?.company || null,
+        },
+      },
     };
 
-    console.log('[GraphQL Variables]', variables);
+    console.log("🚀 Sending GraphQL fulfillment to Shopify:", variables);
 
     const response = await fetch(graphqlUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': shopifyAccessToken
+        'X-Shopify-Access-Token': shopifyAccessToken,
       },
-      body: JSON.stringify({ query, variables })
+      body: JSON.stringify({ query, variables }),
     });
 
     const result = await response.json();
-    console.log('[GraphQL Fulfillment Result]', result);
+    console.log("🛬 Shopify Response:", result);
 
     if (result.errors || result.data?.fulfillmentCreateV2?.userErrors?.length > 0) {
       return res.status(400).json({
         error: 'GraphQL fulfillment error.',
-        details: result.errors || result.data.fulfillmentCreateV2.userErrors
+        details: result.errors || result.data.fulfillmentCreateV2.userErrors,
       });
     }
 
-    // ✅ MongoDB Update
-    const order = await orderModel.findOne({ orderId });
-    console.log('[MongoDB Order Before Update]', order);
+    const newFulfillment = result.data.fulfillmentCreateV2.fulfillment;
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found in MongoDB.' });
-    }
+    // ✅ Update MongoDB with fulfillment quantities
+    order.lineItems = order.lineItems.map((item) => {
+      const fulfilled = itemsToFulfill.find(
+        (fulfilledItem) => Number(fulfilledItem.lineItemId) === Number(item.id)
+      );
 
-    order.lineItems = order.lineItems.map(item => ({
-      ...item,
-      fulfillment_status: 'fulfilled'
-    }));
+      if (fulfilled && fulfilled.quantity > 0) {
+        const alreadyFulfilled = item.fulfilled_quantity || 0;
+        const totalFulfilled = alreadyFulfilled + fulfilled.quantity;
 
-    console.log('[MongoDB Order After Update]', order.lineItems);
+        const updatedItem = {
+          ...item,
+          fulfilled_quantity: totalFulfilled,
+        };
 
-    await order.save();
-    console.log('[MongoDB Save Completed]');
+        if (totalFulfilled >= item.quantity) {
+          updatedItem.fulfillment_status = 'fulfilled';
+        }
 
-    return res.status(200).json({
-      message: 'Order fulfilled successfully and MongoDB updated.',
-      data: result.data.fulfillmentCreateV2.fulfillment
+        console.log(`📌 Updating DB: item ${item.id}, fulfilled ${fulfilled.quantity}, total fulfilled ${totalFulfilled}, status: ${updatedItem.fulfillment_status || 'partial'}`);
+        return updatedItem;
+      }
+
+      return item;
     });
 
+    // ✅ Prevent duplicate fulfillment entry
+    order.shopifyFulfillments = order.shopifyFulfillments || [];
+    const alreadyExists = order.shopifyFulfillments.some(f => f.id === newFulfillment.id);
+
+    if (!alreadyExists) {
+      order.shopifyFulfillments.push(newFulfillment);
+      console.log(`📥 Saved new fulfillment ID ${newFulfillment.id} to DB`);
+    } else {
+      console.log(`⚠️ Fulfillment ID ${newFulfillment.id} already exists in DB. Skipped.`);
+    }
+
+    await order.save();
+    console.log("💾 MongoDB order updated");
+
+    return res.status(200).json({
+      message: 'Order partially fulfilled successfully and MongoDB updated.',
+      data: newFulfillment,
+    });
   } catch (error) {
     console.error('❌ Error in fulfillOrder:', error.message, error);
     return res.status(500).json({ error: 'Server error while fulfilling order.' });

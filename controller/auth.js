@@ -11,8 +11,12 @@ import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { brandAssetModel } from '../Models/brandAsset.js';
 import {apiCredentialModel} from '../Models/apicredential.js'
 import crypto from 'crypto';
+
+
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () => `shpsk_${crypto.randomBytes(16).toString('hex')}`;
+
+
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
     expiresIn: '1d',
