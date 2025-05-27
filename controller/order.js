@@ -92,66 +92,78 @@ async function checkProductExists(productId) {
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
-    const productId = orderData.line_items[0].product_id;
+    const orderId = String(orderData.id); // Ensure consistent type
+    const productId = orderData.line_items?.[0]?.product_id;
+
+    if (!productId) return res.status(400).send('Missing product ID');
 
     const productExists = await checkProductExists(productId);
     if (!productExists) {
       return res.status(404).send('Product does not exist');
     }
 
-    const quantity = orderData.line_items[0].quantity;
+    const quantity = orderData.line_items[0]?.quantity || 0;
 
-    // Check if order already exists
-    let order = await orderModel.findOne({ orderId: orderData.id });
+    // Check if the order already exists
+    let existingOrder = await orderModel.findOne({ orderId });
 
-    let serialNumber = order?.serialNumber;
+    let serialNumber;
 
-    // If order does not exist, assign new serial number
-    if (!order) {
+    if (existingOrder) {
+      // Order already exists — do not reassign serial number
+      serialNumber = existingOrder.serialNumber;
+
+      // Optional: update customer or lineItems if you want to allow refresh/update
+      await orderModel.updateOne(
+        { orderId },
+        {
+          $set: {
+            customer: orderData.customer,
+            lineItems: orderData.line_items,
+            createdAt: orderData.created_at,
+          }
+        }
+      );
+    } else {
+      // Assign a new serial number
       const lastOrder = await orderModel.findOne({ serialNumber: { $ne: null } }).sort({ serialNumber: -1 });
+
       const lastSerial = typeof lastOrder?.serialNumber === 'number' && !isNaN(lastOrder.serialNumber)
         ? lastOrder.serialNumber
         : 100;
-      serialNumber = lastSerial + 1;
-    }
 
-    // Upsert the order with serialNumber preserved or newly assigned
-    await orderModel.updateOne(
-      { orderId: orderData.id },
-      {
-        $set: {
-          customer: orderData.customer,
-          lineItems: orderData.line_items,
-          createdAt: orderData.created_at,
-          serialNumber,
-        }
-      },
-      { upsert: true }
-    );
+      serialNumber = lastSerial + 1;
+
+      // Create new order
+      await orderModel.create({
+        orderId,
+        customer: orderData.customer,
+        lineItems: orderData.line_items,
+        createdAt: orderData.created_at,
+        serialNumber,
+      });
+    }
 
     // Update user subscription
     const user = await authModel.findOne({ email: orderData.customer.email });
-    if (!user) {
-      return res.status(404).send('User not found');
-    }
+    if (!user) return res.status(404).send('User not found');
 
     if (user.subscription) {
       user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
     } else {
-      user.subscription = {
-        quantity,
-      };
+      user.subscription = { quantity };
     }
 
     await user.save();
 
     res.status(200).json({
       message: 'Order saved (or updated) and user updated',
-      orderId: orderData.id,
+      orderId,
       serialNumber,
     });
+
   } catch (error) {
-    console.error('Error saving order:', error);
+    console.error('❌ Error saving order:', error);
     res.status(500).send('Error saving order');
   }
 };
