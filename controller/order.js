@@ -43,6 +43,52 @@ async function checkProductExists(productId) {
   }
 }
 
+// export const createOrder = async (req, res) => {
+//   try {
+//     const orderData = req.body;
+//     const productId = orderData.line_items[0].product_id;
+
+//     const productExists = await checkProductExists(productId);
+//     if (!productExists) {
+//       return res.status(404).send('Product does not exist');
+//     }
+
+//     const quantity = orderData.line_items[0].quantity;
+
+//     const order = new orderModel({
+//       orderId: orderData.id,
+//       customer: orderData.customer,
+//       lineItems: orderData.line_items,
+//       createdAt: orderData.created_at,
+//     });
+
+//     await order.save();
+
+//     const user = await authModel.findOne({ email: orderData.customer.email });
+//     if (!user) {
+//       return res.status(404).send('User not found');
+//     }
+
+//     if (user.subscription) {
+//       user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
+//     } else {
+//       user.subscription = {
+//         quantity,
+//       };
+//     }
+
+//     await user.save();
+
+//     res.status(200).json({
+//       message: 'Order saved and user updated',
+//       orderId: orderData.id,
+//     });
+//   } catch (error) {
+//     console.error('Error saving order:', error);
+//     res.status(500).send('Error saving order');
+//   }
+// };
+
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
@@ -55,14 +101,18 @@ export const createOrder = async (req, res) => {
 
     const quantity = orderData.line_items[0].quantity;
 
-    const order = new orderModel({
-      orderId: orderData.id,
-      customer: orderData.customer,
-      lineItems: orderData.line_items,
-      createdAt: orderData.created_at,
-    });
-
-    await order.save();
+    // ✅ Use upsert to avoid duplicate order
+    await orderModel.updateOne(
+      { orderId: orderData.id }, // condition to check duplicate
+      {
+        $set: {
+          customer: orderData.customer,
+          lineItems: orderData.line_items,
+          createdAt: orderData.created_at,
+        }
+      },
+      { upsert: true }
+    );
 
     const user = await authModel.findOne({ email: orderData.customer.email });
     if (!user) {
@@ -80,7 +130,7 @@ export const createOrder = async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      message: 'Order saved and user updated',
+      message: 'Order saved (or updated) and user updated',
       orderId: orderData.id,
     });
   } catch (error) {
@@ -88,6 +138,7 @@ export const createOrder = async (req, res) => {
     res.status(500).send('Error saving order');
   }
 };
+
 
 export const getFinanceSummary = async (req, res) => {
   try {
@@ -274,7 +325,7 @@ export const getOrderById = async (req, res) => {
     }
 
     const allOrders = await orderModel.find({});
-    console.log('🔍 Total Orders Found:', allOrders.length);
+    console.log(' Total Orders Found:', allOrders.length);
 
     const ordersGroupedByOrderId = new Map();
 
@@ -292,7 +343,6 @@ export const getOrderById = async (req, res) => {
           product.userId &&
           product.userId.toString() === userId
         ) {
-          // ✅ Find matching variant from product
           const matchedVariant = product.variants.find(v => v.id === variantId);
 
           if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
@@ -322,7 +372,6 @@ export const getOrderById = async (req, res) => {
           const existingOrder = ordersGroupedByOrderId.get(order.orderId);
           existingOrder.lineItems.push(...filteredLineItems);
 
-          // Remove duplicate lineItems by variant_id
           existingOrder.lineItems = Array.from(
             new Map(existingOrder.lineItems.map(item => [item.variant_id, item]))
           ).map(([_, item]) => item);
@@ -333,7 +382,6 @@ export const getOrderById = async (req, res) => {
     }
 
     const matchedOrders = Array.from(ordersGroupedByOrderId.values());
-    console.log('✅ Total matched orders for user:', matchedOrders.length);
 
     if (matchedOrders.length > 0) {
       return res.status(200).send({
@@ -346,7 +394,7 @@ export const getOrderById = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Error fetching user orders:', error);
+    console.error(' Error fetching user orders:', error);
     res.status(500).send({ message: 'Internal Server Error' });
   }
 };
@@ -376,22 +424,117 @@ export const getOrderByOrderId = async (req, res) => {
   }
 };
 
+// export const fulfillOrder = async (req, res) => {
+//   try {
+//     const { orderId } = req.body;
+
+//     if (!orderId) {
+//       return res.status(400).json({ error: 'Order ID is required.' });
+//     }
+
+//     const shopifyConfig = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfig) {
+//       return res.status(404).json({ error: 'Shopify configuration not found.' });
+//     }
+
+//     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+//     const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
+
+//     const fulfillmentOrdersRes = await shopifyRequest(
+//       fulfillmentOrdersUrl,
+//       'GET',
+//       null,
+//       null,
+//       shopifyAccessToken
+//     );
+
+//     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
+//     if (!fulfillmentOrder?.id) {
+//       return res.status(400).json({ error: 'No fulfillment order found for this order.' });
+//     }
+
+//     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
+
+//     const query = `
+//       mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {
+//         fulfillmentCreateV2(fulfillment: $fulfillment) {
+//           fulfillment {
+//             id
+//             status
+//           }
+//           userErrors {
+//             field
+//             message
+//           }
+//         }
+//       }
+//     `;
+
+//     const variables = {
+//       fulfillment: {
+//         lineItemsByFulfillmentOrder: [
+//           {
+//             fulfillmentOrderId: `gid://shopify/FulfillmentOrder/${fulfillmentOrder.id}`
+//           }
+//         ],
+//         notifyCustomer: true,
+//         trackingInfo: {
+//           number: null,
+//           url: null,
+//           company: null
+//         }
+//       }
+//     };
+
+//     const response = await fetch(graphqlUrl, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'X-Shopify-Access-Token': shopifyAccessToken
+//       },
+//       body: JSON.stringify({ query, variables })
+//     });
+
+//     const result = await response.json();
+
+//     if (result.errors || result.data?.fulfillmentCreateV2?.userErrors?.length > 0) {
+//       return res.status(400).json({
+//         error: 'GraphQL fulfillment error.',
+//         details: result.errors || result.data.fulfillmentCreateV2.userErrors
+//       });
+//     }
+
+//     return res.status(200).json({
+//       message: 'Order fulfilled successfully.',
+//       data: result.data.fulfillmentCreateV2.fulfillment
+//     });
+
+//   } catch (error) {
+//     console.error(' Error in fulfillOrder:', error.message, error);
+//     return res.status(500).json({ error: 'Server error while fulfilling order.' });
+//   }
+// };
+
 export const fulfillOrder = async (req, res) => {
   try {
     const { orderId } = req.body;
+
+    console.log('[Request Received] orderId:', orderId);
 
     if (!orderId) {
       return res.status(400).json({ error: 'Order ID is required.' });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
+    console.log('[Shopify Config]', shopifyConfig);
+
     if (!shopifyConfig) {
       return res.status(404).json({ error: 'Shopify configuration not found.' });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
 
-    // Step 1: Get Fulfillment Order
     const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
 
     const fulfillmentOrdersRes = await shopifyRequest(
@@ -402,14 +545,17 @@ export const fulfillOrder = async (req, res) => {
       shopifyAccessToken
     );
 
+    console.log('[Fulfillment Orders Response]', fulfillmentOrdersRes);
+
     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
+    console.log('[Selected Fulfillment Order]', fulfillmentOrder);
+
     if (!fulfillmentOrder?.id) {
       return res.status(400).json({ error: 'No fulfillment order found for this order.' });
     }
 
     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
 
-    // Step 2: Use fulfillmentCreateV2 mutation (works with manual fulfillment)
     const query = `
       mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {
         fulfillmentCreateV2(fulfillment: $fulfillment) {
@@ -441,6 +587,8 @@ export const fulfillOrder = async (req, res) => {
       }
     };
 
+    console.log('[GraphQL Variables]', variables);
+
     const response = await fetch(graphqlUrl, {
       method: 'POST',
       headers: {
@@ -451,6 +599,7 @@ export const fulfillOrder = async (req, res) => {
     });
 
     const result = await response.json();
+    console.log('[GraphQL Fulfillment Result]', result);
 
     if (result.errors || result.data?.fulfillmentCreateV2?.userErrors?.length > 0) {
       return res.status(400).json({
@@ -459,8 +608,26 @@ export const fulfillOrder = async (req, res) => {
       });
     }
 
+    // ✅ MongoDB Update
+    const order = await orderModel.findOne({ orderId });
+    console.log('[MongoDB Order Before Update]', order);
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found in MongoDB.' });
+    }
+
+    order.lineItems = order.lineItems.map(item => ({
+      ...item,
+      fulfillment_status: 'fulfilled'
+    }));
+
+    console.log('[MongoDB Order After Update]', order.lineItems);
+
+    await order.save();
+    console.log('[MongoDB Save Completed]');
+
     return res.status(200).json({
-      message: 'Order fulfilled successfully.',
+      message: 'Order fulfilled successfully and MongoDB updated.',
       data: result.data.fulfillmentCreateV2.fulfillment
     });
 
@@ -469,5 +636,3 @@ export const fulfillOrder = async (req, res) => {
     return res.status(500).json({ error: 'Server error while fulfilling order.' });
   }
 };
-
-

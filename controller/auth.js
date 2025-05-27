@@ -773,7 +773,6 @@ export const CreateUserTagsModule = async (req, res) => {
 };
 
 
-
 export const logout = async (req, res) => {
   try {
     const userId = req.params.userId;
