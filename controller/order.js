@@ -709,3 +709,33 @@ export const fulfillOrder = async (req, res) => {
     return res.status(500).json({ error: 'Server error while fulfilling order.' });
   }
 };
+
+
+export const getOrderDatafromShopify = async (req, res) => {
+    const orderId = req.params.id;
+
+    try {
+        const shopifyConfig = await shopifyConfigurationModel.findOne();
+
+        if (!shopifyConfig) {
+            return res.status(404).json({ error: 'Shopify configuration not found.' });
+        }
+
+        const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+        const response = await axios.get(`${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}.json`, {
+            headers: {
+                'X-Shopify-Access-Token': shopifyAccessToken,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error fetching order:', error.response?.data || error.message);
+        res.status(500).json({
+            message: 'Failed to fetch order',
+            error: error.response?.data || error.message
+        });
+    }
+};
