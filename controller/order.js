@@ -108,8 +108,11 @@ export const createOrder = async (req, res) => {
 
     // If order does not exist, assign new serial number
     if (!order) {
-      const lastOrder = await orderModel.findOne().sort({ serialNumber: -1 });
-      serialNumber = lastOrder ? lastOrder.serialNumber + 1 : 101;
+      const lastOrder = await orderModel.findOne({ serialNumber: { $ne: null } }).sort({ serialNumber: -1 });
+      const lastSerial = typeof lastOrder?.serialNumber === 'number' && !isNaN(lastOrder.serialNumber)
+        ? lastOrder.serialNumber
+        : 100;
+      serialNumber = lastSerial + 1;
     }
 
     // Upsert the order with serialNumber preserved or newly assigned
