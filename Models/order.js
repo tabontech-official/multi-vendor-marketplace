@@ -5,21 +5,7 @@ const orderSchema = new mongoose.Schema({
   lineItems: Array,
   createdAt: Date,
   expiresAt: Date,
-  shopifyFulfillments: [
-  {
-    id: String,
-    status: String,
-    createdAt: String,
-    updatedAt: String,
-    trackingInfo: {
-      number: String,
-      url: String,
-      company: String,
-    }
-  }
-],
-serialNumber: Number,
-
+  
 },{
   timestamps:true
 });

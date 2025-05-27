@@ -92,7 +92,7 @@ async function checkProductExists(productId) {
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
-    const orderId = String(orderData.id); // Ensure consistent type
+    const orderId = String(orderData.id); 
     const productId = orderData.line_items?.[0]?.product_id;
 
     if (!productId) return res.status(400).send('Missing product ID');
@@ -104,16 +104,13 @@ export const createOrder = async (req, res) => {
 
     const quantity = orderData.line_items[0]?.quantity || 0;
 
-    // Check if the order already exists
     let existingOrder = await orderModel.findOne({ orderId });
 
     let serialNumber;
 
     if (existingOrder) {
-      // Order already exists — do not reassign serial number
       serialNumber = existingOrder.serialNumber;
 
-      // Optional: update customer or lineItems if you want to allow refresh/update
       await orderModel.updateOne(
         { orderId },
         {
@@ -125,7 +122,6 @@ export const createOrder = async (req, res) => {
         }
       );
     } else {
-      // Assign a new serial number
       const lastOrder = await orderModel.findOne({ serialNumber: { $ne: null } }).sort({ serialNumber: -1 });
 
       const lastSerial = typeof lastOrder?.serialNumber === 'number' && !isNaN(lastOrder.serialNumber)
@@ -134,7 +130,6 @@ export const createOrder = async (req, res) => {
 
       serialNumber = lastSerial + 1;
 
-      // Create new order
       await orderModel.create({
         orderId,
         customer: orderData.customer,
@@ -144,7 +139,6 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Update user subscription
     const user = await authModel.findOne({ email: orderData.customer.email });
     if (!user) return res.status(404).send('User not found');
 
@@ -163,7 +157,7 @@ export const createOrder = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error saving order:', error);
+    console.error(' Error saving order:', error);
     res.status(500).send('Error saving order');
   }
 };
@@ -550,18 +544,13 @@ export const fulfillOrder = async (req, res) => {
   try {
     const { orderId, itemsToFulfill, trackingInfo } = req.body;
 
-    console.log("📦 Incoming Fulfillment Request:", {
-      orderId,
-      trackingInfo,
-      itemsToFulfill,
-    });
+
 
     if (!orderId || !Array.isArray(itemsToFulfill)) {
       return res.status(400).json({ error: 'Order ID and fulfillment items are required.' });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
-    console.log("🔑 Shopify Config:", shopifyConfig);
 
     if (!shopifyConfig) {
       return res.status(404).json({ error: 'Shopify configuration not found.' });
@@ -570,7 +559,6 @@ export const fulfillOrder = async (req, res) => {
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
 
     const order = await orderModel.findOne({ orderId });
-    console.log("📄 MongoDB Order:", order);
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found in MongoDB.' });
@@ -586,8 +574,6 @@ export const fulfillOrder = async (req, res) => {
     );
 
     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
-    console.log("📦 Shopify Fulfillment Order:", fulfillmentOrder);
-    console.log("📋 Fulfillment Order Line Items from Shopify:", fulfillmentOrder.line_items);
 
     if (!fulfillmentOrder?.id) {
       return res.status(400).json({ error: 'No fulfillment order found for this order.' });
@@ -601,27 +587,22 @@ export const fulfillOrder = async (req, res) => {
       );
 
       if (!fulfillable) {
-        console.warn(`⚠️ Line item ${itemToFulfill.lineItemId} not found in Shopify fulfillment order.`);
         return;
       }
 
       const remainingQty = fulfillable.fulfillable_quantity || 0;
       const requestedQty = itemToFulfill.quantity;
 
-      console.log(`🔍 Checking line item ${itemToFulfill.lineItemId}: requested ${requestedQty}, remaining ${remainingQty}`);
 
       if (requestedQty > 0 && requestedQty <= remainingQty) {
         fulfillmentLineItems.push({
           fulfillmentOrderLineItemId: fulfillable.id,
           quantity: requestedQty,
         });
-        console.log(`✅ Added to fulfillment: lineItemId ${itemToFulfill.lineItemId}`);
       } else {
-        console.warn(`⚠️ Skipping line item ${itemToFulfill.lineItemId}: requested ${requestedQty}, remaining ${remainingQty}`);
       }
     });
 
-    console.log("📦 Final fulfillment line items to send:", fulfillmentLineItems);
 
     if (fulfillmentLineItems.length === 0) {
       return res.status(400).json({ error: 'No valid line items to fulfill. Check remaining quantities.' });
@@ -663,7 +644,6 @@ export const fulfillOrder = async (req, res) => {
       },
     };
 
-    console.log("🚀 Sending GraphQL fulfillment to Shopify:", variables);
 
     const response = await fetch(graphqlUrl, {
       method: 'POST',
@@ -686,7 +666,6 @@ export const fulfillOrder = async (req, res) => {
 
     const newFulfillment = result.data.fulfillmentCreateV2.fulfillment;
 
-    // ✅ Update MongoDB with fulfillment quantities
     order.lineItems = order.lineItems.map((item) => {
       const fulfilled = itemsToFulfill.find(
         (fulfilledItem) => Number(fulfilledItem.lineItemId) === Number(item.id)
@@ -712,26 +691,21 @@ export const fulfillOrder = async (req, res) => {
       return item;
     });
 
-    // ✅ Prevent duplicate fulfillment entry
     order.shopifyFulfillments = order.shopifyFulfillments || [];
     const alreadyExists = order.shopifyFulfillments.some(f => f.id === newFulfillment.id);
 
     if (!alreadyExists) {
       order.shopifyFulfillments.push(newFulfillment);
-      console.log(`📥 Saved new fulfillment ID ${newFulfillment.id} to DB`);
     } else {
-      console.log(`⚠️ Fulfillment ID ${newFulfillment.id} already exists in DB. Skipped.`);
     }
 
     await order.save();
-    console.log("💾 MongoDB order updated");
 
     return res.status(200).json({
       message: 'Order partially fulfilled successfully and MongoDB updated.',
       data: newFulfillment,
     });
   } catch (error) {
-    console.error('❌ Error in fulfillOrder:', error.message, error);
     return res.status(500).json({ error: 'Server error while fulfilling order.' });
   }
 };
