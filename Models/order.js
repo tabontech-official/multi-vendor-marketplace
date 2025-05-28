@@ -5,7 +5,7 @@ const orderSchema = new mongoose.Schema({
   lineItems: Array,
   createdAt: Date,
   expiresAt: Date,
-  
+  serialNumber:Number
 },{
   timestamps:true
 });
