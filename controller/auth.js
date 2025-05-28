@@ -9,13 +9,12 @@ import nodemailer from 'nodemailer';
 import axios from 'axios';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { brandAssetModel } from '../Models/brandAsset.js';
-import {apiCredentialModel} from '../Models/apicredential.js'
+import { apiCredentialModel } from '../Models/apicredential.js';
 import crypto from 'crypto';
 
-
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
-const generateApiSecretKey = () => `shpsk_${crypto.randomBytes(16).toString('hex')}`;
-
+const generateApiSecretKey = () =>
+  `shpsk_${crypto.randomBytes(16).toString('hex')}`;
 
 const createToken = (payLoad) => {
   const token = jwt.sign({ payLoad }, process.env.SECRET_KEY, {
@@ -301,18 +300,19 @@ export const checkShopifyAdminTag = async (email) => {
 
         if (existingUser) {
           existingUser.modules = modules;
-          existingUser.role = 'Client';
+          existingUser.role = 'Merchant';
           existingUser.shopifyId = shopifyId;
           await existingUser.save();
         } else {
           console.log('User not found to update.');
         }
 
-        return 'Client';
+        return 'Merchant';
       }
+      if (tags.includes('Support Staff')) return 'Support Staff';
 
-      if (tags.includes('Client')) return 'Client';
-      if (tags.includes('Staff')) return 'Staff';
+      if (tags.includes('Merchant')) return 'Merchant';
+      if (tags.includes('Merchant Staff')) return 'Merchant Staff';
     }
 
     return 'User';
@@ -354,7 +354,6 @@ export const checkShopifyAdminTag = async (email) => {
 //   }
 // };
 
-
 export const signIn = async (req, res) => {
   try {
     const { error } = loginSchema.validate(req.body);
@@ -389,7 +388,7 @@ export const signIn = async (req, res) => {
       credentials = await apiCredentialModel.create({
         userId: user._id,
         apiKey,
-        apiSecretKey
+        apiSecretKey,
       });
     }
 
@@ -399,14 +398,12 @@ export const signIn = async (req, res) => {
       user,
       apiKey: credentials.apiKey,
       apiSecretKey: credentials.apiSecretKey,
-      userId: user._id
+      userId: user._id,
     });
-
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 const hashPassword = async (password) => {
   if (password) {
@@ -679,6 +676,103 @@ export const getUserWithModules = async (req, res) => {
   }
 };
 
+// export const CreateUserTagsModule = async (req, res) => {
+//   try {
+//     const { email, modules, role, creatorId } = req.body;
+
+//     const creator = await authModel.findById(creatorId);
+//     if (!creator) return res.status(404).json({ error: 'Creator not found' });
+
+//     let roleLimitReached = false;
+
+//     if (creator.role === 'MasterAdmin' && role === 'Client') {
+//       const clientCount = await authModel.countDocuments({ role: 'Client', createdBy: creatorId });
+//       if (clientCount >= 2) roleLimitReached = true;
+//     }
+
+//     if (creator.role === 'MasterAdmin' && role === 'Staff') {
+//       const staffCount = await authModel.countDocuments({ role: 'Staff', createdBy: creatorId });
+//       if (staffCount >= 2) roleLimitReached = true;
+//     }
+
+//     if (creator.role === 'Client' && role === 'Staff') {
+//       const staffCount = await authModel.countDocuments({ role: 'Staff', createdBy: creatorId });
+//       if (staffCount >= 2) roleLimitReached = true;
+//     }
+
+//     if (roleLimitReached) {
+//       return res.status(403).json({ error: 'Role creation limit reached' });
+//     }
+
+//     const existingUser = await authModel.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ error: 'User already exists with this email' });
+//     }
+
+//     const token = createToken(email);
+//     const resetLink = `http://localhost:3006/New?token=${token}`;
+
+//     await transporter.sendMail({
+//       to: email,
+//       subject: 'Password Reset',
+//       html: `<p>Click <a href="${resetLink}">here</a> to create your password.</p>`,
+//     });
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration || {};
+
+//     const shopifyPayload = {
+//       customer: {
+//         tags: role,
+//         email,
+//       },
+//     };
+
+//     const response = await fetch(`${shopifyStoreUrl}/admin/api/2024-01/customers.json`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'X-Shopify-Access-Token': shopifyAccessToken,
+//       },
+//       body: JSON.stringify(shopifyPayload),
+//     });
+
+//     const shopifyResponse = await response.json();
+//     if (!response.ok) {
+//       return res.status(500).json({ error: 'Shopify user creation failed', details: shopifyResponse });
+//     }
+
+//     let organizationId = null;
+//     if (creator.role === 'DevAdmin') {
+//       organizationId = null;
+//     } else if (creator.role === 'MasterAdmin') {
+//       organizationId = creator._id;
+//     } else {
+//       organizationId = creator.organizationId || creator._id;
+//     }
+
+//     const newUser = new authModel({
+//       email,
+//       modules,
+//       role,
+//       shopifyId: shopifyResponse.customer.id,
+//       createdBy: creator._id,
+//       organizationId,
+//     });
+
+//     await newUser.save();
+
+//     res.status(201).json({
+//       message: 'User created successfully in both Shopify and MongoDB',
+//       data: newUser,
+//     });
+
+//   } catch (error) {
+//     console.error('Error in CreateUserTagsModule function:', error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const CreateUserTagsModule = async (req, res) => {
   try {
     const { email, modules, role, creatorId } = req.body;
@@ -688,18 +782,37 @@ export const CreateUserTagsModule = async (req, res) => {
 
     let roleLimitReached = false;
 
-    if (creator.role === 'MasterAdmin' && role === 'Client') {
-      const clientCount = await authModel.countDocuments({ role: 'Client', createdBy: creatorId });
-      if (clientCount >= 2) roleLimitReached = true;
+    if (creator.role === 'MasterAdmin') {
+      if (role === 'Merchant') {
+        const merchantCount = await authModel.countDocuments({
+          role: 'Merchant',
+          createdBy: creatorId,
+        });
+        if (merchantCount >= 10) roleLimitReached = true;
+      }
+
+      if (role === 'Support Staff') {
+        const staffCount = await authModel.countDocuments({
+          role: 'Support Staff',
+          createdBy: creatorId,
+        });
+        if (staffCount >= 10) roleLimitReached = true;
+      }
+
+      if (role === 'Merchant Staff') {
+        const staffCount = await authModel.countDocuments({
+          role: 'Merchant Staff',
+          createdBy: creatorId,
+        });
+        if (staffCount >= 10) roleLimitReached = true;
+      }
     }
 
-    if (creator.role === 'MasterAdmin' && role === 'Staff') {
-      const staffCount = await authModel.countDocuments({ role: 'Staff', createdBy: creatorId });
-      if (staffCount >= 2) roleLimitReached = true;
-    }
-
-    if (creator.role === 'Client' && role === 'Staff') {
-      const staffCount = await authModel.countDocuments({ role: 'Staff', createdBy: creatorId });
+    if (creator.role === 'Merchant' && role === 'Merchant Staff') {
+      const staffCount = await authModel.countDocuments({
+        role: 'Merchant Staff',
+        createdBy: creatorId,
+      });
       if (staffCount >= 2) roleLimitReached = true;
     }
 
@@ -709,11 +822,13 @@ export const CreateUserTagsModule = async (req, res) => {
 
     const existingUser = await authModel.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
     const token = createToken(email);
-    const resetLink = `http://localhost:3006/New?token=${token}`;
+    const resetLink = `https://multi-vendor-marketplaces.vercel.app/New?token=${token}`;
 
     await transporter.sendMail({
       to: email,
@@ -724,30 +839,49 @@ export const CreateUserTagsModule = async (req, res) => {
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration || {};
 
+    const tags = role === 'Merchant' ? `${role},approved` : role;
+
     const shopifyPayload = {
       customer: {
-        tags: role,
+        tags,
         email,
       },
     };
 
-    const response = await fetch(`${shopifyStoreUrl}/admin/api/2024-01/customers.json`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': shopifyAccessToken,
-      },
-      body: JSON.stringify(shopifyPayload),
-    });
+    const response = await fetch(
+      `${shopifyStoreUrl}/admin/api/2024-01/customers.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': shopifyAccessToken,
+        },
+        body: JSON.stringify(shopifyPayload),
+      }
+    );
 
     const shopifyResponse = await response.json();
     if (!response.ok) {
-      return res.status(500).json({ error: 'Shopify user creation failed', details: shopifyResponse });
+      return res.status(500).json({
+        error: 'Shopify user creation failed',
+        details: shopifyResponse,
+      });
     }
 
+    const shopifyTags = shopifyResponse.customer.tags || '';
+    const extractedRole = shopifyTags.split(',')[0];
+
+    // ✅ Use selected merchant as creator only if merchant staff is being created by admin
+    const actualCreatorId =
+      extractedRole === 'Merchant Staff' &&
+      (creator.role === 'DevAdmin' || creator.role === 'MasterAdmin')
+        ? req.body.creatorId // selected merchant ID from frontend
+        : creator._id;
+
+    // Determine organizationId
     let organizationId = null;
     if (creator.role === 'DevAdmin') {
-      organizationId = null; 
+      organizationId = null;
     } else if (creator.role === 'MasterAdmin') {
       organizationId = creator._id;
     } else {
@@ -757,9 +891,9 @@ export const CreateUserTagsModule = async (req, res) => {
     const newUser = new authModel({
       email,
       modules,
-      role,
+      role: extractedRole,
       shopifyId: shopifyResponse.customer.id,
-      createdBy: creator._id,
+      createdBy: actualCreatorId,
       organizationId,
     });
 
@@ -769,7 +903,6 @@ export const CreateUserTagsModule = async (req, res) => {
       message: 'User created successfully in both Shopify and MongoDB',
       data: newUser,
     });
-
   } catch (error) {
     console.error('Error in CreateUserTagsModule function:', error);
     return res.status(500).json({ error: error.message });
@@ -1120,7 +1253,7 @@ export const getAllUsersData = async (req, res) => {
           role: 1,
           country: 1,
           city: 1,
-          shopifyId:1
+          shopifyId: 1,
         },
       },
     ]);
@@ -1151,18 +1284,18 @@ export const fetchUserData = async (req, res) => {
   }
 };
 
-
 export const getUserByRole = async (req, res) => {
   try {
     const { id } = req.params;
 
     const userId = new mongoose.Types.ObjectId(id);
 
-    const usersInOrg = await authModel.find({ organizationId: userId });
-
+    const usersInOrg = await authModel.find({ createdBy: userId });
 
     if (!usersInOrg.length) {
-      return res.status(404).json({ message: 'No users found for this organization.' });
+      return res
+        .status(404)
+        .json({ message: 'No users found for this organization.' });
     }
 
     return res.status(200).json({
@@ -1183,7 +1316,6 @@ export const getUserByRole = async (req, res) => {
     return res.status(500).json({ error: 'Server error.' });
   }
 };
-
 
 export const saveShopifyCredentials = async (req, res) => {
   try {
@@ -1304,9 +1436,62 @@ export const getSingleUser = async (req, res) => {
     if (user) {
       res.status(200).json(user);
     } else {
-      res.status(404).json({ message: "User not found" });
+      res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+export const getAllMerchants = async (req, res) => {
+  try {
+    const result = await authModel.aggregate([
+      {
+        $match: {
+          role: "Merchant"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          email: 1
+        }
+      }
+    ]);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching merchants:", error);
+    res.status(500).json({ error: "Failed to fetch merchants" });
+  }
+};
+
+export const getAllOnboardUsersData = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin = await authModel.findById(id);
+
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    let filter = {};
+
+    if (admin.role === "Dev Admin") {
+      filter = {};
+    } else if (admin.role === "Master Admin") {
+      filter = {
+        role: { $in: ["Support Staff", "Merchant", "Merchant Staff"] },
+      };
+    } else {
+      return res.status(403).json({ error: "Unauthorized role" });
+    }
+
+    const users = await authModel.find(filter);
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error in getAllOnboardUsersData:", error);
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 };
