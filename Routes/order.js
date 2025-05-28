@@ -16,7 +16,7 @@ orderRouter.get('/order/:userId', getOrderById)
 // orderRouter.get('/order', getOrderById);
 orderRouter.get('/recurringFinance', getFinanceSummary);
 orderRouter.get('/getOrderByOrderId/:id', getOrderByOrderId);
-orderRouter.get('/getOrderFromShopify/:id', getOrderDatafromShopify);
+orderRouter.get('/getOrderFromShopify/:id/:userId', getOrderDatafromShopify);
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;

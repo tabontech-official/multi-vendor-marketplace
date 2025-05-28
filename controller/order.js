@@ -712,30 +712,96 @@ export const fulfillOrder = async (req, res) => {
 
 
 export const getOrderDatafromShopify = async (req, res) => {
-    const orderId = req.params.id;
+  const orderId = req.params.id;
+  const userId = req.params.userId;
 
-    try {
-        const shopifyConfig = await shopifyConfigurationModel.findOne();
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required.' });
+  }
 
-        if (!shopifyConfig) {
-            return res.status(404).json({ error: 'Shopify configuration not found.' });
+  try {
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+
+    if (!shopifyConfig) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+
+    const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+    const response = await axios.get(
+      `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const order = response.data.order;
+
+    const filteredLineItems = [];
+    const variantOwnershipMap = new Map();
+
+    for (const item of order.line_items || []) {
+      const variantId = item.variant_id?.toString();
+      if (!variantId) continue;
+
+      const product = await listingModel.findOne({ 'variants.id': variantId });
+
+      if (product && product.userId?.toString() === userId) {
+        const matchedVariant = product.variants.find(v => v.id === variantId);
+
+        if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+          const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
+
+          if (image) {
+            item.image = {
+              id: image.id,
+              src: image.src,
+              alt: image.alt,
+              position: image.position,
+              width: image.width,
+              height: image.height,
+            };
+          }
         }
 
-        const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
-
-        const response = await axios.get(`${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}.json`, {
-            headers: {
-                'X-Shopify-Access-Token': shopifyAccessToken,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        res.json(response.data);
-    } catch (error) {
-        console.error('Error fetching order:', error.response?.data || error.message);
-        res.status(500).json({
-            message: 'Failed to fetch order',
-            error: error.response?.data || error.message
-        });
+        filteredLineItems.push(item);
+        variantOwnershipMap.set(variantId, true); // Mark this variant as owned
+      }
     }
+
+    // 🔥 Filter fulfillments
+    const filteredFulfillments = (order.fulfillments || []).map(f => {
+      const ownedItems = (f.line_items || []).filter(item =>
+        variantOwnershipMap.has(item.variant_id?.toString())
+      );
+      return ownedItems.length > 0 ? { ...f, line_items: ownedItems } : null;
+    }).filter(f => f !== null);
+
+    if (filteredLineItems.length === 0 && filteredFulfillments.length === 0) {
+      return res.status(404).json({
+        message: 'No matching items or fulfillments found for this user.',
+      });
+    }
+
+    const filteredOrder = {
+      ...order,
+      line_items: filteredLineItems,
+      fulfillments: filteredFulfillments,
+    };
+
+    res.json({
+      message: 'Filtered Shopify order for user',
+      data: filteredOrder,
+    });
+  } catch (error) {
+    console.error('Error fetching filtered order:', error.response?.data || error.message);
+    res.status(500).json({
+      message: 'Failed to fetch filtered order',
+      error: error.response?.data || error.message,
+    });
+  }
 };
+
