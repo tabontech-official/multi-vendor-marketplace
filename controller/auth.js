@@ -1467,6 +1467,35 @@ export const getAllMerchants = async (req, res) => {
   }
 };
 
+// export const getAllOnboardUsersData = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const admin = await authModel.findById(id);
+
+//     if (!admin) {
+//       return res.status(404).json({ error: "Admin not found" });
+//     }
+
+//     let filter = {};
+
+//     if (admin.role === "Dev Admin") {
+//       filter = {};
+//     } else if (admin.role === "Master Admin") {
+//       filter = {
+//         role: { $in: ["Support Staff", "Merchant", "Merchant Staff"] },
+//       };
+//     } else {
+//       return res.status(403).json({ error: "Unauthorized role" });
+//     }
+
+//     const users = await authModel.find(filter);
+//     res.status(200).json(users);
+//   } catch (error) {
+//     console.error("Error in getAllOnboardUsersData:", error);
+//     res.status(500).json({ error: "Server error: " + error.message });
+//   }
+// };
+
 export const getAllOnboardUsersData = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1476,22 +1505,79 @@ export const getAllOnboardUsersData = async (req, res) => {
       return res.status(404).json({ error: "Admin not found" });
     }
 
-    let filter = {};
+    // Fetch merchants
+    const merchants = await authModel.find({ role: "Merchant" });
 
+    // Build merchantGroups (each merchant + their merchant staff)
+    const merchantGroups = await Promise.all(
+      merchants.map(async (merchant) => {
+        const staff = await authModel.find({
+          role: "Merchant Staff",
+          createdBy: merchant._id,
+        });
+
+        const formattedMerchant = {
+          ...merchant.toObject(),
+          id: merchant._id.toString(),
+          _id: undefined,
+        };
+
+        const formattedStaff = staff.map((s) => ({
+          ...s.toObject(),
+          id: s._id.toString(),
+          _id: undefined,
+          createdBy: s.createdBy?.toString() || null,
+        }));
+
+        return {
+          merchant: formattedMerchant,
+          staff: formattedStaff,
+        };
+      })
+    );
+
+    // Fetch support staff (flat)
+    const supportStaffRaw = await authModel.find({ role: "Support Staff" });
+    const supportStaff = supportStaffRaw.map((s) => ({
+      ...s.toObject(),
+      id: s._id.toString(),
+      _id: undefined,
+      createdBy: s.createdBy?.toString() || null,
+    }));
+
+    // ✅ DEV ADMIN
     if (admin.role === "Dev Admin") {
-      filter = {};
-    } else if (admin.role === "Master Admin") {
-      filter = {
-        role: { $in: ["Support Staff", "Merchant", "Merchant Staff"] },
-      };
-    } else {
-      return res.status(403).json({ error: "Unauthorized role" });
+      const allUsers = await authModel.find();
+
+      const formattedUsers = allUsers.map((user) => ({
+        ...user.toObject(),
+        id: user._id.toString(),
+        _id: undefined,
+        createdBy: user.createdBy?.toString() || null,
+      }));
+
+      return res.status(200).json({
+        type: "dev",
+        users: formattedUsers,
+        supportStaff,
+        merchantGroups,
+      });
     }
 
-    const users = await authModel.find(filter);
-    res.status(200).json(users);
+    // ✅ MASTER ADMIN
+    if (admin.role === "Master Admin") {
+      return res.status(200).json({
+        type: "master",
+        supportStaff,
+        merchantGroups,
+      });
+    }
+
+    // ❌ Unauthorized
+    return res.status(403).json({ error: "Unauthorized role" });
   } catch (error) {
     console.error("Error in getAllOnboardUsersData:", error);
     res.status(500).json({ error: "Server error: " + error.message });
   }
 };
+
