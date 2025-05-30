@@ -1119,7 +1119,6 @@ export const getAllProductPromotionStatus = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
 
   try {
-    // Step 1: Fetch all products with variants
     const allProducts = await listingModel.find({}, { variants: 1 });
 
     const allVariants = allProducts.flatMap((product) =>
@@ -1132,7 +1131,6 @@ export const getAllProductPromotionStatus = async (req, res) => {
 
     const allVariantIds = allVariants.map((v) => v.id);
 
-    // Step 2: Fetch promo statuses
     const promos = await PromoModel.find(
       { variantId: { $in: allVariantIds } },
       { variantId: 1, status: 1 }
@@ -1143,13 +1141,12 @@ export const getAllProductPromotionStatus = async (req, res) => {
       promoStatusMap.set(promo.variantId?.toString(), promo.status);
     });
 
-    // Step 3: Filter variants based on your 2 conditions
     const productVariantMap = new Map();
 
     for (const { id, productId, variant } of allVariants) {
       const promoStatus = promoStatusMap.get(id);
 
-      if (promoStatus === 'active') continue; // ❌ Skip active
+      if (promoStatus === 'active') continue;
       if (!promoStatus || promoStatus === 'inactive') {
         if (!productVariantMap.has(productId)) {
           productVariantMap.set(productId, []);
@@ -1167,7 +1164,6 @@ export const getAllProductPromotionStatus = async (req, res) => {
         .json({ message: 'No products with valid variants found.' });
     }
 
-    // Step 4: Aggregate and paginate product details
     const products = await listingModel.aggregate([
       {
         $match: {
@@ -1224,7 +1220,6 @@ export const getAllProductPromotionStatus = async (req, res) => {
       { $limit: limit },
     ]);
 
-    // Step 5: Attach filtered variants
     const finalProducts = products.map((product) => ({
       ...product,
       variants: productVariantMap.get(product._id.toString()) || [],
@@ -2049,6 +2044,10 @@ export const deleteImageGallery = async (req, res) => {
   } catch (error) {}
 };
 
+
+
+// const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
 //   const userId = req.body.userId;
@@ -2068,7 +2067,6 @@ export const deleteImageGallery = async (req, res) => {
 //     }
 
 //     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
-
 //     const allRows = [];
 //     const stream = Readable.from(file.buffer);
 
@@ -2081,7 +2079,6 @@ export const deleteImageGallery = async (req, res) => {
 //       })
 //       .on('end', async () => {
 //         const groupedProducts = {};
-
 //         allRows.forEach((row) => {
 //           const handle = row['Handle']?.trim();
 //           if (handle) {
@@ -2124,7 +2121,11 @@ export const deleteImageGallery = async (req, res) => {
 //               taxable: row['Variant Taxable'] === 'TRUE',
 //               barcode: row['Variant Barcode'] || '',
 //               weight: parseFloat(row['Variant Grams']) || 0,
-//               weight_unit: row['Variant Weight Unit'] || 'kg',
+//               weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
+//                 row['Variant Weight Unit']
+//               )
+//                 ? row['Variant Weight Unit']
+//                 : 'g',
 //               option1: row['Option1 Value'] || null,
 //               option2: row['Option2 Value'] || null,
 //               option3: row['Option3 Value'] || null,
@@ -2181,10 +2182,7 @@ export const deleteImageGallery = async (req, res) => {
 //             },
 //           };
 
-//           console.log(
-//             '🛠️ Shopify Product Payload:',
-//             JSON.stringify(payload, null, 2)
-//           );
+//           await delay(2000); // 👈 ADD DELAY HERE (2 seconds between product creations)
 
 //           try {
 //             const response = await shopifyRequest(
@@ -2197,7 +2195,6 @@ export const deleteImageGallery = async (req, res) => {
 
 //             const product = response.product;
 //             const productId = product.id;
-//             console.log(' Created Product on Shopify with ID:', productId);
 
 //             const uploadedVariantImages = [];
 
@@ -2236,7 +2233,7 @@ export const deleteImageGallery = async (req, res) => {
 //                     }
 //                   } catch (uploadError) {
 //                     console.error(
-//                       ` Error uploading variant image: ${uploadError.message}`
+//                       `Error uploading variant image: ${uploadError.message}`
 //                     );
 //                   }
 //                 }
@@ -2272,7 +2269,7 @@ export const deleteImageGallery = async (req, res) => {
 //                     variant.image_id = uploadedVariantImages[index].id;
 //                   } catch (updateError) {
 //                     console.error(
-//                       ` Error linking image to variant ID ${variant.id}: ${updateError.message}`
+//                       `Error linking image to variant ID ${variant.id}: ${updateError.message}`
 //                     );
 //                   }
 //                 }
@@ -2296,10 +2293,6 @@ export const deleteImageGallery = async (req, res) => {
 //               variantImages: uploadedVariantImages,
 //             });
 
-//             console.log(
-//               ` Product and Variant Images saved into Database for Product ID: ${productId}`
-//             );
-
 //             const imageGallery = await new imageGalleryModel({
 //               userId: userId,
 //               images: product.images.map((img) => ({
@@ -2316,10 +2309,11 @@ export const deleteImageGallery = async (req, res) => {
 //               })),
 //             });
 //             imageGallery.save();
+
 //             results.push({ success: true, productId, title: product.title });
 //           } catch (error) {
 //             console.error(
-//               ` Error creating product for handle ${handle}:`,
+//               `Error creating product for handle ${handle}:`,
 //               error?.message || error
 //             );
 //             results.push({
@@ -2348,13 +2342,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
-  const userId = req.body.userId;
+  const userId = req.params; // 👈 keeps your desired syntax
 
   if (!file || !file.buffer) {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
 
-  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+  if (!userId.userId || !mongoose.Types.ObjectId.isValid(userId.userId)) {
     return res.status(400).json({ error: 'Invalid or missing userId.' });
   }
 
@@ -2398,32 +2392,22 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const optionValues = [[], [], []];
 
           const variants = rows.map((row) => {
-            if (row['Option1 Value'])
-              optionValues[0].push(row['Option1 Value']);
-            if (row['Option2 Value'])
-              optionValues[1].push(row['Option2 Value']);
-            if (row['Option3 Value'])
-              optionValues[2].push(row['Option3 Value']);
+            if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
+            if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
+            if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
 
             return {
               sku: row['Variant SKU'] || '',
               price: row['Variant Price'] || '0.00',
               compare_at_price: row['Variant Compare At Price'] || null,
-              inventory_management:
-                row['Variant Inventory Tracker'] === 'shopify'
-                  ? 'shopify'
-                  : null,
+              inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
               inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
               fulfillment_service: 'manual',
               requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
               taxable: row['Variant Taxable'] === 'TRUE',
               barcode: row['Variant Barcode'] || '',
               weight: parseFloat(row['Variant Grams']) || 0,
-              weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
-                row['Variant Weight Unit']
-              )
-                ? row['Variant Weight Unit']
-                : 'g',
+              weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
               option1: row['Option1 Value'] || null,
               option2: row['Option2 Value'] || null,
               option3: row['Option3 Value'] || null,
@@ -2431,24 +2415,15 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             };
           });
 
-          const uniqueOptions = options
-            .map((name, idx) => ({
-              name,
-              values: [...new Set(optionValues[idx])],
-            }))
-            .filter((opt) => opt.name);
+          const uniqueOptions = options.map((name, idx) => ({
+            name,
+            values: [...new Set(optionValues[idx])],
+          })).filter((opt) => opt.name);
 
-          const images = [
-            ...new Set(
-              rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
-            ),
-          ].map((src, index) => ({
+          const images = [...new Set(rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean))].map((src, index) => ({
             src,
             position: index + 1,
-            alt:
-              rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
-                'Image Alt Text'
-              ] || null,
+            alt: rows.find((r) => cleanUrl(r['Image Src']) === src)?.['Image Alt Text'] || null,
           }));
 
           const payload = {
@@ -2480,7 +2455,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             },
           };
 
-          await delay(2000); // 👈 ADD DELAY HERE (2 seconds between product creations)
+          await delay(2000);
 
           try {
             const response = await shopifyRequest(
@@ -2493,50 +2468,45 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
             const product = response.product;
             const productId = product.id;
-
             const uploadedVariantImages = [];
 
-            await Promise.all(
-              variants.map(async (variant) => {
-                if (variant.variant_image) {
-                  try {
-                    const imageUploadPayload = {
-                      image: {
-                        src: variant.variant_image,
-                        alt: `Variant Image`,
-                      },
-                    };
+            await Promise.all(variants.map(async (variant) => {
+              if (variant.variant_image) {
+                try {
+                  const imageUploadPayload = {
+                    image: {
+                      src: variant.variant_image,
+                      alt: `Variant Image`,
+                    },
+                  };
 
-                    const uploadResponse = await shopifyRequest(
-                      `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
-                      'POST',
-                      imageUploadPayload,
-                      shopifyApiKey,
-                      shopifyAccessToken
-                    );
+                  const uploadResponse = await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+                    'POST',
+                    imageUploadPayload,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
 
-                    if (uploadResponse?.image) {
-                      const img = uploadResponse.image;
-                      uploadedVariantImages.push({
-                        id: img.id?.toString() || '',
-                        alt: img.alt || '',
-                        position: img.position || 0,
-                        product_id: img.product_id?.toString() || '',
-                        created_at: img.created_at || '',
-                        updated_at: img.updated_at || '',
-                        width: img.width || 0,
-                        height: img.height || 0,
-                        src: img.src || '',
-                      });
-                    }
-                  } catch (uploadError) {
-                    console.error(
-                      `Error uploading variant image: ${uploadError.message}`
-                    );
+                  if (uploadResponse?.image) {
+                    const img = uploadResponse.image;
+                    uploadedVariantImages.push({
+                      id: img.id?.toString() || '',
+                      alt: img.alt || '',
+                      position: img.position || 0,
+                      product_id: img.product_id?.toString() || '',
+                      created_at: img.created_at || '',
+                      updated_at: img.updated_at || '',
+                      width: img.width || 0,
+                      height: img.height || 0,
+                      src: img.src || '',
+                    });
                   }
+                } catch (uploadError) {
+                  console.error(`Error uploading variant image: ${uploadError.message}`);
                 }
-              })
-            );
+              }
+            }));
 
             const productDetails = await shopifyRequest(
               `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
@@ -2548,31 +2518,28 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
             const shopifyVariants = productDetails?.product?.variants || [];
 
-            await Promise.all(
-              shopifyVariants.map(async (variant, index) => {
-                if (uploadedVariantImages[index]) {
-                  try {
-                    await shopifyRequest(
-                      `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-                      'PUT',
-                      {
-                        variant: {
-                          id: variant.id,
-                          image_id: uploadedVariantImages[index].id,
-                        },
+            await Promise.all(shopifyVariants.map(async (variant, index) => {
+              if (uploadedVariantImages[index]) {
+                try {
+                  await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+                    'PUT',
+                    {
+                      variant: {
+                        id: variant.id,
+                        image_id: uploadedVariantImages[index].id,
                       },
-                      shopifyApiKey,
-                      shopifyAccessToken
-                    );
-                    variant.image_id = uploadedVariantImages[index].id;
-                  } catch (updateError) {
-                    console.error(
-                      `Error linking image to variant ID ${variant.id}: ${updateError.message}`
-                    );
-                  }
+                    },
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+                  variant.image_id = uploadedVariantImages[index].id;
+                } catch (updateError) {
+                  console.error(`Error linking image to variant ID ${variant.id}: ${updateError.message}`);
                 }
-              })
-            );
+              }
+            }));
+console.log('Incoming userId param:', userId.userId);
 
             await listingModel.create({
               shopifyId: productId,
@@ -2587,12 +2554,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               images: product.images,
               variants: shopifyVariants,
               options: product.options,
-              userId: userId,
+              userId: userId.userId, 
               variantImages: uploadedVariantImages,
             });
 
-            const imageGallery = await new imageGalleryModel({
-              userId: userId,
+            const imageGallery = new imageGalleryModel({
+              userId: userId.userId, 
               images: product.images.map((img) => ({
                 id: img.id?.toString(),
                 product_id: img.product_id?.toString(),
@@ -2606,14 +2573,11 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                 productId: productId.toString(),
               })),
             });
-            imageGallery.save();
+            await imageGallery.save();
 
             results.push({ success: true, productId, title: product.title });
           } catch (error) {
-            console.error(
-              `Error creating product for handle ${handle}:`,
-              error?.message || error
-            );
+            console.error(`Error creating product for handle ${handle}:`, error?.message || error);
             results.push({
               success: false,
               handle,
@@ -2621,10 +2585,8 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             });
           }
         }
-
-        return res
-          .status(200)
-          .json({ message: 'Products processed.', results });
+  await listingModel.deleteMany({ $or: [{ userId: { $exists: false } }, { userId: null }] });
+        return res.status(200).json({ message: 'Products processed.', results });
       });
   } catch (error) {
     console.error('🔥 Server error:', error.message);
@@ -2635,6 +2597,9 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
+
+
 
 export const updateProductWebhook = async (req, res) => {
   try {
@@ -2739,7 +2704,6 @@ export const updateInventoryPrice = async (req, res) => {
     const variantId = req.params.id;
     const { price, compareAtPrice } = req.body;
 
-    // Atomic update of variant price inside product document
     const product = await listingModel.findOneAndUpdate(
       { 'variants.id': variantId },
       {
@@ -3522,3 +3486,8 @@ export const getAllVariants = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const deleteAll=async(req,res)=>{
+  await listingModel.deleteMany()
+  res.status(200).send("deleted")
+}

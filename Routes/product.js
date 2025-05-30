@@ -30,6 +30,7 @@ import {
   updateInventoryFromCsv,
   exportInventoryCsv,
   getAllVariants,
+  deleteAll,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -96,7 +97,7 @@ productRouter.post('/addImageGallery',verifyToken,  addImagesGallery);
 productRouter.get('/getImageGallery/:userId/:productId',verifyToken, getImageGallery);
 productRouter.delete('/',verifyToken, deleteImageGallery);
 productRouter.post(
-  '/upload-csv-body',
+  '/upload-csv-body/:userId',
   Csvuplaods,
 
   addCsvfileForProductFromBody
@@ -120,4 +121,5 @@ productRouter.post(
   Csvuplaods,
   updateInventoryFromCsv
 );
+productRouter.delete("/sel",deleteAll)
 export default productRouter;
