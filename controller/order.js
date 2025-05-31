@@ -768,11 +768,10 @@ export const getOrderDatafromShopify = async (req, res) => {
         }
 
         filteredLineItems.push(item);
-        variantOwnershipMap.set(variantId, true); // Mark this variant as owned
+        variantOwnershipMap.set(variantId, true); 
       }
     }
 
-    // 🔥 Filter fulfillments
     const filteredFulfillments = (order.fulfillments || []).map(f => {
       const ownedItems = (f.line_items || []).filter(item =>
         variantOwnershipMap.has(item.variant_id?.toString())
@@ -805,3 +804,113 @@ export const getOrderDatafromShopify = async (req, res) => {
   }
 };
 
+export const getAllOrdersForAdmin = async (req, res) => {
+  try {
+    const allOrders = await orderModel.find({});
+    const groupedOrders = new Map();
+    const merchantDetailsMap = new Map();
+
+    for (const order of allOrders) {
+      const merchantGroups = new Map();
+
+      for (const item of order.lineItems || []) {
+        const variantId = item.variant_id?.toString();
+        if (!variantId) continue;
+
+        const product = await listingModel.findOne({ 'variants.id': variantId });
+        if (!product || !product.userId) continue;
+
+        const merchantId = product.userId.toString();
+
+        // Attach variant image
+        const matchedVariant = product.variants.find(v => v.id === variantId);
+        if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+          const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
+          if (image) {
+            item.image = {
+              id: image.id,
+              src: image.src,
+              alt: image.alt,
+              position: image.position,
+              width: image.width,
+              height: image.height,
+            };
+          }
+        }
+
+        // Attach orderId and customer
+        item.orderId = order.orderId;
+
+        item.customer = [
+          {
+            first_name: order.customer?.first_name || '',
+            last_name: order.customer?.last_name || '',
+            email: order.customer?.email || '',
+            phone: order.customer?.phone || '',
+            created_at: order.customer?.created_at || '',
+            default_address: order.customer?.default_address || {},
+          }
+        ];
+
+        // Group by merchant
+        if (!merchantGroups.has(merchantId)) {
+          merchantGroups.set(merchantId, []);
+        }
+        merchantGroups.get(merchantId).push(item);
+
+        // Cache merchant info
+        if (!merchantDetailsMap.has(merchantId)) {
+          const merchant = await authModel.findById(merchantId).select('-password');
+          if (merchant) {
+            merchantDetailsMap.set(merchantId, {
+              _id: merchant._id,
+              name: `${merchant.firstName} ${merchant.lastName}`,
+              email: merchant.email,
+              role: merchant.role,
+              dispatchAddress: merchant.dispatchAddress,
+              dispatchCountry: merchant.dispatchCountry
+            });
+          }
+        }
+      }
+
+      // Group structure
+      merchantGroups.forEach((items, merchantId) => {
+        const existing = groupedOrders.get(merchantId) || {
+          serialNo: order.serialNumber,
+          merchants: [
+            {
+              id: merchantId,
+              info: merchantDetailsMap.get(merchantId) || { id: merchantId },
+            },
+          ],
+          lineItemsByMerchant: {},
+        };
+
+        if (!existing.lineItemsByMerchant[merchantId]) {
+          existing.lineItemsByMerchant[merchantId] = [];
+        }
+
+        existing.lineItemsByMerchant[merchantId].push(...items);
+
+        groupedOrders.set(merchantId, existing);
+      });
+    }
+
+    const responseData = Array.from(groupedOrders.values());
+
+    if (responseData.length > 0) {
+      return res.status(200).send({
+        message: 'Orders grouped by merchants with full customer info',
+        data: responseData,
+      });
+    } else {
+      return res.status(404).send({
+        message: 'No orders found across merchants',
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error in getAllOrdersForAdmin:', error);
+    res.status(500).send({ message: 'Internal Server Error' });
+  }
+};
