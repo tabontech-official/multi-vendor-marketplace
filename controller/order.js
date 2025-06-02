@@ -4,10 +4,16 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 import { listingModel } from '../Models/Listing.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
-export const shopifyRequest = async (url, method, body, apiKey, accessToken) => {
+export const shopifyRequest = async (
+  url,
+  method,
+  body,
+  apiKey,
+  accessToken
+) => {
   const headers = {
     'Content-Type': 'application/json',
-    'X-Shopify-Access-Token': accessToken
+    'X-Shopify-Access-Token': accessToken,
   };
 
   const response = await fetch(url, {
@@ -30,7 +36,6 @@ export const shopifyRequest = async (url, method, body, apiKey, accessToken) => 
   return response.json();
 };
 
-
 async function checkProductExists(productId) {
   const url = `https://${process.env.SHOPIFY_API_KEY}:${process.env.SHOPIFY_ACCESS_TOKEN}@${process.env.SHOPIFY_STORE_URL}/admin/api/2023-01/products/${productId}.json`;
 
@@ -43,12 +48,11 @@ async function checkProductExists(productId) {
   }
 }
 
-
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
-    const orderId = String(orderData.id); 
-        const shopifyOrderNo = orderData.order_number; 
+    const orderId = String(orderData.id);
+    const shopifyOrderNo = orderData.order_number;
 
     const productId = orderData.line_items?.[0]?.product_id;
 
@@ -75,16 +79,20 @@ export const createOrder = async (req, res) => {
             customer: orderData.customer,
             lineItems: orderData.line_items,
             createdAt: orderData.created_at,
-                shopifyOrderNo,
-          }
+            shopifyOrderNo,
+          },
         }
       );
     } else {
-      const lastOrder = await orderModel.findOne({ serialNumber: { $ne: null } }).sort({ serialNumber: -1 });
+      const lastOrder = await orderModel
+        .findOne({ serialNumber: { $ne: null } })
+        .sort({ serialNumber: -1 });
 
-      const lastSerial = typeof lastOrder?.serialNumber === 'number' && !isNaN(lastOrder.serialNumber)
-        ? lastOrder.serialNumber
-        : 100;
+      const lastSerial =
+        typeof lastOrder?.serialNumber === 'number' &&
+        !isNaN(lastOrder.serialNumber)
+          ? lastOrder.serialNumber
+          : 100;
 
       serialNumber = lastSerial + 1;
 
@@ -94,7 +102,7 @@ export const createOrder = async (req, res) => {
         lineItems: orderData.line_items,
         createdAt: orderData.created_at,
         serialNumber,
-        shopifyOrderNo
+        shopifyOrderNo,
       });
     }
 
@@ -112,18 +120,15 @@ export const createOrder = async (req, res) => {
     res.status(200).json({
       message: 'Order saved (or updated) and user updated',
       orderId,
-            shopifyOrderNo,
+      shopifyOrderNo,
 
       serialNumber,
     });
-
   } catch (error) {
     console.error(' Error saving order:', error);
     res.status(500).send('Error saving order');
   }
 };
-
-
 
 export const getFinanceSummary = async (req, res) => {
   try {
@@ -221,7 +226,6 @@ export const getFinanceSummary = async (req, res) => {
   }
 };
 
-
 // export const getOrderById = async (req, res) => {
 //   try {
 //     const userId = req.params.userId;
@@ -296,7 +300,6 @@ export const getFinanceSummary = async (req, res) => {
 //   }
 // };
 
-
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -321,17 +324,22 @@ export const getOrderById = async (req, res) => {
         const variantId = item.variant_id?.toString();
         if (!variantId) continue;
 
-        const product = await listingModel.findOne({ 'variants.id': variantId });
+        const product = await listingModel.findOne({
+          'variants.id': variantId,
+        });
 
-        if (
-          product &&
-          product.userId &&
-          product.userId.toString() === userId
-        ) {
-          const matchedVariant = product.variants.find(v => v.id === variantId);
+        if (product && product.userId && product.userId.toString() === userId) {
+          const matchedVariant = product.variants.find(
+            (v) => v.id === variantId
+          );
 
-          if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-            const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
+          if (
+            matchedVariant?.image_id &&
+            Array.isArray(product.variantImages)
+          ) {
+            const image = product.variantImages.find(
+              (img) => img.id === matchedVariant.image_id
+            );
 
             if (image) {
               item.image = {
@@ -358,7 +366,9 @@ export const getOrderById = async (req, res) => {
           existingOrder.lineItems.push(...filteredLineItems);
 
           existingOrder.lineItems = Array.from(
-            new Map(existingOrder.lineItems.map(item => [item.variant_id, item]))
+            new Map(
+              existingOrder.lineItems.map((item) => [item.variant_id, item])
+            )
           ).map(([_, item]) => item);
         } else {
           ordersGroupedByOrderId.set(order.orderId, orderForUser);
@@ -384,8 +394,6 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-
-
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {
     if (result) {
@@ -394,18 +402,17 @@ export const deleteUser = async (req, res) => {
   });
 };
 
-
 export const getOrderByOrderId = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await orderModel.findOne({ orderId: id }); 
+    const result = await orderModel.findOne({ orderId: id });
     if (!result) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: 'Order not found' });
     }
-    res.status(200).json({ data: result }); 
+    res.status(200).json({ data: result });
   } catch (error) {
-    console.error("Error fetching order:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error('Error fetching order:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -505,16 +512,18 @@ export const fulfillOrder = async (req, res) => {
   try {
     const { orderId, itemsToFulfill, trackingInfo } = req.body;
 
-
-
     if (!orderId || !Array.isArray(itemsToFulfill)) {
-      return res.status(400).json({ error: 'Order ID and fulfillment items are required.' });
+      return res
+        .status(400)
+        .json({ error: 'Order ID and fulfillment items are required.' });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
 
     if (!shopifyConfig) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
@@ -537,7 +546,9 @@ export const fulfillOrder = async (req, res) => {
     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
 
     if (!fulfillmentOrder?.id) {
-      return res.status(400).json({ error: 'No fulfillment order found for this order.' });
+      return res
+        .status(400)
+        .json({ error: 'No fulfillment order found for this order.' });
     }
 
     const fulfillmentLineItems = [];
@@ -554,7 +565,6 @@ export const fulfillOrder = async (req, res) => {
       const remainingQty = fulfillable.fulfillable_quantity || 0;
       const requestedQty = itemToFulfill.quantity;
 
-
       if (requestedQty > 0 && requestedQty <= remainingQty) {
         fulfillmentLineItems.push({
           fulfillmentOrderLineItemId: fulfillable.id,
@@ -564,9 +574,12 @@ export const fulfillOrder = async (req, res) => {
       }
     });
 
-
     if (fulfillmentLineItems.length === 0) {
-      return res.status(400).json({ error: 'No valid line items to fulfill. Check remaining quantities.' });
+      return res
+        .status(400)
+        .json({
+          error: 'No valid line items to fulfill. Check remaining quantities.',
+        });
     }
 
     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
@@ -605,7 +618,6 @@ export const fulfillOrder = async (req, res) => {
       },
     };
 
-
     const response = await fetch(graphqlUrl, {
       method: 'POST',
       headers: {
@@ -616,9 +628,12 @@ export const fulfillOrder = async (req, res) => {
     });
 
     const result = await response.json();
-    console.log("🛬 Shopify Response:", result);
+    console.log('🛬 Shopify Response:', result);
 
-    if (result.errors || result.data?.fulfillmentCreateV2?.userErrors?.length > 0) {
+    if (
+      result.errors ||
+      result.data?.fulfillmentCreateV2?.userErrors?.length > 0
+    ) {
       return res.status(400).json({
         error: 'GraphQL fulfillment error.',
         details: result.errors || result.data.fulfillmentCreateV2.userErrors,
@@ -645,7 +660,9 @@ export const fulfillOrder = async (req, res) => {
           updatedItem.fulfillment_status = 'fulfilled';
         }
 
-        console.log(`📌 Updating DB: item ${item.id}, fulfilled ${fulfilled.quantity}, total fulfilled ${totalFulfilled}, status: ${updatedItem.fulfillment_status || 'partial'}`);
+        console.log(
+          `📌 Updating DB: item ${item.id}, fulfilled ${fulfilled.quantity}, total fulfilled ${totalFulfilled}, status: ${updatedItem.fulfillment_status || 'partial'}`
+        );
         return updatedItem;
       }
 
@@ -653,7 +670,9 @@ export const fulfillOrder = async (req, res) => {
     });
 
     order.shopifyFulfillments = order.shopifyFulfillments || [];
-    const alreadyExists = order.shopifyFulfillments.some(f => f.id === newFulfillment.id);
+    const alreadyExists = order.shopifyFulfillments.some(
+      (f) => f.id === newFulfillment.id
+    );
 
     if (!alreadyExists) {
       order.shopifyFulfillments.push(newFulfillment);
@@ -667,10 +686,11 @@ export const fulfillOrder = async (req, res) => {
       data: newFulfillment,
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Server error while fulfilling order.' });
+    return res
+      .status(500)
+      .json({ error: 'Server error while fulfilling order.' });
   }
 };
-
 
 export const getOrderDatafromShopify = async (req, res) => {
   const orderId = req.params.id;
@@ -684,7 +704,9 @@ export const getOrderDatafromShopify = async (req, res) => {
     const shopifyConfig = await shopifyConfigurationModel.findOne();
 
     if (!shopifyConfig) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
@@ -711,10 +733,12 @@ export const getOrderDatafromShopify = async (req, res) => {
       const product = await listingModel.findOne({ 'variants.id': variantId });
 
       if (product && product.userId?.toString() === userId) {
-        const matchedVariant = product.variants.find(v => v.id === variantId);
+        const matchedVariant = product.variants.find((v) => v.id === variantId);
 
         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-          const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
+          const image = product.variantImages.find(
+            (img) => img.id === matchedVariant.image_id
+          );
 
           if (image) {
             item.image = {
@@ -729,16 +753,18 @@ export const getOrderDatafromShopify = async (req, res) => {
         }
 
         filteredLineItems.push(item);
-        variantOwnershipMap.set(variantId, true); 
+        variantOwnershipMap.set(variantId, true);
       }
     }
 
-    const filteredFulfillments = (order.fulfillments || []).map(f => {
-      const ownedItems = (f.line_items || []).filter(item =>
-        variantOwnershipMap.has(item.variant_id?.toString())
-      );
-      return ownedItems.length > 0 ? { ...f, line_items: ownedItems } : null;
-    }).filter(f => f !== null);
+    const filteredFulfillments = (order.fulfillments || [])
+      .map((f) => {
+        const ownedItems = (f.line_items || []).filter((item) =>
+          variantOwnershipMap.has(item.variant_id?.toString())
+        );
+        return ownedItems.length > 0 ? { ...f, line_items: ownedItems } : null;
+      })
+      .filter((f) => f !== null);
 
     if (filteredLineItems.length === 0 && filteredFulfillments.length === 0) {
       return res.status(404).json({
@@ -757,7 +783,10 @@ export const getOrderDatafromShopify = async (req, res) => {
       data: filteredOrder,
     });
   } catch (error) {
-    console.error('Error fetching filtered order:', error.response?.data || error.message);
+    console.error(
+      'Error fetching filtered order:',
+      error.response?.data || error.message
+    );
     res.status(500).json({
       message: 'Failed to fetch filtered order',
       error: error.response?.data || error.message,
@@ -778,15 +807,19 @@ export const getAllOrdersForAdmin = async (req, res) => {
         const variantId = item.variant_id?.toString();
         if (!variantId) continue;
 
-        const product = await listingModel.findOne({ 'variants.id': variantId });
+        const product = await listingModel.findOne({
+          'variants.id': variantId,
+        });
         if (!product || !product.userId) continue;
 
         const merchantId = product.userId.toString();
 
         // Attach variant image
-        const matchedVariant = product.variants.find(v => v.id === variantId);
+        const matchedVariant = product.variants.find((v) => v.id === variantId);
         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-          const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
+          const image = product.variantImages.find(
+            (img) => img.id === matchedVariant.image_id
+          );
           if (image) {
             item.image = {
               id: image.id,
@@ -809,7 +842,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
             phone: order.customer?.phone || '',
             created_at: order.customer?.created_at || '',
             default_address: order.customer?.default_address || {},
-          }
+          },
         ];
 
         // Group items per merchant inside this order
@@ -820,7 +853,9 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
         // Cache merchant info
         if (!merchantDetailsMap.has(merchantId)) {
-          const merchant = await authModel.findById(merchantId).select('-password');
+          const merchant = await authModel
+            .findById(merchantId)
+            .select('-password');
           if (merchant) {
             merchantDetailsMap.set(merchantId, {
               _id: merchant._id,
@@ -828,7 +863,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
               email: merchant.email,
               role: merchant.role,
               dispatchAddress: merchant.dispatchAddress,
-              dispatchCountry: merchant.dispatchCountry
+              dispatchCountry: merchant.dispatchCountry,
             });
           }
         }
