@@ -43,56 +43,13 @@ async function checkProductExists(productId) {
   }
 }
 
-// export const createOrder = async (req, res) => {
-//   try {
-//     const orderData = req.body;
-//     const productId = orderData.line_items[0].product_id;
-
-//     const productExists = await checkProductExists(productId);
-//     if (!productExists) {
-//       return res.status(404).send('Product does not exist');
-//     }
-
-//     const quantity = orderData.line_items[0].quantity;
-
-//     const order = new orderModel({
-//       orderId: orderData.id,
-//       customer: orderData.customer,
-//       lineItems: orderData.line_items,
-//       createdAt: orderData.created_at,
-//     });
-
-//     await order.save();
-
-//     const user = await authModel.findOne({ email: orderData.customer.email });
-//     if (!user) {
-//       return res.status(404).send('User not found');
-//     }
-
-//     if (user.subscription) {
-//       user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
-//     } else {
-//       user.subscription = {
-//         quantity,
-//       };
-//     }
-
-//     await user.save();
-
-//     res.status(200).json({
-//       message: 'Order saved and user updated',
-//       orderId: orderData.id,
-//     });
-//   } catch (error) {
-//     console.error('Error saving order:', error);
-//     res.status(500).send('Error saving order');
-//   }
-// };
 
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
     const orderId = String(orderData.id); 
+        const shopifyOrderNo = orderData.order_number; 
+
     const productId = orderData.line_items?.[0]?.product_id;
 
     if (!productId) return res.status(400).send('Missing product ID');
@@ -118,6 +75,7 @@ export const createOrder = async (req, res) => {
             customer: orderData.customer,
             lineItems: orderData.line_items,
             createdAt: orderData.created_at,
+                shopifyOrderNo,
           }
         }
       );
@@ -136,6 +94,7 @@ export const createOrder = async (req, res) => {
         lineItems: orderData.line_items,
         createdAt: orderData.created_at,
         serialNumber,
+        shopifyOrderNo
       });
     }
 
@@ -153,6 +112,8 @@ export const createOrder = async (req, res) => {
     res.status(200).json({
       message: 'Order saved (or updated) and user updated',
       orderId,
+            shopifyOrderNo,
+
       serialNumber,
     });
 
@@ -807,7 +768,7 @@ export const getOrderDatafromShopify = async (req, res) => {
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
     const allOrders = await orderModel.find({});
-    const groupedOrders = new Map();
+    const finalOrders = [];
     const merchantDetailsMap = new Map();
 
     for (const order of allOrders) {
@@ -840,7 +801,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
         // Attach orderId and customer
         item.orderId = order.orderId;
-
         item.customer = [
           {
             first_name: order.customer?.first_name || '',
@@ -852,7 +812,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
           }
         ];
 
-        // Group by merchant
+        // Group items per merchant inside this order
         if (!merchantGroups.has(merchantId)) {
           merchantGroups.set(merchantId, []);
         }
@@ -874,35 +834,29 @@ export const getAllOrdersForAdmin = async (req, res) => {
         }
       }
 
-      // Group structure
+      // Now create separate order block
+      const merchantsArray = [];
+      const lineItemsByMerchant = {};
+
       merchantGroups.forEach((items, merchantId) => {
-        const existing = groupedOrders.get(merchantId) || {
-          serialNo: order.serialNumber,
-          merchants: [
-            {
-              id: merchantId,
-              info: merchantDetailsMap.get(merchantId) || { id: merchantId },
-            },
-          ],
-          lineItemsByMerchant: {},
-        };
+        merchantsArray.push({
+          id: merchantId,
+          info: merchantDetailsMap.get(merchantId) || { id: merchantId },
+        });
+        lineItemsByMerchant[merchantId] = items;
+      });
 
-        if (!existing.lineItemsByMerchant[merchantId]) {
-          existing.lineItemsByMerchant[merchantId] = [];
-        }
-
-        existing.lineItemsByMerchant[merchantId].push(...items);
-
-        groupedOrders.set(merchantId, existing);
+      finalOrders.push({
+        serialNo: order.serialNumber,
+        merchants: merchantsArray,
+        lineItemsByMerchant,
       });
     }
 
-    const responseData = Array.from(groupedOrders.values());
-
-    if (responseData.length > 0) {
+    if (finalOrders.length > 0) {
       return res.status(200).send({
-        message: 'Orders grouped by merchants with full customer info',
-        data: responseData,
+        message: 'Orders grouped per order (not merged by merchant)',
+        data: finalOrders,
       });
     } else {
       return res.status(404).send({
