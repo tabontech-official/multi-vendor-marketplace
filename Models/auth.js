@@ -75,7 +75,7 @@ const authSchema = new mongoose.Schema(
       type: String,
     },
     modules: [String],
-    organizationId: { 
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
     },
     createdBy: {
@@ -89,6 +89,10 @@ const authSchema = new mongoose.Schema(
     dispatchAddress: String,
     shopifyAccessToken: String,
     shopifyApiKey: String,
+    paypalAccount: {
+      type: String,
+      default: '',
+    },
   },
 
   {
