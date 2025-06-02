@@ -14,13 +14,14 @@ import promoRouter from './Routes/promotion.js';
 import consultationRouter from './Routes/consultation.js';
 import apiCredentialsRouter from './Routes/apiCredentials.js';
 import notificationRouter from './Routes/notification.js';
-
+import { financeCron } from './controller/financeCron.js';
 const app = express();
 // Setup Swagger documentation
 setupSwagger(app);
 // Initialize MongoDB connection
 Connect();
 productSubscriptionExpiration();
+financeCron()
 app.use(bodyParser.json()); // To handle JSON request bodies
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));

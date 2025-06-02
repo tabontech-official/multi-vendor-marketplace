@@ -11,6 +11,7 @@ import {
   addPayouts,
   getPayoutDate,
   getPayout,
+  getPayoutOrders,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -27,6 +28,7 @@ orderRouter.post('/addPaypal', addPaypalAccount);
 orderRouter.post('/addPayOutDates', addPayouts);
 orderRouter.get('/getPayoutsDates', getPayoutDate);
 orderRouter.get('/getPayout', getPayout);
+orderRouter.get('/getPayoutOrders', getPayoutOrders);
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;
