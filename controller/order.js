@@ -1101,41 +1101,63 @@ export const getPayoutDate=async(req,res)=>{
   });
 }
 
-export const getPayout=async(req,res)=>{
+export const getPayout = async (req, res) => {
   try {
     const config = await PayoutConfig.findOne({});
     if (!config) return res.status(400).json({ error: 'Payout config not found.' });
 
     const { firstPayoutDate, secondPayoutDate } = config;
-    const firstDay = dayjs(firstPayoutDate).date(); 
+    const firstDay = dayjs(firstPayoutDate).date();
     const secondDay = dayjs(secondPayoutDate).date();
 
-    const orders = await orderModel.find({ });
+    const orders = await orderModel.find({});
 
     const updates = [];
+    let totalPayoutAmount = 0;
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
       const eligibleDate = createdAt.add(7, 'day');
-
       const payoutDate = getNextPayoutDate(eligibleDate, firstDay, secondDay);
 
       order.eligibleDate = eligibleDate.toDate();
       order.scheduledPayoutDate = payoutDate.toDate();
+
+      // ✅ Calculate payout from lineItems
+      const lineItems = order.lineItems || [];
+      const amount = lineItems.reduce((sum, item) => {
+        const price = Number(item.price) || 0;
+        const qty = Number(item.quantity) || 0;
+        return sum + price * qty;
+      }, 0);
+
+      order.payoutAmount = amount;
       await order.save();
+
+      totalPayoutAmount += amount;
+
       updates.push({
         orderId: order._id,
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
+        payoutStatus: order.payoutStatus,
+        payoutAmount: amount,
+        createdAt: order.createdAt,
       });
     }
 
-    res.json({ message: 'Payout dates calculated', updates });
+    res.json({
+      message: 'Payout dates calculated',
+      totalAmount: totalPayoutAmount,
+      updates,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
-}
+};
+
+
 function getNextPayoutDate(startDate, day1, day2) {
   let base = dayjs(startDate).startOf('day');
   const currentMonth = base.month();
