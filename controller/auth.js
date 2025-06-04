@@ -11,6 +11,8 @@ import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { brandAssetModel } from '../Models/brandAsset.js';
 import { apiCredentialModel } from '../Models/apicredential.js';
 import crypto from 'crypto';
+import { orderRquestModel } from '../Models/OrderRequest.js';
+import { orderModel } from '../Models/order.js';
 
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () =>
@@ -909,7 +911,6 @@ export const CreateUserTagsModule = async (req, res) => {
   }
 };
 
-
 export const logout = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -1443,27 +1444,26 @@ export const getSingleUser = async (req, res) => {
   }
 };
 
-
 export const getAllMerchants = async (req, res) => {
   try {
     const result = await authModel.aggregate([
       {
         $match: {
-          role: "Merchant"
-        }
+          role: 'Merchant',
+        },
       },
       {
         $project: {
           _id: 1,
-          email: 1
-        }
-      }
+          email: 1,
+        },
+      },
     ]);
 
     res.status(200).json(result);
   } catch (error) {
-    console.error("Error fetching merchants:", error);
-    res.status(500).json({ error: "Failed to fetch merchants" });
+    console.error('Error fetching merchants:', error);
+    res.status(500).json({ error: 'Failed to fetch merchants' });
   }
 };
 
@@ -1502,17 +1502,17 @@ export const getAllOnboardUsersData = async (req, res) => {
     const admin = await authModel.findById(id);
 
     if (!admin) {
-      return res.status(404).json({ error: "Admin not found" });
+      return res.status(404).json({ error: 'Admin not found' });
     }
 
     // Fetch merchants
-    const merchants = await authModel.find({ role: "Merchant" });
+    const merchants = await authModel.find({ role: 'Merchant' });
 
     // Build merchantGroups (each merchant + their merchant staff)
     const merchantGroups = await Promise.all(
       merchants.map(async (merchant) => {
         const staff = await authModel.find({
-          role: "Merchant Staff",
+          role: 'Merchant Staff',
           createdBy: merchant._id,
         });
 
@@ -1537,7 +1537,7 @@ export const getAllOnboardUsersData = async (req, res) => {
     );
 
     // Fetch support staff (flat)
-    const supportStaffRaw = await authModel.find({ role: "Support Staff" });
+    const supportStaffRaw = await authModel.find({ role: 'Support Staff' });
     const supportStaff = supportStaffRaw.map((s) => ({
       ...s.toObject(),
       id: s._id.toString(),
@@ -1546,7 +1546,7 @@ export const getAllOnboardUsersData = async (req, res) => {
     }));
 
     // ✅ DEV ADMIN
-    if (admin.role === "Dev Admin") {
+    if (admin.role === 'Dev Admin') {
       const allUsers = await authModel.find();
 
       const formattedUsers = allUsers.map((user) => ({
@@ -1557,7 +1557,7 @@ export const getAllOnboardUsersData = async (req, res) => {
       }));
 
       return res.status(200).json({
-        type: "dev",
+        type: 'dev',
         users: formattedUsers,
         supportStaff,
         merchantGroups,
@@ -1565,19 +1565,72 @@ export const getAllOnboardUsersData = async (req, res) => {
     }
 
     // ✅ MASTER ADMIN
-    if (admin.role === "Master Admin") {
+    if (admin.role === 'Master Admin') {
       return res.status(200).json({
-        type: "master",
+        type: 'master',
         supportStaff,
         merchantGroups,
       });
     }
 
     // ❌ Unauthorized
-    return res.status(403).json({ error: "Unauthorized role" });
+    return res.status(403).json({ error: 'Unauthorized role' });
   } catch (error) {
-    console.error("Error in getAllOnboardUsersData:", error);
-    res.status(500).json({ error: "Server error: " + error.message });
+    console.error('Error in getAllOnboardUsersData:', error);
+    res.status(500).json({ error: 'Server error: ' + error.message });
+  }
+};
+
+export const addOrderRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { request, orderId, orderNo, lineItemIds } = req.body;
+
+    const user = await authModel.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    const order = await orderModel.findOne({ orderId: String(orderId) });
+    if (!order) return res.status(404).json({ message: 'Order not found.' });
+
+    const allLineItems = order.lineItems || [];
+    const requestedItems = allLineItems.filter(item =>
+      lineItemIds.includes(item.id)
+    );
+    const productNames = requestedItems.map(item => item.name);
+
+    const savedRequest = await orderRquestModel.create({
+      userId: id,
+      orderId,
+      orderNo,
+      request,
+      productNames,
+    });
+
+    const email = 'aydimarketplace@gmail.com';
+    await transporter.sendMail({
+      to: email,
+      subject: 'Request for Order Cancellation',
+      html: `
+        <div style="font-family: sans-serif;">
+          <p><strong>Request from:</strong> ${user.firstName} ${user.lastName}</p>
+          <p><strong>Email:</strong> ${user.email}</p>
+          <p><strong>Order No:</strong> ${orderNo}</p>
+          <p><strong>Message:</strong> ${request}</p>
+          <p><strong>Products:</strong></p>
+          <ul>
+            ${productNames.map((name) => `<li>${name}</li>`).join('')}
+          </ul>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({
+      message: 'Request submitted successfully.',
+      data: savedRequest,
+    });
+  } catch (error) {
+    console.error('Error in addOrderRequest:', error);
+    return res.status(500).json({ message: 'Internal server error.' });
   }
 };
 

@@ -10,6 +10,7 @@ import minMax from 'dayjs/plugin/minMax.js';
 dayjs.extend(minMax);
 
 import { PayoutConfig } from '../Models/finance.js';
+import { orderRquestModel } from '../Models/OrderRequest.js';
 export const shopifyRequest = async (
   url,
   method,
@@ -1285,7 +1286,7 @@ export const getPayoutDate = async (req, res) => {
 //           payoutDate: group.payoutDate,
 //           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
 //           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} CAD`,
+//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
 //           orders: group.orders,
 //           sortKey: group.sortKey,
 //         };
@@ -1442,7 +1443,7 @@ const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
-          amount: `$${group.totalAmount.toFixed(2)} CAD`,
+          amount: `$${group.totalAmount.toFixed(2)} AUD`,
           orders: group.orders,
           sortKey: group.sortKey,
         };
@@ -1550,7 +1551,7 @@ const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 //           payoutDate: group.payoutDate,
 //           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
 //           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} CAD`,
+//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
 //           orders: group.orders,
 //           sortKey: group.sortKey,
 //         };
@@ -1596,7 +1597,7 @@ export const getPayoutOrders = async (req, res) => {
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-      const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config); // ✅ uses corrected logic
+      const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config); 
 
       order.eligibleDate = eligibleDate.toDate();
       order.scheduledPayoutDate = payoutDateObj.toDate();
@@ -1658,7 +1659,7 @@ export const getPayoutOrders = async (req, res) => {
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
-          amount: `$${group.totalAmount.toFixed(2)} CAD`,
+          amount: `$${group.totalAmount.toFixed(2)} AUD`,
           orders: group.orders,
           sortKey: group.sortKey,
         };
@@ -1874,5 +1875,121 @@ export const cancelFulfillment = async (req, res) => {
   } catch (error) {
     console.error('❌ Cancel Fulfillment Error:', error);
     return res.status(500).json({ error: 'Server error while canceling fulfillment.' });
+  }
+};
+
+
+export const getLineItemCountByShopifyOrderId = async (req, res) => {
+  try {
+    const { shopifyOrderId } = req.params;
+
+    if (!shopifyOrderId) {
+      return res.status(400).json({ message: "Missing order ID" });
+    }
+
+    const order = await orderModel.findOne({ orderId: shopifyOrderId });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const lineItems = order.lineItems || [];
+
+    const variantIds = lineItems
+      .map((item) => item.variant_id)
+      .filter((id) => id !== undefined && id !== null);
+
+    return res.status(200).json({
+      shopifyOrderId,
+      lineItemCount: variantIds.length,
+      variantIds,
+    });
+  } catch (err) {
+    console.error("Error in getLineItem:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const getAllRequestsGroupedByUser = async (req, res) => {
+  try {
+    const groupedData = await orderRquestModel.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $unwind: "$userDetails",
+      },
+      {
+        $group: {
+          _id: "$userId",
+          firstName: { $first: "$userDetails.firstName" },
+          lastName: { $first: "$userDetails.lastName" },
+          email: { $first: "$userDetails.email" },
+          requestCount: { $sum: 1 },
+          requests: {
+            $push: {
+               _id: "$_id",
+              orderId: "$orderId",
+              orderNo: "$orderNo",
+              request: "$request",
+              productNames: "$productNames",
+              createdAt: "$createdAt",
+            },
+          },
+        },
+      },
+      {
+        $sort: { requestCount: -1 } 
+      }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      totalUsers: groupedData.length,
+      data: groupedData,
+    });
+  } catch (error) {
+    console.error("Error in getAllRequestsGroupedByUser:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+
+export const getRequestById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const request = await orderRquestModel.findById(id).lean();
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "No request found with this ID."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderId: request.orderId,
+        orderNo: request.orderNo,
+        request: request.request,
+        productNames: request.productNames,
+        createdAt: request.createdAt,
+        userId: request.userId
+      }
+    });
+  } catch (error) {
+    console.error("Error in getRequestById:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
   }
 };

@@ -19,6 +19,7 @@ import {
   getSingleUser,
   getAllMerchants,
   getAllOnboardUsersData,
+  addOrderRequest,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -44,6 +45,7 @@ authRouter.post('/addBrandAsset', cpUpload, createShopifyCollection);
 authRouter.get('/getSingleUser/:id', getSingleUser);
 authRouter.get('/getAllMerchant', getAllMerchants);
 authRouter.get('/getAllOnboardUsers/:id', getAllOnboardUsersData);
+authRouter.post('/addRequestForOrderCancellation/:id', addOrderRequest);
 
 
 

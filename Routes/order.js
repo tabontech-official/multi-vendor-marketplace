@@ -14,6 +14,9 @@ import {
   getPayoutOrders,
   updateTrackingInShopify,
   cancelShopifyOrder,
+  getLineItemCountByShopifyOrderId,
+  getAllRequestsGroupedByUser,
+  getRequestById,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -33,6 +36,10 @@ orderRouter.get('/getPayout', getPayout);
 orderRouter.get('/getPayoutOrders', getPayoutOrders);
 orderRouter.post('/updatetrackingShopify', updateTrackingInShopify);
 orderRouter.post('/cancelShopifyOrder', cancelShopifyOrder);
+orderRouter.get('/getPayoutOrders', getPayoutOrders);
+orderRouter.get("/lineItemCount/:shopifyOrderId",getLineItemCountByShopifyOrderId)
+orderRouter.get("/getCancellationRequests",getAllRequestsGroupedByUser)
+orderRouter.get("/getCancellationRequestsByUserId/:id",getRequestById)
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;
