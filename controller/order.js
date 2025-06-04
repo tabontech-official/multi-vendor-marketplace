@@ -164,7 +164,6 @@ export const getFinanceSummary = async (req, res) => {
         (totals, item) => {
           const price = parseFloat(item.price || '0');
           const cost = parseFloat(item.cost || '0');
-          ;
           const qty = parseFloat(item.quantity || '1');
 
           totals.income += price * qty;
@@ -1068,34 +1067,117 @@ export const addPaypalAccount = async (req, res) => {
   }
 };
 
-export const addPayouts = async (req, res) => {
-  const { firstDate, secondDate } = req.body;
+// export const addPayouts = async (req, res) => {
+//   const { firstDate, secondDate } = req.body;
 
-  if (!firstDate || !secondDate) {
-    return res.status(400).json({ message: 'Both payout dates are required.' });
+//   if (!firstDate || !secondDate) {
+//     return res.status(400).json({ message: 'Both payout dates are required.' });
+//   }
+
+//   try {
+//     const existing = await PayoutConfig.findOne();
+
+//     if (existing) {
+//       existing.firstPayoutDate = new Date(firstDate);
+//       existing.secondPayoutDate = new Date(secondDate);
+//       await existing.save();
+//     } else {
+//       await PayoutConfig.create({
+//         firstPayoutDate: new Date(firstDate),
+//         secondPayoutDate: new Date(secondDate),
+//       });
+//     }
+
+//     res.json({ message: 'Payout dates saved successfully.' });
+//   } catch (error) {
+//     console.error('Error saving payout dates:', error);
+//     res.status(500).json({ message: 'Failed to save payout dates.' });
+//   }
+// };
+
+export const addPayouts = async (req, res) => {
+  const {
+    payoutFrequency,
+    graceTime = 0,
+    firstDate,
+    secondDate,
+    weeklyDay,
+  } = req.body;
+
+  if (!payoutFrequency) {
+    return res.status(400).json({ message: 'Payout frequency is required.' });
   }
 
   try {
-    const existing = await PayoutConfig.findOne();
+    let config = await PayoutConfig.findOne();
+    if (!config) config = new PayoutConfig();
 
-    if (existing) {
-      existing.firstPayoutDate = new Date(firstDate);
-      existing.secondPayoutDate = new Date(secondDate);
-      await existing.save();
-    } else {
-      await PayoutConfig.create({
-        firstPayoutDate: new Date(firstDate),
-        secondPayoutDate: new Date(secondDate),
-      });
+    config.graceTime = graceTime;
+    config.payoutFrequency = payoutFrequency;
+
+    const graceStart = dayjs().add(graceTime, 'day').startOf('day');
+
+    switch (payoutFrequency) {
+      case 'daily':
+        config.firstPayoutDate = graceStart.toDate();
+        config.secondPayoutDate = null;
+        config.weeklyDay = null;
+        break;
+
+      case 'weekly':
+        if (!weeklyDay) {
+          return res.status(400).json({ message: 'Weekly day is required.' });
+        }
+
+        const weekdays = {
+          Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+          Thursday: 4, Friday: 5, Saturday: 6,
+        };
+
+        const targetDay = weekdays[weeklyDay];
+        let nextWeekly = graceStart;
+
+        while (nextWeekly.day() !== targetDay) {
+          nextWeekly = nextWeekly.add(1, 'day');
+        }
+
+        config.firstPayoutDate = nextWeekly.toDate();
+        config.secondPayoutDate = null;
+        config.weeklyDay = weeklyDay;
+        break;
+
+      case 'once':
+        if (!firstDate) {
+          return res.status(400).json({ message: 'First date is required for monthly payout.' });
+        }
+
+        config.firstPayoutDate = new Date(firstDate);
+        config.secondPayoutDate = null;
+        config.weeklyDay = null;
+        break;
+
+      case 'twice':
+        if (!firstDate || !secondDate) {
+          return res.status(400).json({ message: 'Both dates are required for twice a month.' });
+        }
+
+        config.firstPayoutDate = new Date(firstDate);
+        config.secondPayoutDate = new Date(secondDate);
+        config.weeklyDay = null;
+        break;
+
+      default:
+        return res.status(400).json({ message: 'Invalid payout frequency selected.' });
     }
 
-    res.json({ message: 'Payout dates saved successfully.' });
+    await config.save();
+
+    return res.json({ message: '✅ Payout config saved successfully.' });
   } catch (error) {
-    console.error('Error saving payout dates:', error);
-    res.status(500).json({ message: 'Failed to save payout dates.' });
+    console.error('❌ Error saving payout config:', error);
+    return res.status(500).json({ message: 'Failed to save payout config.' });
   }
 };
-
 export const getPayoutDate = async (req, res) => {
   const config = await PayoutConfig.findOne();
   if (!config)
@@ -1106,15 +1188,176 @@ export const getPayoutDate = async (req, res) => {
     secondDate: config.secondPayoutDate,
   });
 };
+// export const getPayout = async (req, res) => {
+//   try {
+//     const config = await PayoutConfig.findOne({});
+//     if (!config)
+//       return res.status(400).json({ error: 'Payout config not found.' });
+
+//     const { firstPayoutDate, secondPayoutDate } = config;
+//     const firstDay = dayjs(firstPayoutDate).date();
+//     const secondDay = dayjs(secondPayoutDate).date();
+
+//     const orders = await orderModel.find({});
+//     const updates = [];
+//     let totalPayoutAmount = 0;
+
+//     for (const order of orders) {
+//       const createdAt = dayjs(order.createdAt);
+//       const eligibleDate = createdAt.add(7, 'day');
+//       const payoutDate = getNextPayoutDate(eligibleDate, firstDay, secondDay);
+
+//       order.eligibleDate = eligibleDate.toDate();
+//       order.scheduledPayoutDate = payoutDate.toDate();
+
+//       const lineItems = order.lineItems || [];
+//       const amount = lineItems.reduce((sum, item) => {
+//         const price = Number(item.price) || 0;
+//         const qty = Number(item.quantity) || 0;
+//         return sum + price * qty;
+//       }, 0);
+
+//       order.payoutAmount = amount;
+//       await order.save();
+
+//       totalPayoutAmount += amount;
+
+//       updates.push({
+//         orderId: order._id,
+//         shopifyOrderId: order.orderId,
+//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
+//         eligibleDate: order.eligibleDate,
+//         scheduledPayoutDate: order.scheduledPayoutDate,
+//         payoutStatus: order.payoutStatus || 'pending',
+//         payoutAmount: amount,
+//         createdAt: order.createdAt,
+//       });
+//     }
+
+//     const grouped = {};
+
+//     updates.forEach((order) => {
+//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
+
+//       if (!grouped[key]) {
+//         grouped[key] = {
+//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
+//           createdAts: [],
+//           totalAmount: 0,
+//           orders: [],
+//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+//         };
+//       }
+
+//       grouped[key].createdAts.push(dayjs(order.createdAt));
+//       grouped[key].totalAmount += order.payoutAmount || 0;
+
+//       grouped[key].orders.push({
+//         orderId: order.orderId,
+//         shopifyOrderId: order.shopifyOrderId,
+//         shopifyOrderNo: order.shopifyOrderNo,
+//         amount: order.payoutAmount,
+//         status: order.payoutStatus,
+//         createdAt: order.createdAt,
+//       });
+//     });
+
+//     // ✅ Final sorted and structured response
+//     const payouts = Object.values(grouped)
+//       .map((group) => {
+//         const minDate = dayjs.min(group.createdAts);
+//         const maxDate = dayjs.max(group.createdAts);
+
+//         return {
+//           payoutDate: group.payoutDate,
+//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
+//           status: group.status,
+//           amount: `$${group.totalAmount.toFixed(2)} CAD`,
+//           orders: group.orders,
+//           sortKey: group.sortKey,
+//         };
+//       })
+//       .sort((a, b) => {
+//         // Show Pending payouts first, then Deposited
+//         if (a.status !== b.status) {
+//           return a.status === 'Pending' ? -1 : 1;
+//         }
+//         return b.sortKey - a.sortKey; // Newer dates first
+//       });
+
+//     res.json({
+//       message: 'Payout dates calculated',
+//       totalAmount: totalPayoutAmount,
+//       payouts,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Server error while calculating payouts' });
+//   }
+// };
+
+// function getNextPayoutDate(startDate, day1, day2) {
+//   let base = dayjs(startDate).startOf('day');
+//   const currentMonth = base.month();
+//   const currentYear = base.year();
+
+//   let possibleDates = [
+//     dayjs(`${currentYear}-${currentMonth + 1}-${day1}`),
+//     dayjs(`${currentYear}-${currentMonth + 1}-${day2}`),
+//   ];
+
+//   if (base.isAfter(possibleDates[1])) {
+//     possibleDates = [
+//       dayjs(`${currentYear}-${currentMonth + 2}-${day1}`),
+//       dayjs(`${currentYear}-${currentMonth + 2}-${day2}`),
+//     ];
+//   }
+
+//   const futureDates = possibleDates.filter((d) => d.isAfter(base));
+//   return futureDates.length > 0 ? futureDates[0] : possibleDates[0];
+// }
+
+function getNextPayoutDate(startDate, config) {
+  const frequency = config.payoutFrequency || 'twice';
+  const base = dayjs(startDate).startOf('day'); // FIXED LINE
+
+  if (frequency === 'daily') {
+    return base;
+  }
+
+  if (frequency === 'weekly') {
+    const weekdays = {
+      Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+      Thursday: 4, Friday: 5, Saturday: 6
+    };
+    const targetDay = weekdays[config.weeklyDay] ?? 1;
+    const diff = (targetDay + 7 - base.day()) % 7;
+    return base.add(diff, 'day');
+  }
+
+  const d1 = config.firstPayoutDate ? dayjs(config.firstPayoutDate).date() : 5;
+  const d2 = config.secondPayoutDate ? dayjs(config.secondPayoutDate).date() : 20;
+
+  const possible = [
+    dayjs(`${base.year()}-${base.month() + 1}-${d1}`),
+    dayjs(`${base.year()}-${base.month() + 1}-${d2}`),
+    dayjs(`${base.year()}-${base.month() + 2}-${d1}`),
+    dayjs(`${base.year()}-${base.month() + 2}-${d2}`)
+  ];
+
+  if (frequency === 'once') {
+    return base.isBefore(possible[0]) ? possible[0] : possible[2]; // d1 next month
+  }
+
+  const next = possible.find((d) => d.isAfter(base));
+  return next || possible[0];
+}
+
 export const getPayout = async (req, res) => {
   try {
     const config = await PayoutConfig.findOne({});
-    if (!config)
-      return res.status(400).json({ error: 'Payout config not found.' });
-
-    const { firstPayoutDate, secondPayoutDate } = config;
-    const firstDay = dayjs(firstPayoutDate).date();
-    const secondDay = dayjs(secondPayoutDate).date();
+    if (!config) return res.status(400).json({ error: 'Payout config not found.' });
 
     const orders = await orderModel.find({});
     const updates = [];
@@ -1122,13 +1365,12 @@ export const getPayout = async (req, res) => {
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-      const eligibleDate = createdAt.add(7, 'day');
-      const payoutDate = getNextPayoutDate(eligibleDate, firstDay, secondDay);
+const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 
       order.eligibleDate = eligibleDate.toDate();
       order.scheduledPayoutDate = payoutDate.toDate();
 
-      // ✅ Calculate payout from lineItems
       const lineItems = order.lineItems || [];
       const amount = lineItems.reduce((sum, item) => {
         const price = Number(item.price) || 0;
@@ -1143,6 +1385,7 @@ export const getPayout = async (req, res) => {
 
       updates.push({
         orderId: order._id,
+        shopifyOrderId: order.orderId,
         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
@@ -1156,7 +1399,6 @@ export const getPayout = async (req, res) => {
 
     updates.forEach((order) => {
       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
-
       if (!grouped[key]) {
         grouped[key] = {
           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
@@ -1170,9 +1412,9 @@ export const getPayout = async (req, res) => {
 
       grouped[key].createdAts.push(dayjs(order.createdAt));
       grouped[key].totalAmount += order.payoutAmount || 0;
-
       grouped[key].orders.push({
         orderId: order.orderId,
+        shopifyOrderId: order.shopifyOrderId,
         shopifyOrderNo: order.shopifyOrderNo,
         amount: order.payoutAmount,
         status: order.payoutStatus,
@@ -1180,12 +1422,10 @@ export const getPayout = async (req, res) => {
       });
     });
 
-    // ✅ Final sorted and structured response
     const payouts = Object.values(grouped)
       .map((group) => {
         const minDate = dayjs.min(group.createdAts);
         const maxDate = dayjs.max(group.createdAts);
-
         return {
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
@@ -1196,49 +1436,23 @@ export const getPayout = async (req, res) => {
         };
       })
       .sort((a, b) => {
-        // Show Pending payouts first, then Deposited
-        if (a.status !== b.status) {
-          return a.status === 'Pending' ? -1 : 1;
-        }
-        return b.sortKey - a.sortKey; // Newer dates first
+        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+        return b.sortKey - a.sortKey;
       });
 
     res.json({
-      message: 'Payout dates calculated',
+      message: 'Payouts calculated',
       totalAmount: totalPayoutAmount,
       payouts,
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
 
-// Helper function
-function getNextPayoutDate(startDate, day1, day2) {
-  let base = dayjs(startDate).startOf('day');
-  const currentMonth = base.month();
-  const currentYear = base.year();
-
-  let possibleDates = [
-    dayjs(`${currentYear}-${currentMonth + 1}-${day1}`),
-    dayjs(`${currentYear}-${currentMonth + 1}-${day2}`),
-  ];
-
-  if (base.isAfter(possibleDates[1])) {
-    possibleDates = [
-      dayjs(`${currentYear}-${currentMonth + 2}-${day1}`),
-      dayjs(`${currentYear}-${currentMonth + 2}-${day2}`),
-    ];
-  }
-
-  const futureDates = possibleDates.filter((d) => d.isAfter(base));
-  return futureDates.length > 0 ? futureDates[0] : possibleDates[0];
-}
-
 export const getPayoutOrders = async (req, res) => {
-try {
+  try {
     const { payoutDate, status } = req.query;
 
     const config = await PayoutConfig.findOne({});
@@ -1256,7 +1470,11 @@ try {
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
       const eligibleDate = createdAt.add(7, 'day');
-      const payoutDateObj = getNextPayoutDate(eligibleDate, firstDay, secondDay);
+      const payoutDateObj = getNextPayoutDate(
+        eligibleDate,
+        firstDay,
+        secondDay
+      );
 
       order.eligibleDate = eligibleDate.toDate();
       order.scheduledPayoutDate = payoutDateObj.toDate();
@@ -1334,7 +1552,11 @@ try {
       });
 
     if (payoutDate && status) {
-      payouts = payouts.filter(p => p.payoutDate === payoutDate && p.status.toLowerCase() === status.toLowerCase());
+      payouts = payouts.filter(
+        (p) =>
+          p.payoutDate === payoutDate &&
+          p.status.toLowerCase() === status.toLowerCase()
+      );
     }
 
     res.json({
@@ -1342,9 +1564,198 @@ try {
       totalAmount: totalPayoutAmount,
       payouts,
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error while calculating payouts' });
+  }
+};
+
+
+export const updateTrackingInShopify = async (req, res) => {
+  try {
+    const { fulfillmentId, tracking_number, tracking_company } = req.body;
+
+    if (!fulfillmentId || !tracking_number || !tracking_company) {
+      return res.status(400).json({
+        error: 'Missing required fields: fulfillmentId, tracking_number, tracking_company',
+      });
+    }
+
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+
+    const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+    const endpoint = `${shopifyStoreUrl}/admin/api/2024-01/fulfillments/${fulfillmentId}/update_tracking.json`;
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': shopifyAccessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fulfillment: {
+          tracking_info: {
+            number: tracking_number,
+            company: tracking_company,
+          },
+          notify_customer: true,
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(500).json({
+        error: 'Shopify API error',
+        details: data,
+      });
+    }
+
+    return res.status(200).json({
+      message: '✅ Tracking info updated in Shopify',
+      data,
+    });
+  } catch (error) {
+    console.error('❌ Server Error:', error);
+    return res.status(500).json({
+      error: 'Server error while updating tracking info.',
+    });
+  }
+};
+export const cancelShopifyOrder = async (req, res) => {
+  try {
+    const { orderId, reason, lineItemIds } = req.body;
+    console.log("📩 Incoming cancel request for Order ID:", orderId);
+    console.log("🔢 Line Item IDs to cancel:", lineItemIds);
+
+    if (!orderId || !Array.isArray(lineItemIds)) {
+      console.warn("⚠️ Missing required cancel params");
+      return res.status(400).json({
+        error: 'Shopify Order ID and lineItemIds array are required.',
+      });
+    }
+
+    const config = await shopifyConfigurationModel.findOne();
+    if (!config) {
+      console.error("❌ Shopify configuration not found");
+      return res.status(404).json({ error: 'Shopify config not found.' });
+    }
+
+    const { shopifyAccessToken, shopifyStoreUrl } = config;
+    console.log("🔐 Shopify credentials loaded");
+
+    const cancelEndpoint = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/cancel.json`;
+    console.log("🌐 Shopify cancel endpoint:", cancelEndpoint);
+
+    const cancelRes = await fetch(cancelEndpoint, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': shopifyAccessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: true,
+        reason: reason || 'customer',
+      }),
+    });
+
+    const cancelData = await cancelRes.json();
+    console.log("🛒 Shopify Cancel Response:", cancelData);
+
+    if (!cancelRes.ok) {
+      console.error("❌ Shopify cancel failed:", cancelData);
+      return res.status(500).json({
+        error: 'Failed to cancel order in Shopify',
+        details: cancelData,
+      });
+    }
+
+    const dbOrder = await orderModel.findOne({ orderId });
+    if (!dbOrder) {
+      console.error("❌ Order not found in DB");
+      return res.status(404).json({ error: 'Order not found in DB' });
+    }
+
+    const normalizedLineItemIds = lineItemIds.map((id) => String(id));
+    console.log("✅ Normalized Line Item IDs:", normalizedLineItemIds);
+
+    dbOrder.lineItems = dbOrder.lineItems.map((item) => {
+      const isMatch = normalizedLineItemIds.includes(String(item.id));
+      if (isMatch) console.log(`✅ Cancelling lineItem ID: ${item.id}`);
+      return {
+        ...item,
+        fulfillment_status: isMatch ? "cancelled" : item.fulfillment_status,
+      };
+    });
+
+    dbOrder.cancelledAt = new Date();
+
+    await dbOrder.save();
+    console.log("💾 DB updated successfully");
+
+    return res.status(200).json({
+      message: 'Order cancelled in Shopify. Selected line items marked as cancelled.',
+      shopifyStatus: cancelData.order.financial_status,
+      updatedLineItems: normalizedLineItemIds,
+      orderId,
+      cancelledAt: dbOrder.cancelledAt,
+    });
+
+  } catch (err) {
+    console.error('❌ Cancel Order Error:', err);
+    return res.status(500).json({ error: 'Server error while canceling order.' });
+  }
+};
+
+
+export const cancelFulfillment = async (req, res) => {
+  try {
+    const { fulfillmentId } = req.body;
+
+    if (!fulfillmentId) {
+      return res.status(400).json({ error: 'Fulfillment ID is required.' });
+    }
+
+    const config = await shopifyConfigurationModel.findOne();
+    if (!config) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+
+    const { shopifyAccessToken, shopifyStoreUrl } = config;
+
+    const cancelFulfillmentUrl = `${shopifyStoreUrl}/admin/api/2024-01/fulfillments/${fulfillmentId}/cancel.json`;
+
+    const cancelRes = await fetch(cancelFulfillmentUrl, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': shopifyAccessToken,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const cancelData = await cancelRes.json();
+
+    if (!cancelRes.ok) {
+      return res.status(500).json({
+        error: 'Failed to cancel fulfillment in Shopify',
+        details: cancelData,
+      });
+    }
+
+    // Optional: update local DB if needed
+    // await orderModel.updateOne({ fulfillmentId }, { $set: { fulfillment_status: 'cancelled' } });
+
+    return res.status(200).json({
+      message: '✅ Fulfillment cancelled successfully',
+      data: cancelData,
+    });
+  } catch (error) {
+    console.error('❌ Cancel Fulfillment Error:', error);
+    return res.status(500).json({ error: 'Server error while canceling fulfillment.' });
   }
 };

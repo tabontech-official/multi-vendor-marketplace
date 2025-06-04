@@ -12,6 +12,8 @@ import {
   getPayoutDate,
   getPayout,
   getPayoutOrders,
+  updateTrackingInShopify,
+  cancelShopifyOrder,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -29,6 +31,8 @@ orderRouter.post('/addPayOutDates', addPayouts);
 orderRouter.get('/getPayoutsDates', getPayoutDate);
 orderRouter.get('/getPayout', getPayout);
 orderRouter.get('/getPayoutOrders', getPayoutOrders);
+orderRouter.post('/updatetrackingShopify', updateTrackingInShopify);
+orderRouter.post('/cancelShopifyOrder', cancelShopifyOrder);
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;
