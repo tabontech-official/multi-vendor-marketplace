@@ -31,6 +31,9 @@ const orderSchema = new mongoose.Schema(
     payPal: {
       type:String,
     },
+    referenceNo:{
+      type:String
+    }
   },
   {
     timestamps: true,

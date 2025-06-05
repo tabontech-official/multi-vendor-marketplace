@@ -3,12 +3,10 @@ import { orderModel } from '../Models/order.js';
 import axios from 'axios';
 import mongoose from 'mongoose';
 import { listingModel } from '../Models/Listing.js';
-
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import dayjs from 'dayjs';
 import minMax from 'dayjs/plugin/minMax.js';
 dayjs.extend(minMax);
-
 import { PayoutConfig } from '../Models/finance.js';
 import { orderRquestModel } from '../Models/OrderRequest.js';
 export const shopifyRequest = async (
@@ -1028,16 +1026,15 @@ export const getAllOrdersForAdmin = async (req, res) => {
     //     message: 'Orders grouped per order (not merged by merchant)',
     //     data: finalOrders,
     //   });
-   if (finalOrders.length > 0) {
-  // Sort so latest orders appear on top
-  finalOrders.sort((a, b) => b.serialNo - a.serialNo);
+    if (finalOrders.length > 0) {
+      // Sort so latest orders appear on top
+      finalOrders.sort((a, b) => b.serialNo - a.serialNo);
 
-  return res.status(200).send({
-    message: 'Orders grouped per order (not merged by merchant)',
-    data: finalOrders,
-  });
-}
- else {
+      return res.status(200).send({
+        message: 'Orders grouped per order (not merged by merchant)',
+        data: finalOrders,
+      });
+    } else {
       return res.status(404).send({
         message: 'No orders found across merchants',
       });
@@ -1140,8 +1137,13 @@ export const addPayouts = async (req, res) => {
         }
 
         const weekdays = {
-          Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
-          Thursday: 4, Friday: 5, Saturday: 6,
+          Sunday: 0,
+          Monday: 1,
+          Tuesday: 2,
+          Wednesday: 3,
+          Thursday: 4,
+          Friday: 5,
+          Saturday: 6,
         };
 
         const targetDay = weekdays[weeklyDay];
@@ -1158,7 +1160,9 @@ export const addPayouts = async (req, res) => {
 
       case 'once':
         if (!firstDate) {
-          return res.status(400).json({ message: 'First date is required for monthly payout.' });
+          return res
+            .status(400)
+            .json({ message: 'First date is required for monthly payout.' });
         }
 
         config.firstPayoutDate = new Date(firstDate);
@@ -1168,7 +1172,9 @@ export const addPayouts = async (req, res) => {
 
       case 'twice':
         if (!firstDate || !secondDate) {
-          return res.status(400).json({ message: 'Both dates are required for twice a month.' });
+          return res
+            .status(400)
+            .json({ message: 'Both dates are required for twice a month.' });
         }
 
         config.firstPayoutDate = new Date(firstDate);
@@ -1177,7 +1183,9 @@ export const addPayouts = async (req, res) => {
         break;
 
       default:
-        return res.status(400).json({ message: 'Invalid payout frequency selected.' });
+        return res
+          .status(400)
+          .json({ message: 'Invalid payout frequency selected.' });
     }
 
     await config.save();
@@ -1196,9 +1204,9 @@ export const getPayoutDate = async (req, res) => {
   res.json({
     firstDate: config.firstPayoutDate,
     secondDate: config.secondPayoutDate,
-    payoutFrequency:config.payoutFrequency,
-    graceTime:config.graceTime,
-    weeklyDay:config.weeklyDay
+    payoutFrequency: config.payoutFrequency,
+    graceTime: config.graceTime,
+    weeklyDay: config.weeklyDay,
   });
 };
 // export const getPayout = async (req, res) => {
@@ -1341,8 +1349,13 @@ function getNextPayoutDate(startDate, config) {
 
   if (frequency === 'weekly') {
     const weekdays = {
-      Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
-      Thursday: 4, Friday: 5, Saturday: 6
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6,
     };
     const targetDay = weekdays[config.weeklyDay] ?? 1;
     const diff = (targetDay + 7 - base.day()) % 7;
@@ -1350,13 +1363,15 @@ function getNextPayoutDate(startDate, config) {
   }
 
   const d1 = config.firstPayoutDate ? dayjs(config.firstPayoutDate).date() : 5;
-  const d2 = config.secondPayoutDate ? dayjs(config.secondPayoutDate).date() : 20;
+  const d2 = config.secondPayoutDate
+    ? dayjs(config.secondPayoutDate).date()
+    : 20;
 
   const possible = [
     dayjs(`${base.year()}-${base.month() + 1}-${d1}`),
     dayjs(`${base.year()}-${base.month() + 1}-${d2}`),
     dayjs(`${base.year()}-${base.month() + 2}-${d1}`),
-    dayjs(`${base.year()}-${base.month() + 2}-${d2}`)
+    dayjs(`${base.year()}-${base.month() + 2}-${d2}`),
   ];
 
   if (frequency === 'once') {
@@ -1370,7 +1385,8 @@ function getNextPayoutDate(startDate, config) {
 export const getPayout = async (req, res) => {
   try {
     const config = await PayoutConfig.findOne({});
-    if (!config) return res.status(400).json({ error: 'Payout config not found.' });
+    if (!config)
+      return res.status(400).json({ error: 'Payout config not found.' });
 
     const orders = await orderModel.find({});
     const updates = [];
@@ -1378,8 +1394,8 @@ export const getPayout = async (req, res) => {
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
+      const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+      const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 
       order.eligibleDate = eligibleDate.toDate();
       order.scheduledPayoutDate = payoutDate.toDate();
@@ -1479,7 +1495,7 @@ const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 //     for (const order of orders) {
 //       const createdAt = dayjs(order.createdAt);
 //       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-//       const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config); 
+//       const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
 
 //       order.eligibleDate = eligibleDate.toDate();
 //       order.scheduledPayoutDate = payoutDateObj.toDate();
@@ -1570,14 +1586,14 @@ const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 //   }
 // };
 
-
 export const getPayoutOrders = async (req, res) => {
   try {
     const { payoutDate, status } = req.query;
 
     const config = await PayoutConfig.findOne({});
-    if (!config)
-      return res.status(400).json({ error: "Payout config not found." });
+    if (!config) {
+      return res.status(400).json({ error: 'Payout config not found.' });
+    }
 
     const orders = await orderModel.find({});
     const updates = [];
@@ -1585,7 +1601,7 @@ export const getPayoutOrders = async (req, res) => {
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-      const eligibleDate = createdAt.add(config.graceTime || 7, "day");
+      const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
       const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
 
       order.eligibleDate = eligibleDate.toDate();
@@ -1601,7 +1617,7 @@ export const getPayoutOrders = async (req, res) => {
         const qty = Number(item.quantity) || 0;
         const total = price * qty;
 
-        if (item.fulfillment_status === "cancelled") {
+        if (item.fulfillment_status === 'cancelled') {
           refundAmount += total;
         } else {
           payoutAmount += total;
@@ -1615,25 +1631,26 @@ export const getPayoutOrders = async (req, res) => {
       totalPayoutAmount += payoutAmount;
 
       updates.push({
-        orderId: order._id,
-        shopifyOrderNo: order.shopifyOrderNo || "N/A",
+        orderId: order.orderId,
+        shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || "pending",
+        payoutStatus: order.payoutStatus || 'pending',
         payoutAmount,
         refundAmount,
         createdAt: order.createdAt,
+        referenceNo: order.referenceNo || '', // ✅ Added here
       });
     }
 
     const grouped = {};
 
     updates.forEach((order) => {
-      const key = `${dayjs(order.scheduledPayoutDate).format("YYYY-MM-DD")}__${order.payoutStatus}`;
+      const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
       if (!grouped[key]) {
         grouped[key] = {
-          payoutDate: dayjs(order.scheduledPayoutDate).format("MMM D, YYYY"),
-          status: order.payoutStatus === "Deposited" ? "Deposited" : "Pending",
+          payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+          status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
           createdAts: [],
           totalAmount: 0,
           totalRefundAmount: 0,
@@ -1653,6 +1670,7 @@ export const getPayoutOrders = async (req, res) => {
         refund: order.refundAmount,
         status: order.payoutStatus,
         createdAt: order.createdAt,
+        referenceNo: order.referenceNo || '',
       });
     });
 
@@ -1662,7 +1680,7 @@ export const getPayoutOrders = async (req, res) => {
         const maxDate = dayjs.max(group.createdAts);
         return {
           payoutDate: group.payoutDate,
-          transactionDates: `${minDate.format("MMM D")} – ${maxDate.format("MMM D, YYYY")}`,
+          transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
           amount: `$${group.totalAmount.toFixed(2)} AUD`,
           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
@@ -1671,7 +1689,7 @@ export const getPayoutOrders = async (req, res) => {
         };
       })
       .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "Pending" ? -1 : 1;
+        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
         return b.sortKey - a.sortKey;
       });
 
@@ -1684,13 +1702,13 @@ export const getPayoutOrders = async (req, res) => {
     }
 
     res.json({
-      message: "Payouts calculated",
+      message: 'Payouts calculated',
       totalAmount: totalPayoutAmount,
       payouts,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error while calculating payouts" });
+    res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
 
@@ -1700,13 +1718,16 @@ export const updateTrackingInShopify = async (req, res) => {
 
     if (!fulfillmentId || !tracking_number || !tracking_company) {
       return res.status(400).json({
-        error: 'Missing required fields: fulfillmentId, tracking_number, tracking_company',
+        error:
+          'Missing required fields: fulfillmentId, tracking_number, tracking_company',
       });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
     if (!shopifyConfig) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
@@ -1753,11 +1774,11 @@ export const updateTrackingInShopify = async (req, res) => {
 export const cancelShopifyOrder = async (req, res) => {
   try {
     const { orderId, reason, lineItemIds } = req.body;
-    console.log("📩 Incoming cancel request for Order ID:", orderId);
-    console.log("🔢 Line Item IDs to cancel:", lineItemIds);
+    console.log('📩 Incoming cancel request for Order ID:', orderId);
+    console.log('🔢 Line Item IDs to cancel:', lineItemIds);
 
     if (!orderId || !Array.isArray(lineItemIds)) {
-      console.warn("⚠️ Missing required cancel params");
+      console.warn('⚠️ Missing required cancel params');
       return res.status(400).json({
         error: 'Shopify Order ID and lineItemIds array are required.',
       });
@@ -1765,15 +1786,15 @@ export const cancelShopifyOrder = async (req, res) => {
 
     const config = await shopifyConfigurationModel.findOne();
     if (!config) {
-      console.error("❌ Shopify configuration not found");
+      console.error('❌ Shopify configuration not found');
       return res.status(404).json({ error: 'Shopify config not found.' });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = config;
-    console.log("🔐 Shopify credentials loaded");
+    console.log('🔐 Shopify credentials loaded');
 
     const cancelEndpoint = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/cancel.json`;
-    console.log("🌐 Shopify cancel endpoint:", cancelEndpoint);
+    console.log('🌐 Shopify cancel endpoint:', cancelEndpoint);
 
     const cancelRes = await fetch(cancelEndpoint, {
       method: 'POST',
@@ -1788,10 +1809,10 @@ export const cancelShopifyOrder = async (req, res) => {
     });
 
     const cancelData = await cancelRes.json();
-    console.log("🛒 Shopify Cancel Response:", cancelData);
+    console.log('🛒 Shopify Cancel Response:', cancelData);
 
     if (!cancelRes.ok) {
-      console.error("❌ Shopify cancel failed:", cancelData);
+      console.error('❌ Shopify cancel failed:', cancelData);
       return res.status(500).json({
         error: 'Failed to cancel order in Shopify',
         details: cancelData,
@@ -1800,41 +1821,42 @@ export const cancelShopifyOrder = async (req, res) => {
 
     const dbOrder = await orderModel.findOne({ orderId });
     if (!dbOrder) {
-      console.error("❌ Order not found in DB");
+      console.error('❌ Order not found in DB');
       return res.status(404).json({ error: 'Order not found in DB' });
     }
 
     const normalizedLineItemIds = lineItemIds.map((id) => String(id));
-    console.log("✅ Normalized Line Item IDs:", normalizedLineItemIds);
+    console.log('✅ Normalized Line Item IDs:', normalizedLineItemIds);
 
     dbOrder.lineItems = dbOrder.lineItems.map((item) => {
       const isMatch = normalizedLineItemIds.includes(String(item.id));
       if (isMatch) console.log(`✅ Cancelling lineItem ID: ${item.id}`);
       return {
         ...item,
-        fulfillment_status: isMatch ? "cancelled" : item.fulfillment_status,
+        fulfillment_status: isMatch ? 'cancelled' : item.fulfillment_status,
       };
     });
 
     dbOrder.cancelledAt = new Date();
 
     await dbOrder.save();
-    console.log("💾 DB updated successfully");
+    console.log('💾 DB updated successfully');
 
     return res.status(200).json({
-      message: 'Order cancelled in Shopify. Selected line items marked as cancelled.',
+      message:
+        'Order cancelled in Shopify. Selected line items marked as cancelled.',
       shopifyStatus: cancelData.order.financial_status,
       updatedLineItems: normalizedLineItemIds,
       orderId,
       cancelledAt: dbOrder.cancelledAt,
     });
-
   } catch (err) {
     console.error('❌ Cancel Order Error:', err);
-    return res.status(500).json({ error: 'Server error while canceling order.' });
+    return res
+      .status(500)
+      .json({ error: 'Server error while canceling order.' });
   }
 };
-
 
 export const cancelFulfillment = async (req, res) => {
   try {
@@ -1846,7 +1868,9 @@ export const cancelFulfillment = async (req, res) => {
 
     const config = await shopifyConfigurationModel.findOne();
     if (!config) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = config;
@@ -1879,23 +1903,24 @@ export const cancelFulfillment = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Cancel Fulfillment Error:', error);
-    return res.status(500).json({ error: 'Server error while canceling fulfillment.' });
+    return res
+      .status(500)
+      .json({ error: 'Server error while canceling fulfillment.' });
   }
 };
-
 
 export const getLineItemCountByShopifyOrderId = async (req, res) => {
   try {
     const { shopifyOrderId } = req.params;
 
     if (!shopifyOrderId) {
-      return res.status(400).json({ message: "Missing order ID" });
+      return res.status(400).json({ message: 'Missing order ID' });
     }
 
     const order = await orderModel.findOne({ orderId: shopifyOrderId });
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
     const lineItems = order.lineItems || [];
@@ -1910,48 +1935,47 @@ export const getLineItemCountByShopifyOrderId = async (req, res) => {
       variantIds,
     });
   } catch (err) {
-    console.error("Error in getLineItem:", err);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error('Error in getLineItem:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 export const getAllRequestsGroupedByUser = async (req, res) => {
   try {
     const groupedData = await orderRquestModel.aggregate([
       {
         $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "userDetails",
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userDetails',
         },
       },
       {
-        $unwind: "$userDetails",
+        $unwind: '$userDetails',
       },
       {
         $group: {
-          _id: "$userId",
-          firstName: { $first: "$userDetails.firstName" },
-          lastName: { $first: "$userDetails.lastName" },
-          email: { $first: "$userDetails.email" },
+          _id: '$userId',
+          firstName: { $first: '$userDetails.firstName' },
+          lastName: { $first: '$userDetails.lastName' },
+          email: { $first: '$userDetails.email' },
           requestCount: { $sum: 1 },
           requests: {
             $push: {
-               _id: "$_id",
-              orderId: "$orderId",
-              orderNo: "$orderNo",
-              request: "$request",
-              productNames: "$productNames",
-              createdAt: "$createdAt",
+              _id: '$_id',
+              orderId: '$orderId',
+              orderNo: '$orderNo',
+              request: '$request',
+              productNames: '$productNames',
+              createdAt: '$createdAt',
             },
           },
         },
       },
       {
-        $sort: { requestCount: -1 } 
-      }
+        $sort: { requestCount: -1 },
+      },
     ]);
 
     return res.status(200).json({
@@ -1960,11 +1984,10 @@ export const getAllRequestsGroupedByUser = async (req, res) => {
       data: groupedData,
     });
   } catch (error) {
-    console.error("Error in getAllRequestsGroupedByUser:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    console.error('Error in getAllRequestsGroupedByUser:', error);
+    return res.status(500).json({ message: 'Internal server error.' });
   }
 };
-
 
 export const getRequestById = async (req, res) => {
   const { id } = req.params;
@@ -1975,7 +1998,7 @@ export const getRequestById = async (req, res) => {
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: "No request found with this ID."
+        message: 'No request found with this ID.',
       });
     }
 
@@ -1987,14 +2010,39 @@ export const getRequestById = async (req, res) => {
         request: request.request,
         productNames: request.productNames,
         createdAt: request.createdAt,
-        userId: request.userId
-      }
+        userId: request.userId,
+      },
     });
   } catch (error) {
-    console.error("Error in getRequestById:", error);
+    console.error('Error in getRequestById:', error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error."
+      message: 'Internal server error.',
     });
+  }
+};
+
+export const addReferenceToOrders = async (req, res) => {
+  try {
+    const { orderIds, referenceNo } = req.body;
+
+    if (!Array.isArray(orderIds) || !referenceNo) {
+      return res.status(400).json({
+        message: 'orderIds (array) and referenceNo (string) are required.',
+      });
+    }
+
+    const result = await orderModel.updateMany(
+      { _id: { $in: orderIds } },
+      { $set: { referenceNo } }
+    );
+
+    res.status(200).json({
+      message: 'Reference number added to selected orders.',
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (err) {
+    console.error('Error updating orders:', err);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
