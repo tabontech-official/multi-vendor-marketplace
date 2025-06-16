@@ -266,6 +266,7 @@ export const checkShopifyAdminTag = async (email) => {
     'Reports',
     'Catalog Performance',
     'eCommerce Consultation',
+    "Finance"
   ];
 
   try {
@@ -1180,30 +1181,37 @@ export const createPassword = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    console.log('Decoded token:', decoded);
+    const userId = decoded?.payLoad?._id;
 
-    const userEmail = decoded.payLoad;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid or missing user ID in token' });
+    }
 
-    console.log('Searching for user with email:', userEmail);
-
-    const user = await authModel.findOne({ email: userEmail });
-    console.log('User fetched from database:', user);
-
+    const user = await authModel.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.password = newPassword;
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
     await user.save();
 
-    await updateShopifyPassword(user.shopifyId, newPassword);
+    if (user.shopifyId && updateShopifyPassword) {
+      await updateShopifyPassword(user.shopifyId, newPassword);
+    }
 
     res.status(200).json({ message: 'Password has been reset successfully' });
+
   } catch (error) {
-    console.error('Error resetting password:', error);
-    res
-      .status(500)
-      .json({ message: 'Error resetting password', error: error.message });
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token has expired. Please request a new password reset.' });
+    }
+
+    console.error(' Error resetting password:', error);
+    res.status(500).json({
+      message: 'Internal server error while resetting password',
+      error: error.message,
+    });
   }
 };
 
