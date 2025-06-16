@@ -93,6 +93,9 @@ const authSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    referenceNo:{
+      type:String
+    }
   },
 
   {

@@ -1341,7 +1341,7 @@ export const getPayoutDate = async (req, res) => {
 
 function getNextPayoutDate(startDate, config) {
   const frequency = config.payoutFrequency || 'twice';
-  const base = dayjs(startDate).startOf('day'); 
+  const base = dayjs(startDate).startOf('day');
 
   if (frequency === 'daily') {
     return base;
@@ -1522,7 +1522,8 @@ export const getPayout = async (req, res) => {
           if (listing && listing.userId) {
             const merchant = await authModel.findById(listing.userId);
             if (merchant) {
-              merchantName = `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantName =
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
               merchantEmail = merchant.email || 'N/A';
               merchantId = merchant._id;
             }
@@ -1649,7 +1650,9 @@ export const getPayoutByUserId = async (req, res) => {
 
         const variantId = item.variantId || item.variant_id;
         if (variantId) {
-          const listing = await listingModel.findOne({ 'variants.id': String(variantId) });
+          const listing = await listingModel.findOne({
+            'variants.id': String(variantId),
+          });
 
           if (listing && listing.userId) {
             merchantId = String(listing.userId); // convert to string for comparison
@@ -1660,7 +1663,8 @@ export const getPayoutByUserId = async (req, res) => {
 
             const merchant = await authModel.findById(listing.userId);
             if (merchant) {
-              merchantName = `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantName =
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
               merchantEmail = merchant.email || 'N/A';
             }
           }
@@ -1757,17 +1761,25 @@ export const getPayoutByUserId = async (req, res) => {
   }
 };
 
-
 // export const getPayoutOrders = async (req, res) => {
 //   try {
-//     const { payoutDate, status } = req.query;
+//     const { payoutDate, status, userId } = req.query;
+
+//     if (!userId) {
+//       return res.status(400).json({ error: 'Missing userId' });
+//     }
 
 //     const config = await PayoutConfig.findOne({});
 //     if (!config) {
 //       return res.status(400).json({ error: 'Payout config not found.' });
 //     }
 
-//     const orders = await orderModel.find({});
+//     const orderQuery = {};
+//     if (status) {
+//       orderQuery.payoutStatus = new RegExp(`^${status}$`, 'i');
+//     }
+//     const orders = await orderModel.find(orderQuery);
+
 //     const updates = [];
 //     let totalPayoutAmount = 0;
 
@@ -1780,16 +1792,21 @@ export const getPayoutByUserId = async (req, res) => {
 //       order.scheduledPayoutDate = payoutDateObj.toDate();
 
 //       const lineItems = order.lineItems || [];
-
 //       let payoutAmount = 0;
 //       let refundAmount = 0;
-
 //       const products = [];
 
-//       lineItems.forEach((item) => {
+//       for (const item of lineItems) {
 //         const price = Number(item.price) || 0;
 //         const qty = Number(item.quantity) || 0;
 //         const total = price * qty;
+
+//         const variantId = item.variantId || item.variant_id;
+//         const listing = await listingModel.findOne({ 'variants.id': String(variantId) });
+
+//         if (!listing || String(listing.userId) !== String(userId)) {
+//           continue;
+//         }
 
 //         const productData = {
 //           title: item.title || '',
@@ -1808,7 +1825,11 @@ export const getPayoutByUserId = async (req, res) => {
 //         }
 
 //         products.push(productData);
-//       });
+//       }
+
+//       if (products.length === 0) {
+//         continue;
+//       }
 
 //       order.payoutAmount = payoutAmount;
 //       order.refundAmount = refundAmount;
@@ -1913,12 +1934,15 @@ export const getPayoutOrders = async (req, res) => {
       return res.status(400).json({ error: 'Payout config not found.' });
     }
 
+    const merchant = await authModel.findById(userId);
+    const referenceNo = merchant?.referenceNo || 'N/A';
+
     const orderQuery = {};
     if (status) {
       orderQuery.payoutStatus = new RegExp(`^${status}$`, 'i');
     }
-    const orders = await orderModel.find(orderQuery);
 
+    const orders = await orderModel.find(orderQuery);
     const updates = [];
     let totalPayoutAmount = 0;
 
@@ -1941,10 +1965,12 @@ export const getPayoutOrders = async (req, res) => {
         const total = price * qty;
 
         const variantId = item.variantId || item.variant_id;
-        const listing = await listingModel.findOne({ 'variants.id': String(variantId) });
+        const listing = await listingModel.findOne({
+          'variants.id': String(variantId),
+        });
 
         if (!listing || String(listing.userId) !== String(userId)) {
-          continue; 
+          continue;
         }
 
         const productData = {
@@ -1985,7 +2011,7 @@ export const getPayoutOrders = async (req, res) => {
         payoutAmount,
         refundAmount,
         createdAt: order.createdAt,
-        referenceNo: order.referenceNo || '',
+        referenceNo, // ✅ fetched from user document
         products,
       });
     }
@@ -2059,7 +2085,6 @@ export const getPayoutOrders = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
 
 export const updateTrackingInShopify = async (req, res) => {
   try {
@@ -2373,25 +2398,31 @@ export const getRequestById = async (req, res) => {
 
 export const addReferenceToOrders = async (req, res) => {
   try {
-    const { orderIds, referenceNo } = req.body;
+    const { UserId, referenceNo } = req.body;
 
-    if (!Array.isArray(orderIds) || !referenceNo) {
-      return res.status(400).json({
-        message: 'orderIds (array) and referenceNo (string) are required.',
-      });
+    if (!UserId || !referenceNo) {
+      return res
+        .status(400)
+        .json({ message: 'UserId and referenceNo are required.' });
     }
 
-    const result = await orderModel.updateMany(
-      { _id: { $in: orderIds } },
+    const result = await authModel.updateOne(
+      { _id: UserId },
       { $set: { referenceNo } }
     );
 
+    if (result.modifiedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: 'User not found or reference not updated.' });
+    }
+
     res.status(200).json({
-      message: 'Reference number added to selected orders.',
+      message: 'Reference number saved successfully to user.',
       modifiedCount: result.modifiedCount,
     });
   } catch (err) {
-    console.error('Error updating orders:', err);
+    console.error('Error updating user reference:', err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
