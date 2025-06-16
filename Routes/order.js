@@ -18,6 +18,7 @@ import {
   getAllRequestsGroupedByUser,
   getRequestById,
   addReferenceToOrders,
+  getPayoutByUserId,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -42,6 +43,7 @@ orderRouter.get("/lineItemCount/:shopifyOrderId",getLineItemCountByShopifyOrderI
 orderRouter.get("/getCancellationRequests",getAllRequestsGroupedByUser)
 orderRouter.get("/getCancellationRequestsByUserId/:id",getRequestById)
 orderRouter.post('/addReferenceNumber', addReferenceToOrders);
+orderRouter.get("/getPayoutByUserId",getPayoutByUserId)
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;

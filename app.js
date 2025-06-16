@@ -21,7 +21,7 @@ setupSwagger(app);
 // Initialize MongoDB connection
 Connect();
 productSubscriptionExpiration();
-financeCron()
+// financeCron()
 app.use(bodyParser.json()); // To handle JSON request bodies
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));
