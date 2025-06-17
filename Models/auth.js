@@ -95,7 +95,11 @@ const authSchema = new mongoose.Schema(
     },
     referenceNo:{
       type:String
-    }
+    },
+     paypalAccountNo: {
+      type: String,
+      default: '',
+    },
   },
 
   {
