@@ -830,6 +830,103 @@ export const addPaypalAccountNo = async (req, res) => {
   }
 };
 
+// export const addPayouts = async (req, res) => {
+//   const {
+//     payoutFrequency,
+//     graceTime = 0,
+//     firstDate,
+//     secondDate,
+//     weeklyDay,
+//   } = req.body;
+
+//   if (!payoutFrequency) {
+//     return res.status(400).json({ message: 'Payout frequency is required.' });
+//   }
+
+//   try {
+//     let config = await PayoutConfig.findOne();
+//     if (!config) config = new PayoutConfig();
+
+//     config.graceTime = graceTime;
+//     config.payoutFrequency = payoutFrequency;
+
+//     const graceStart = dayjs().add(graceTime, 'day').startOf('day');
+
+//     switch (payoutFrequency) {
+//       case 'daily':
+//         config.firstPayoutDate = graceStart.toDate();
+//         config.secondPayoutDate = null;
+//         config.weeklyDay = null;
+//         break;
+
+//       case 'weekly':
+//         if (!weeklyDay) {
+//           return res.status(400).json({ message: 'Weekly day is required.' });
+//         }
+
+//         const weekdays = {
+//           Sunday: 0,
+//           Monday: 1,
+//           Tuesday: 2,
+//           Wednesday: 3,
+//           Thursday: 4,
+//           Friday: 5,
+//           Saturday: 6,
+//         };
+
+//         const targetDay = weekdays[weeklyDay];
+//         let nextWeekly = graceStart;
+
+//         while (nextWeekly.day() !== targetDay) {
+//           nextWeekly = nextWeekly.add(1, 'day');
+//         }
+
+//         config.firstPayoutDate = nextWeekly.toDate();
+//         config.secondPayoutDate = null;
+//         config.weeklyDay = weeklyDay;
+//         break;
+
+//       case 'once':
+//         if (!firstDate) {
+//           return res
+//             .status(400)
+//             .json({ message: 'First date is required for monthly payout.' });
+//         }
+
+//         config.firstPayoutDate = new Date(firstDate);
+//         config.secondPayoutDate = null;
+//         config.weeklyDay = null;
+//         break;
+
+//       case 'twice':
+//         if (!firstDate || !secondDate) {
+//           return res
+//             .status(400)
+//             .json({ message: 'Both dates are required for twice a month.' });
+//         }
+
+//         config.firstPayoutDate = new Date(firstDate);
+//         config.secondPayoutDate = new Date(secondDate);
+//         config.weeklyDay = null;
+//         break;
+
+//       default:
+//         return res
+//           .status(400)
+//           .json({ message: 'Invalid payout frequency selected.' });
+//     }
+
+//     await config.save();
+
+//     return res.json({ message: ' Payout config saved successfully.' });
+//   } catch (error) {
+//     console.error(' Error saving payout config:', error);
+//     return res.status(500).json({ message: 'Failed to save payout config.' });
+//   }
+// };
+
+
+
 export const addPayouts = async (req, res) => {
   const {
     payoutFrequency,
@@ -850,11 +947,13 @@ export const addPayouts = async (req, res) => {
     config.graceTime = graceTime;
     config.payoutFrequency = payoutFrequency;
 
-    const graceStart = dayjs().add(graceTime, 'day').startOf('day');
+    const now = dayjs().add(graceTime, 'day');
+    const currentMonth = now.month(); // 0-indexed
+    const currentYear = now.year();
 
     switch (payoutFrequency) {
       case 'daily':
-        config.firstPayoutDate = graceStart.toDate();
+        config.firstPayoutDate = now.startOf('day').toDate();
         config.secondPayoutDate = null;
         config.weeklyDay = null;
         break;
@@ -875,8 +974,11 @@ export const addPayouts = async (req, res) => {
         };
 
         const targetDay = weekdays[weeklyDay];
-        let nextWeekly = graceStart;
+        if (targetDay === undefined) {
+          return res.status(400).json({ message: 'Invalid weekly day.' });
+        }
 
+        let nextWeekly = now;
         while (nextWeekly.day() !== targetDay) {
           nextWeekly = nextWeekly.add(1, 'day');
         }
@@ -887,26 +989,44 @@ export const addPayouts = async (req, res) => {
         break;
 
       case 'once':
-        if (!firstDate) {
+        if (typeof firstDate !== 'number' || firstDate < 1) {
           return res
             .status(400)
-            .json({ message: 'First date is required for monthly payout.' });
+            .json({ message: 'First payout day is required.' });
         }
 
-        config.firstPayoutDate = new Date(firstDate);
+        config.firstPayoutDate = dayjs()
+          .set('date', Math.min(firstDate, 28))
+          .set('month', currentMonth)
+          .set('year', currentYear)
+          .toDate();
+
         config.secondPayoutDate = null;
         config.weeklyDay = null;
         break;
 
       case 'twice':
-        if (!firstDate || !secondDate) {
-          return res
-            .status(400)
-            .json({ message: 'Both dates are required for twice a month.' });
+        if (
+          typeof firstDate !== 'number' ||
+          typeof secondDate !== 'number' ||
+          firstDate < 1 ||
+          secondDate < 1
+        ) {
+          return res.status(400).json({ message: 'Both payout days required.' });
         }
 
-        config.firstPayoutDate = new Date(firstDate);
-        config.secondPayoutDate = new Date(secondDate);
+        config.firstPayoutDate = dayjs()
+          .set('date', Math.min(firstDate, 28))
+          .set('month', currentMonth)
+          .set('year', currentYear)
+          .toDate();
+
+        config.secondPayoutDate = dayjs()
+          .set('date', Math.min(secondDate, 28))
+          .set('month', currentMonth)
+          .set('year', currentYear)
+          .toDate();
+
         config.weeklyDay = null;
         break;
 
@@ -918,12 +1038,15 @@ export const addPayouts = async (req, res) => {
 
     await config.save();
 
-    return res.json({ message: ' Payout config saved successfully.' });
+    return res.json({ message: '✅ Payout config saved successfully.' });
   } catch (error) {
-    console.error(' Error saving payout config:', error);
+    console.error('❌ Error saving payout config:', error);
     return res.status(500).json({ message: 'Failed to save payout config.' });
   }
 };
+
+
+
 export const getPayoutDate = async (req, res) => {
   const config = await PayoutConfig.findOne();
   if (!config)
@@ -974,12 +1097,146 @@ function getNextPayoutDate(startDate, config) {
   ];
 
   if (frequency === 'once') {
-    return base.isBefore(possible[0]) ? possible[0] : possible[2]; // d1 next month
+    return base.isBefore(possible[0]) ? possible[0] : possible[2];
   }
 
   const next = possible.find((d) => d.isAfter(base));
   return next || possible[0];
 }
+
+// export const getPayout = async (req, res) => {
+//   try {
+//     const config = await PayoutConfig.findOne({});
+//     if (!config) {
+//       return res.status(400).json({ error: 'Payout config not found.' });
+//     }
+
+//     const orders = await orderModel.find({});
+//     const updates = [];
+//     let totalPayoutAmount = 0;
+
+//     for (const order of orders) {
+//       const createdAt = dayjs(order.createdAt);
+//       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+//       const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
+
+//       order.eligibleDate = eligibleDate.toDate();
+//       order.scheduledPayoutDate = payoutDate.toDate();
+
+//       const lineItems = order.lineItems || [];
+//       let payoutAmount = 0;
+//       const enrichedLineItems = [];
+
+//       for (const item of lineItems) {
+//         const price = Number(item.price) || 0;
+//         const qty = Number(item.quantity) || 0;
+//         const total = price * qty;
+//         payoutAmount += total;
+
+//         let merchantName = 'Unknown';
+//         let merchantEmail = 'Unknown';
+//         let merchantId = null;
+
+//         const variantId = item.variantId || item.variant_id;
+//         if (variantId) {
+//           const listing = await listingModel.findOne({
+//             'variants.id': String(variantId),
+//           });
+
+//           if (listing && listing.userId) {
+//             const merchant = await authModel.findById(listing.userId);
+//             if (merchant) {
+//               merchantName =
+//                 `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+//               merchantEmail = merchant.email || 'N/A';
+//               merchantId = merchant._id;
+//             }
+//           }
+//         }
+
+//         enrichedLineItems.push({
+//           ...item,
+//           merchantName,
+//           merchantEmail,
+//           merchantId,
+//         });
+//       }
+
+//       order.payoutAmount = payoutAmount;
+//       await order.save();
+
+//       totalPayoutAmount += payoutAmount;
+
+//       updates.push({
+//         orderId: order._id,
+//         shopifyOrderId: order.orderId,
+//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
+//         eligibleDate: order.eligibleDate,
+//         scheduledPayoutDate: order.scheduledPayoutDate,
+//         payoutStatus: order.payoutStatus || 'pending',
+//         payoutAmount,
+//         createdAt: order.createdAt,
+//         lineItems: enrichedLineItems,
+//       });
+//     }
+
+//     const grouped = {};
+
+//     updates.forEach((order) => {
+//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
+//       if (!grouped[key]) {
+//         grouped[key] = {
+//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
+//           createdAts: [],
+//           totalAmount: 0,
+//           orders: [],
+//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+//         };
+//       }
+
+//       grouped[key].createdAts.push(dayjs(order.createdAt));
+//       grouped[key].totalAmount += order.payoutAmount || 0;
+
+//       grouped[key].orders.push({
+//         orderId: order.orderId,
+//         shopifyOrderId: order.shopifyOrderId,
+//         shopifyOrderNo: order.shopifyOrderNo,
+//         amount: order.payoutAmount,
+//         status: order.payoutStatus,
+//         createdAt: order.createdAt,
+//         lineItems: order.lineItems || [],
+//       });
+//     });
+
+//     const payouts = Object.values(grouped)
+//       .map((group) => {
+//         const minDate = dayjs.min(group.createdAts);
+//         const maxDate = dayjs.max(group.createdAts);
+//         return {
+//           payoutDate: group.payoutDate,
+//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
+//           status: group.status,
+//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
+//           orders: group.orders,
+//           sortKey: group.sortKey,
+//         };
+//       })
+//       .sort((a, b) => {
+//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+//         return b.sortKey - a.sortKey;
+//       });
+
+//     res.json({
+//       message: 'Payouts calculated',
+//       totalAmount: totalPayoutAmount,
+//       payouts,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Server error while calculating payouts' });
+//   }
+// };
 
 export const getPayout = async (req, res) => {
   try {
@@ -994,11 +1251,19 @@ export const getPayout = async (req, res) => {
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-      const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-      const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 
-      order.eligibleDate = eligibleDate.toDate();
-      order.scheduledPayoutDate = payoutDate.toDate();
+      if (!order.scheduledPayoutDate || !order.eligibleDate) {
+        const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+        const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
+
+        if (!order.eligibleDate) {
+          order.eligibleDate = eligibleDate.toDate();
+        }
+
+        if (!order.scheduledPayoutDate) {
+          order.scheduledPayoutDate = payoutDate.toDate();
+        }
+      }
 
       const lineItems = order.lineItems || [];
       let payoutAmount = 0;
@@ -1114,153 +1379,6 @@ export const getPayout = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
-// export const getPayoutByUserId = async (req, res) => {
-//   try {
-//     const { userId } = req.query;
-
-//     const config = await PayoutConfig.findOne({});
-//     if (!config) {
-//       return res.status(400).json({ error: 'Payout config not found.' });
-//     }
-
-//     const orders = await orderModel.find({});
-//     const updates = [];
-//     let totalPayoutAmount = 0;
-
-//     for (const order of orders) {
-//       const createdAt = dayjs(order.createdAt);
-//       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-//       const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
-
-//       order.eligibleDate = eligibleDate.toDate();
-//       order.scheduledPayoutDate = payoutDate.toDate();
-
-//       const lineItems = order.lineItems || [];
-//       let payoutAmount = 0;
-//       const enrichedLineItems = [];
-
-//       for (const item of lineItems) {
-//         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         const total = price * qty;
-
-//         let merchantName = 'Unknown';
-//         let merchantEmail = 'Unknown';
-//         let merchantId = null;
-
-//         const variantId = item.variantId || item.variant_id;
-//         if (variantId) {
-//           const listing = await listingModel.findOne({
-//             'variants.id': String(variantId),
-//           });
-
-//           if (listing && listing.userId) {
-//             merchantId = String(listing.userId); // convert to string for comparison
-
-//             if (userId && merchantId !== String(userId)) {
-//               continue; // skip this item, not matching userId
-//             }
-
-//             const merchant = await authModel.findById(listing.userId);
-//             if (merchant) {
-//               merchantName =
-//                 `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
-//               merchantEmail = merchant.email || 'N/A';
-//             }
-//           }
-//         }
-
-//         enrichedLineItems.push({
-//           ...item,
-//           merchantName,
-//           merchantEmail,
-//           merchantId,
-//         });
-
-//         payoutAmount += total;
-//       }
-
-//       if (enrichedLineItems.length === 0) {
-//         continue; // skip if no items matched the user
-//       }
-
-//       order.payoutAmount = payoutAmount;
-//       await order.save();
-
-//       totalPayoutAmount += payoutAmount;
-
-//       updates.push({
-//         orderId: order._id,
-//         shopifyOrderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
-//         eligibleDate: order.eligibleDate,
-//         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount,
-//         createdAt: order.createdAt,
-//         lineItems: enrichedLineItems,
-//       });
-//     }
-
-//     // group by payoutDate + status
-//     const grouped = {};
-
-//     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
-//       if (!grouped[key]) {
-//         grouped[key] = {
-//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
-//           createdAts: [],
-//           totalAmount: 0,
-//           orders: [],
-//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
-//         };
-//       }
-
-//       grouped[key].createdAts.push(dayjs(order.createdAt));
-//       grouped[key].totalAmount += order.payoutAmount || 0;
-
-//       grouped[key].orders.push({
-//         orderId: order.orderId,
-//         shopifyOrderId: order.shopifyOrderId,
-//         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
-//         status: order.payoutStatus,
-//         createdAt: order.createdAt,
-//         lineItems: order.lineItems || [],
-//       });
-//     });
-
-//     const payouts = Object.values(grouped)
-//       .map((group) => {
-//         const minDate = dayjs.min(group.createdAts);
-//         const maxDate = dayjs.max(group.createdAts);
-//         return {
-//           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
-//           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
-//           orders: group.orders,
-//           sortKey: group.sortKey,
-//         };
-//       })
-//       .sort((a, b) => {
-//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
-//         return b.sortKey - a.sortKey;
-//       });
-
-//     res.json({
-//       message: 'Payouts calculated',
-//       totalAmount: totalPayoutAmount,
-//       payouts,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Server error while calculating payouts' });
-//   }
-// };
 
 export const getPayoutByUserId = async (req, res) => {
   try {
@@ -1612,11 +1730,18 @@ export const getPayoutForAllOrders = async (req, res) => {
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-      const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
-      const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
+      if (!order.scheduledPayoutDate || !order.eligibleDate) {
+        const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
+        const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
 
-      order.eligibleDate = eligibleDate.toDate();
-      order.scheduledPayoutDate = payoutDateObj.toDate();
+        if (!order.eligibleDate) {
+          order.eligibleDate = eligibleDate.toDate();
+        }
+
+        if (!order.scheduledPayoutDate) {
+          order.scheduledPayoutDate = payoutDateObj.toDate();
+        }
+      }
 
       const lineItems = order.lineItems ?? [];
       let payoutAmount = 0;
