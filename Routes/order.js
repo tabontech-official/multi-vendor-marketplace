@@ -20,6 +20,7 @@ import {
   addReferenceToOrders,
   getPayoutByUserId,
   getPayoutForAllOrders,
+  addPaypalAccountNo,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -33,6 +34,7 @@ orderRouter.get('/getOrderByOrderId/:id', getOrderByOrderId);
 orderRouter.get('/getOrderFromShopify/:id/:userId', getOrderDatafromShopify);
 orderRouter.get('/getAllOrderForMerchants', getAllOrdersForAdmin);
 orderRouter.post('/addPaypal', addPaypalAccount);
+orderRouter.post('/addPaypalAccountNo', addPaypalAccountNo);
 orderRouter.post('/addPayOutDates', addPayouts);
 orderRouter.get('/getPayoutsDates', getPayoutDate);
 orderRouter.get('/getPayout', getPayout);

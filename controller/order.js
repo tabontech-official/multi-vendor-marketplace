@@ -230,80 +230,6 @@ export const getFinanceSummary = async (req, res) => {
   }
 };
 
-// export const getOrderById = async (req, res) => {
-//   try {
-//     const userId = req.params.userId;
-
-//     if (!userId) {
-//       return res.status(400).send({ message: 'User ID is required' });
-//     }
-
-//     if (!mongoose.Types.ObjectId.isValid(userId)) {
-//       return res.status(400).send({ message: 'Invalid user ID' });
-//     }
-
-//     const allOrders = await orderModel.find({});
-//     console.log('🔍 Total Orders Found:', allOrders.length);
-
-//     const ordersGroupedByOrderId = new Map();
-
-//     for (const order of allOrders) {
-//       const filteredLineItems = [];
-
-//       for (const item of order.lineItems || []) {
-//         const variantId = item.variant_id?.toString();
-
-//         if (!variantId) continue;
-
-//         const product = await listingModel.findOne({ 'variants.id': variantId });
-
-//         if (
-//           product &&
-//           product.userId &&
-//           product.userId.toString() === userId
-//         ) {
-//           filteredLineItems.push(item);
-//         }
-//       }
-
-//       if (filteredLineItems.length > 0) {
-//         const orderForUser = order.toObject();
-//         orderForUser.lineItems = filteredLineItems;
-
-//         if (ordersGroupedByOrderId.has(order.orderId)) {
-//           const existingOrder = ordersGroupedByOrderId.get(order.orderId);
-//           existingOrder.lineItems.push(...filteredLineItems);
-
-//           // Remove duplicate lineItems by variant_id
-//           existingOrder.lineItems = Array.from(
-//             new Map(existingOrder.lineItems.map(item => [item.variant_id, item]))
-//           ).map(([_, item]) => item);
-//         } else {
-//           ordersGroupedByOrderId.set(order.orderId, orderForUser);
-//         }
-//       }
-//     }
-
-//     const matchedOrders = Array.from(ordersGroupedByOrderId.values());
-
-//     console.log('✅ Total matched orders for user:', matchedOrders.length);
-
-//     if (matchedOrders.length > 0) {
-//       return res.status(200).send({
-//         message: 'Orders found for user',
-//         data: matchedOrders,
-//       });
-//     } else {
-//       return res.status(404).send({
-//         message: "No orders found for this user's products",
-//       });
-//     }
-//   } catch (error) {
-//     console.error('❌ Error fetching user orders:', error);
-//     res.status(500).send({ message: 'Internal Server Error' });
-//   }
-// };
-
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -420,97 +346,6 @@ export const getOrderByOrderId = async (req, res) => {
   }
 };
 
-// export const fulfillOrder = async (req, res) => {
-//   try {
-//     const { orderId } = req.body;
-
-//     if (!orderId) {
-//       return res.status(400).json({ error: 'Order ID is required.' });
-//     }
-
-//     const shopifyConfig = await shopifyConfigurationModel.findOne();
-//     if (!shopifyConfig) {
-//       return res.status(404).json({ error: 'Shopify configuration not found.' });
-//     }
-
-//     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
-
-//     const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
-
-//     const fulfillmentOrdersRes = await shopifyRequest(
-//       fulfillmentOrdersUrl,
-//       'GET',
-//       null,
-//       null,
-//       shopifyAccessToken
-//     );
-
-//     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
-//     if (!fulfillmentOrder?.id) {
-//       return res.status(400).json({ error: 'No fulfillment order found for this order.' });
-//     }
-
-//     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
-
-//     const query = `
-//       mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {
-//         fulfillmentCreateV2(fulfillment: $fulfillment) {
-//           fulfillment {
-//             id
-//             status
-//           }
-//           userErrors {
-//             field
-//             message
-//           }
-//         }
-//       }
-//     `;
-
-//     const variables = {
-//       fulfillment: {
-//         lineItemsByFulfillmentOrder: [
-//           {
-//             fulfillmentOrderId: `gid://shopify/FulfillmentOrder/${fulfillmentOrder.id}`
-//           }
-//         ],
-//         notifyCustomer: true,
-//         trackingInfo: {
-//           number: null,
-//           url: null,
-//           company: null
-//         }
-//       }
-//     };
-
-//     const response = await fetch(graphqlUrl, {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'X-Shopify-Access-Token': shopifyAccessToken
-//       },
-//       body: JSON.stringify({ query, variables })
-//     });
-
-//     const result = await response.json();
-
-//     if (result.errors || result.data?.fulfillmentCreateV2?.userErrors?.length > 0) {
-//       return res.status(400).json({
-//         error: 'GraphQL fulfillment error.',
-//         details: result.errors || result.data.fulfillmentCreateV2.userErrors
-//       });
-//     }
-
-//     return res.status(200).json({
-//       message: 'Order fulfilled successfully.',
-//       data: result.data.fulfillmentCreateV2.fulfillment
-//     });
-
-//   } catch (error) {
-//     console.error(' Error in fulfillOrder:', error.message, error);
-//     return res.status(500).json({ error: 'Server error while fulfilling order.' });
-//   }
-// };
 
 export const fulfillOrder = async (req, res) => {
   try {
@@ -796,115 +631,6 @@ export const getOrderDatafromShopify = async (req, res) => {
   }
 };
 
-// export const getAllOrdersForAdmin = async (req, res) => {
-//   try {
-//     const allOrders = await orderModel.find({});
-//     const finalOrders = [];
-//     const merchantDetailsMap = new Map();
-
-//     for (const order of allOrders) {
-//       const merchantGroups = new Map();
-
-//       for (const item of order.lineItems || []) {
-//         const variantId = item.variant_id?.toString();
-//         if (!variantId) continue;
-
-//         const product = await listingModel.findOne({
-//           'variants.id': variantId,
-//         });
-//         if (!product || !product.userId) continue;
-
-//         const merchantId = product.userId.toString();
-
-//         // Attach variant image
-//         const matchedVariant = product.variants.find((v) => v.id === variantId);
-//         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-//           const image = product.variantImages.find(
-//             (img) => img.id === matchedVariant.image_id
-//           );
-//           if (image) {
-//             item.image = {
-//               id: image.id,
-//               src: image.src,
-//               alt: image.alt,
-//               position: image.position,
-//               width: image.width,
-//               height: image.height,
-//             };
-//           }
-//         }
-
-//         // Attach orderId and customer
-//         item.orderId = order.orderId;
-//         item.customer = [
-//           {
-//             first_name: order.customer?.first_name || '',
-//             last_name: order.customer?.last_name || '',
-//             email: order.customer?.email || '',
-//             phone: order.customer?.phone || '',
-//             created_at: order.customer?.created_at || '',
-//             default_address: order.customer?.default_address || {},
-//           },
-//         ];
-
-//         // Group items per merchant inside this order
-//         if (!merchantGroups.has(merchantId)) {
-//           merchantGroups.set(merchantId, []);
-//         }
-//         merchantGroups.get(merchantId).push(item);
-
-//         // Cache merchant info
-//         if (!merchantDetailsMap.has(merchantId)) {
-//           const merchant = await authModel
-//             .findById(merchantId)
-//             .select('-password');
-//           if (merchant) {
-//             merchantDetailsMap.set(merchantId, {
-//               _id: merchant._id,
-//               name: `${merchant.firstName} ${merchant.lastName}`,
-//               email: merchant.email,
-//               role: merchant.role,
-//               dispatchAddress: merchant.dispatchAddress,
-//               dispatchCountry: merchant.dispatchCountry,
-//             });
-//           }
-//         }
-//       }
-
-//       // Now create separate order block
-//       const merchantsArray = [];
-//       const lineItemsByMerchant = {};
-
-//       merchantGroups.forEach((items, merchantId) => {
-//         merchantsArray.push({
-//           id: merchantId,
-//           info: merchantDetailsMap.get(merchantId) || { id: merchantId },
-//         });
-//         lineItemsByMerchant[merchantId] = items;
-//       });
-
-//       finalOrders.push({
-//         serialNo: order.shopifyOrderNo,
-//         merchants: merchantsArray,
-//         lineItemsByMerchant,
-//       });
-//     }
-
-//     if (finalOrders.length > 0) {
-//       return res.status(200).send({
-//         message: 'Orders grouped per order (not merged by merchant)',
-//         data: finalOrders,
-//       });
-//     } else {
-//       return res.status(404).send({
-//         message: 'No orders found across merchants',
-//       });
-//     }
-//   } catch (error) {
-//     console.error('❌ Error in getAllOrdersForAdmin:', error);
-//     res.status(500).send({ message: 'Internal Server Error' });
-//   }
-// };
 
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
@@ -1045,7 +771,41 @@ export const getAllOrdersForAdmin = async (req, res) => {
   }
 };
 
+
 export const addPaypalAccount = async (req, res) => {
+  try {
+    const { payPal, merchantIds } = req.body;
+
+    if (!payPal || !Array.isArray(merchantIds) || merchantIds.length === 0) {
+      return res.status(400).json({ message: 'Missing payPal or merchantIds' });
+    }
+
+    const updatedUsers = [];
+
+    for (const id of merchantIds) {
+      const user = await authModel.findById(id);
+      if (user) {
+        user.paypalAccount = payPal;
+        await user.save();
+        updatedUsers.push({
+          merchantId: user._id,
+          paypalAccount: user.paypalAccount,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      message: 'PayPal account updated for all valid merchants',
+      updated: updatedUsers,
+    });
+  } catch (error) {
+    console.error('Error in addPaypalAccount:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+export const addPaypalAccountNo = async (req, res) => {
   try {
     const { payPal, merchantId } = req.body;
 
@@ -1058,14 +818,14 @@ export const addPaypalAccount = async (req, res) => {
       return res.status(404).json({ message: 'Merchant not found' });
     }
 
-    user.paypalAccount = payPal;
+    user.paypalAccountNo = payPal;
     await user.save();
 
     return res.status(200).json({
       message: 'PayPal account updated successfully',
       data: {
         merchantId: user._id,
-        paypalAccount: user.paypalAccount,
+        paypalAccountNo: user.paypalAccountNo,
       },
     });
   } catch (error) {
@@ -1074,33 +834,6 @@ export const addPaypalAccount = async (req, res) => {
   }
 };
 
-// export const addPayouts = async (req, res) => {
-//   const { firstDate, secondDate } = req.body;
-
-//   if (!firstDate || !secondDate) {
-//     return res.status(400).json({ message: 'Both payout dates are required.' });
-//   }
-
-//   try {
-//     const existing = await PayoutConfig.findOne();
-
-//     if (existing) {
-//       existing.firstPayoutDate = new Date(firstDate);
-//       existing.secondPayoutDate = new Date(secondDate);
-//       await existing.save();
-//     } else {
-//       await PayoutConfig.create({
-//         firstPayoutDate: new Date(firstDate),
-//         secondPayoutDate: new Date(secondDate),
-//       });
-//     }
-
-//     res.json({ message: 'Payout dates saved successfully.' });
-//   } catch (error) {
-//     console.error('Error saving payout dates:', error);
-//     res.status(500).json({ message: 'Failed to save payout dates.' });
-//   }
-// };
 
 export const addPayouts = async (req, res) => {
   const {
@@ -1209,135 +942,7 @@ export const getPayoutDate = async (req, res) => {
     weeklyDay: config.weeklyDay,
   });
 };
-// export const getPayout = async (req, res) => {
-//   try {
-//     const config = await PayoutConfig.findOne({});
-//     if (!config)
-//       return res.status(400).json({ error: 'Payout config not found.' });
 
-//     const { firstPayoutDate, secondPayoutDate } = config;
-//     const firstDay = dayjs(firstPayoutDate).date();
-//     const secondDay = dayjs(secondPayoutDate).date();
-
-//     const orders = await orderModel.find({});
-//     const updates = [];
-//     let totalPayoutAmount = 0;
-
-//     for (const order of orders) {
-//       const createdAt = dayjs(order.createdAt);
-//       const eligibleDate = createdAt.add(7, 'day');
-//       const payoutDate = getNextPayoutDate(eligibleDate, firstDay, secondDay);
-
-//       order.eligibleDate = eligibleDate.toDate();
-//       order.scheduledPayoutDate = payoutDate.toDate();
-
-//       const lineItems = order.lineItems || [];
-//       const amount = lineItems.reduce((sum, item) => {
-//         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         return sum + price * qty;
-//       }, 0);
-
-//       order.payoutAmount = amount;
-//       await order.save();
-
-//       totalPayoutAmount += amount;
-
-//       updates.push({
-//         orderId: order._id,
-//         shopifyOrderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
-//         eligibleDate: order.eligibleDate,
-//         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount: amount,
-//         createdAt: order.createdAt,
-//       });
-//     }
-
-//     const grouped = {};
-
-//     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
-
-//       if (!grouped[key]) {
-//         grouped[key] = {
-//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
-//           createdAts: [],
-//           totalAmount: 0,
-//           orders: [],
-//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
-//         };
-//       }
-
-//       grouped[key].createdAts.push(dayjs(order.createdAt));
-//       grouped[key].totalAmount += order.payoutAmount || 0;
-
-//       grouped[key].orders.push({
-//         orderId: order.orderId,
-//         shopifyOrderId: order.shopifyOrderId,
-//         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
-//         status: order.payoutStatus,
-//         createdAt: order.createdAt,
-//       });
-//     });
-
-//     // ✅ Final sorted and structured response
-//     const payouts = Object.values(grouped)
-//       .map((group) => {
-//         const minDate = dayjs.min(group.createdAts);
-//         const maxDate = dayjs.max(group.createdAts);
-
-//         return {
-//           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
-//           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
-//           orders: group.orders,
-//           sortKey: group.sortKey,
-//         };
-//       })
-//       .sort((a, b) => {
-//         // Show Pending payouts first, then Deposited
-//         if (a.status !== b.status) {
-//           return a.status === 'Pending' ? -1 : 1;
-//         }
-//         return b.sortKey - a.sortKey; // Newer dates first
-//       });
-
-//     res.json({
-//       message: 'Payout dates calculated',
-//       totalAmount: totalPayoutAmount,
-//       payouts,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Server error while calculating payouts' });
-//   }
-// };
-
-// function getNextPayoutDate(startDate, day1, day2) {
-//   let base = dayjs(startDate).startOf('day');
-//   const currentMonth = base.month();
-//   const currentYear = base.year();
-
-//   let possibleDates = [
-//     dayjs(`${currentYear}-${currentMonth + 1}-${day1}`),
-//     dayjs(`${currentYear}-${currentMonth + 1}-${day2}`),
-//   ];
-
-//   if (base.isAfter(possibleDates[1])) {
-//     possibleDates = [
-//       dayjs(`${currentYear}-${currentMonth + 2}-${day1}`),
-//       dayjs(`${currentYear}-${currentMonth + 2}-${day2}`),
-//     ];
-//   }
-
-//   const futureDates = possibleDates.filter((d) => d.isAfter(base));
-//   return futureDates.length > 0 ? futureDates[0] : possibleDates[0];
-// }
 
 function getNextPayoutDate(startDate, config) {
   const frequency = config.payoutFrequency || 'twice';
@@ -1382,103 +987,6 @@ function getNextPayoutDate(startDate, config) {
   return next || possible[0];
 }
 
-// export const getPayout = async (req, res) => {
-//   try {
-//     const config = await PayoutConfig.findOne({});
-//     if (!config)
-//       return res.status(400).json({ error: 'Payout config not found.' });
-
-//     const orders = await orderModel.find({});
-//     const updates = [];
-//     let totalPayoutAmount = 0;
-
-//     for (const order of orders) {
-//       const createdAt = dayjs(order.createdAt);
-//       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-//       const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
-
-//       order.eligibleDate = eligibleDate.toDate();
-//       order.scheduledPayoutDate = payoutDate.toDate();
-
-//       const lineItems = order.lineItems || [];
-//       const amount = lineItems.reduce((sum, item) => {
-//         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         return sum + price * qty;
-//       }, 0);
-
-//       order.payoutAmount = amount;
-//       await order.save();
-
-//       totalPayoutAmount += amount;
-
-//       updates.push({
-//         orderId: order._id,
-//         shopifyOrderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
-//         eligibleDate: order.eligibleDate,
-//         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount: amount,
-//         createdAt: order.createdAt,
-//       });
-//     }
-
-//     const grouped = {};
-
-//     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
-//       if (!grouped[key]) {
-//         grouped[key] = {
-//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
-//           createdAts: [],
-//           totalAmount: 0,
-//           orders: [],
-//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
-//         };
-//       }
-
-//       grouped[key].createdAts.push(dayjs(order.createdAt));
-//       grouped[key].totalAmount += order.payoutAmount || 0;
-//       grouped[key].orders.push({
-//         orderId: order.orderId,
-//         shopifyOrderId: order.shopifyOrderId,
-//         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
-//         status: order.payoutStatus,
-//         createdAt: order.createdAt,
-//       });
-//     });
-
-//     const payouts = Object.values(grouped)
-//       .map((group) => {
-//         const minDate = dayjs.min(group.createdAts);
-//         const maxDate = dayjs.max(group.createdAts);
-//         return {
-//           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
-//           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
-//           orders: group.orders,
-//           sortKey: group.sortKey,
-//         };
-//       })
-//       .sort((a, b) => {
-//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
-//         return b.sortKey - a.sortKey;
-//       });
-
-//     res.json({
-//       message: 'Payouts calculated',
-//       totalAmount: totalPayoutAmount,
-//       payouts,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Server error while calculating payouts' });
-//   }
-// };
 
 export const getPayout = async (req, res) => {
   try {
@@ -1761,165 +1269,6 @@ export const getPayoutByUserId = async (req, res) => {
   }
 };
 
-// export const getPayoutOrders = async (req, res) => {
-//   try {
-//     const { payoutDate, status, userId } = req.query;
-
-//     if (!userId) {
-//       return res.status(400).json({ error: 'Missing userId' });
-//     }
-
-//     const config = await PayoutConfig.findOne({});
-//     if (!config) {
-//       return res.status(400).json({ error: 'Payout config not found.' });
-//     }
-
-//     const orderQuery = {};
-//     if (status) {
-//       orderQuery.payoutStatus = new RegExp(`^${status}$`, 'i');
-//     }
-//     const orders = await orderModel.find(orderQuery);
-
-//     const updates = [];
-//     let totalPayoutAmount = 0;
-
-//     for (const order of orders) {
-//       const createdAt = dayjs(order.createdAt);
-//       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-//       const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
-
-//       order.eligibleDate = eligibleDate.toDate();
-//       order.scheduledPayoutDate = payoutDateObj.toDate();
-
-//       const lineItems = order.lineItems || [];
-//       let payoutAmount = 0;
-//       let refundAmount = 0;
-//       const products = [];
-
-//       for (const item of lineItems) {
-//         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         const total = price * qty;
-
-//         const variantId = item.variantId || item.variant_id;
-//         const listing = await listingModel.findOne({ 'variants.id': String(variantId) });
-
-//         if (!listing || String(listing.userId) !== String(userId)) {
-//           continue;
-//         }
-
-//         const productData = {
-//           title: item.title || '',
-//           variantTitle: item.variant_title || '',
-//           price,
-//           quantity: qty,
-//           total,
-//           fulfillment_status: item.fulfillment_status || 'fulfilled',
-//           cancelled: item.fulfillment_status === 'cancelled',
-//         };
-
-//         if (productData.cancelled) {
-//           refundAmount += total;
-//         } else {
-//           payoutAmount += total;
-//         }
-
-//         products.push(productData);
-//       }
-
-//       if (products.length === 0) {
-//         continue;
-//       }
-
-//       order.payoutAmount = payoutAmount;
-//       order.refundAmount = refundAmount;
-//       await order.save();
-
-//       totalPayoutAmount += payoutAmount;
-
-//       updates.push({
-//         orderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
-//         eligibleDate: order.eligibleDate,
-//         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount,
-//         refundAmount,
-//         createdAt: order.createdAt,
-//         referenceNo: order.referenceNo || '',
-//         products,
-//       });
-//     }
-
-//     const grouped = {};
-
-//     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
-//       if (!grouped[key]) {
-//         grouped[key] = {
-//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
-//           createdAts: [],
-//           totalAmount: 0,
-//           totalRefundAmount: 0,
-//           orders: [],
-//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
-//         };
-//       }
-
-//       grouped[key].createdAts.push(dayjs(order.createdAt));
-//       grouped[key].totalAmount += order.payoutAmount || 0;
-//       grouped[key].totalRefundAmount += order.refundAmount || 0;
-
-//       grouped[key].orders.push({
-//         orderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
-//         refund: order.refundAmount,
-//         status: order.payoutStatus,
-//         createdAt: order.createdAt,
-//         referenceNo: order.referenceNo || '',
-//         products: order.products || [],
-//       });
-//     });
-
-//     let payouts = Object.values(grouped)
-//       .map((group) => {
-//         const minDate = dayjs.min(group.createdAts);
-//         const maxDate = dayjs.max(group.createdAts);
-//         return {
-//           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
-//           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
-//           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
-//           orders: group.orders,
-//           sortKey: group.sortKey,
-//         };
-//       })
-//       .sort((a, b) => {
-//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
-//         return b.sortKey - a.sortKey;
-//       });
-
-//     if (payoutDate && status) {
-//       payouts = payouts.filter(
-//         (p) =>
-//           p.payoutDate === payoutDate &&
-//           p.status.toLowerCase() === status.toLowerCase()
-//       );
-//     }
-
-//     res.json({
-//       message: 'Payouts calculated',
-//       totalAmount: totalPayoutAmount,
-//       payouts,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Server error while calculating payouts' });
-//   }
-// };
 
 export const getPayoutOrders = async (req, res) => {
   try {
@@ -2086,151 +1435,6 @@ export const getPayoutOrders = async (req, res) => {
   }
 };
 
-// export const getPayoutForAllOrders = async (req, res) => {
-//   try {
-//     const { payoutDate, status } = req.query;
-
-//     const config = await PayoutConfig.findOne({});
-//     if (!config) {
-//       return res.status(400).json({ error: 'Payout config not found.' });
-//     }
-
-//     const orders = await orderModel.find({});
-//     const updates = [];
-//     let totalPayoutAmount = 0;
-
-//     for (const order of orders) {
-//       const createdAt = dayjs(order.createdAt);
-//       const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
-//       const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
-
-//       order.eligibleDate = eligibleDate.toDate();
-//       order.scheduledPayoutDate = payoutDateObj.toDate();
-
-//       const lineItems = order.lineItems ?? [];
-//       let payoutAmount = 0;
-//       let refundAmount = 0;
-//       const products = [];
-
-//       lineItems.forEach((item) => {
-//         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         const total = price * qty;
-
-//         const cancelled = item.fulfillment_status === 'cancelled';
-
-//         const productData = {
-//           title: item.title || '',
-//           variantTitle: item.variant_title || '',
-//           price,
-//           quantity: qty,
-//           total,
-//           fulfillment_status: item.fulfillment_status || 'fulfilled',
-//           cancelled,
-//         };
-
-//         if (cancelled) {
-//           refundAmount += total;
-//         } else {
-//           payoutAmount += total;
-//         }
-
-//         products.push(productData);
-//       });
-
-//       order.payoutAmount = payoutAmount;
-//       order.refundAmount = refundAmount;
-//       await order.save();
-
-//       totalPayoutAmount += payoutAmount;
-
-//       updates.push({
-//         orderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
-//         eligibleDate: order.eligibleDate,
-//         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount,
-//         refundAmount,
-//         createdAt: order.createdAt,
-//         referenceNo: order.referenceNo || '',
-//         products,
-//       });
-//     }
-
-//     // Group by scheduledPayoutDate and status
-//     const grouped = {};
-
-//     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
-//       if (!grouped[key]) {
-//         grouped[key] = {
-//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
-//           createdAts: [],
-//           totalAmount: 0,
-//           totalRefundAmount: 0,
-//           orders: [],
-//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
-//         };
-//       }
-
-//       grouped[key].createdAts.push(dayjs(order.createdAt));
-//       grouped[key].totalAmount += order.payoutAmount || 0;
-//       grouped[key].totalRefundAmount += order.refundAmount || 0;
-
-//       grouped[key].orders.push({
-//         orderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
-//         refund: order.refundAmount,
-//         status: order.payoutStatus,
-//         createdAt: order.createdAt,
-//         referenceNo: order.referenceNo || '',
-//         products: order.products || [],
-//       });
-//     });
-
-//     // Format payout groups
-//     let payouts = Object.values(grouped)
-//       .map((group) => {
-//         const minDate = dayjs.min(group.createdAts);
-//         const maxDate = dayjs.max(group.createdAts);
-//         return {
-//           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
-//           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
-//           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
-//           orders: group.orders,
-//           sortKey: group.sortKey,
-//         };
-//       })
-//       .sort((a, b) => {
-//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
-//         return b.sortKey - a.sortKey;
-//       });
-
-//     // Apply query filters
-//     if (payoutDate && status) {
-//       payouts = payouts.filter(
-//         (p) =>
-//           p.payoutDate === payoutDate &&
-//           p.status.toLowerCase() === status.toLowerCase()
-//       );
-//     }
-
-//     res.json({
-//       message: 'Payouts calculated',
-//       totalAmount: totalPayoutAmount,
-//       payouts,
-//     });
-
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Server error while calculating payouts' });
-//   }
-// };
 
 
 export const getPayoutForAllOrders = async (req, res) => {
@@ -2246,10 +1450,9 @@ export const getPayoutForAllOrders = async (req, res) => {
     const updates = [];
     let totalPayoutAmount = 0;
 
-    const allUserIds = new Set(); // collect unique user IDs
+    const allUserIds = new Set(); 
     const grouped = {};
 
-    // First pass: prepare orders and collect userIds
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
       const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
@@ -2316,41 +1519,41 @@ export const getPayoutForAllOrders = async (req, res) => {
         payoutAmount,
         refundAmount,
         createdAt: order.createdAt,
-        products, // add now, ref no will be added below
+        products,
       });
     }
 
-    // ✅ Fetch all users' reference numbers
-    const userReferenceMap = {};
+    const userDataMap = {};
     const userList = await authModel.find({
-      _id: { $in: Array.from(allUserIds) }
-    }).select('_id referenceNo');
+      _id: { $in: Array.from(allUserIds) },
+    }).select('_id referenceNo paypalAccount');
 
     userList.forEach(user => {
-      userReferenceMap[user._id.toString()] = user.referenceNo || '';
+      userDataMap[user._id.toString()] = {
+        referenceNo: user.referenceNo || '',
+        paypalAccount: user.paypalAccount || '',
+      };
     });
 
-    // ✅ Attach reference number to products and orders
     updates.forEach(order => {
       order.products.forEach(product => {
         if (product.userId) {
-          product.referenceNo = userReferenceMap[product.userId] || '';
+          const userData = userDataMap[product.userId] || {};
+          product.referenceNo = userData.referenceNo || '';
+          product.paypalAccount = userData.paypalAccount || '';
         }
       });
 
-      const orderLevelReference = order.products.find(
-        p => p.userId && userReferenceMap[p.userId]
-      )?.userId
-        ? userReferenceMap[
-            order.products.find(p => p.userId && userReferenceMap[p.userId])
-              .userId
-          ]
+      const userRef = order.products.find(p => p.userId && userDataMap[p.userId]);
+      order.referenceNo = userRef?.userId
+        ? userDataMap[userRef.userId].referenceNo
         : '';
 
-      order.referenceNo = orderLevelReference;
+      order.paypalAccount = userRef?.userId
+        ? userDataMap[userRef.userId].paypalAccount
+        : '';
     });
 
-    // ✅ Group by payout date and status
     updates.forEach(order => {
       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
       if (!grouped[key]) {
@@ -2377,11 +1580,11 @@ export const getPayoutForAllOrders = async (req, res) => {
         status: order.payoutStatus,
         createdAt: order.createdAt,
         referenceNo: order.referenceNo || '',
+        paypalAccount: order.paypalAccount || '',
         products: order.products || [],
       });
     });
 
-    // ✅ Final formatted response
     let payouts = Object.values(grouped)
       .map(group => {
         const minDate = dayjs.min(group.createdAts);
@@ -2401,7 +1604,6 @@ export const getPayoutForAllOrders = async (req, res) => {
         return b.sortKey - a.sortKey;
       });
 
-    // ✅ Apply query filters
     if (payoutDate && status) {
       payouts = payouts.filter(
         p =>
@@ -2420,6 +1622,7 @@ export const getPayoutForAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
+
 
 
 export const updateTrackingInShopify = async (req, res) => {
@@ -2732,36 +1935,6 @@ export const getRequestById = async (req, res) => {
   }
 };
 
-// export const addReferenceToOrders = async (req, res) => {
-//   try {
-//     const { UserId, referenceNo } = req.body;
-
-//     if (!UserId || !referenceNo) {
-//       return res
-//         .status(400)
-//         .json({ message: 'UserId and referenceNo are required.' });
-//     }
-
-//     const result = await authModel.updateOne(
-//       { _id: UserId },
-//       { $set: { referenceNo } }
-//     );
-
-//     if (result.modifiedCount === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: 'User not found or reference not updated.' });
-//     }
-
-//     res.status(200).json({
-//       message: 'Reference number saved successfully to user.',
-//       modifiedCount: result.modifiedCount,
-//     });
-//   } catch (err) {
-//     console.error('Error updating user reference:', err);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
 
 export const addReferenceToOrders = async (req, res) => {
   try {
