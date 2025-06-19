@@ -41,7 +41,7 @@ export const financeScheduler = cron.schedule('0 2 * * *', async () => {
       console.log('Updated payout config with resolved dates:', updatedFields);
     }
   } catch (err) {
-    console.error("❌ Payout cron failed:", err.message);
+    console.error(" Payout cron failed:", err.message);
   }
 });
 
