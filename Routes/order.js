@@ -21,6 +21,7 @@ import {
   getPayoutByUserId,
   getPayoutForAllOrders,
   addPaypalAccountNo,
+  exportOrders,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -48,6 +49,7 @@ orderRouter.get("/getCancellationRequestsByUserId/:id",getRequestById)
 orderRouter.post('/addReferenceNumber', addReferenceToOrders);
 orderRouter.get("/getPayoutByUserId",getPayoutByUserId)
 orderRouter.get('/getPayoutForAllOrders', getPayoutForAllOrders);
+orderRouter.get('/exportAllOrder', exportOrders);
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;
