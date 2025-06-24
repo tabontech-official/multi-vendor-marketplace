@@ -25,175 +25,175 @@ const createToken = (payLoad) => {
   return token;
 };
 
-export const signUp = async (req, res) => {
-  try {
-    // const { error } = registerSchema.validate(req.body);
-    // if (error) {
-    //   return res.status(400).json({ error: error.details[0].message });
-    // }
+// export const signUp = async (req, res) => {
+//   try {
+//     // const { error } = registerSchema.validate(req.body);
+//     // if (error) {
+//     //   return res.status(400).json({ error: error.details[0].message });
+//     // }
 
-    const baseUsername = req.body.email
-      .split('@')[0]
-      .toLowerCase()
-      .replace(/[.-\s]/g, '');
-    let username = baseUsername;
-    let counter = 1;
+//     const baseUsername = req.body.email
+//       .split('@')[0]
+//       .toLowerCase()
+//       .replace(/[.-\s]/g, '');
+//     let username = baseUsername;
+//     let counter = 1;
 
-    const userExist = await authModel.findOne({ email: req.body.email });
-    if (userExist) {
-      return res
-        .status(400)
-        .json({ error: 'User already exists with this email' });
-    }
+//     const userExist = await authModel.findOne({ email: req.body.email });
+//     if (userExist) {
+//       return res
+//         .status(400)
+//         .json({ error: 'User already exists with this email' });
+//     }
 
-    const usernameExists = async (username) => {
-      return await authModel.findOne({ userName: username });
-    };
+//     const usernameExists = async (username) => {
+//       return await authModel.findOne({ userName: username });
+//     };
 
-    while (await usernameExists(username)) {
-      username = `${baseUsername}${counter}`;
-      counter++;
-    }
+//     while (await usernameExists(username)) {
+//       username = `${baseUsername}${counter}`;
+//       counter++;
+//     }
 
-    const shopifyPayload = {
-      customer: {
-        first_name: req.body.firstName,
-        last_name: req.body.lastName,
-        email: req.body.email,
-        password: req.body.password,
-        password_confirmation: req.body.password,
-        tags: `Trade User, trade_${username}`,
-        metafields: [
-          {
-            namespace: 'custom',
-            key: 'username',
-            value: username,
-            type: 'single_line_text_field',
-          },
-          {
-            namespace: 'custom',
-            key: 'phoneNumber',
-            value: req.body.phoneNumber,
-            type: 'single_line_text_field',
-          },
-          {
-            namespace: 'custom',
-            key: 'city',
-            value: req.body.city,
-            type: 'single_line_text_field',
-          },
-          {
-            namespace: 'custom',
-            key: 'state',
-            value: req.body.state,
-            type: 'single_line_text_field',
-          },
-          {
-            namespace: 'custom',
-            key: 'zip',
-            value: req.body.zip,
-            type: 'single_line_text_field',
-          },
-          {
-            namespace: 'custom',
-            key: 'country',
-            value: req.body.country,
-            type: 'single_line_text_field',
-          },
-        ],
-      },
-    };
+//     const shopifyPayload = {
+//       customer: {
+//         first_name: req.body.firstName,
+//         last_name: req.body.lastName,
+//         email: req.body.email,
+//         password: req.body.password,
+//         password_confirmation: req.body.password,
+//         tags: `Trade User, trade_${username}`,
+//         metafields: [
+//           {
+//             namespace: 'custom',
+//             key: 'username',
+//             value: username,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'phoneNumber',
+//             value: req.body.phoneNumber,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'city',
+//             value: req.body.city,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'state',
+//             value: req.body.state,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'zip',
+//             value: req.body.zip,
+//             type: 'single_line_text_field',
+//           },
+//           {
+//             namespace: 'custom',
+//             key: 'country',
+//             value: req.body.country,
+//             type: 'single_line_text_field',
+//           },
+//         ],
+//       },
+//     };
 
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) {
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
-    }
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration) {
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+//     }
 
-    const apiKey = shopifyConfiguration.shopifyApiKey;
-    const apiPassword = shopifyConfiguration.shopifyAccessToken;
-    const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+//     const apiKey = shopifyConfiguration.shopifyApiKey;
+//     const apiPassword = shopifyConfiguration.shopifyAccessToken;
+//     const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
 
-    const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-      'base64'
-    );
-    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
+//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
+//       'base64'
+//     );
+//     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
-    const response = await fetch(shopifyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
-      },
-      body: JSON.stringify(shopifyPayload),
-    });
+//     const response = await fetch(shopifyUrl, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         Authorization: `Basic ${base64Credentials}`,
+//       },
+//       body: JSON.stringify(shopifyPayload),
+//     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error saving user to Shopify:', errorData);
-      return res
-        .status(500)
-        .json({ error: 'Failed to register user with Shopify' });
-    }
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       console.error('Error saving user to Shopify:', errorData);
+//       return res
+//         .status(500)
+//         .json({ error: 'Failed to register user with Shopify' });
+//     }
 
-    const shopifyResponse = await response.json();
-    const shopifyId = shopifyResponse.customer.id;
+//     const shopifyResponse = await response.json();
+//     const shopifyId = shopifyResponse.customer.id;
 
-    const newUser = new authModel({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      userName: username,
-      email: req.body.email,
-      password: req.body.password,
-      shopifyId: shopifyId,
-      tags: `Trade User, trade_${username}`,
-      phoneNumber: req.body.phoneNumber,
-      city: req.body.city,
-      state: req.body.state,
-      zip: req.body.zip,
-      country: req.body.country,
-    });
-    const savedUser = await newUser.save();
-    const token = createToken({ _id: savedUser._id });
+//     const newUser = new authModel({
+//       firstName: req.body.firstName,
+//       lastName: req.body.lastName,
+//       userName: username,
+//       email: req.body.email,
+//       password: req.body.password,
+//       shopifyId: shopifyId,
+//       tags: `Trade User, trade_${username}`,
+//       phoneNumber: req.body.phoneNumber,
+//       city: req.body.city,
+//       state: req.body.state,
+//       zip: req.body.zip,
+//       country: req.body.country,
+//     });
+//     const savedUser = await newUser.save();
+//     const token = createToken({ _id: savedUser._id });
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'aydimarketplace@gmail.com',
-        pass: 'ijeg fypl llry kftw',
-      },
-    });
+//     const transporter = nodemailer.createTransport({
+//       service: 'gmail',
+//       auth: {
+//         user: 'aydimarketplace@gmail.com',
+//         pass: 'ijeg fypl llry kftw',
+//       },
+//     });
 
-    const mailOptions = {
-      from: `${req.body.firstName} <${req.body.email}>`,
-      to: 'aydimarketplace@gmail.com',
-      subject: 'New User Signup',
-      html: `
-        <h2>New User Registered</h2>
-        <p><strong>Name:</strong> ${req.body.firstName} ${req.body.lastName}</p>
-        <p><strong>Email:</strong> ${req.body.email}</p>
+//     const mailOptions = {
+//       from: `${req.body.firstName} <${req.body.email}>`,
+//       to: 'aydimarketplace@gmail.com',
+//       subject: 'New User Signup',
+//       html: `
+//         <h2>New User Registered</h2>
+//         <p><strong>Name:</strong> ${req.body.firstName} ${req.body.lastName}</p>
+//         <p><strong>Email:</strong> ${req.body.email}</p>
        
-      `,
-    };
+//       `,
+//     };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.error('Signup mail failed:', err);
-      } else {
-        console.log('Signup mail sent:', info.response);
-      }
-    });
-    res.status(201).send({
-      message: 'Successfully registered',
-      token,
-      data: savedUser,
-    });
-  } catch (error) {
-    console.error('Error in signUp function:', error);
-    return res.status(500).json({ error: error.message });
-  }
-};
+//     transporter.sendMail(mailOptions, (err, info) => {
+//       if (err) {
+//         console.error('Signup mail failed:', err);
+//       } else {
+//         console.log('Signup mail sent:', info.response);
+//       }
+//     });
+//     res.status(201).send({
+//       message: 'Successfully registered',
+//       token,
+//       data: savedUser,
+//     });
+//   } catch (error) {
+//     console.error('Error in signUp function:', error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
 
 // export const checkShopifyAdminTag = async (email) => {
 //   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
@@ -242,6 +242,171 @@ export const signUp = async (req, res) => {
 //     throw new Error('Error checking Shopify customer');
 //   }
 // };
+
+
+export const signUp = async (req, res) => {
+  try {
+    const { email, sellerName } = req.body;
+
+    const baseUsername = email.split('@')[0].toLowerCase().replace(/[.-\s]/g, '');
+    let username = baseUsername;
+    let counter = 1;
+
+    const userExist = await authModel.findOne({ email });
+    if (userExist) {
+      return res.status(400).json({ error: 'User already exists with this email' });
+    }
+
+    const usernameExists = async (uname) => {
+      return await authModel.findOne({ userName: uname });
+    };
+
+    while (await usernameExists(username)) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    const shopifyPayload = {
+      customer: {
+        first_name: req.body.firstName,
+        last_name: req.body.lastName,
+        email,
+        password: req.body.password,
+        password_confirmation: req.body.password,
+        tags: `Trade User, trade_${username}`,
+        metafields: [
+          { namespace: 'custom', key: 'username', value: username, type: 'single_line_text_field' },
+          { namespace: 'custom', key: 'phoneNumber', value: req.body.phoneNumber, type: 'single_line_text_field' },
+          { namespace: 'custom', key: 'city', value: req.body.city, type: 'single_line_text_field' },
+          { namespace: 'custom', key: 'state', value: req.body.state, type: 'single_line_text_field' },
+          { namespace: 'custom', key: 'zip', value: req.body.zip, type: 'single_line_text_field' },
+          { namespace: 'custom', key: 'country', value: req.body.country, type: 'single_line_text_field' },
+        ],
+      },
+    };
+
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
+    }
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
+    const base64Credentials = Buffer.from(`${shopifyApiKey}:${shopifyAccessToken}`).toString('base64');
+    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
+
+    const response = await fetch(shopifyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${base64Credentials}`,
+      },
+      body: JSON.stringify(shopifyPayload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Shopify customer creation error:', errorData);
+      return res.status(500).json({ error: 'Failed to register user with Shopify' });
+    }
+
+    const shopifyResponse = await response.json();
+    const shopifyId = shopifyResponse.customer.id;
+
+    const newUser = new authModel({
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      userName: username,
+      email,
+      password: req.body.password,
+      shopifyId,
+      tags: `Trade User, trade_${username}`,
+      phoneNumber: req.body.phoneNumber,
+      city: req.body.city,
+      state: req.body.state,
+      zip: req.body.zip,
+      country: req.body.country,
+      sellerName
+    });
+
+    const savedUser = await newUser.save();
+
+    // 👉 Create Shopify Collection
+    let createdCollectionId = null;
+    try {
+      const collectionPayload = {
+        custom_collection: {
+          title: sellerName,
+          body_html: `Brand collection for seller: ${sellerName}`,
+        },
+      };
+
+      const collectionResponse = await axios.post(
+        `${shopifyStoreUrl}/admin/api/2023-10/custom_collections.json`,
+        collectionPayload,
+        {
+          headers: {
+            'X-Shopify-Access-Token': shopifyAccessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      createdCollectionId = collectionResponse.data.custom_collection.id;
+
+      // 👉 Update user with collection ID
+      await authModel.findByIdAndUpdate(savedUser._id, {
+        shopifyCollectionId: createdCollectionId,
+      });
+
+      // ✅ Save to brandAssetModel as well
+      await brandAssetModel.create({
+        userId: savedUser._id,
+        sellerName: sellerName,
+        shopifyCollectionId: createdCollectionId,
+        description: '',
+        images: '',     
+      });
+
+    } catch (err) {
+      console.error('Shopify collection creation error:', err?.response?.data || err.message);
+    }
+
+    // ✅ Notify Admin
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'aydimarketplace@gmail.com',
+        pass: 'ijeg fypl llry kftw',
+      },
+    });
+
+    transporter.sendMail({
+      from: `${req.body.firstName} <${email}>`,
+      to: 'aydimarketplace@gmail.com',
+      subject: 'New User Signup',
+      html: `
+        <h2>New User Registered</h2>
+        <p><strong>Seller Name:</strong> ${sellerName}</p>
+        <p><strong>Email:</strong> ${email}</p>
+      `,
+    });
+
+    const token = createToken({ _id: savedUser._id });
+
+    res.status(201).send({
+      message: 'Successfully registered',
+      token,
+      data: {
+        ...savedUser.toObject(),
+        shopifyCollectionId: createdCollectionId,
+      },
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 export const checkShopifyAdminTag = async (email) => {
   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
@@ -1356,19 +1521,31 @@ export const saveShopifyCredentials = async (req, res) => {
 
 export const createShopifyCollection = async (req, res) => {
   try {
-    const { description } = req.body;
+    const { description, userId } = req.body;
 
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required.' });
+    }
+
+    // 🔍 Step 1: Find collection ID from brandAssetModel
+    const brandAsset = await brandAssetModel.findOne({ userId });
+
+    if (!brandAsset || !brandAsset.shopifyCollectionId) {
+      return res.status(404).json({ error: 'No collection found for this user.' });
+    }
+
+    const collectionId = brandAsset.shopifyCollectionId;
+
+    // 🔐 Step 2: Get Shopify credentials
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+      return res.status(404).json({ error: 'Shopify configuration not found.' });
     }
 
     const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
-    // const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
     const SHOPIFY_STORE_URL = shopifyConfiguration.shopifyStoreUrl;
 
+    // 📦 Step 3: Get image from Cloudinary (raw resource)
     const images = req.files?.images
       ? Array.isArray(req.files.images)
         ? req.files.images
@@ -1377,22 +1554,24 @@ export const createShopifyCollection = async (req, res) => {
 
     const firstImageUrl = images.length > 0 ? images[0].path : null;
 
-    const collectionPayload = {
+    // 🛠️ Step 4: Prepare Shopify payload
+    const updatePayload = {
       custom_collection: {
-        title: 'Brand Asset Upload',
+        id: collectionId,
         body_html: description,
       },
     };
 
     if (firstImageUrl) {
-      collectionPayload.custom_collection.image = {
+      updatePayload.custom_collection.image = {
         src: firstImageUrl,
       };
     }
 
-    const createCollection = await axios.post(
-      `${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections.json`,
-      collectionPayload,
+    // 🔁 Step 5: Update collection on Shopify
+    const updateCollection = await axios.put(
+      `${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections/${collectionId}.json`,
+      updatePayload,
       {
         headers: {
           'X-Shopify-Access-Token': ACCESS_TOKEN,
@@ -1400,29 +1579,37 @@ export const createShopifyCollection = async (req, res) => {
         },
       }
     );
-    const saveBrandData = new brandAssetModel({
-      images: firstImageUrl || '',
-      description,
-    });
-    await saveBrandData.save();
+
+    // 🧠 Step 6: Update local DB
+    await brandAssetModel.findOneAndUpdate(
+      { userId, shopifyCollectionId: collectionId },
+      {
+        description,
+        ...(firstImageUrl && { images: firstImageUrl }),
+        updatedAt: new Date(),
+      },
+      { new: true }
+    );
+
     return res.status(200).json({
-      message: 'Collection created successfully',
-      collection: createCollection.data.custom_collection,
+      message: 'Collection updated successfully',
+      collection: updateCollection.data.custom_collection,
     });
   } catch (error) {
     if (error.response) {
-      console.error(' Shopify API Error:');
-      console.error('Status:', error.response.status);
+      console.error('Shopify API Error:', error.response.status);
       console.error('Data:', JSON.stringify(error.response.data, null, 2));
     } else {
-      console.error(' General Error:', error.message);
+      console.error('General Error:', error.message);
     }
 
-    res
-      .status(500)
-      .json({ message: 'Failed to create collection', error: error.message });
+    res.status(500).json({
+      message: 'Failed to update collection details',
+      error: error.message,
+    });
   }
 };
+
 
 export const getLatestBrandAsset = async (req, res) => {
   try {
@@ -1643,3 +1830,52 @@ export const addOrderRequest = async (req, res) => {
 };
 
 
+export const getCollectionId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const user = await authModel.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Collection fetched successfully',
+      sellerName: user.sellerName || `${user.firstName} ${user.lastName}`,
+      shopifyCollectionId: user.shopifyCollectionId,
+    });
+  } catch (error) {
+    console.error('Error in getCollectionId:', error.message);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+export const getBrandAssets = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const asset = await brandAssetModel.findOne({ userId: id });
+
+    if (!asset) {
+      return res.status(404).json({ error: 'No brand asset found for this user' });
+    }
+
+    return res.status(200).json({
+      message: 'Brand asset fetched successfully',
+      data: asset,
+    });
+  } catch (error) {
+    console.error('Error in getBrandAssets:', error.message);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};

@@ -8,6 +8,15 @@ const brandAssetSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    sellerName: {
+      type: String,
+    },
+    userId:{
+      type:mongoose.Schema.Types.ObjectId
+    },
+    shopifyCollectionId:{
+      type:String
+    }
   },
   {
     timestamps: true,

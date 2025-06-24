@@ -20,9 +20,12 @@ import {
   getAllMerchants,
   getAllOnboardUsersData,
   addOrderRequest,
+  getCollectionId,
+  getBrandAssets,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
+import { cpUploads } from '../middleware/upload.js';
 
 const authRouter = express.Router();
 
@@ -41,12 +44,12 @@ authRouter.get('/getUserWithModules/:id', getUserWithModules);
 authRouter.get('/getAllUsers', getAllUsersData);
 authRouter.get('/user/:id', fetchUserData);
 authRouter.get('/getUserByRole/:id', getUserByRole);
-authRouter.post('/addBrandAsset', cpUpload, createShopifyCollection);
+authRouter.post('/addBrandAsset', cpUploads, createShopifyCollection);
 authRouter.get('/getSingleUser/:id', getSingleUser);
 authRouter.get('/getAllMerchant', getAllMerchants);
 authRouter.get('/getAllOnboardUsers/:id', getAllOnboardUsersData);
 authRouter.post('/addRequestForOrderCancellation/:id', addOrderRequest);
-
-
+authRouter.get('/getCollcetion/:id', getCollectionId);
+authRouter.get('/getBrandAssets/:id', getBrandAssets);
 
 export default authRouter;

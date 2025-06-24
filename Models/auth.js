@@ -100,6 +100,11 @@ const authSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    sellerName:{
+      type:String
+    },
+    shopifyCollectionId: { type: String, default: null },
+
   },
 
   {
