@@ -330,7 +330,6 @@ export const signUp = async (req, res) => {
 
     const savedUser = await newUser.save();
 
-    // 👉 Create Shopify Collection
     let createdCollectionId = null;
     try {
       const collectionPayload = {
@@ -353,12 +352,10 @@ export const signUp = async (req, res) => {
 
       createdCollectionId = collectionResponse.data.custom_collection.id;
 
-      // 👉 Update user with collection ID
       await authModel.findByIdAndUpdate(savedUser._id, {
         shopifyCollectionId: createdCollectionId,
       });
 
-      // ✅ Save to brandAssetModel as well
       await brandAssetModel.create({
         userId: savedUser._id,
         sellerName: sellerName,
@@ -371,7 +368,6 @@ export const signUp = async (req, res) => {
       console.error('Shopify collection creation error:', err?.response?.data || err.message);
     }
 
-    // ✅ Notify Admin
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -431,7 +427,8 @@ export const checkShopifyAdminTag = async (email) => {
     'Reports',
     'Catalog Performance',
     'eCommerce Consultation',
-    "Finance"
+    "Finance",
+    "Manage Categories"
   ];
 
   try {
