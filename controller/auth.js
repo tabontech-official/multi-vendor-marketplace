@@ -1527,7 +1527,6 @@ export const createShopifyCollection = async (req, res) => {
       return res.status(400).json({ error: 'userId is required.' });
     }
 
-    // 🔍 Step 1: Find collection ID from brandAssetModel
     const brandAsset = await brandAssetModel.findOne({ userId });
 
     if (!brandAsset || !brandAsset.shopifyCollectionId) {
@@ -1536,7 +1535,6 @@ export const createShopifyCollection = async (req, res) => {
 
     const collectionId = brandAsset.shopifyCollectionId;
 
-    // 🔐 Step 2: Get Shopify credentials
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
       return res.status(404).json({ error: 'Shopify configuration not found.' });
@@ -1545,7 +1543,6 @@ export const createShopifyCollection = async (req, res) => {
     const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
     const SHOPIFY_STORE_URL = shopifyConfiguration.shopifyStoreUrl;
 
-    // 📦 Step 3: Get image from Cloudinary (raw resource)
     const images = req.files?.images
       ? Array.isArray(req.files.images)
         ? req.files.images
@@ -1554,7 +1551,6 @@ export const createShopifyCollection = async (req, res) => {
 
     const firstImageUrl = images.length > 0 ? images[0].path : null;
 
-    // 🛠️ Step 4: Prepare Shopify payload
     const updatePayload = {
       custom_collection: {
         id: collectionId,
@@ -1568,7 +1564,6 @@ export const createShopifyCollection = async (req, res) => {
       };
     }
 
-    // 🔁 Step 5: Update collection on Shopify
     const updateCollection = await axios.put(
       `${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections/${collectionId}.json`,
       updatePayload,
@@ -1580,7 +1575,6 @@ export const createShopifyCollection = async (req, res) => {
       }
     );
 
-    // 🧠 Step 6: Update local DB
     await brandAssetModel.findOneAndUpdate(
       { userId, shopifyCollectionId: collectionId },
       {
