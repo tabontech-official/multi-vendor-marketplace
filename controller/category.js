@@ -156,7 +156,6 @@ import axios from 'axios';
 
 const generateUniqueCatNo = async () => {
   try {
-    // Fetch the current highest catNo from the database
     const lastCategory = await categoryModel.findOne().sort({ catNo: -1 }).limit(1);
 
     let newCatNumber = 1;
@@ -166,7 +165,7 @@ const generateUniqueCatNo = async () => {
       newCatNumber = numberPart + 1;
     }
 
-    return `cat_${newCatNumber}`; // Return the new catNo
+    return `cat_${newCatNumber}`;
   } catch (error) {
     console.error('Error generating catNo:', error);
     throw new Error('Error generating catNo');
@@ -186,45 +185,42 @@ export const createCategory = async (req, res) => {
 
     console.log('Starting category saving process...');
 
-    // Loop through categories and save each category
     for (const [index, category] of categories.entries()) {
-      const catNo = await generateUniqueCatNo(); // Generate a unique catNo asynchronously
+      const catNo = await generateUniqueCatNo(); 
       console.log(`Generating catNo for category ${category.title}: ${catNo}`);
 
-      // Prepare the category data to save
       const categoryToSave = new categoryModel({
         title: category.title,
         description: category.description,
         level: category.level,
-        catNo, // Assign the generated unique catNo
-        parentCatNo: category.parentCatNo || '', // Save the parentCatNo for level 2/3
+        catNo,
+        parentCatNo: category.parentCatNo || '',
       });
 
-      await categoryToSave.save(); // Save the category to MongoDB
+      await categoryToSave.save();
 
       savedCategories.push(categoryToSave);
 
       console.log(`Adding collection rules for category ${category.title}`);
 
-      // Add rules based on category level
       if (category.level === 'level1') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
-          condition: catNo, // Add Level 1 catNo
+          condition: catNo, 
         });
       } else if (category.level === 'level2') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
-          condition: catNo, // Add Level 2 catNo
+          condition: catNo, 
         });
 
         if (category.parentCatNo) {
           collectionRules.push({
             column: 'TAG',
             relation: 'EQUALS',
-            condition: category.parentCatNo, // Add parentLevel1's catNo
+            condition: category.parentCatNo,
           });
         } else {
           console.error(`Level 2 category missing parentCatNo: ${category.title}`);
@@ -233,14 +229,14 @@ export const createCategory = async (req, res) => {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
-          condition: catNo, // Add Level 3 catNo
+          condition: catNo, 
         });
 
         if (category.parentCatNo) {
           collectionRules.push({
             column: 'TAG',
             relation: 'EQUALS',
-            condition: category.parentCatNo, // Add parentLevel2's catNo
+            condition: category.parentCatNo, 
           });
 
           const parentLevel2 = await categoryModel.findOne({
@@ -252,7 +248,7 @@ export const createCategory = async (req, res) => {
             collectionRules.push({
               column: 'TAG',
               relation: 'EQUALS',
-              condition: parentLevel2.parentCatNo, // Add parentLevel1's catNo
+              condition: parentLevel2.parentCatNo,
             });
           } else {
             console.error(`Level 2 category missing parentCatNo for Level 3 category: ${category.title}`);
@@ -271,7 +267,6 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Create Shopify collection using the generated rules
     const collectionId = await createShopifyCollection(description, title, validCollectionRules);
 
     res.status(200).json({
@@ -283,9 +278,6 @@ export const createCategory = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-
-
 
 
 const createShopifyCollection = async (description, title, collectionRules) => {
