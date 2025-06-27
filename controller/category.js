@@ -4,7 +4,7 @@ import { CartnumberModel } from '../Models/cartnumber.js';
 import { categoryModel } from '../Models/category.js';
 import axios from 'axios';
 
-// let catNumber = 1; 
+// let catNumber = 1;
 
 // const generateUniqueCatNo = (level, parentCatNo = '') => {
 //   const catNo = `cat_${catNumber}`;
@@ -156,7 +156,10 @@ import axios from 'axios';
 
 const generateUniqueCatNo = async () => {
   try {
-    const lastCategory = await categoryModel.findOne().sort({ catNo: -1 }).limit(1);
+    const lastCategory = await categoryModel
+      .findOne()
+      .sort({ catNo: -1 })
+      .limit(1);
 
     let newCatNumber = 1;
     if (lastCategory) {
@@ -171,10 +174,9 @@ const generateUniqueCatNo = async () => {
     throw new Error('Error generating catNo');
   }
 };
-
 export const createCategory = async (req, res) => {
   try {
-    const { title, description, categories } = req.body;
+    const { title, description, categories, handle } = req.body;
 
     if (!categories || categories.length === 0) {
       return res.status(400).json({ error: 'Categories are required' });
@@ -186,7 +188,7 @@ export const createCategory = async (req, res) => {
     console.log('Starting category saving process...');
 
     for (const [index, category] of categories.entries()) {
-      const catNo = await generateUniqueCatNo(); 
+      const catNo = await generateUniqueCatNo();
       console.log(`Generating catNo for category ${category.title}: ${catNo}`);
 
       const categoryToSave = new categoryModel({
@@ -207,13 +209,13 @@ export const createCategory = async (req, res) => {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
-          condition: catNo, 
+          condition: catNo,
         });
       } else if (category.level === 'level2') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
-          condition: catNo, 
+          condition: catNo,
         });
 
         if (category.parentCatNo) {
@@ -223,20 +225,22 @@ export const createCategory = async (req, res) => {
             condition: category.parentCatNo,
           });
         } else {
-          console.error(`Level 2 category missing parentCatNo: ${category.title}`);
+          console.error(
+            `Level 2 category missing parentCatNo: ${category.title}`
+          );
         }
       } else if (category.level === 'level3') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
-          condition: catNo, 
+          condition: catNo,
         });
 
         if (category.parentCatNo) {
           collectionRules.push({
             column: 'TAG',
             relation: 'EQUALS',
-            condition: category.parentCatNo, 
+            condition: category.parentCatNo,
           });
 
           const parentLevel2 = await categoryModel.findOne({
@@ -251,15 +255,21 @@ export const createCategory = async (req, res) => {
               condition: parentLevel2.parentCatNo,
             });
           } else {
-            console.error(`Level 2 category missing parentCatNo for Level 3 category: ${category.title}`);
+            console.error(
+              `Level 2 category missing parentCatNo for Level 3 category: ${category.title}`
+            );
           }
         } else {
-          console.error(`Level 3 category missing parentCatNo: ${category.title}`);
+          console.error(
+            `Level 3 category missing parentCatNo: ${category.title}`
+          );
         }
       }
     }
 
-    const validCollectionRules = collectionRules.filter((rule) => rule.condition);
+    const validCollectionRules = collectionRules.filter(
+      (rule) => rule.condition
+    );
 
     if (validCollectionRules.length === 0) {
       return res.status(400).json({
@@ -267,7 +277,12 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    const collectionId = await createShopifyCollection(description, title, validCollectionRules);
+    const collectionId = await createShopifyCollection(
+      description,
+      title,
+      validCollectionRules,
+      handle
+    );
 
     res.status(200).json({
       message: 'Categories saved successfully and Shopify collection created',
@@ -279,8 +294,12 @@ export const createCategory = async (req, res) => {
   }
 };
 
-
-const createShopifyCollection = async (description, title, collectionRules) => {
+const createShopifyCollection = async (
+  description,
+  title,
+  collectionRules,
+  handle
+) => {
   try {
     console.log('Fetching Shopify configuration...');
     const shopifyConfig = await shopifyConfigurationModel.findOne();
@@ -314,11 +333,13 @@ const createShopifyCollection = async (description, title, collectionRules) => {
       }
     `;
 
+    const collectionHandle = handle || title.toLowerCase().replace(/\s+/g, '-');
+
     const variables = {
       collection: {
         title: title,
         descriptionHtml: description,
-        handle: title.toLowerCase().replace(/\s+/g, '-'),
+        handle: collectionHandle,
         ruleSet: {
           appliedDisjunctively: true,
           rules: collectionRules,
