@@ -8,6 +8,7 @@ const categorySchema = new mongoose.Schema({
   level: { type: String,},  
   parentCatNo: { type: String, default: '' }, 
     imageUrl: { type: String, default: '' }, // Add image URL field
+categoryId:{type:String}
 
 });
 export const categoryModel = mongoose.model('Category', categorySchema);
