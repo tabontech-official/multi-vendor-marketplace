@@ -767,13 +767,12 @@
 //   }
 // };
 
-
 import { brandAssetModel } from '../Models/brandAsset.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { CartnumberModel } from '../Models/cartnumber.js';
 import { categoryModel } from '../Models/category.js';
 import axios from 'axios';
-import fs from  "fs"
+import fs from 'fs';
 import { Parser } from 'json2csv';
 import path from 'path';
 // let catNumber = 1;
@@ -932,7 +931,7 @@ const generateUniqueCatNo = async () => {
 
     let maxNumber = 0;
 
-    categories.forEach(cat => {
+    categories.forEach((cat) => {
       const numberPart = parseInt(cat.catNo.replace('cat_', ''));
       if (!isNaN(numberPart) && numberPart > maxNumber) {
         maxNumber = numberPart;
@@ -941,7 +940,6 @@ const generateUniqueCatNo = async () => {
 
     const newCatNo = `cat_${maxNumber + 1}`;
     return newCatNo;
-
   } catch (error) {
     console.error('Error generating unique catNo:', error);
     throw new Error('Failed to generate unique catNo');
@@ -979,31 +977,25 @@ export const createCategory = async (req, res) => {
 
       console.log(`Adding collection rules for category ${category.title}`);
 
-      // Level 1: Only include the category's catNo
       if (category.level === 'level1') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
           condition: catNo,
         });
-      } 
-
-      // Level 2: Only include the category's catNo (parentCatNo is not included)
-      else if (category.level === 'level2') {
+      } else if (category.level === 'level2') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
           condition: catNo,
         });
-        
-        // Log an error if parentCatNo is present, but not required
+
         if (category.parentCatNo) {
-          console.error(`Level 2 category should not have a parentCatNo: ${category.title}`);
+          console.error(
+            `Level 2 category should not have a parentCatNo: ${category.title}`
+          );
         }
-      } 
-
-      // Level 3: Only include the category's catNo (parentCatNo is not included)
-      else if (category.level === 'level3') {
+      } else if (category.level === 'level3') {
         collectionRules.push({
           column: 'TAG',
           relation: 'EQUALS',
@@ -1012,7 +1004,9 @@ export const createCategory = async (req, res) => {
 
         // Log an error if parentCatNo is present, but not required
         if (category.parentCatNo) {
-          console.error(`Level 3 category should not have a parentCatNo: ${category.title}`);
+          console.error(
+            `Level 3 category should not have a parentCatNo: ${category.title}`
+          );
         }
       }
     }
@@ -1033,6 +1027,13 @@ export const createCategory = async (req, res) => {
       validCollectionRules,
       handle
     );
+    for (const savedCategory of savedCategories) {
+      savedCategory.categoryId = collectionId;
+      await savedCategory.save();
+      console.log(
+        `Updated category ${savedCategory.title} with collectionId ${collectionId}`
+      );
+    }
 
     res.status(200).json({
       message: 'Categories saved successfully and Shopify collection created',
@@ -1194,9 +1195,8 @@ export const delet = async (req, res) => {
   } catch (error) {}
 };
 
-
 export const getSingleCategory = async (req, res) => {
-  const { categoryId } = req.params; 
+  const { categoryId } = req.params;
 
   try {
     const selectedCategory = await categoryModel.findOne({ catNo: categoryId });
@@ -1241,54 +1241,78 @@ export const exportCsvForCategories = async (req, res) => {
     const categories = await categoryModel.find();
 
     if (!categories || categories.length === 0) {
-      return res.status(404).json({ message: 'No categories found for export.' });
+      return res
+        .status(404)
+        .json({ message: 'No categories found for export.' });
     }
 
-    const csvData = [];
+    const rows = [];
 
-    categories.forEach(level1 => {
-      if (level1.level === 'level1') {
-        csvData.push({
+    const getFullTitle = (cat) => {
+      let title = cat.title;
+      let parentCatNo = cat.parentCatNo;
+
+      while (parentCatNo) {
+        const parent = categories.find((c) => c.catNo === parentCatNo);
+        if (parent) {
+          title = parent.title + ' > ' + title;
+          parentCatNo = parent.parentCatNo;
+        } else {
+          break;
+        }
+      }
+
+      return title;
+    };
+
+    categories
+      .filter((level1) => level1.level === 'level1')
+      .forEach((level1) => {
+        // Level 1 Row
+        rows.push({
           catNo: level1.catNo,
-          level1: level1.title,
-          level2: '',
-          level3: ''
+          title: level1.title,
         });
 
         categories
-          .filter(level2 => level2.parentCatNo === level1.catNo && level2.level === 'level2')
-          .forEach(level2 => {
-            csvData.push({
+          .filter(
+            (level2) =>
+              level2.parentCatNo === level1.catNo && level2.level === 'level2'
+          )
+          .forEach((level2) => {
+            // Level 2 Row
+            rows.push({
               catNo: level2.catNo,
-              level1: '',
-              level2: level2.title,
-              level3: ''
+              title: getFullTitle(level2),
             });
 
             categories
-              .filter(level3 => level3.parentCatNo === level2.catNo && level3.level === 'level3')
-              .forEach(level3 => {
-                csvData.push({
+              .filter(
+                (level3) =>
+                  level3.parentCatNo === level2.catNo &&
+                  level3.level === 'level3'
+              )
+              .forEach((level3) => {
+                // Level 3 Row (immediately after Level 2)
+                rows.push({
                   catNo: level3.catNo,
-                  level1: '',
-                  level2: '',
-                  level3: level3.title
+                  title: getFullTitle(level3),
                 });
               });
           });
-      }
-    });
+      });
 
-    if (csvData.length === 0) {
-      return res.status(404).json({ message: 'No category hierarchy found for export.' });
+    if (rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: 'No category hierarchy found for export.' });
     }
 
-    const fields = ['catNo', 'level1', 'level2', 'level3'];
-    const parser = new Parser({ fields });
-    const csv = parser.parse(csvData);
+    const fields = ['catNo', 'title'];
+    const parser = new Parser({ fields, header: false }); // ✅ No headers
+    const csv = parser.parse(rows);
 
     const filename = `categories_export_${Date.now()}.csv`;
-
     const isVercel = process.env.VERCEL === '1';
     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
 
@@ -1304,11 +1328,119 @@ export const exportCsvForCategories = async (req, res) => {
         console.error('Download error:', err);
         res.status(500).send('Error downloading file');
       }
-      fs.unlinkSync(filePath); // ✅ Delete file after download
+      fs.unlinkSync(filePath);
     });
-
   } catch (error) {
     console.error('CSV Export Error:', error);
     res.status(500).json({ error: 'Server error during categories export.' });
+  }
+};
+
+
+
+export const deleteCollection = async (req, res) => {
+  const { categoryIds } = req.body;
+
+  try {
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      console.log('Shopify configuration not found.');
+      throw new Error('Shopify configuration not found.');
+    }
+
+    const ACCESS_TOKEN = shopifyConfig.shopifyAccessToken;
+    const SHOPIFY_STORE_URL = shopifyConfig.shopifyStoreUrl;
+
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({ error: 'No category IDs provided.' });
+    }
+
+    const categories = await categoryModel.find({ _id: { $in: categoryIds } });
+
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ error: 'No matching categories found.' });
+    }
+
+    const uniqueShopifyGIDs = [
+      ...new Set(
+        categories
+          .map((cat) =>
+            cat.categoryId &&
+            cat.categoryId.includes('gid://shopify/Collection/')
+              ? cat.categoryId
+              : null
+          )
+          .filter(Boolean)
+      ),
+    ];
+
+    console.log(
+      'Deleting Shopify Collections (GraphQL GIDs):',
+      uniqueShopifyGIDs
+    );
+
+    for (const gid of uniqueShopifyGIDs) {
+      const mutation = `
+        mutation collectionDelete($input: CollectionDeleteInput!) {
+          collectionDelete(input: $input) {
+            deletedCollectionId
+            shop {
+              id
+              name
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        input: {
+          id: gid,
+        },
+      };
+
+      try {
+        const response = await axios.post(
+          `${SHOPIFY_STORE_URL}/admin/api/2024-04/graphql.json`,
+          { query: mutation, variables },
+          {
+            headers: {
+              'X-Shopify-Access-Token': ACCESS_TOKEN,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        const result = response.data;
+
+        if (result.data.collectionDelete.userErrors.length > 0) {
+          console.error(
+            `Shopify Error Deleting Collection ${gid}:`,
+            result.data.collectionDelete.userErrors
+          );
+        } else {
+          console.log(`Deleted Shopify Collection: ${gid}`);
+        }
+      } catch (shopifyErr) {
+        console.error(`Shopify API Error for ${gid}:`, shopifyErr.message);
+      }
+    }
+
+    await categoryModel.deleteMany({ _id: { $in: categoryIds } });
+    console.log(`Deleted categories from DB: ${categoryIds.join(', ')}`);
+
+    return res.json({
+      success: true,
+      message:
+        'Selected categories and their Shopify collections deleted via GraphQL.',
+    });
+  } catch (error) {
+    console.error('Delete Error:', error.message);
+    return res
+      .status(500)
+      .json({ error: 'Something went wrong during deletion' });
   }
 };
