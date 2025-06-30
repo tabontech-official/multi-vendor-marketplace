@@ -781,7 +781,9 @@ import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { CartnumberModel } from '../Models/cartnumber.js';
 import { categoryModel } from '../Models/category.js';
 import axios from 'axios';
-
+import fs from  "fs"
+import { Parser } from 'json2csv';
+import path from 'path';
 // let catNumber = 1;
 
 // const generateUniqueCatNo = (level, parentCatNo = '') => {
@@ -934,24 +936,26 @@ import axios from 'axios';
 
 const generateUniqueCatNo = async () => {
   try {
-    const lastCategory = await categoryModel
-      .findOne()
-      .sort({ catNo: -1 })
-      .limit(1);
+    const categories = await categoryModel.find({}, 'catNo').lean();
 
-    let newCatNumber = 1;
-    if (lastCategory) {
-      const lastCatNo = lastCategory.catNo;
-      const numberPart = parseInt(lastCatNo.split('_')[1]);
-      newCatNumber = numberPart + 1;
-    }
+    let maxNumber = 0;
 
-    return `cat_${newCatNumber}`;
+    categories.forEach(cat => {
+      const numberPart = parseInt(cat.catNo.replace('cat_', ''));
+      if (!isNaN(numberPart) && numberPart > maxNumber) {
+        maxNumber = numberPart;
+      }
+    });
+
+    const newCatNo = `cat_${maxNumber + 1}`;
+    return newCatNo;
+
   } catch (error) {
-    console.error('Error generating catNo:', error);
-    throw new Error('Error generating catNo');
+    console.error('Error generating unique catNo:', error);
+    throw new Error('Failed to generate unique catNo');
   }
 };
+
 export const createCategory = async (req, res) => {
   try {
     const { title, description, categories, handle } = req.body;
@@ -1200,25 +1204,21 @@ export const delet = async (req, res) => {
 
 
 export const getSingleCategory = async (req, res) => {
-  const { categoryId } = req.params; // categoryId in this case will be the catNo like 'cat_2'
+  const { categoryId } = req.params; 
 
   try {
-    // Fetch the category based on catNo, not by _id
     const selectedCategory = await categoryModel.findOne({ catNo: categoryId });
 
     if (!selectedCategory) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    // Start with the selected category itself (cat_2, in your example)
     let categoriesToFetch = [categoryId];
 
-    // If level 2, just use parentCatNo and don't fetch the parent category
     if (selectedCategory.level === 'level2' && selectedCategory.parentCatNo) {
       categoriesToFetch.push(selectedCategory.parentCatNo);
     }
 
-    // If level 3, fetch parent and grandparent category if needed
     if (selectedCategory.level === 'level3' && selectedCategory.parentCatNo) {
       const parentCategory = await categoryModel.findOne({
         catNo: selectedCategory.parentCatNo,
@@ -1229,20 +1229,80 @@ export const getSingleCategory = async (req, res) => {
       }
     }
 
-    // Fetch only the category that matches categoryId and its related categories if needed
     const categories = await categoryModel.find({
       catNo: { $in: categoriesToFetch },
     });
 
-    // If we only want to return the selected category (not others)
     const filteredCategories = categories.filter(
       (cat) => cat.catNo === categoryId
     );
 
-    // Return the filtered categories (just the selected one or its related ones if needed)
-    return res.status(200).json(filteredCategories[0] || {}); // Send only the selected category
+    return res.status(200).json(filteredCategories[0] || {});
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const exportCsvForCategories = async (req, res) => {
+  try {
+    const categories = await categoryModel.find();
+
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ message: 'No categories found for export.' });
+    }
+
+    const csvData = [];
+
+    categories.forEach(level1 => {
+      if (level1.level === 'level1') {
+        // Level 1 row
+        csvData.push({
+          catNo: level1.catNo,
+          level1: level1.title,
+          level2: '',
+          level3: ''
+        });
+
+        categories
+          .filter(level2 => level2.parentCatNo === level1.catNo && level2.level === 'level2')
+          .forEach(level2 => {
+            // Level 2 row
+            csvData.push({
+              catNo: level2.catNo,
+              level1: '',
+              level2: level2.title,
+              level3: ''
+            });
+
+            categories
+              .filter(level3 => level3.parentCatNo === level2.catNo && level3.level === 'level3')
+              .forEach(level3 => {
+                // Level 3 row
+                csvData.push({
+                  catNo: level3.catNo,
+                  level1: '',
+                  level2: '',
+                  level3: level3.title
+                });
+              });
+          });
+      }
+    });
+
+    const fields = ['catNo', 'level1', 'level2', 'level3'];
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(csvData);
+
+    const filePath = path.resolve('./exports/categories_export.csv');
+    fs.writeFileSync(filePath, csv);
+
+    res.download(filePath, 'categories_export.csv', () => {
+      fs.unlinkSync(filePath);
+    });
+
+  } catch (error) {
+    console.error('CSV Export Error:', error);
+    res.status(500).json({ error: 'Internal server error while exporting categories' });
   }
 };
