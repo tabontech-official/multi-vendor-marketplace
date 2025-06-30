@@ -122,6 +122,7 @@ const listingSchema = new mongoose.Schema(
     promoPrice: String,
     expiresAt: { type: Date },
     credit_required: { type: Number },
+    categories:[String],
     options: [
       {
         name: { type: String, required: true },

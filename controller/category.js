@@ -1336,8 +1336,6 @@ export const exportCsvForCategories = async (req, res) => {
   }
 };
 
-
-
 export const deleteCollection = async (req, res) => {
   const { categoryIds } = req.body;
 
