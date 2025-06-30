@@ -768,14 +768,6 @@
 // };
 
 
-
-
-
-
-
-
-
-
 import { brandAssetModel } from '../Models/brandAsset.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { CartnumberModel } from '../Models/cartnumber.js';
@@ -1256,7 +1248,6 @@ export const exportCsvForCategories = async (req, res) => {
 
     categories.forEach(level1 => {
       if (level1.level === 'level1') {
-        // Level 1 row
         csvData.push({
           catNo: level1.catNo,
           level1: level1.title,
@@ -1267,7 +1258,6 @@ export const exportCsvForCategories = async (req, res) => {
         categories
           .filter(level2 => level2.parentCatNo === level1.catNo && level2.level === 'level2')
           .forEach(level2 => {
-            // Level 2 row
             csvData.push({
               catNo: level2.catNo,
               level1: '',
@@ -1278,7 +1268,6 @@ export const exportCsvForCategories = async (req, res) => {
             categories
               .filter(level3 => level3.parentCatNo === level2.catNo && level3.level === 'level3')
               .forEach(level3 => {
-                // Level 3 row
                 csvData.push({
                   catNo: level3.catNo,
                   level1: '',
@@ -1290,19 +1279,36 @@ export const exportCsvForCategories = async (req, res) => {
       }
     });
 
-    const fields = ['catNo', 'level1', 'level2', 'level3'];
-    const json2csvParser = new Parser({ fields });
-    const csv = json2csvParser.parse(csvData);
+    if (csvData.length === 0) {
+      return res.status(404).json({ message: 'No category hierarchy found for export.' });
+    }
 
-    const filePath = path.resolve('./exports/categories_export.csv');
+    const fields = ['catNo', 'level1', 'level2', 'level3'];
+    const parser = new Parser({ fields });
+    const csv = parser.parse(csvData);
+
+    const filename = `categories_export_${Date.now()}.csv`;
+
+    const isVercel = process.env.VERCEL === '1';
+    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+
+    if (!isVercel && !fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true });
+    }
+
+    const filePath = path.join(exportDir, filename);
     fs.writeFileSync(filePath, csv);
 
-    res.download(filePath, 'categories_export.csv', () => {
-      fs.unlinkSync(filePath);
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        res.status(500).send('Error downloading file');
+      }
+      fs.unlinkSync(filePath); // ✅ Delete file after download
     });
 
   } catch (error) {
     console.error('CSV Export Error:', error);
-    res.status(500).json({ error: 'Internal server error while exporting categories' });
+    res.status(500).json({ error: 'Server error during categories export.' });
   }
 };
