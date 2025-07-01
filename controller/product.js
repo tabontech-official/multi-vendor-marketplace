@@ -12,6 +12,7 @@ import Papa from 'papaparse';
 import { PromoModel } from '../Models/Promotions.js';
 import { Parser } from 'json2csv';
 import path from 'path';
+import moment from 'moment';
 
 export const shopifyRequest = async (
   url,
@@ -55,7 +56,6 @@ const generateVariantCombinations = (options, index = 0, current = {}) => {
   });
   return variants;
 };
-
 
 export const addUsedEquipments = async (req, res) => {
   let productId;
@@ -190,12 +190,11 @@ export const addUsedEquipments = async (req, res) => {
         options: shopifyOptions,
         variants: shopifyVariants,
         // tags: [...(keyWord ? keyWord.split(',') : []),]
-tags: [
-  ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
-  `user_${userId}`,
-  `vendor_${vendor}`,
-],
-
+        tags: [
+          ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
+          `user_${userId}`,
+          `vendor_${vendor}`,
+        ],
       },
     };
 
@@ -615,60 +614,66 @@ export const updateProductData = async (req, res) => {
     //   },
     //   { new: true }
     // );
-const existing = await listingModel.findById(id);
+    const existing = await listingModel.findById(id);
 
-if (!existing) {
-  return res.status(404).json({ message: 'Product not found' });
-}
+    if (!existing) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
 
-const updatedFields = {
-  title: title || existing.title,
-  body_html: description || existing.body_html,
-  vendor: vendor || existing.vendor,
-  product_type: productType || existing.product_type,
-  updated_at: new Date(),
-  tags: updateResponse?.product?.tags || existing.tags,
-  variants: updateResponse?.product?.variants || existing.variants,
-  options: shopifyOptions || existing.options,
-  userId: userId || existing.userId,
-  status: productStatus || existing.status,
-  categories: Array.isArray(categories)
-    ? categories
-    : existing.categories || [],
+    const updatedFields = {
+      title: title || existing.title,
+      body_html: description || existing.body_html,
+      vendor: vendor || existing.vendor,
+      product_type: productType || existing.product_type,
+      updated_at: new Date(),
+      tags: updateResponse?.product?.tags || existing.tags,
+      variants: updateResponse?.product?.variants || existing.variants,
+      options: shopifyOptions || existing.options,
+      userId: userId || existing.userId,
+      status: productStatus || existing.status,
+      categories: Array.isArray(categories)
+        ? categories
+        : existing.categories || [],
 
-  inventory: {
-    track_quantity: !!track_quantity ?? existing.inventory?.track_quantity,
-    quantity:
-      !isNaN(parseInt(quantity)) && parseInt(quantity) !== null
-        ? parseInt(quantity)
-        : existing.inventory?.quantity || 0,
-    continue_selling:
-      typeof continue_selling === "boolean"
-        ? continue_selling
-        : existing.inventory?.continue_selling || false,
-    has_sku: typeof has_sku === "boolean" ? has_sku : existing.inventory?.has_sku,
-    sku: sku ?? existing.inventory?.sku,
-    barcode: barcode ?? existing.inventory?.barcode,
-  },
+      inventory: {
+        track_quantity: !!track_quantity ?? existing.inventory?.track_quantity,
+        quantity:
+          !isNaN(parseInt(quantity)) && parseInt(quantity) !== null
+            ? parseInt(quantity)
+            : existing.inventory?.quantity || 0,
+        continue_selling:
+          typeof continue_selling === 'boolean'
+            ? continue_selling
+            : existing.inventory?.continue_selling || false,
+        has_sku:
+          typeof has_sku === 'boolean' ? has_sku : existing.inventory?.has_sku,
+        sku: sku ?? existing.inventory?.sku,
+        barcode: barcode ?? existing.inventory?.barcode,
+      },
 
-  shipping: {
-    track_shipping: typeof track_shipping === "boolean"
-      ? track_shipping
-      : existing.shipping?.track_shipping || false,
-    weight:
-      track_shipping && !isNaN(parseFloat(weight))
-        ? parseFloat(weight)
-        : existing.shipping?.weight || 0,
-    weight_unit:
-      track_shipping && weight_unit
-        ? weight_unit
-        : existing.shipping?.weight_unit || "kg",
-  },
-};
+      shipping: {
+        track_shipping:
+          typeof track_shipping === 'boolean'
+            ? track_shipping
+            : existing.shipping?.track_shipping || false,
+        weight:
+          track_shipping && !isNaN(parseFloat(weight))
+            ? parseFloat(weight)
+            : existing.shipping?.weight || 0,
+        weight_unit:
+          track_shipping && weight_unit
+            ? weight_unit
+            : existing.shipping?.weight_unit || 'kg',
+      },
+    };
 
-const updatedInDb = await listingModel.findByIdAndUpdate(id, updatedFields, {
-  new: true,
-});
+    const updatedInDb = await listingModel.findByIdAndUpdate(
+      id,
+      updatedFields,
+      {
+        new: true,
+      }
+    );
 
     return res.status(200).json({
       message: 'Product and images updated successfully!',
@@ -3588,3 +3593,84 @@ export const deleteAll = async (req, res) => {
   await listingModel.deleteMany();
   res.status(200).send('deleted');
 };
+
+
+export const getProductForCahrts = async (req, res) => {
+  try {
+    const { userId } = req.params;  // Get userId from the request parameters
+
+    console.log("Fetching data for userId:", userId);
+
+    const productCounts = await listingModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),  // Ensure correct handling of ObjectId
+        },
+      },
+      {
+        $facet: {
+          activeProducts: [
+            { $match: { status: "active" } },  // Match active products
+            { $count: "count" },  // Count active products
+          ],
+          inactiveProducts: [
+            { $match: { status: "inactive" } },  // Match inactive products
+            { $count: "count" },  // Count inactive products
+          ],
+          missingImages: [
+            { $match: { $or: [{ images: { $size: 0 } }, { images: { $exists: false } }] } },  // Match products with no images
+            { $count: "count" },  // Count products with missing images
+          ],
+        },
+      },
+      {
+        $project: {
+          activeCount: { $arrayElemAt: ["$activeProducts.count", 0] },
+          inactiveCount: { $arrayElemAt: ["$inactiveProducts.count", 0] },
+          missingImagesCount: { $arrayElemAt: ["$missingImages.count", 0] },
+        },
+      },
+      {
+        $project: {
+          activeCount: { $ifNull: ["$activeCount", 0] },
+          inactiveCount: { $ifNull: ["$inactiveCount", 0] },
+          missingImagesCount: { $ifNull: ["$missingImagesCount", 0] },
+        },
+      },
+    ]);
+
+    console.log("Product counts:", productCounts);  // Log to check counts
+
+    if (!productCounts || !productCounts.length) {
+      res.json([  // If no products found, return 0 counts for each category
+        { status: "Active", count: 0 },
+        { status: "Inactive", count: 0 },
+        { status: "Missing Images", count: 0 },
+      ]);
+      return;
+    }
+
+    const result = [
+      { status: "Active", count: productCounts[0].activeCount },
+      { status: "Inactive", count: productCounts[0].inactiveCount },
+      { status: "Missing Images", count: productCounts[0].missingImagesCount },
+    ];
+
+    res.json(result);  // Send the result with counts of active, inactive, and missing images
+  } catch (error) {
+    console.error("Error fetching product data: ", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const deleteAllProducts=async(req,res)=>{
+  try {
+    const result=await listingModel.deleteMany()
+    if(result){
+      res.status(200).send("deleted")
+    }
+  } catch (error) {
+    
+  }
+}

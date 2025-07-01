@@ -31,6 +31,8 @@ import {
   exportInventoryCsv,
   getAllVariants,
   deleteAll,
+  getProductForCahrts,
+  deleteAllProducts,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -122,4 +124,8 @@ productRouter.post(
   updateInventoryFromCsv
 );
 productRouter.delete("/sel",deleteAll)
+productRouter.get('/getProductForCharts/:userId',getProductForCahrts)
+productRouter.delete('/deleteAll',deleteAllProducts)
+
+
 export default productRouter;

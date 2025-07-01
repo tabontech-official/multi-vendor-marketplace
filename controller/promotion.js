@@ -3,6 +3,9 @@ import { listingModel } from '../Models/Listing.js';
 import { authModel } from '../Models/auth.js';
 import { shopifyRequest } from './product.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
+import mongoose from 'mongoose';
+import moment from 'moment';
+
 export const addPromotion = async (req, res) => {
   try {
     const {
@@ -180,7 +183,6 @@ export const deletePromotion = async (req, res) => {
 //   }
 // };
 
-
 export const addPromotionDataFromProductDb = async (req, res) => {
   try {
     const { id: variantId } = req.params;
@@ -191,13 +193,13 @@ export const addPromotionDataFromProductDb = async (req, res) => {
     });
 
     if (!product)
-      return res.status(404).json({ message: 'Product not found for this variant.' });
+      return res
+        .status(404)
+        .json({ message: 'Product not found for this variant.' });
 
     const variant = product.variants.find((v) => v.id === variantId);
     if (!variant)
-      return res
-        .status(400)
-        .json({ message: 'Variant not found in product.' });
+      return res.status(400).json({ message: 'Variant not found in product.' });
 
     const oldPrice = variant.price;
     product.oldPrice = oldPrice;
@@ -217,9 +219,7 @@ export const addPromotionDataFromProductDb = async (req, res) => {
       shopifyConfiguration;
 
     if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl) {
-      return res
-        .status(400)
-        .json({ error: 'Missing Shopify credentials.' });
+      return res.status(400).json({ error: 'Missing Shopify credentials.' });
     }
 
     const promo = new PromoModel({
@@ -237,11 +237,11 @@ export const addPromotionDataFromProductDb = async (req, res) => {
       shopifyVariantId: variant.id,
       oldPrice,
       variantId: variantId,
-      variantName:variant.title,
-      variantQuantity:variant.inventory_quantity
+      variantName: variant.title,
+      variantQuantity: variant.inventory_quantity,
     });
     await promo.save();
-console.log('promo results',promo)
+    console.log('promo results', promo);
     variant.price = promoPrice;
     variant.VariantStatus = 'active';
     await product.save();
@@ -285,7 +285,6 @@ console.log('promo results',promo)
     res.status(500).json({ message: 'Server error while creating promotion.' });
   }
 };
-
 
 export const endPromotions = async (req, res) => {
   try {
@@ -370,5 +369,61 @@ export const endPromotions = async (req, res) => {
   } catch (error) {
     console.error(' Error in endPromotions API:', error.message || error);
     return res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
+export const getPromotionCountForSpecificUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    console.log('Fetching data for userId:', userId);
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required.' });
+    }
+
+    const promotionsData = await PromoModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $addFields: {
+          month: { $month: '$startDate' },
+          year: { $year: '$startDate' },
+        },
+      },
+      {
+        $group: {
+          _id: { month: '$month', year: '$year' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+      {
+        $project: {
+          _id: 0,
+          month: '$_id.month',
+          year: '$_id.year',
+          count: 1,
+        },
+      },
+    ]);
+
+    if (!promotionsData || promotionsData.length === 0) {
+      return res.json([]);
+    }
+
+    const result = new Array(12).fill(0);
+
+    promotionsData.forEach((item) => {
+      result[item.month - 1] = item.count;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching promotions data: ', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

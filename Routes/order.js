@@ -23,6 +23,8 @@ import {
   addPaypalAccountNo,
   exportOrders,
   exportProductsForUser,
+  getPendingOrder,
+  getSalesContribution,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -52,6 +54,8 @@ orderRouter.get("/getPayoutByUserId",getPayoutByUserId)
 orderRouter.get('/getPayoutForAllOrders', getPayoutForAllOrders);
 orderRouter.get('/exportAllOrder', exportOrders);
 orderRouter.get('/exportOrderByUserId', exportProductsForUser);
+orderRouter.get('/getPendingOrder', getPendingOrder);
+orderRouter.get('/getSalesContribution', getSalesContribution);
 
 
 orderRouter.delete('/', deleteUser);

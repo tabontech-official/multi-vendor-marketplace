@@ -2456,3 +2456,110 @@ export const exportProductsForUser = async (req, res) => {
     res.status(500).json({ message: 'Export failed', error: err.message });
   }
 };
+
+
+export const getPendingOrder=async(req,res)=>{
+   try {
+    const orders = await orderModel.aggregate([
+      {
+        $match: { payoutStatus: "pending" }, 
+      },
+      {
+        $project: {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+          payoutAmount: 1, 
+        },
+      },
+      {
+        $group: {
+          _id: { month: "$month", year: "$year" },
+          totalPayoutAmount: { $sum: "$payoutAmount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { "_id.month": 1 }, 
+      },
+      {
+        $project: {
+          month: "$_id.month",
+          totalPayoutAmount: 1,
+          totalOrders: 1,
+          _id: 0,
+        },
+      },
+    ]);
+
+    const formattedData = orders.map((order) => ({
+      month: getMonthName(order.month),
+      series1: order.totalOrders, 
+      series2: order.totalPayoutAmount, 
+    }));
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error("Error fetching pending orders: ", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+function getMonthName(month) {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  return months[month - 1];
+}
+
+
+export const getSalesContribution = async (req, res) => {
+  try {
+    console.log("Fetching sales data for all products.");
+
+    // Fetch all orders and calculate sales contribution for each product
+    const salesData = await orderModel.aggregate([
+      {
+        $unwind: "$lineItems",  // Unwind the line items to process each product
+      },
+      {
+        $addFields: {
+          price: { $toDouble: "$lineItems.price" },  // Convert price to double (numeric)
+          quantity: { $toInt: "$lineItems.quantity" },  // Convert quantity to integer
+        },
+      },
+      {
+        $group: {
+          _id: "$lineItems.product_id",  // Group by product_id
+          totalSales: { $sum: { $multiply: ["$price", "$quantity"] } },  // Calculate total sales for each product
+          productName: { $first: "$lineItems.name" },  // Get the product name
+        },
+      },
+      {
+        $project: {
+          _id: 0,  // Hide _id field
+          productId: "$_id",  // Include productId
+          productName: 1,  // Include productName
+          totalSales: 1,  // Include totalSales
+        },
+      },
+      { $sort: { totalSales: -1 } },  // Sort by total sales (descending)
+    ]);
+
+    if (salesData.length === 0) {
+      return res.json([]);  // If no sales data found, return an empty array
+    }
+
+    // Format the result to show total sales contribution for each product
+    const formattedData = salesData.map((item) => ({
+      productName: item.productName,
+      totalSales: item.totalSales,
+    }));
+
+    // Return the sales contribution data
+    res.json(formattedData);
+  } catch (error) {
+    console.error("Error fetching sales data: ", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
