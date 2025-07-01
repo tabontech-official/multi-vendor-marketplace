@@ -48,7 +48,7 @@ productRouter.get('/getAllVariants/:userId',verifyToken,  getAllVariants);
 productRouter.get('/getAllData',verifyToken,  getAllProductData);
 productRouter.put('/publishedProduct/:productId',verifyToken,  publishProduct);
 productRouter.put('/unpublished/:productId',verifyToken,  unpublishProduct);
-productRouter.put(
+productRouter.patch(
   '/updateProducts/:id',
   cpUpload,
   verifyToken,

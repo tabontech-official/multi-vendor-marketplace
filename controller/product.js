@@ -56,229 +56,6 @@ const generateVariantCombinations = (options, index = 0, current = {}) => {
   return variants;
 };
 
-// export const addUsedEquipments = async (req, res) => {
-//   let productId;
-//   try {
-//     console.log(req.body);
-//     const {
-//       title,
-//       description,
-//       price,
-//       compare_at_price,
-//       track_quantity,
-//       trackQuantity,
-//       quantity,
-//       continue_selling,
-//       has_sku,
-//       sku,
-//       barcode,
-//       track_shipping,
-//       weight,
-//       weight_unit,
-//       status,
-//       userId,
-//       productType,
-//       vendor,
-//       keyWord,
-//       options,
-//       variantPrices,
-//       variantCompareAtPrices,
-//       variantQuantites,
-//       variantSku,
-//     } = req.body;
-//     const productStatus = status === 'publish' ? 'active' : 'draft';
-
-//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-//     if (!shopifyConfiguration)
-//       return res
-//         .status(404)
-//         .json({ error: 'Shopify configuration not found.' });
-
-//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-//       shopifyConfiguration;
-
-//     let parsedOptions =
-//       typeof options === 'string' ? JSON.parse(options) : options;
-//     if (!Array.isArray(parsedOptions) || parsedOptions.length === 0) {
-//       parsedOptions = [{ name: 'Title', values: ['Default'] }];
-//     }
-
-//     const shopifyOptions = parsedOptions.map((option) => ({
-//       name: option.name,
-//       values: option.values,
-//     }));
-
-//     const variantCombinations = generateVariantCombinations(parsedOptions);
-//     const formatPrice = (value) => {
-//       if (!value) return '0.00';
-//       const num = parseFloat(value);
-//       return isNaN(num) ? '0.00' : num.toFixed(2);
-//     };
-//     const formatCompareAtPrice = (value) => {
-//       if (!value) return '0.00';
-//       const num = parseFloat(value);
-//       return isNaN(num) ? '0.00' : num.toFixed(2);
-//     };
-//     // const shopifyVariants = variantCombinations.map((variant, index) => {
-//     //   const variantPrice = variantPrices?.[index] || price;
-//     //   const variantCompareAtPrice = formatCompareAtPrice(
-//     //     variantCompareAtPrices?.[index] || compare_at_price
-//     //   );
-
-//     //   return {
-//     //     option1: variant[parsedOptions[0].name] || null,
-//     //     option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
-//     //     option3: parsedOptions[2] ? variant[parsedOptions[2].name] : null,
-//     //     price: formatPrice(variantPrice),
-//     //     compare_at_price: variantCompareAtPrice,
-//     //     inventory_management: track_quantity ? 'shopify' : null,
-//     //     inventory_quantity:
-//     //       track_quantity && !isNaN(parseInt(variantQuantites?.[index]))
-//     //         ? parseInt(variantQuantites?.[index])
-//     //         : 0,
-//     //     sku: has_sku ? `${sku}-${index + 1}` : null,
-//     //     barcode: has_sku ? `${barcode}-${index + 1}` : null,
-//     //     weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-//     //     weight_unit: track_shipping ? weight_unit : null,
-//     //     isParent: index === 0,
-//     //   };
-//     // });
-//     const shopifyVariants = variantCombinations.map((variant, index) => {
-//       const variantPrice = variantPrices?.[index] || price;
-//       const variantCompareAtPrice = formatCompareAtPrice(
-//         variantCompareAtPrices?.[index] || compare_at_price
-//       );
-
-//       const variantQuantity =
-//         track_quantity && !isNaN(parseInt(variantQuantites?.[index]))
-//           ? parseInt(variantQuantites?.[index])
-//           : 0;
-
-//       const variantSKU = has_sku
-//         ? variantSku?.[index] || `${sku}-${index + 1}`
-//         : null;
-
-//       return {
-//         option1: variant[parsedOptions[0].name] || null,
-//         option2: parsedOptions[1] ? variant[parsedOptions[1].name] : null,
-//         option3: parsedOptions[2] ? variant[parsedOptions[2].name] : null,
-//         price: formatPrice(variantPrice),
-//         compare_at_price: variantCompareAtPrice,
-//         inventory_management: track_quantity ? 'shopify' : null,
-//         inventory_quantity: variantQuantity,
-//         sku: variantSKU,
-//         barcode: has_sku ? `${barcode}-${index + 1}` : null,
-//         weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-//         weight_unit: track_shipping ? weight_unit : null,
-//         isParent: index === 0,
-//       };
-//     });
-
-//     const shopifyPayload = {
-//       product: {
-//         title,
-//         body_html: description || '',
-//         vendor,
-//         product_type: productType,
-//         status: productStatus,
-//         options: shopifyOptions,
-//         variants: shopifyVariants,
-//         tags: [...(keyWord ? keyWord.split(',') : [])],
-//       },
-//     };
-
-//     const productResponse = await shopifyRequest(
-//       `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
-//       'POST',
-//       shopifyPayload,
-//       shopifyApiKey,
-//       shopifyAccessToken
-//     );
-
-//     if (!productResponse?.product?.id)
-//       throw new Error('Shopify product creation failed.');
-//     productId = productResponse.product.id;
-//     const metafieldsPayload = [
-//       {
-//         namespace: 'Aydi',
-//         key: 'Aydi_Information',
-//         value: title || 'Not specified',
-//         type: 'single_line_text_field',
-//       },
-//     ];
-
-//     for (const metafield of metafieldsPayload) {
-//       const metafieldsUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`;
-
-//       const metafieldResponse = await shopifyRequest(
-//         metafieldsUrl,
-//         'POST',
-//         { metafield },
-//         shopifyApiKey,
-//         shopifyAccessToken
-//       );
-
-//       if (metafieldResponse?.metafield) {
-//       } else {
-//       }
-//     }
-
-//     const newProduct = new listingModel({
-//       id: productId,
-//       title,
-//       body_html: description,
-//       vendor,
-//       product_type: productType,
-//       options: shopifyOptions,
-//       created_at: new Date(),
-//       tags: productResponse.product.tags,
-//       variants: productResponse.product.variants,
-//       inventory: {
-//         track_quantity: !!track_quantity || false,
-//         quantity:
-//           track_quantity && !isNaN(parseInt(quantity)) ? parseInt(quantity) : 0,
-//         continue_selling: continue_selling || true,
-//         has_sku: !!has_sku || false,
-//         sku: sku,
-//         barcode: barcode,
-//       },
-//       shipping: {
-//         track_shipping: track_shipping || false,
-//         weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-//         weight_unit: weight_unit || 'kg',
-//       },
-//       userId,
-//       status: productStatus,
-//       shopifyId: productId,
-//     });
-
-//     await newProduct.save();
-
-//     return res.status(201).json({
-//       message: 'Product successfully created.',
-//       product: newProduct,
-//     });
-//   } catch (error) {
-//     console.error('Error in addUsedEquipments function:', error);
-
-//     if (productId) {
-//       try {
-//         await shopifyRequest(
-//           `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
-//           'DELETE',
-//           null,
-//           shopifyApiKey,
-//           shopifyAccessToken
-//         );
-//       } catch (deleteError) {
-//         console.error('Error deleting product from Shopify:', deleteError);
-//       }
-//     }
-
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
 
 export const addUsedEquipments = async (req, res) => {
   let productId;
@@ -309,8 +86,7 @@ export const addUsedEquipments = async (req, res) => {
       variantCompareAtPrices,
       variantQuantites,
       variantSku,
-            categories,  // ✅ ✅ ✅ New for categories from frontend
-
+      categories, // ✅ ✅ ✅ New for categories from frontend
     } = req.body;
     const productStatus = status === 'publish' ? 'active' : 'draft';
 
@@ -399,7 +175,7 @@ export const addUsedEquipments = async (req, res) => {
         isParent: index === 0,
       };
     });
-  const tagsArray = [
+    const tagsArray = [
       ...(keyWord ? keyWord.split(',').map((tag) => tag.trim()) : []),
       ...(categories ? categories : []),
     ];
@@ -413,7 +189,13 @@ export const addUsedEquipments = async (req, res) => {
         status: productStatus,
         options: shopifyOptions,
         variants: shopifyVariants,
-        tags: [...(keyWord ? keyWord.split(',') : [])],
+        // tags: [...(keyWord ? keyWord.split(',') : []),]
+tags: [
+  ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
+  `user_${userId}`,
+  `vendor_${vendor}`,
+],
+
       },
     };
 
@@ -480,6 +262,7 @@ export const addUsedEquipments = async (req, res) => {
       userId,
       status: productStatus,
       shopifyId: productId,
+      categories: Array.isArray(categories) ? categories : [categories],
     });
 
     await newProduct.save();
@@ -508,8 +291,6 @@ export const addUsedEquipments = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 export const getProduct = async (req, res) => {
   try {
@@ -572,6 +353,7 @@ export const getProduct = async (req, res) => {
           shipping: 1,
           status: 1,
           userId: 1,
+          categories: 1,
           oldPrice: 1,
           shopifyId: 1,
           username: {
@@ -668,6 +450,7 @@ export const updateProductData = async (req, res) => {
       variantCompareAtPrices,
       variantQuantities,
       variantSku,
+      categories,
     } = req.body;
 
     const productStatus = status === 'publish' ? 'active' : 'draft';
@@ -802,35 +585,90 @@ export const updateProductData = async (req, res) => {
     if (!updateResponse?.product?.id)
       return res.status(500).json({ error: 'Shopify product update failed.' });
 
-    const updatedInDb = await listingModel.findByIdAndUpdate(
-      id,
-      {
-        title,
-        body_html: description,
-        vendor,
-        product_type: productType,
-        updated_at: new Date(),
-        tags: updateResponse.product.tags,
-        variants: updateResponse.product.variants,
-        inventory: {
-          track_quantity: !!track_quantity,
-          quantity: parseInt(quantity) || 0,
-          continue_selling: !!continue_selling,
-          has_sku: !!has_sku,
-          sku: sku || null,
-          barcode: barcode || null,
-        },
-        shipping: {
-          track_shipping: !!track_shipping,
-          weight: track_shipping ? parseFloat(weight) : null,
-          weight_unit: track_shipping ? weight_unit : null,
-        },
-        userId,
-        status: productStatus,
-        options: shopifyOptions,
-      },
-      { new: true }
-    );
+    // const updatedInDb = await listingModel.findByIdAndUpdate(
+    //   id,
+    //   {
+    //     title,
+    //     body_html: description,
+    //     vendor,
+    //     product_type: productType,
+    //     updated_at: new Date(),
+    //     tags: updateResponse.product.tags,
+    //     variants: updateResponse.product.variants,
+    //     inventory: {
+    //       track_quantity: !!track_quantity,
+    //       quantity: parseInt(quantity) || 0,
+    //       continue_selling: !!continue_selling,
+    //       has_sku: !!has_sku,
+    //       sku: sku || null,
+    //       barcode: barcode || null,
+    //     },
+    //     shipping: {
+    //       track_shipping: !!track_shipping,
+    //       weight: track_shipping ? parseFloat(weight) : null,
+    //       weight_unit: track_shipping ? weight_unit : null,
+    //     },
+    //     userId,
+    //     status: productStatus,
+    //     options: shopifyOptions,
+    //     categories: Array.isArray(categories) ? categories : [categories],
+    //   },
+    //   { new: true }
+    // );
+const existing = await listingModel.findById(id);
+
+if (!existing) {
+  return res.status(404).json({ message: 'Product not found' });
+}
+
+const updatedFields = {
+  title: title || existing.title,
+  body_html: description || existing.body_html,
+  vendor: vendor || existing.vendor,
+  product_type: productType || existing.product_type,
+  updated_at: new Date(),
+  tags: updateResponse?.product?.tags || existing.tags,
+  variants: updateResponse?.product?.variants || existing.variants,
+  options: shopifyOptions || existing.options,
+  userId: userId || existing.userId,
+  status: productStatus || existing.status,
+  categories: Array.isArray(categories)
+    ? categories
+    : existing.categories || [],
+
+  inventory: {
+    track_quantity: !!track_quantity ?? existing.inventory?.track_quantity,
+    quantity:
+      !isNaN(parseInt(quantity)) && parseInt(quantity) !== null
+        ? parseInt(quantity)
+        : existing.inventory?.quantity || 0,
+    continue_selling:
+      typeof continue_selling === "boolean"
+        ? continue_selling
+        : existing.inventory?.continue_selling || false,
+    has_sku: typeof has_sku === "boolean" ? has_sku : existing.inventory?.has_sku,
+    sku: sku ?? existing.inventory?.sku,
+    barcode: barcode ?? existing.inventory?.barcode,
+  },
+
+  shipping: {
+    track_shipping: typeof track_shipping === "boolean"
+      ? track_shipping
+      : existing.shipping?.track_shipping || false,
+    weight:
+      track_shipping && !isNaN(parseFloat(weight))
+        ? parseFloat(weight)
+        : existing.shipping?.weight || 0,
+    weight_unit:
+      track_shipping && weight_unit
+        ? weight_unit
+        : existing.shipping?.weight_unit || "kg",
+  },
+};
+
+const updatedInDb = await listingModel.findByIdAndUpdate(id, updatedFields, {
+  new: true,
+});
 
     return res.status(200).json({
       message: 'Product and images updated successfully!',
