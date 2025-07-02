@@ -35,6 +35,7 @@ import {
   deleteAllProducts,
   trackProductView,
   getTrackingCountForUser,
+  fetchProductCountForUser,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -130,5 +131,6 @@ productRouter.get('/getProductForCharts/:userId',getProductForCahrts)
 productRouter.delete('/deleteAll',deleteAllProducts)
 productRouter.post('/trackingProduct',trackProductView)
 productRouter.get('/trackingViews/:userId',getTrackingCountForUser)
+productRouter.get('/getProductCountForUser/:userId',verifyToken,  fetchProductCountForUser);
 
 export default productRouter;

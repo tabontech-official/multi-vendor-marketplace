@@ -238,7 +238,7 @@ export const createOrder = async (req, res) => {
 
 export const getFinanceSummary = async (req, res) => {
   try {
-    const allOrders = await orderModel.find(); 
+    const allOrders = await orderModel.find();
 
     const totalOrdersInDb = allOrders.length;
 
@@ -281,8 +281,90 @@ export const getFinanceSummary = async (req, res) => {
   }
 };
 
+export const getFinanceSummaryForUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('Received userId:', userId); // Log the received userId
 
+    // Fetch all orders
+    const allOrders = await orderModel.find();
+    console.log('All Orders:', allOrders.length); // Log the number of orders fetched
 
+    let totalIncome = 0;
+    let netProfit = 0;
+
+    // Loop through all orders
+    for (const order of allOrders) {
+      console.log('Processing Order ID:', order._id); // Log each order ID
+
+      // Loop through each line item in the order
+      for (const item of order.lineItems) {
+        const price = parseFloat(item.price || '0');
+        const qty = parseFloat(item.quantity || '1');
+        console.log('Item Price:', price, 'Quantity:', qty); // Log item price and quantity
+        console.log('Line Item Variant ID:', item.variant_id); // Log the variant_id of each item
+
+        // Fetch product based on variant_id (using the correct path 'variants.id')
+        const product = await listingModel.findOne({
+          'variants.id': item.variant_id,
+        });
+        console.log(
+          'Found Product:',
+          product ? product._id : 'No product found'
+        ); // Log product found
+
+        if (product) {
+          // Check if product belongs to the current user
+          if (product.userId.toString() === userId) {
+            totalIncome += price * qty;
+            netProfit += price * qty - parseFloat(item.cost || '0') * qty;
+            console.log(
+              `Match found for product ${product._id}. Total income and profit updated.`
+            );
+          } else {
+            console.log(`Product ${product._id} does not match the userId`);
+          }
+        }
+      }
+    }
+
+    console.log('Total Income:', totalIncome);
+    console.log('Net Profit:', netProfit);
+
+    // Calculate Monthly Recurring Revenue (MRR)
+    const mrr = allOrders
+      .filter((order) => {
+        const item = order.lineItems[0];
+        return (
+          item.name?.toLowerCase()?.includes('subscription') ||
+          item.title?.toLowerCase()?.includes('subscription') ||
+          item.vendor?.toLowerCase()?.includes('recurring')
+        );
+      })
+      .reduce(
+        (sum, order) =>
+          sum +
+          order.lineItems.reduce(
+            (total, item) => total + parseFloat(item.price || '0'),
+            0
+          ),
+        0
+      );
+
+    console.log('Monthly Recurring Revenue (MRR):', mrr);
+
+    res.status(200).json({
+      totalIncome: totalIncome.toFixed(2),
+      netProfit: netProfit.toFixed(2),
+      mrr: mrr.toFixed(2),
+    });
+  } catch (error) {
+    console.error('Finance summary error for user:', error);
+    res
+      .status(500)
+      .json({ message: 'Error calculating finance summary for user' });
+  }
+};
 
 export const getOrderById = async (req, res) => {
   try {
@@ -884,7 +966,6 @@ export const addPaypalAccountNo = async (req, res) => {
   }
 };
 
-
 export const addPayouts = async (req, res) => {
   const {
     payoutFrequency,
@@ -1019,7 +1100,6 @@ export const getPayoutDate = async (req, res) => {
   });
 };
 
-
 function getNextPayoutDate(startDate, config) {
   const frequency = config.payoutFrequency || 'twice';
   const base = dayjs(startDate).startOf('day');
@@ -1062,7 +1142,6 @@ function getNextPayoutDate(startDate, config) {
   const next = possible.find((d) => d.isAfter(base));
   return next || possible[0];
 }
-
 
 // export const getPayout = async (req, res) => {
 //   try {
@@ -1245,7 +1324,6 @@ function getNextPayoutDate(startDate, config) {
 //   }
 // };
 
-
 export const getPayout = async (req, res) => {
   try {
     const config = await PayoutConfig.findOne({});
@@ -1312,7 +1390,8 @@ export const getPayout = async (req, res) => {
           if (listing && listing.userId) {
             const merchant = await authModel.findById(listing.userId);
             if (merchant) {
-              merchantName = `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantName =
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
               merchantEmail = merchant.email || 'N/A';
               merchantId = merchant._id;
             }
@@ -1379,7 +1458,8 @@ export const getPayout = async (req, res) => {
           };
         }
 
-        grouped[key].orders[merchantKey].totalAmount += parseFloat(line.price) * line.current_quantity;
+        grouped[key].orders[merchantKey].totalAmount +=
+          parseFloat(line.price) * line.current_quantity;
 
         if (line.fulfillment_status === 'fulfilled') {
           grouped[key].orders[merchantKey].fulfilledCount += 1;
@@ -1431,7 +1511,6 @@ export const getPayout = async (req, res) => {
   }
 };
 
-
 export const getPayoutByUserId = async (req, res) => {
   try {
     const { userId } = req.query;
@@ -1474,7 +1553,9 @@ export const getPayoutByUserId = async (req, res) => {
 
         const variantId = item.variantId || item.variant_id;
         if (variantId) {
-          const listing = await listingModel.findOne({ 'variants.id': String(variantId) });
+          const listing = await listingModel.findOne({
+            'variants.id': String(variantId),
+          });
 
           if (listing?.userId) {
             merchantId = String(listing.userId);
@@ -1483,7 +1564,8 @@ export const getPayoutByUserId = async (req, res) => {
 
             const merchant = await authModel.findById(listing.userId);
             if (merchant) {
-              merchantName = `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantName =
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
               merchantEmail = merchant.email || 'N/A';
             }
           }
@@ -1607,7 +1689,6 @@ export const getPayoutByUserId = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
 
 export const getPayoutOrders = async (req, res) => {
   try {
@@ -1977,7 +2058,6 @@ export const getPayoutForAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
 
 export const updateTrackingInShopify = async (req, res) => {
   try {
@@ -2400,7 +2480,9 @@ export const exportOrders = async (req, res) => {
     });
   } catch (error) {
     console.error('Export Orders Error:', error);
-    res.status(500).json({ message: 'Server error during export.', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Server error during export.', error: error.message });
   }
 };
 export const exportProductsForUser = async (req, res) => {
@@ -2411,11 +2493,15 @@ export const exportProductsForUser = async (req, res) => {
     }
 
     // Replace this with your actual data fetch function for that user
-    const response = await fetch(`https://multi-vendor-marketplace.vercel.app/order/order/${userId}`);
+    const response = await fetch(
+      `https://multi-vendor-marketplace.vercel.app/order/order/${userId}`
+    );
     const result = await response.json();
 
     if (!Array.isArray(result.data) || result.data.length === 0) {
-      return res.status(404).json({ message: 'No orders found for this user.' });
+      return res
+        .status(404)
+        .json({ message: 'No orders found for this user.' });
     }
 
     const rows = [];
@@ -2457,12 +2543,8 @@ export const exportProductsForUser = async (req, res) => {
           ScheduledPayoutDate: scheduledPayoutDate
             ? new Date(scheduledPayoutDate).toLocaleDateString()
             : '',
-          OrderCreatedAt: createdAt
-            ? new Date(createdAt).toLocaleString()
-            : '',
-          OrderUpdatedAt: updatedAt
-            ? new Date(updatedAt).toLocaleString()
-            : '',
+          OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : '',
+          OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : '',
           CustomerEmail: customer?.email || '',
           CustomerName: `${customer?.first_name || ''} ${customer?.last_name || ''}`,
           CustomerPhone: customer?.phone || '',
@@ -2505,33 +2587,32 @@ export const exportProductsForUser = async (req, res) => {
   }
 };
 
-
-export const getPendingOrder=async(req,res)=>{
-   try {
+export const getPendingOrder = async (req, res) => {
+  try {
     const orders = await orderModel.aggregate([
       {
-        $match: { payoutStatus: "pending" }, 
+        $match: { payoutStatus: 'pending' },
       },
       {
         $project: {
-          month: { $month: "$createdAt" },
-          year: { $year: "$createdAt" },
-          payoutAmount: 1, 
+          month: { $month: '$createdAt' },
+          year: { $year: '$createdAt' },
+          payoutAmount: 1,
         },
       },
       {
         $group: {
-          _id: { month: "$month", year: "$year" },
-          totalPayoutAmount: { $sum: "$payoutAmount" },
+          _id: { month: '$month', year: '$year' },
+          totalPayoutAmount: { $sum: '$payoutAmount' },
           totalOrders: { $sum: 1 },
         },
       },
       {
-        $sort: { "_id.month": 1 }, 
+        $sort: { '_id.month': 1 },
       },
       {
         $project: {
-          month: "$_id.month",
+          month: '$_id.month',
           totalPayoutAmount: 1,
           totalOrders: 1,
           _id: 0,
@@ -2541,61 +2622,70 @@ export const getPendingOrder=async(req,res)=>{
 
     const formattedData = orders.map((order) => ({
       month: getMonthName(order.month),
-      series1: order.totalOrders, 
-      series2: order.totalPayoutAmount, 
+      series1: order.totalOrders,
+      series2: order.totalPayoutAmount,
     }));
 
     res.json(formattedData);
   } catch (error) {
-    console.error("Error fetching pending orders: ", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error fetching pending orders: ', error);
+    res.status(500).json({ message: 'Server error' });
   }
-}
+};
 
 function getMonthName(month) {
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return months[month - 1];
 }
 
-
 export const getSalesContribution = async (req, res) => {
   try {
-    console.log("Fetching sales data for all products.");
+    console.log('Fetching sales data for all products.');
 
     // Fetch all orders and calculate sales contribution for each product
     const salesData = await orderModel.aggregate([
       {
-        $unwind: "$lineItems",  // Unwind the line items to process each product
+        $unwind: '$lineItems', // Unwind the line items to process each product
       },
       {
         $addFields: {
-          price: { $toDouble: "$lineItems.price" },  // Convert price to double (numeric)
-          quantity: { $toInt: "$lineItems.quantity" },  // Convert quantity to integer
+          price: { $toDouble: '$lineItems.price' }, // Convert price to double (numeric)
+          quantity: { $toInt: '$lineItems.quantity' }, // Convert quantity to integer
         },
       },
       {
         $group: {
-          _id: "$lineItems.product_id",  // Group by product_id
-          totalSales: { $sum: { $multiply: ["$price", "$quantity"] } },  // Calculate total sales for each product
-          productName: { $first: "$lineItems.name" },  // Get the product name
+          _id: '$lineItems.product_id', // Group by product_id
+          totalSales: { $sum: { $multiply: ['$price', '$quantity'] } }, // Calculate total sales for each product
+          productName: { $first: '$lineItems.name' }, // Get the product name
         },
       },
       {
         $project: {
-          _id: 0,  // Hide _id field
-          productId: "$_id",  // Include productId
-          productName: 1,  // Include productName
-          totalSales: 1,  // Include totalSales
+          _id: 0, // Hide _id field
+          productId: '$_id', // Include productId
+          productName: 1, // Include productName
+          totalSales: 1, // Include totalSales
         },
       },
-      { $sort: { totalSales: -1 } },  // Sort by total sales (descending)
+      { $sort: { totalSales: -1 } }, // Sort by total sales (descending)
     ]);
 
     if (salesData.length === 0) {
-      return res.json([]);  // If no sales data found, return an empty array
+      return res.json([]); // If no sales data found, return an empty array
     }
 
     // Format the result to show total sales contribution for each product
@@ -2607,7 +2697,7 @@ export const getSalesContribution = async (req, res) => {
     // Return the sales contribution data
     res.json(formattedData);
   } catch (error) {
-    console.error("Error fetching sales data: ", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error fetching sales data: ', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

@@ -1142,6 +1142,24 @@ export const fetchProductCount = async (req, res) => {
   }
 };
 
+export const fetchProductCountForUser = async (req, res) => {
+  try {
+    const { userId } = req.params; 
+
+    const result = await listingModel.aggregate([
+      { $match: { status: 'active', userId: userId } }, 
+      { $count: 'totalProducts' },
+    ]);
+
+    const count = result[0]?.totalProducts || '0'; 
+    res.status(200).send({ count });
+  } catch (error) {
+    console.error('Error in fetchProductCountForUser:', error);
+    res.status(500).json({ message: 'Failed to fetch product count for user.' });
+  }
+};
+
+
 export const getProductDataFromShopify = async (req, res) => {
   try {
     const { id } = req.params;

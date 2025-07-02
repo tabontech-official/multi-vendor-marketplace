@@ -25,6 +25,7 @@ import {
   exportProductsForUser,
   getPendingOrder,
   getSalesContribution,
+  getFinanceSummaryForUser,
 } from '../controller/order.js';
 import express from 'express';
 const orderRouter = express.Router();
@@ -56,6 +57,7 @@ orderRouter.get('/exportAllOrder', exportOrders);
 orderRouter.get('/exportOrderByUserId', exportProductsForUser);
 orderRouter.get('/getPendingOrder', getPendingOrder);
 orderRouter.get('/getSalesContribution', getSalesContribution);
+orderRouter.get('/getFinanceSummaryForUser/:userId', getFinanceSummaryForUser);
 
 
 orderRouter.delete('/', deleteUser);
