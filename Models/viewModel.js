@@ -4,14 +4,14 @@ const userViewSchema = new mongoose.Schema({
   userId: {
     type: String,
     required: true,
-    index: true,  // ✅ For faster lookup by userId
+    index: true,  
   },
   totalViews: {
     type: Number,
     default: 0,
   },
 }, {
-  timestamps: true,  // ✅ Adds createdAt and updatedAt fields
+  timestamps: true,
 });
 
 export const viewModel = mongoose.model("productTracking", userViewSchema);
