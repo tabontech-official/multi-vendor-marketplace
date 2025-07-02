@@ -13,6 +13,7 @@ import { PromoModel } from '../Models/Promotions.js';
 import { Parser } from 'json2csv';
 import path from 'path';
 import moment from 'moment';
+import { viewModel } from '../Models/viewModel.js';
 
 export const shopifyRequest = async (
   url,
@@ -3674,3 +3675,58 @@ export const deleteAllProducts=async(req,res)=>{
     
   }
 }
+
+
+export const trackProductView=async(req,res)=>{
+   try {
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ message: "Product ID is required" });
+    }
+
+    const product = await listingModel.findOne({ shopifyId: productId });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const userId = product.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID not found for this product" });
+    }
+
+    await viewModel.findOneAndUpdate(
+      { userId },
+      { $inc: { totalViews: 1 } },
+      { upsert: true, new: true }
+    );
+
+    res.status(200).json({ message: `View counted for user ${userId}` });
+  } catch (error) {
+    console.error("Error in tracking product view:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+
+export const getTrackingCountForUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userViewData = await viewModel.findOne({ userId: userId });
+
+    if (!userViewData) {
+      return res.status(404).json({ message: "User view data not found" });
+    }
+
+    res.status(200).json({
+      userId,
+      totalViews: userViewData.totalViews,
+    });
+  } catch (error) {
+    console.error("Error fetching user view count:", error);
+    res.status(500).json({ message: "Failed to get user view count" });
+  }
+};
