@@ -141,62 +141,30 @@ export const createOrder = async (req, res) => {
   }
 };
 
+
 // export const getFinanceSummary = async (req, res) => {
 //   try {
-//     const now = new Date();
+//     const allOrders = await orderModel.find();
 
-//     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-//     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+//     const totalOrdersInDb = allOrders.length;
 
-//     const startOfLastYear = new Date(now.getFullYear() - 1, now.getMonth(), 1);
-//     const endOfLastYear = new Date(
-//       now.getFullYear() - 1,
-//       now.getMonth() + 1,
-//       0
-//     );
-
-//     const currentOrders = await orderModel.find({
-//       createdAt: { $gte: startOfMonth, $lte: endOfMonth },
-//     });
-
-//     const lastYearOrders = await orderModel.find({
-//       createdAt: { $gte: startOfLastYear, $lte: endOfLastYear },
-//     });
-//     const totalOrdersInDb = await orderModel.countDocuments();
-
-//     const getOrderTotals = (order) => {
-//       return order.lineItems.reduce(
-//         (totals, item) => {
-//           const price = parseFloat(item.price || '0');
-//           const cost = parseFloat(item.cost || '0');
-//           const qty = parseFloat(item.quantity || '1');
-
-//           totals.income += price * qty;
-//           totals.spend += cost * qty;
-
-//           return totals;
-//         },
-//         { income: 0, spend: 0 }
-//       );
+//     const getOrderIncome = (order) => {
+//       return order.lineItems.reduce((total, item) => {
+//         const price = parseFloat(item.price || '0');
+//         const qty = parseFloat(item.quantity || '1');
+//         total += price * qty;
+//         return total;
+//       }, 0);
 //     };
 
 //     let totalIncome = 0;
-//     let totalSpend = 0;
-//     currentOrders.forEach((order) => {
-//       const { income, spend } = getOrderTotals(order);
-//       totalIncome += income;
-//       totalSpend += spend;
+//     allOrders.forEach((order) => {
+//       totalIncome += getOrderIncome(order);
 //     });
 
-//     let lastYearIncome = 0;
-//     let lastYearSpend = 0;
-//     lastYearOrders.forEach((order) => {
-//       const { income, spend } = getOrderTotals(order);
-//       lastYearIncome += income;
-//       lastYearSpend += spend;
-//     });
+//     const netProfit = totalIncome;
 
-//     const mrr = currentOrders
+//     const mrr = allOrders
 //       .filter((order) => {
 //         const item = order.lineItems[0];
 //         return (
@@ -205,27 +173,10 @@ export const createOrder = async (req, res) => {
 //           item.vendor?.toLowerCase()?.includes('recurring')
 //         );
 //       })
-//       .reduce((sum, order) => sum + getOrderTotals(order).income, 0);
-
-//     const incomeGrowth =
-//       lastYearIncome > 0
-//         ? ((totalIncome - lastYearIncome) / lastYearIncome) * 100
-//         : 100;
-
-//     const spendGrowth =
-//       lastYearSpend > 0
-//         ? ((totalSpend - lastYearSpend) / lastYearSpend) * 100
-//         : 100;
-
-//     const netProfit = totalIncome - totalSpend;
+//       .reduce((sum, order) => sum + getOrderIncome(order), 0);
 
 //     res.status(200).json({
 //       totalIncome: totalIncome.toFixed(2),
-//       lastYearIncome: lastYearIncome.toFixed(2),
-//       incomeGrowth: incomeGrowth.toFixed(2),
-//       spend: totalSpend.toFixed(2),
-//       lastYearSpend: lastYearSpend.toFixed(2),
-//       spendGrowth: spendGrowth.toFixed(2),
 //       netProfit: netProfit.toFixed(2),
 //       mrr: mrr.toFixed(2),
 //       totalOrdersInDb,
@@ -235,6 +186,7 @@ export const createOrder = async (req, res) => {
 //     res.status(500).json({ message: 'Error calculating finance summary' });
 //   }
 // };
+
 
 export const getFinanceSummary = async (req, res) => {
   try {
@@ -252,8 +204,30 @@ export const getFinanceSummary = async (req, res) => {
     };
 
     let totalIncome = 0;
+    let paidIncome = 0;
+    let unpaidIncome = 0;
+    let fulfilledOrdersCount = 0;
+    let unfulfilledOrdersCount = 0;
+
     allOrders.forEach((order) => {
-      totalIncome += getOrderIncome(order);
+      const income = getOrderIncome(order);
+      totalIncome += income;
+
+      if (order.payoutStatus === 'deposited') {
+        paidIncome += income;
+      } else if (order.payoutStatus === 'pending') {
+        unpaidIncome += income;
+      }
+
+      const allFulfilled = order.lineItems.every(
+        (item) => item.fulfillmentStatus === 'fulfilled'
+      );
+
+      if (allFulfilled) {
+        fulfilledOrdersCount += 1;
+      } else {
+        unfulfilledOrdersCount += 1;
+      }
     });
 
     const netProfit = totalIncome;
@@ -274,12 +248,17 @@ export const getFinanceSummary = async (req, res) => {
       netProfit: netProfit.toFixed(2),
       mrr: mrr.toFixed(2),
       totalOrdersInDb,
+      paidIncome: paidIncome.toFixed(2),
+      unpaidIncome: unpaidIncome.toFixed(2),
+      fulfilledOrders: fulfilledOrdersCount,
+      unfulfilledOrders: unfulfilledOrdersCount,
     });
   } catch (error) {
     console.error('Finance summary error:', error);
     res.status(500).json({ message: 'Error calculating finance summary' });
   }
 };
+
 
 export const getFinanceSummaryForUser = async (req, res) => {
   try {

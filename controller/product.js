@@ -1130,17 +1130,35 @@ export const updateAllProductsStatus = async (req, res) => {
 export const fetchProductCount = async (req, res) => {
   try {
     const result = await listingModel.aggregate([
-      { $match: { status: 'active' } },
-
-      { $count: 'totalProducts' },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
     ]);
-    const count = result[0]?.totalProducts || '0';
-    res.status(200).send({ count });
+
+    let total = 0;
+    let active = 0;
+    let inactive = 0;
+
+    result.forEach((item) => {
+      total += item.count;
+      if (item._id === 'active') active = item.count;
+      if (item._id === 'draft') inactive = item.count;
+    });
+
+    res.status(200).json({
+      total,
+      active,
+      inactive
+    });
   } catch (error) {
     console.error('Error in fetchProductCount:', error);
-    res.status(500).json({ message: 'Failed to fetch product count.' });
+    res.status(500).json({ message: 'Failed to fetch product counts.' });
   }
 };
+
 
 export const fetchProductCountForUser = async (req, res) => {
   try {
