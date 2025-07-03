@@ -142,6 +142,8 @@ export const createOrder = async (req, res) => {
 };
 
 
+
+
 // export const getFinanceSummary = async (req, res) => {
 //   try {
 //     const allOrders = await orderModel.find();
@@ -158,8 +160,30 @@ export const createOrder = async (req, res) => {
 //     };
 
 //     let totalIncome = 0;
+//     let paidIncome = 0;
+//     let unpaidIncome = 0;
+//     let fulfilledOrdersCount = 0;
+//     let unfulfilledOrdersCount = 0;
+
 //     allOrders.forEach((order) => {
-//       totalIncome += getOrderIncome(order);
+//       const income = getOrderIncome(order);
+//       totalIncome += income;
+
+//       if (order.payoutStatus === 'deposited') {
+//         paidIncome += income;
+//       } else if (order.payoutStatus === 'pending') {
+//         unpaidIncome += income;
+//       }
+
+//       const allFulfilled = order.lineItems.every(
+//         (item) => item.fulfillmentStatus === 'fulfilled'
+//       );
+
+//       if (allFulfilled) {
+//         fulfilledOrdersCount += 1;
+//       } else {
+//         unfulfilledOrdersCount += 1;
+//       }
 //     });
 
 //     const netProfit = totalIncome;
@@ -180,6 +204,10 @@ export const createOrder = async (req, res) => {
 //       netProfit: netProfit.toFixed(2),
 //       mrr: mrr.toFixed(2),
 //       totalOrdersInDb,
+//       paidIncome: paidIncome.toFixed(2),
+//       unpaidIncome: unpaidIncome.toFixed(2),
+//       fulfilledOrders: fulfilledOrdersCount,
+//       unfulfilledOrders: unfulfilledOrdersCount,
 //     });
 //   } catch (error) {
 //     console.error('Finance summary error:', error);
@@ -213,20 +241,16 @@ export const getFinanceSummary = async (req, res) => {
       const income = getOrderIncome(order);
       totalIncome += income;
 
-      if (order.payoutStatus === 'deposited') {
-        paidIncome += income;
-      } else if (order.payoutStatus === 'pending') {
-        unpaidIncome += income;
-      }
-
       const allFulfilled = order.lineItems.every(
-        (item) => item.fulfillmentStatus === 'fulfilled'
+        (item) => item.fulfillment_status === 'fulfilled'
       );
 
       if (allFulfilled) {
         fulfilledOrdersCount += 1;
+        paidIncome += income;
       } else {
         unfulfilledOrdersCount += 1;
+        unpaidIncome += income;
       }
     });
 
@@ -258,6 +282,7 @@ export const getFinanceSummary = async (req, res) => {
     res.status(500).json({ message: 'Error calculating finance summary' });
   }
 };
+
 
 
 export const getFinanceSummaryForUser = async (req, res) => {
