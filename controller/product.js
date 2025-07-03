@@ -3487,11 +3487,9 @@ export const trackProductView = async (req, res) => {
         lastMonthlyReset: now,
       });
     } else {
-      // Weekly reset
       const lastWeek = new Date(existing.lastWeeklyReset);
       const isNewWeek = now - lastWeek > 1000 * 60 * 60 * 24 * 7;
 
-      // Monthly reset
       const lastMonth = new Date(existing.lastMonthlyReset);
       const isNewMonth = now - lastMonth > 1000 * 60 * 60 * 24 * 30;
 
