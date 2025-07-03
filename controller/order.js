@@ -2379,8 +2379,96 @@ export const addReferenceToOrders = async (req, res) => {
   }
 };
 
+// export const exportOrders = async (req, res) => {
+//   try {
+//     const orders = await orderModel.find({}).lean();
+
+//     if (!orders.length) {
+//       return res.status(404).json({ message: 'No orders found' });
+//     }
+
+//     const rows = [];
+
+//     for (const order of orders) {
+//       const base = {
+//         OrderID: order.orderId || '',
+//         ShopifyOrderNo: order.shopifyOrderNo || '',
+//         SerialNumber: order.serialNumber || '',
+//         PayoutAmount: order.payoutAmount || '',
+//         PayoutStatus: order.payoutStatus || '',
+//         EligiblePayoutDate: order.eligibleDate
+//           ? new Date(order.eligibleDate).toLocaleDateString()
+//           : '',
+//         ScheduledPayoutDate: order.scheduledPayoutDate
+//           ? new Date(order.scheduledPayoutDate).toLocaleDateString()
+//           : '',
+//         OrderCreatedAt: order.createdAt
+//           ? new Date(order.createdAt).toLocaleString()
+//           : '',
+//         OrderUpdatedAt: order.updatedAt
+//           ? new Date(order.updatedAt).toLocaleString()
+//           : '',
+//         CustomerEmail: order.customer?.email || '',
+//         CustomerName: `${order.customer?.first_name || ''} ${order.customer?.last_name || ''}`,
+//         CustomerPhone: order.customer?.phone || '',
+//         CustomerCreated: order.customer?.created_at || '',
+//       };
+
+//       if (Array.isArray(order.lineItems)) {
+//         for (const item of order.lineItems) {
+//           rows.push({
+//             ...base,
+//             LineItemID: item.id || '',
+//             ProductName: item.name || '',
+//             SKU: item.sku || '',
+//             Vendor: item.vendor || '',
+//             Quantity: item.quantity || '',
+//             Price: item.price || '',
+//             FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
+//             VariantTitle: item.variant_title || '',
+//             ProductID: item.product_id || '',
+//             VariantID: item.variant_id || '',
+//           });
+//         }
+//       } else {
+//         rows.push(base);
+//       }
+//     }
+
+//     const fields = Object.keys(rows[0]);
+//     const parser = new Parser({ fields });
+//     const csv = parser.parse(rows);
+
+//     const filename = `orders-export-${Date.now()}.csv`;
+//     const isVercel = process.env.VERCEL === '1';
+//     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+
+//     if (!isVercel && !fs.existsSync(exportDir)) {
+//       fs.mkdirSync(exportDir, { recursive: true });
+//     }
+
+//     const filePath = path.join(exportDir, filename);
+//     fs.writeFileSync(filePath, csv);
+
+//     res.download(filePath, filename, (err) => {
+//       if (err) {
+//         console.error('Download error:', err);
+//         res.status(500).send('Error downloading file');
+//       }
+//       fs.unlinkSync(filePath); // Clean up file after sending
+//     });
+//   } catch (error) {
+//     console.error('Export Orders Error:', error);
+//     res
+//       .status(500)
+//       .json({ message: 'Server error during export.', error: error.message });
+//   }
+// };
+
+
 export const exportOrders = async (req, res) => {
   try {
+    const { status } = req.query; // e.g. 'fulfilled', 'unfulfilled', 'cancelled'
     const orders = await orderModel.find({}).lean();
 
     if (!orders.length) {
@@ -2416,6 +2504,11 @@ export const exportOrders = async (req, res) => {
 
       if (Array.isArray(order.lineItems)) {
         for (const item of order.lineItems) {
+          const itemStatus = item.fulfillment_status || 'unfulfilled';
+
+          // 🔽 FILTER based on status if provided
+          if (status && status !== itemStatus) continue;
+
           rows.push({
             ...base,
             LineItemID: item.id || '',
@@ -2424,15 +2517,20 @@ export const exportOrders = async (req, res) => {
             Vendor: item.vendor || '',
             Quantity: item.quantity || '',
             Price: item.price || '',
-            FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
+            FulfillmentStatus: itemStatus,
             VariantTitle: item.variant_title || '',
             ProductID: item.product_id || '',
             VariantID: item.variant_id || '',
           });
         }
       } else {
-        rows.push(base);
+        // Skip if no lineItems and status is applied
+        if (!status) rows.push(base);
       }
+    }
+
+    if (!rows.length) {
+      return res.status(404).json({ message: 'No matching orders found for the selected filter' });
     }
 
     const fields = Object.keys(rows[0]);
@@ -2455,15 +2553,19 @@ export const exportOrders = async (req, res) => {
         console.error('Download error:', err);
         res.status(500).send('Error downloading file');
       }
-      fs.unlinkSync(filePath); // Clean up file after sending
+      fs.unlinkSync(filePath); // Clean up
     });
   } catch (error) {
     console.error('Export Orders Error:', error);
-    res
-      .status(500)
-      .json({ message: 'Server error during export.', error: error.message });
+    res.status(500).json({
+      message: 'Server error during export.',
+      error: error.message,
+    });
   }
 };
+
+
+
 export const exportProductsForUser = async (req, res) => {
   try {
     const { userId } = req.query;
