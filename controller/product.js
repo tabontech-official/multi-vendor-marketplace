@@ -3422,8 +3422,40 @@ export const deleteAllProducts=async(req,res)=>{
 }
 
 
-export const trackProductView=async(req,res)=>{
-   try {
+// export const trackProductView=async(req,res)=>{
+//    try {
+//     const { productId } = req.body;
+
+//     if (!productId) {
+//       return res.status(400).json({ message: "Product ID is required" });
+//     }
+
+//     const product = await listingModel.findOne({ shopifyId: productId });
+
+//     if (!product) {
+//       return res.status(404).json({ message: "Product not found" });
+//     }
+
+//     const userId = product.userId;
+
+//     if (!userId) {
+//       return res.status(400).json({ message: "User ID not found for this product" });
+//     }
+
+//     await viewModel.findOneAndUpdate(
+//       { userId },
+//       { $inc: { totalViews: 1 } },
+//       { upsert: true, new: true }
+//     );
+
+//     res.status(200).json({ message: `View counted for user ${userId}` });
+//   } catch (error) {
+//     console.error("Error in tracking product view:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// }
+export const trackProductView = async (req, res) => {
+  try {
     const { productId } = req.body;
 
     if (!productId) {
@@ -3437,30 +3469,83 @@ export const trackProductView=async(req,res)=>{
     }
 
     const userId = product.userId;
-
     if (!userId) {
       return res.status(400).json({ message: "User ID not found for this product" });
     }
 
-    await viewModel.findOneAndUpdate(
-      { userId },
-      { $inc: { totalViews: 1 } },
-      { upsert: true, new: true }
-    );
+    const now = new Date();
+
+    const existing = await viewModel.findOne({ userId });
+
+    if (!existing) {
+      await viewModel.create({
+        userId,
+        totalViews: 1,
+        weeklyViews: 1,
+        monthlyViews: 1,
+        lastWeeklyReset: now,
+        lastMonthlyReset: now,
+      });
+    } else {
+      // Weekly reset
+      const lastWeek = new Date(existing.lastWeeklyReset);
+      const isNewWeek = now - lastWeek > 1000 * 60 * 60 * 24 * 7;
+
+      // Monthly reset
+      const lastMonth = new Date(existing.lastMonthlyReset);
+      const isNewMonth = now - lastMonth > 1000 * 60 * 60 * 24 * 30;
+
+      const update = {
+        $inc: {
+          totalViews: 1,
+          weeklyViews: isNewWeek ? 0 : 1,
+          monthlyViews: isNewMonth ? 0 : 1,
+        },
+      };
+
+      if (isNewWeek) {
+        update.$set = { ...update.$set, weeklyViews: 1, lastWeeklyReset: now };
+      }
+
+      if (isNewMonth) {
+        update.$set = { ...update.$set, monthlyViews: 1, lastMonthlyReset: now };
+      }
+
+      await viewModel.findOneAndUpdate({ userId }, update);
+    }
 
     res.status(200).json({ message: `View counted for user ${userId}` });
   } catch (error) {
     console.error("Error in tracking product view:", error);
     res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 
+// export const getTrackingCountForUser = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     const userViewData = await viewModel.findOne({ userId: userId });
+
+//     if (!userViewData) {
+//       return res.status(404).json({ message: "User view data not found" });
+//     }
+
+//     res.status(200).json({
+//       userId,
+//       totalViews: userViewData.totalViews,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching user view count:", error);
+//     res.status(500).json({ message: "Failed to get user view count" });
+//   }
+// };
 export const getTrackingCountForUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const userViewData = await viewModel.findOne({ userId: userId });
+    const userViewData = await viewModel.findOne({ userId });
 
     if (!userViewData) {
       return res.status(404).json({ message: "User view data not found" });
@@ -3469,6 +3554,8 @@ export const getTrackingCountForUser = async (req, res) => {
     res.status(200).json({
       userId,
       totalViews: userViewData.totalViews,
+      weeklyViews: userViewData.weeklyViews,
+      monthlyViews: userViewData.monthlyViews,
     });
   } catch (error) {
     console.error("Error fetching user view count:", error);
