@@ -22,6 +22,8 @@ import {
   addOrderRequest,
   getCollectionId,
   getBrandAssets,
+  signInForBulkUploader,
+  signUpForBulkUploader,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -30,6 +32,9 @@ import { cpUploads } from '../middleware/upload.js';
 const authRouter = express.Router();
 
 authRouter.post('/signIn', signIn);
+authRouter.post('/signInForBulkUploader', signInForBulkUploader);
+authRouter.post('/signUpForBulkUploader', signUpForBulkUploader);
+
 authRouter.post('/signUp', signUp);
 authRouter.post('/forgot', forgotPassword);
 authRouter.post('/logout/:userId', logout);

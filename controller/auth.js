@@ -13,6 +13,7 @@ import { apiCredentialModel } from '../Models/apicredential.js';
 import crypto from 'crypto';
 import { orderRquestModel } from '../Models/OrderRequest.js';
 import { orderModel } from '../Models/order.js';
+import { authBulkUploaderModel } from '../Models/authForBulkUploder.js';
 
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () =>
@@ -173,7 +174,7 @@ const createToken = (payLoad) => {
 //         <h2>New User Registered</h2>
 //         <p><strong>Name:</strong> ${req.body.firstName} ${req.body.lastName}</p>
 //         <p><strong>Email:</strong> ${req.body.email}</p>
-       
+
 //       `,
 //     };
 
@@ -243,18 +244,22 @@ const createToken = (payLoad) => {
 //   }
 // };
 
-
 export const signUp = async (req, res) => {
   try {
     const { email, sellerName } = req.body;
 
-    const baseUsername = email.split('@')[0].toLowerCase().replace(/[.-\s]/g, '');
+    const baseUsername = email
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[.-\s]/g, '');
     let username = baseUsername;
     let counter = 1;
 
     const userExist = await authModel.findOne({ email });
     if (userExist) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email' });
     }
 
     const usernameExists = async (uname) => {
@@ -275,23 +280,58 @@ export const signUp = async (req, res) => {
         password_confirmation: req.body.password,
         tags: `Trade User, trade_${username}`,
         metafields: [
-          { namespace: 'custom', key: 'username', value: username, type: 'single_line_text_field' },
-          { namespace: 'custom', key: 'phoneNumber', value: req.body.phoneNumber, type: 'single_line_text_field' },
-          { namespace: 'custom', key: 'city', value: req.body.city, type: 'single_line_text_field' },
-          { namespace: 'custom', key: 'state', value: req.body.state, type: 'single_line_text_field' },
-          { namespace: 'custom', key: 'zip', value: req.body.zip, type: 'single_line_text_field' },
-          { namespace: 'custom', key: 'country', value: req.body.country, type: 'single_line_text_field' },
+          {
+            namespace: 'custom',
+            key: 'username',
+            value: username,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'phoneNumber',
+            value: req.body.phoneNumber,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'city',
+            value: req.body.city,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'state',
+            value: req.body.state,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'zip',
+            value: req.body.zip,
+            type: 'single_line_text_field',
+          },
+          {
+            namespace: 'custom',
+            key: 'country',
+            value: req.body.country,
+            type: 'single_line_text_field',
+          },
         ],
       },
     };
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration;
-    const base64Credentials = Buffer.from(`${shopifyApiKey}:${shopifyAccessToken}`).toString('base64');
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
+    const base64Credentials = Buffer.from(
+      `${shopifyApiKey}:${shopifyAccessToken}`
+    ).toString('base64');
     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
     const response = await fetch(shopifyUrl, {
@@ -306,7 +346,9 @@ export const signUp = async (req, res) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Shopify customer creation error:', errorData);
-      return res.status(500).json({ error: 'Failed to register user with Shopify' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to register user with Shopify' });
     }
 
     const shopifyResponse = await response.json();
@@ -325,7 +367,7 @@ export const signUp = async (req, res) => {
       state: req.body.state,
       zip: req.body.zip,
       country: req.body.country,
-      sellerName
+      sellerName,
     });
 
     const savedUser = await newUser.save();
@@ -361,11 +403,13 @@ export const signUp = async (req, res) => {
         sellerName: sellerName,
         shopifyCollectionId: createdCollectionId,
         description: '',
-        images: '',     
+        images: '',
       });
-
     } catch (err) {
-      console.error('Shopify collection creation error:', err?.response?.data || err.message);
+      console.error(
+        'Shopify collection creation error:',
+        err?.response?.data || err.message
+      );
     }
 
     const transporter = nodemailer.createTransport({
@@ -403,7 +447,6 @@ export const signUp = async (req, res) => {
   }
 };
 
-
 export const checkShopifyAdminTag = async (email) => {
   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
   if (!shopifyConfiguration) {
@@ -427,8 +470,8 @@ export const checkShopifyAdminTag = async (email) => {
     'Reports',
     'Catalog Performance',
     'eCommerce Consultation',
-    "Finance",
-    "Manage Categories"
+    'Finance',
+    'Manage Categories',
   ];
 
   try {
@@ -1346,7 +1389,9 @@ export const createPassword = async (req, res) => {
     const userId = decoded?.payLoad?._id;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'Invalid or missing user ID in token' });
+      return res
+        .status(400)
+        .json({ message: 'Invalid or missing user ID in token' });
     }
 
     const user = await authModel.findById(userId);
@@ -1363,10 +1408,11 @@ export const createPassword = async (req, res) => {
     }
 
     res.status(200).json({ message: 'Password has been reset successfully' });
-
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token has expired. Please request a new password reset.' });
+      return res.status(401).json({
+        message: 'Token has expired. Please request a new password reset.',
+      });
     }
 
     console.error(' Error resetting password:', error);
@@ -1527,14 +1573,18 @@ export const createShopifyCollection = async (req, res) => {
     const brandAsset = await brandAssetModel.findOne({ userId });
 
     if (!brandAsset || !brandAsset.shopifyCollectionId) {
-      return res.status(404).json({ error: 'No collection found for this user.' });
+      return res
+        .status(404)
+        .json({ error: 'No collection found for this user.' });
     }
 
     const collectionId = brandAsset.shopifyCollectionId;
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify configuration not found.' });
+      return res
+        .status(404)
+        .json({ error: 'Shopify configuration not found.' });
     }
 
     const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
@@ -1600,7 +1650,6 @@ export const createShopifyCollection = async (req, res) => {
     });
   }
 };
-
 
 export const getLatestBrandAsset = async (req, res) => {
   try {
@@ -1779,10 +1828,10 @@ export const addOrderRequest = async (req, res) => {
     if (!order) return res.status(404).json({ message: 'Order not found.' });
 
     const allLineItems = order.lineItems || [];
-    const requestedItems = allLineItems.filter(item =>
+    const requestedItems = allLineItems.filter((item) =>
       lineItemIds.includes(item.id)
     );
-    const productNames = requestedItems.map(item => item.name);
+    const productNames = requestedItems.map((item) => item.name);
 
     const savedRequest = await orderRquestModel.create({
       userId: id,
@@ -1820,7 +1869,6 @@ export const addOrderRequest = async (req, res) => {
   }
 };
 
-
 export const getCollectionId = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1846,7 +1894,6 @@ export const getCollectionId = async (req, res) => {
   }
 };
 
-
 export const getBrandAssets = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1858,7 +1905,9 @@ export const getBrandAssets = async (req, res) => {
     const asset = await brandAssetModel.findOne({ userId: id });
 
     if (!asset) {
-      return res.status(404).json({ error: 'No brand asset found for this user' });
+      return res
+        .status(404)
+        .json({ error: 'No brand asset found for this user' });
     }
 
     return res.status(200).json({
@@ -1868,5 +1917,84 @@ export const getBrandAssets = async (req, res) => {
   } catch (error) {
     console.error('Error in getBrandAssets:', error.message);
     return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const signUpForBulkUploader = async (req, res) => {
+  try {
+    const { fullName, email, password } = req.body;
+
+    if (!fullName || !email || !password) {
+      return res
+        .status(400)
+        .json({ error: 'Full name, email, and password are required.' });
+    }
+
+    const existingUser = await authBulkUploaderModel.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ error: 'User already exists with this email.' });
+    }
+
+    const newUser = new authBulkUploaderModel({
+      fullName,
+      email,
+      password,
+    });
+
+    const savedUser = await newUser.save();
+
+    const token = createToken({ _id: savedUser._id });
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      data: savedUser,
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Server error during signup.' });
+  }
+};
+
+export const signInForBulkUploader = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ error: 'Email and password are required.' });
+    }
+
+    const user = await authBulkUploaderModel.findOne({ email });
+    if (!user) {
+      return res
+        .status(401)
+        .json({ error: 'Invalid credentials. User not found.' });
+    }
+
+    const isPasswordMatch = await user.comparePassword(password);
+
+    if (!isPasswordMatch) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const token = createToken({ _id: user._id });
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        userName: user.userName,
+      },
+    });
+  } catch (error) {
+    console.error('SignIn error:', error);
+    res.status(500).json({ error: 'Server error during sign in.' });
   }
 };
