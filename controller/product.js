@@ -3854,34 +3854,36 @@ export const addCsvfileForBulkUploader = async (req, res) => {
             alt: rows.find(r => cleanUrl(r['Image Src']) === src)?.['Image Alt Text'] || null,
           }));
 
-          const payload = {
-            product: {
-              title: mainRow['Title'],
-              body_html: mainRow['Body (HTML)'] || '',
-              vendor: mainRow['Vendor'] || '',
-              product_type: mainRow['Type'] || '',
-              status: mainRow['Published'] === 'TRUE' ? 'active' : 'draft',
-              tags: mainRow['Tags']?.split(',').map(tag => tag.trim()) || [],
-              options: uniqueOptions,
-              images,
-              variants: variants.map(v => ({
-                sku: v.sku,
-                price: v.price,
-                compare_at_price: v.compare_at_price,
-                inventory_management: v.inventory_management,
-                inventory_quantity: v.inventory_quantity,
-                fulfillment_service: v.fulfillment_service,
-                requires_shipping: v.requires_shipping,
-                taxable: v.taxable,
-                barcode: v.barcode,
-                weight: v.weight,
-                weight_unit: v.weight_unit,
-                option1: v.option1,
-                option2: v.option2,
-                option3: v.option3,
-              })),
-            },
-          };
+         const payload = {
+  product: {
+    title: mainRow['Title'],
+    handle: handle, // ✅ Correct place
+    body_html: mainRow['Body (HTML)'] || '',
+    vendor: mainRow['Vendor'] || '',
+    product_type: mainRow['Type'] || '',
+    status: mainRow['Published'] === 'TRUE' ? 'active' : 'draft',
+    tags: mainRow['Tags']?.split(',').map(tag => tag.trim()) || [],
+    options: uniqueOptions,
+    images,
+    variants: variants.map(v => ({
+      sku: v.sku,
+      price: v.price,
+      compare_at_price: v.compare_at_price,
+      inventory_management: v.inventory_management,
+      inventory_quantity: v.inventory_quantity,
+      fulfillment_service: v.fulfillment_service,
+      requires_shipping: v.requires_shipping,
+      taxable: v.taxable,
+      barcode: v.barcode,
+      weight: v.weight,
+      weight_unit: v.weight_unit,
+      option1: v.option1,
+      option2: v.option2,
+      option3: v.option3,
+    })),
+  }
+};
+
 
           await delay(2000);
 
