@@ -141,9 +141,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-
-
-
 // export const getFinanceSummary = async (req, res) => {
 //   try {
 //     const allOrders = await orderModel.find();
@@ -215,7 +212,6 @@ export const createOrder = async (req, res) => {
 //   }
 // };
 
-
 export const getFinanceSummary = async (req, res) => {
   try {
     const allOrders = await orderModel.find();
@@ -282,8 +278,6 @@ export const getFinanceSummary = async (req, res) => {
     res.status(500).json({ message: 'Error calculating finance summary' });
   }
 };
-
-
 
 export const getFinanceSummaryForUser = async (req, res) => {
   try {
@@ -2490,7 +2484,6 @@ export const addReferenceToOrders = async (req, res) => {
 //   }
 // };
 
-
 export const exportOrders = async (req, res) => {
   try {
     const { status } = req.query; // e.g. 'fulfilled', 'unfulfilled', 'cancelled'
@@ -2555,7 +2548,9 @@ export const exportOrders = async (req, res) => {
     }
 
     if (!rows.length) {
-      return res.status(404).json({ message: 'No matching orders found for the selected filter' });
+      return res
+        .status(404)
+        .json({ message: 'No matching orders found for the selected filter' });
     }
 
     const fields = Object.keys(rows[0]);
@@ -2588,8 +2583,6 @@ export const exportOrders = async (req, res) => {
     });
   }
 };
-
-
 
 export const exportProductsForUser = async (req, res) => {
   try {

@@ -1,6 +1,7 @@
 import { apiCredentialModel } from "../Models/apicredential.js";
 import crypto from 'crypto';
 import mongoose from "mongoose";
+import { ShopifyModel } from "../Models/StoreCredits.js";
 
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () => `shpsk_${crypto.randomBytes(16).toString('hex')}`;
@@ -64,5 +65,40 @@ export const getApiCredentialByUserId = async (req, res) => {
   } catch (error) {
     console.error('Error fetching API credentials:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+
+export const addMultipleStores=async(req,res)=>{
+    try {
+    const { name, storeUrl, accessToken, apiKey } = req.body;
+
+    if (!name || !storeUrl || !accessToken || !apiKey) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    const newStore = new ShopifyModel({ name, storeUrl, accessToken, apiKey });
+    const savedStore = await newStore.save();
+    res.status(201).json(savedStore);
+  } catch (error) {
+    console.error('Error saving store:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
+
+
+export const getStores = async (req, res) => {
+  try {
+    const result = await ShopifyModel.find();
+
+    if (result && result.length > 0) {
+      res.status(200).json(result);
+    } else {
+      res.status(200).json([]); 
+    }
+  } catch (error) {
+    console.error("Error fetching stores:", error);
+    res.status(500).json({ message: "Failed to fetch stores" });
   }
 };

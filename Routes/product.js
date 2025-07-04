@@ -36,6 +36,7 @@ import {
   trackProductView,
   getTrackingCountForUser,
   fetchProductCountForUser,
+  addCsvfileForBulkUploader,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -132,5 +133,10 @@ productRouter.delete('/deleteAll',deleteAllProducts)
 productRouter.post('/trackingProduct',trackProductView)
 productRouter.get('/trackingViews/:userId',getTrackingCountForUser)
 productRouter.get('/getProductCountForUser/:userId',verifyToken,  fetchProductCountForUser);
+productRouter.post(
+  '/upload-csv-for-bulk-upload',
+  Csvuplaods,
 
+  addCsvfileForBulkUploader
+);
 export default productRouter;
