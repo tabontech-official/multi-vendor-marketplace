@@ -8,8 +8,13 @@ const NotificationSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
     },
-    source: { type: String},
+    source: { type: String },
+    seen: {
+      type: Boolean,
+      default: false,
+    },
   },
+
   {
     timestamps: true,
   }

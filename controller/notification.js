@@ -68,3 +68,13 @@ export const getNotificationByUserId = async (req, res) => {
     return res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 };
+
+export const updateSeen=async(req,res)=>{
+   try {
+    const { userId } = req.params;
+    await notificationModel.updateMany({ userId, seen: false }, { seen: true });
+    res.status(200).json({ message: "Marked all as seen" });
+  } catch (err) {
+    res.status(500).json({ error: "Error updating seen status" });
+  }
+}

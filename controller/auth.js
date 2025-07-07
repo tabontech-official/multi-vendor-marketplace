@@ -1035,14 +1035,7 @@ export const CreateUserTagsModule = async (req, res) => {
         .json({ error: 'User already exists with this email' });
     }
 
-    const token = createToken(email);
-    const resetLink = `https://multi-vendor-marketplaces.vercel.app/New?token=${token}`;
-
-    await transporter.sendMail({
-      to: email,
-      subject: 'Password Reset',
-      html: `<p>Click <a href="${resetLink}">here</a> to create your password.</p>`,
-    });
+   
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration || {};
@@ -1106,6 +1099,15 @@ export const CreateUserTagsModule = async (req, res) => {
     });
 
     await newUser.save();
+
+ const token = createToken(email,newUser._id);
+    const resetLink = `https://multi-vendor-marketplaces.vercel.app/New?token=${token}`;
+
+    await transporter.sendMail({
+      to: email,
+      subject: 'Password Reset',
+      html: `<p>Click <a href="${resetLink}">here</a> to create your password.</p>`,
+    });
 
     res.status(201).json({
       message: 'User created successfully in both Shopify and MongoDB',
@@ -1386,7 +1388,7 @@ export const createPassword = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const userId = decoded?.payLoad?._id;
+    const userId = decoded?.payLoad;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res
