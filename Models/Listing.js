@@ -82,11 +82,11 @@ const listingSchema = new mongoose.Schema(
       },
       continue_selling: {
         type: Boolean,
-        default: false,
+        // default: false,
       },
       has_sku: {
         type: Boolean,
-        default: false,
+        // default: false,
       },
       sku: {
         type: String,
@@ -98,7 +98,7 @@ const listingSchema = new mongoose.Schema(
     shipping: {
       track_shipping: {
         type: Boolean,
-        default: false,
+        // default: false,
       },
       weight: {
         type: Number,
