@@ -1260,6 +1260,7 @@ export const getAllProductData = async (req, res) => {
           variants: 1,
           options: 1,
           images: 1,
+          variantImages: 1,
           inventory: 1,
           shipping: 1,
           status: 1,
@@ -2828,7 +2829,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
           let product = null;
 
-          // 🔍 Check if product with handle exists
           const existing = await shopifyRequest(
             `${shopifyStoreUrl}/admin/api/2024-01/products.json?handle=${handle}`,
             'GET',
