@@ -2188,11 +2188,10 @@ export const getImageGallery = async (req, res) => {
               as: 'image',
               cond: {
                 $or: [
-                  // Show both productId matched + unassigned images
                   ...(productId && productId !== 'null'
                     ? [
                         { $eq: ['$$image.productId', productId] },
-                        { $not: ['$$image.productId'] }, // images without productId
+                        { $not: ['$$image.productId'] }, 
                       ]
                     : [
                         {
@@ -2218,8 +2217,6 @@ export const getImageGallery = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-
 
 
 export const deleteImageGallery = async (req, res) => {
