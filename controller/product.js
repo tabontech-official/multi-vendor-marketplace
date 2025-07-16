@@ -15,6 +15,8 @@ import path from 'path';
 import moment from 'moment';
 import { viewModel } from '../Models/viewModel.js';
 import { categoryModel } from '../Models/category.js';
+
+
 export const shopifyRequest = async (
   url,
   method,
@@ -699,6 +701,8 @@ export const updateProductData = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 

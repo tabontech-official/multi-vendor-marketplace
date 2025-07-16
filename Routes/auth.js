@@ -34,7 +34,6 @@ const authRouter = express.Router();
 authRouter.post('/signIn', signIn);
 authRouter.post('/signInForBulkUploader', signInForBulkUploader);
 authRouter.post('/signUpForBulkUploader', signUpForBulkUploader);
-
 authRouter.post('/signUp', signUp);
 authRouter.post('/forgot', forgotPassword);
 authRouter.post('/logout/:userId', logout);
