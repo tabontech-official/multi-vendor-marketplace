@@ -1346,7 +1346,7 @@ export const forgotPassword = async (req, res) => {
       html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
     });
 
-    res.status(200).json({ message: 'Reset link sent to your email' });
+    res.status(200).json({ message: 'Reset link sent to your email',token });
   } catch (error) {
     console.error('Error sending reset email:', error);
     res.status(500).json({ message: 'Error sending reset email', error });
@@ -1358,7 +1358,7 @@ export const resetPassword = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const userId = decoded.payLoad._id;
+    const userId = decoded.payLoad;
     console.log('Decoded token:', decoded);
 
     const user = await authModel.findById(userId);
