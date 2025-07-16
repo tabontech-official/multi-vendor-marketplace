@@ -14,7 +14,7 @@ import { Parser } from 'json2csv';
 import path from 'path';
 import moment from 'moment';
 import { viewModel } from '../Models/viewModel.js';
-
+import { categoryModel } from '../Models/category.js';
 export const shopifyRequest = async (
   url,
   method,
@@ -1169,16 +1169,19 @@ export const fetchProductCount = async (req, res) => {
       if (item._id === 'draft') inactive = item.count;
     });
 
-    res.status(200).json({
-      total,
-      active,
-      inactive,
-    });
+    const response = [
+      { status: 'Total', count: total },
+      { status: 'Active', count: active },
+      { status: 'Inactive', count: inactive },
+    ];
+
+    res.status(200).json(response);
   } catch (error) {
-    console.error('Error in fetchProductCount:', error);
+    console.error('❌ Error in fetchProductCount:', error);
     res.status(500).json({ message: 'Failed to fetch product counts.' });
   }
 };
+
 
 export const fetchProductCountForUser = async (req, res) => {
   try {
@@ -2229,6 +2232,325 @@ export const deleteImageGallery = async (req, res) => {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 
+// export const addCsvfileForProductFromBody = async (req, res) => {
+//   const file = req.file;
+//   const userId = req.params;
+
+//   if (!file || !file.buffer) {
+//     return res.status(400).json({ error: 'No file uploaded.' });
+//   }
+
+//   if (!userId.userId || !mongoose.Types.ObjectId.isValid(userId.userId)) {
+//     return res.status(400).json({ error: 'Invalid or missing userId.' });
+//   }
+
+//   try {
+//     const config = await shopifyConfigurationModel.findOne();
+//     if (!config) {
+//       return res.status(404).json({ error: 'Shopify config not found.' });
+//     }
+
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+//     const allRows = [];
+//     const stream = Readable.from(file.buffer);
+//     const cleanUrl = (url) => url?.split('?')[0];
+
+//     stream
+//       .pipe(csv())
+//       .on('data', (row) => {
+//         allRows.push(row);
+//       })
+//       .on('end', async () => {
+//         const groupedProducts = {};
+//         allRows.forEach((row) => {
+//           const handle = row['Handle']?.trim();
+//           if (handle) {
+//             if (!groupedProducts[handle]) groupedProducts[handle] = [];
+//             groupedProducts[handle].push(row);
+//           }
+//         });
+
+//         const results = [];
+
+//         for (const handle in groupedProducts) {
+//           const rows = groupedProducts[handle];
+//           const mainRow = rows[0];
+
+//           const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
+//             .map((opt) => mainRow[opt])
+//             .filter(Boolean);
+
+//           const optionValues = [[], [], []];
+
+//           const variants = rows.map((row) => {
+//             if (row['Option1 Value'])
+//               optionValues[0].push(row['Option1 Value']);
+//             if (row['Option2 Value'])
+//               optionValues[1].push(row['Option2 Value']);
+//             if (row['Option3 Value'])
+//               optionValues[2].push(row['Option3 Value']);
+
+//             return {
+//               sku: row['Variant SKU'] || '',
+//               price: row['Variant Price'] || '0.00',
+//               compare_at_price: row['Variant Compare At Price'] || null,
+//               inventory_management:
+//                 row['Variant Inventory Tracker'] === 'shopify'
+//                   ? 'shopify'
+//                   : null,
+//               inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
+//               fulfillment_service: 'manual',
+//               requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
+//               taxable: row['Variant Taxable'] === 'TRUE',
+//               barcode: row['Variant Barcode'] || '',
+//               weight: parseFloat(row['Variant Grams']) || 0,
+//               weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
+//                 row['Variant Weight Unit']
+//               )
+//                 ? row['Variant Weight Unit']
+//                 : 'g',
+//               option1: row['Option1 Value'] || null,
+//               option2: row['Option2 Value'] || null,
+//               option3: row['Option3 Value'] || null,
+//               variant_image: cleanUrl(row['Variant Image']) || null,
+//             };
+//           });
+
+//           const uniqueOptions = options
+//             .map((name, idx) => ({
+//               name,
+//               values: [...new Set(optionValues[idx])],
+//             }))
+//             .filter((opt) => opt.name);
+
+//           const images = [
+//             ...new Set(
+//               rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
+//             ),
+//           ].map((src, index) => ({
+//             src,
+//             position: index + 1,
+//             alt:
+//               rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
+//                 'Image Alt Text'
+//               ] || null,
+//           }));
+
+//           const isPublished = mainRow['Published']?.toUpperCase() === 'TRUE';
+
+//           const productPayload = {
+//             title: mainRow['Title'],
+//             body_html: mainRow['Body (HTML)'] || '',
+//             vendor: mainRow['Vendor'] || '',
+//             product_type: mainRow['Type'] || '',
+//             status: isPublished ? 'active' : 'draft',
+//             published_at: isPublished ? new Date().toISOString() : null,
+//             tags: mainRow['Tags']?.split(',').map((tag) => tag.trim()) || [],
+//             options: uniqueOptions,
+//             images,
+//             variants: variants.map((v) => ({
+//               sku: v.sku,
+//               price: v.price,
+//               compare_at_price: v.compare_at_price,
+//               inventory_management: v.inventory_management,
+//               inventory_quantity: v.inventory_quantity,
+//               fulfillment_service: v.fulfillment_service,
+//               requires_shipping: v.requires_shipping,
+//               taxable: v.taxable,
+//               barcode: v.barcode,
+//               weight: v.weight,
+//               weight_unit: v.weight_unit,
+//               option1: v.option1,
+//               option2: v.option2,
+//               option3: v.option3,
+//             })),
+//           };
+
+//           await delay(2000);
+
+//           let product = null;
+
+//           const existing = await shopifyRequest(
+//             `${shopifyStoreUrl}/admin/api/2024-01/products.json?handle=${handle}`,
+//             'GET',
+//             null,
+//             shopifyApiKey,
+//             shopifyAccessToken
+//           );
+
+//           if (existing?.products?.length > 0) {
+//             const existingProduct = existing.products[0];
+//             const updateRes = await shopifyRequest(
+//               `${shopifyStoreUrl}/admin/api/2024-01/products/${existingProduct.id}.json`,
+//               'PUT',
+//               { product: { ...productPayload, id: existingProduct.id } },
+//               shopifyApiKey,
+//               shopifyAccessToken
+//             );
+//             product = updateRes.product;
+//           } else {
+//             const createRes = await shopifyRequest(
+//               `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
+//               'POST',
+//               { product: productPayload },
+//               shopifyApiKey,
+//               shopifyAccessToken
+//             );
+//             product = createRes.product;
+//           }
+
+//           const productId = product.id;
+//           const uploadedVariantImages = [];
+
+//           // Upload variant images
+//           await Promise.all(
+//             variants.map(async (variant) => {
+//               if (variant.variant_image) {
+//                 try {
+//                   const imageUploadPayload = {
+//                     image: {
+//                       src: variant.variant_image,
+//                       alt: `Variant Image`,
+//                     },
+//                   };
+
+//                   const uploadResponse = await shopifyRequest(
+//                     `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+//                     'POST',
+//                     imageUploadPayload,
+//                     shopifyApiKey,
+//                     shopifyAccessToken
+//                   );
+
+//                   if (uploadResponse?.image) {
+//                     const img = uploadResponse.image;
+//                     uploadedVariantImages.push({
+//                       id: img.id?.toString() || '',
+//                       alt: img.alt || '',
+//                       position: img.position || 0,
+//                       product_id: img.product_id?.toString() || '',
+//                       created_at: img.created_at || '',
+//                       updated_at: img.updated_at || '',
+//                       width: img.width || 0,
+//                       height: img.height || 0,
+//                       src: img.src || '',
+//                     });
+//                   }
+//                 } catch (uploadError) {
+//                   console.error(`Image upload error: ${uploadError.message}`);
+//                 }
+//               }
+//             })
+//           );
+
+//           const productDetails = await shopifyRequest(
+//             `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
+//             'GET',
+//             null,
+//             shopifyApiKey,
+//             shopifyAccessToken
+//           );
+
+//           const shopifyVariants = productDetails?.product?.variants || [];
+
+//           // Assign images to variants
+//           await Promise.all(
+//             shopifyVariants.map(async (variant, index) => {
+//               if (uploadedVariantImages[index]) {
+//                 try {
+//                   await shopifyRequest(
+//                     `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+//                     'PUT',
+//                     {
+//                       variant: {
+//                         id: variant.id,
+//                         image_id: uploadedVariantImages[index].id,
+//                       },
+//                     },
+//                     shopifyApiKey,
+//                     shopifyAccessToken
+//                   );
+//                   variant.image_id = uploadedVariantImages[index].id;
+//                 } catch (updateError) {
+//                   console.error(
+//                     `Error linking variant image: ${updateError.message}`
+//                   );
+//                 }
+//               }
+//             })
+//           );
+
+//           // Build inventory object
+//           const baseVariant = shopifyVariants[0] || {};
+//           const inventory = {
+//             track_quantity: !!baseVariant?.inventory_management,
+//             quantity: baseVariant?.inventory_quantity ?? 0,
+//             continue_selling: true,
+//             has_sku: !!baseVariant?.sku,
+//             sku: baseVariant?.sku || '',
+//             barcode: baseVariant?.barcode || '',
+//           };
+
+//           await listingModel.findOneAndUpdate(
+//             { shopifyId: productId },
+//             {
+//               shopifyId: productId,
+//               id: productId,
+//               title: product.title,
+//               body_html: product.body_html,
+//               vendor: product.vendor,
+//               product_type: product.product_type,
+//               status: product.status,
+//               handle: product.handle,
+//               tags: product.tags,
+//               images: product.images,
+//               variants: shopifyVariants,
+//               options: product.options,
+//               userId: userId.userId,
+//               variantImages: uploadedVariantImages,
+//               inventory: inventory,
+//             },
+//             { upsert: true, new: true }
+//           );
+
+//           const imageGallery = new imageGalleryModel({
+//             userId: userId.userId,
+//             images: product.images.map((img) => ({
+//               id: img.id?.toString(),
+//               product_id: img.product_id?.toString(),
+//               position: img.position,
+//               created_at: img.created_at,
+//               updated_at: img.updated_at,
+//               alt: img.alt,
+//               width: img.width,
+//               height: img.height,
+//               src: img.src,
+//               productId: productId.toString(),
+//             })),
+//           });
+//           await imageGallery.save();
+
+//           results.push({ success: true, productId, title: product.title });
+//         }
+
+//         await listingModel.deleteMany({
+//           $or: [{ userId: { $exists: false } }, { userId: null }],
+//         });
+
+//         return res
+//           .status(200)
+//           .json({ message: 'Products processed.', results });
+//       });
+//   } catch (error) {
+//     console.error('🔥 Server error:', error.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Unexpected error during CSV upload.',
+//       error: error?.message || 'Unknown error',
+//     });
+//   }
+// };
+
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
   const userId = req.params;
@@ -2248,9 +2570,16 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     }
 
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+
     const allRows = [];
     const stream = Readable.from(file.buffer);
     const cleanUrl = (url) => url?.split('?')[0];
+
+    const categories = await categoryModel.find();
+    const catNoMap = {};
+    categories.forEach((cat) => {
+      catNoMap[cat.title.trim().toLowerCase()] = cat;
+    });
 
     stream
       .pipe(csv())
@@ -2280,32 +2609,22 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const optionValues = [[], [], []];
 
           const variants = rows.map((row) => {
-            if (row['Option1 Value'])
-              optionValues[0].push(row['Option1 Value']);
-            if (row['Option2 Value'])
-              optionValues[1].push(row['Option2 Value']);
-            if (row['Option3 Value'])
-              optionValues[2].push(row['Option3 Value']);
+            if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
+            if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
+            if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
 
             return {
               sku: row['Variant SKU'] || '',
               price: row['Variant Price'] || '0.00',
               compare_at_price: row['Variant Compare At Price'] || null,
-              inventory_management:
-                row['Variant Inventory Tracker'] === 'shopify'
-                  ? 'shopify'
-                  : null,
+              inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
               inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
               fulfillment_service: 'manual',
               requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
               taxable: row['Variant Taxable'] === 'TRUE',
               barcode: row['Variant Barcode'] || '',
               weight: parseFloat(row['Variant Grams']) || 0,
-              weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
-                row['Variant Weight Unit']
-              )
-                ? row['Variant Weight Unit']
-                : 'g',
+              weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
               option1: row['Option1 Value'] || null,
               option2: row['Option2 Value'] || null,
               option3: row['Option3 Value'] || null,
@@ -2313,27 +2632,75 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             };
           });
 
-          const uniqueOptions = options
-            .map((name, idx) => ({
-              name,
-              values: [...new Set(optionValues[idx])],
-            }))
-            .filter((opt) => opt.name);
+          const uniqueOptions = options.map((name, idx) => ({
+            name,
+            values: [...new Set(optionValues[idx])],
+          })).filter((opt) => opt.name);
 
-          const images = [
-            ...new Set(
-              rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
-            ),
-          ].map((src, index) => ({
+          const images = [...new Set(rows.map(r => cleanUrl(r['Image Src'])).filter(Boolean))].map((src, index) => ({
             src,
             position: index + 1,
-            alt:
-              rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
-                'Image Alt Text'
-              ] || null,
+            alt: rows.find((r) => cleanUrl(r['Image Src']) === src)?.['Image Alt Text'] || null,
           }));
 
           const isPublished = mainRow['Published']?.toUpperCase() === 'TRUE';
+
+          const categoryTags = [];
+          const categoryPathTitles = [];
+
+       const categoryTitles = (
+  mainRow['Category']?.split('|')
+    .map((title) => title.trim().toLowerCase())
+    .filter(Boolean)
+) || [];
+
+categoryTitles.forEach((catTitle) => {
+  const matchedCategory = catNoMap[catTitle];
+  if (matchedCategory) {
+    const path = [];
+
+    if (matchedCategory.level === 'level3') {
+      path.push(matchedCategory.title);
+      const level2 = categories.find(c => c.catNo === matchedCategory.parentCatNo);
+      if (level2) {
+        categoryTags.push(level2.catNo);
+        path.push(level2.title);
+        const level1 = categories.find(c => c.catNo === level2.parentCatNo);
+        if (level1) {
+          categoryTags.push(level1.catNo);
+          path.push(level1.title);
+        }
+      }
+    } else if (matchedCategory.level === 'level2') {
+      path.push(matchedCategory.title);
+      const level1 = categories.find(c => c.catNo === matchedCategory.parentCatNo);
+      if (level1) {
+        categoryTags.push(level1.catNo);
+        path.push(level1.title);
+      }
+    } else if (matchedCategory.level === 'level1') {
+      path.push(matchedCategory.title);
+    }
+
+    categoryTags.push(matchedCategory.catNo);
+    categoryPathTitles.push(path.join(' > '));
+  }
+});
+
+
+          const csvTags = typeof mainRow['Tags'] === 'string'
+            ? mainRow['Tags'].split(',').map(t => t.trim()).filter(Boolean)
+            : [];
+
+          const tags = [
+            ...new Set([
+              ...csvTags,
+              ...categoryTags,
+              ...categoryPathTitles,
+              `user_${userId.userId}`,
+              `vendor_${mainRow['Vendor'] || ''}`,
+            ]),
+          ];
 
           const productPayload = {
             title: mainRow['Title'],
@@ -2342,7 +2709,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             product_type: mainRow['Type'] || '',
             status: isPublished ? 'active' : 'draft',
             published_at: isPublished ? new Date().toISOString() : null,
-            tags: mainRow['Tags']?.split(',').map((tag) => tag.trim()) || [],
+            tags: tags,
             options: uniqueOptions,
             images,
             variants: variants.map((v) => ({
@@ -2399,7 +2766,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const productId = product.id;
           const uploadedVariantImages = [];
 
-          // Upload variant images
           await Promise.all(
             variants.map(async (variant) => {
               if (variant.variant_image) {
@@ -2450,7 +2816,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
           const shopifyVariants = productDetails?.product?.variants || [];
 
-          // Assign images to variants
           await Promise.all(
             shopifyVariants.map(async (variant, index) => {
               if (uploadedVariantImages[index]) {
@@ -2469,15 +2834,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                   );
                   variant.image_id = uploadedVariantImages[index].id;
                 } catch (updateError) {
-                  console.error(
-                    `Error linking variant image: ${updateError.message}`
-                  );
+                  console.error(`Error linking variant image: ${updateError.message}`);
                 }
               }
             })
           );
 
-          // Build inventory object
           const baseVariant = shopifyVariants[0] || {};
           const inventory = {
             track_quantity: !!baseVariant?.inventory_management,
@@ -2499,7 +2861,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               product_type: product.product_type,
               status: product.status,
               handle: product.handle,
-              tags: product.tags,
+              tags: tags,
               images: product.images,
               variants: shopifyVariants,
               options: product.options,
@@ -2534,9 +2896,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           $or: [{ userId: { $exists: false } }, { userId: null }],
         });
 
-        return res
-          .status(200)
-          .json({ message: 'Products processed.', results });
+        return res.status(200).json({ message: 'Products processed.', results });
       });
   } catch (error) {
     console.error('🔥 Server error:', error.message);
@@ -2547,6 +2907,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
 
 export const updateProductWebhook = async (req, res) => {
   try {
@@ -3443,76 +3804,80 @@ export const deleteAll = async (req, res) => {
 
 export const getProductForCahrts = async (req, res) => {
   try {
-    const { userId } = req.params; // Get userId from the request parameters
+    const { userId } = req.params; 
 
-    console.log('Fetching data for userId:', userId);
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid userId' });
+    }
+
+    const objectId = new mongoose.Types.ObjectId(userId);
+    console.log('📥 Fetching data for userId:', objectId);
 
     const productCounts = await listingModel.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(userId), // Ensure correct handling of ObjectId
+          userId: objectId,
         },
       },
       {
         $facet: {
+          totalProducts: [
+            { $count: 'count' }
+          ],
           activeProducts: [
-            { $match: { status: 'active' } }, // Match active products
-            { $count: 'count' }, // Count active products
+            { $match: { status: 'active' } },
+            { $count: 'count' },
           ],
           inactiveProducts: [
-            { $match: { status: 'inactive' } }, // Match inactive products
-            { $count: 'count' }, // Count inactive products
+            { $match: { status: 'inactive' } },
+            { $count: 'count' },
           ],
           missingImages: [
             {
               $match: {
-                $or: [{ images: { $size: 0 } }, { images: { $exists: false } }],
+                $or: [
+                  { images: { $exists: false } },
+                  { images: { $size: 0 } },
+                ],
               },
-            }, // Match products with no images
-            { $count: 'count' }, // Count products with missing images
+            },
+            { $count: 'count' },
           ],
         },
       },
       {
         $project: {
-          activeCount: { $arrayElemAt: ['$activeProducts.count', 0] },
-          inactiveCount: { $arrayElemAt: ['$inactiveProducts.count', 0] },
-          missingImagesCount: { $arrayElemAt: ['$missingImages.count', 0] },
-        },
-      },
-      {
-        $project: {
-          activeCount: { $ifNull: ['$activeCount', 0] },
-          inactiveCount: { $ifNull: ['$inactiveCount', 0] },
-          missingImagesCount: { $ifNull: ['$missingImagesCount', 0] },
+          totalCount: { $ifNull: [{ $arrayElemAt: ['$totalProducts.count', 0] }, 0] },
+          activeCount: { $ifNull: [{ $arrayElemAt: ['$activeProducts.count', 0] }, 0] },
+          inactiveCount: { $ifNull: [{ $arrayElemAt: ['$inactiveProducts.count', 0] }, 0] },
+          missingImagesCount: { $ifNull: [{ $arrayElemAt: ['$missingImages.count', 0] }, 0] },
         },
       },
     ]);
 
-    console.log('Product counts:', productCounts); // Log to check counts
+    console.log('📊 Product counts:', productCounts);
 
-    if (!productCounts || !productCounts.length) {
-      res.json([
-        // If no products found, return 0 counts for each category
-        { status: 'Active', count: 0 },
-        { status: 'Inactive', count: 0 },
-        { status: 'Missing Images', count: 0 },
-      ]);
-      return;
-    }
+    const stats = productCounts[0] || {
+      totalCount: 0,
+      activeCount: 0,
+      inactiveCount: 0,
+      missingImagesCount: 0,
+    };
 
     const result = [
-      { status: 'Active', count: productCounts[0].activeCount },
-      { status: 'Inactive', count: productCounts[0].inactiveCount },
-      { status: 'Missing Images', count: productCounts[0].missingImagesCount },
+      { status: 'Total', count: stats.totalCount },
+      { status: 'Active', count: stats.activeCount },
+      { status: 'Inactive', count: stats.inactiveCount },
+      { status: 'Missing Images', count: stats.missingImagesCount },
     ];
 
-    res.json(result); // Send the result with counts of active, inactive, and missing images
+    res.json(result);
   } catch (error) {
-    console.error('Error fetching product data: ', error);
+    console.error('❌ Error fetching product data:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 export const deleteAllProducts = async (req, res) => {
   try {
