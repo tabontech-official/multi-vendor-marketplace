@@ -44,58 +44,44 @@ import express from 'express';
 import { Csvuplaods } from '../middleware/multer.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 const productRouter = express.Router();
-productRouter.post('/addEquipment',verifyToken, cpUpload,addUsedEquipments);
+productRouter.post('/addEquipment', verifyToken, cpUpload, addUsedEquipments);
 productRouter.post('/webhooks/delete', productDelete);
-productRouter.post('/holiday',verifyToken, updateAllProductsStatus);
-productRouter.post('/webhook/product/update',verifyToken, productUpdate);
-productRouter.get('/getProduct/:userId',verifyToken, getProduct);
-productRouter.get('/getAllVariants/:userId',verifyToken, getAllVariants);
+productRouter.post('/holiday', verifyToken, updateAllProductsStatus);
+productRouter.post('/webhook/product/update', verifyToken, productUpdate);
+productRouter.get('/getProduct/:userId', verifyToken, getProduct);
+productRouter.get('/getAllVariants/:userId', verifyToken, getAllVariants);
 
-productRouter.get('/getAllData',verifyToken, getAllProductData);
-productRouter.put('/publishedProduct/:productId',verifyToken, publishProduct);
-productRouter.put('/unpublished/:productId',verifyToken, unpublishProduct);
+productRouter.get('/getAllData', verifyToken, getAllProductData);
+productRouter.put('/publishedProduct/:productId', verifyToken, publishProduct);
+productRouter.put('/unpublished/:productId', verifyToken, unpublishProduct);
 productRouter.patch(
   '/updateProducts/:id',
   verifyToken,
   cpUpload,
   updateProductData
 );
-productRouter.put('/updateImages/:id',verifyToken, updateImages);
-productRouter.put('/updateVariantImages/:id',verifyToken, updateVariantImages);
-productRouter.get('/getProductCount',verifyToken, fetchProductCount);
-productRouter.get(
-  '/getProductDataFromShopify/:id',
-  getProductDataFromShopify
-);
-productRouter.get(
-  '/getAllDataForPromotion',
-  getAllProductPromotionStatus
-);
-productRouter.get(
-  '/getPromotionProduct/:userId',
-  getPromotionProduct
-);
-productRouter.delete('/deleteProduct/:id',verifyToken,  deleteProduct);
+productRouter.put('/updateImages/:id', verifyToken, updateImages);
+productRouter.put('/updateVariantImages/:id', verifyToken, updateVariantImages);
+productRouter.get('/getProductCount', verifyToken, fetchProductCount);
+productRouter.get('/getProductDataFromShopify/:id', getProductDataFromShopify);
+productRouter.get('/getAllDataForPromotion', getAllProductPromotionStatus);
+productRouter.get('/getPromotionProduct/:userId', getPromotionProduct);
+productRouter.delete('/deleteProduct/:id', verifyToken, deleteProduct);
 productRouter.get(
   '/getSingleVariant/:productId/variants/:variantId',
   getSingleVariantData,
-  verifyToken,
+  verifyToken
 );
 productRouter.put(
-  '/updateVariant/:productId/:variantId',verifyToken,
+  '/updateVariant/:productId/:variantId',
+  verifyToken,
   updateSingleVariant
 );
-productRouter.get(
-  '/getSingleProductForVariants/:productId',
-  getsingleProduct
-);
-productRouter.get(
-  '/fetchvarinatimages/:id',
-  fetchVariantsWithImages
-);
-productRouter.post('/addImageGallery',verifyToken, addImagesGallery);
-productRouter.get('/getImageGallery/:userId/:productId',getImageGallery);
-productRouter.delete('/',deleteImageGallery);
+productRouter.get('/getSingleProductForVariants/:productId', getsingleProduct);
+productRouter.get('/fetchvarinatimages/:id', fetchVariantsWithImages);
+productRouter.post('/addImageGallery', verifyToken, addImagesGallery);
+productRouter.get('/getImageGallery/:userId/:productId', getImageGallery);
+productRouter.delete('/', deleteImageGallery);
 productRouter.post(
   '/upload-csv-body/:userId',
   Csvuplaods,
@@ -105,11 +91,13 @@ productRouter.post(
 );
 productRouter.post('/productUpdateWebhook', updateProductWebhook);
 productRouter.put(
-  '/updateInventoryPrice/:id',verifyToken,
+  '/updateInventoryPrice/:id',
+  verifyToken,
   updateInventoryPrice
 );
 productRouter.put(
-  '/updateInventoryQuantity/:id',verifyToken,
+  '/updateInventoryQuantity/:id',
+  verifyToken,
   updateInventoryQuantity
 );
 productRouter.get('/csvEportFile', exportProducts);
@@ -118,15 +106,15 @@ productRouter.get('/csvInventoryEportFile', exportInventoryCsv);
 productRouter.post(
   '/upload-csv-for-inventory',
   Csvuplaods,
-    verifyToken,
+  verifyToken,
 
   updateInventoryFromCsv
 );
-productRouter.delete("/sel",deleteAll)
-productRouter.get('/getProductForCharts/:userId',getProductForCahrts)
-productRouter.delete('/deleteAll',deleteAllProducts)
-productRouter.post('/trackingProduct',trackProductView)
-productRouter.get('/trackingViews/:userId',getTrackingCountForUser)
+productRouter.delete('/sel', deleteAll);
+productRouter.get('/getProductForCharts/:userId', getProductForCahrts);
+productRouter.delete('/deleteAll', deleteAllProducts);
+productRouter.post('/trackingProduct', trackProductView);
+productRouter.get('/trackingViews/:userId', getTrackingCountForUser);
 productRouter.get('/getProductCountForUser/:userId', fetchProductCountForUser);
 productRouter.post(
   '/upload-csv-for-bulk-upload',
