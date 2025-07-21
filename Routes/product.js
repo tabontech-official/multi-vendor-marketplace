@@ -44,16 +44,16 @@ import express from 'express';
 import { Csvuplaods } from '../middleware/multer.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 const productRouter = express.Router();
-productRouter.post('/addEquipment', cpUpload,addUsedEquipments);
+productRouter.post('/addEquipment',verifyToken, cpUpload,addUsedEquipments);
 productRouter.post('/webhooks/delete', productDelete);
-productRouter.post('/holiday', updateAllProductsStatus);
-productRouter.post('/webhook/product/update', productUpdate);
-productRouter.get('/getProduct/:userId', getProduct);
-productRouter.get('/getAllVariants/:userId', getAllVariants);
+productRouter.post('/holiday',verifyToken, updateAllProductsStatus);
+productRouter.post('/webhook/product/update',verifyToken, productUpdate);
+productRouter.get('/getProduct/:userId',verifyToken, getProduct);
+productRouter.get('/getAllVariants/:userId',verifyToken, getAllVariants);
 
-productRouter.get('/getAllData', getAllProductData);
-productRouter.put('/publishedProduct/:productId', publishProduct);
-productRouter.put('/unpublished/:productId', unpublishProduct);
+productRouter.get('/getAllData',verifyToken, getAllProductData);
+productRouter.put('/publishedProduct/:productId',verifyToken, publishProduct);
+productRouter.put('/unpublished/:productId',verifyToken, unpublishProduct);
 productRouter.patch(
   '/updateProducts/:id',
   cpUpload,
@@ -80,7 +80,7 @@ productRouter.get(
   getSingleVariantData
 );
 productRouter.put(
-  '/updateVariant/:productId/:variantId',
+  '/updateVariant/:productId/:variantId',verifyToken,
   updateSingleVariant
 );
 productRouter.get(
@@ -91,7 +91,7 @@ productRouter.get(
   '/fetchvarinatimages/:id',
   fetchVariantsWithImages
 );
-productRouter.post('/addImageGallery', addImagesGallery);
+productRouter.post('/addImageGallery',verifyToken, addImagesGallery);
 productRouter.get('/getImageGallery/:userId/:productId',getImageGallery);
 productRouter.delete('/',deleteImageGallery);
 productRouter.post(
@@ -102,11 +102,11 @@ productRouter.post(
 );
 productRouter.post('/productUpdateWebhook', updateProductWebhook);
 productRouter.put(
-  '/updateInventoryPrice/:id',
+  '/updateInventoryPrice/:id',verifyToken,
   updateInventoryPrice
 );
 productRouter.put(
-  '/updateInventoryQuantity/:id',
+  '/updateInventoryQuantity/:id',verifyToken,
   updateInventoryQuantity
 );
 productRouter.get('/csvEportFile', exportProducts);
