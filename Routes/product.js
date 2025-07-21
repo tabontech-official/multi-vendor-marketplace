@@ -56,12 +56,13 @@ productRouter.put('/publishedProduct/:productId',verifyToken, publishProduct);
 productRouter.put('/unpublished/:productId',verifyToken, unpublishProduct);
 productRouter.patch(
   '/updateProducts/:id',
+  verifyToken,
   cpUpload,
   updateProductData
 );
-productRouter.put('/updateImages/:id', updateImages);
-productRouter.put('/updateVariantImages/:id', updateVariantImages);
-productRouter.get('/getProductCount', fetchProductCount);
+productRouter.put('/updateImages/:id',verifyToken, updateImages);
+productRouter.put('/updateVariantImages/:id',verifyToken, updateVariantImages);
+productRouter.get('/getProductCount',verifyToken, fetchProductCount);
 productRouter.get(
   '/getProductDataFromShopify/:id',
   getProductDataFromShopify
@@ -74,10 +75,11 @@ productRouter.get(
   '/getPromotionProduct/:userId',
   getPromotionProduct
 );
-productRouter.delete('/deleteProduct/:id',  deleteProduct);
+productRouter.delete('/deleteProduct/:id',verifyToken,  deleteProduct);
 productRouter.get(
   '/getSingleVariant/:productId/variants/:variantId',
-  getSingleVariantData
+  getSingleVariantData,
+  verifyToken,
 );
 productRouter.put(
   '/updateVariant/:productId/:variantId',verifyToken,
@@ -97,6 +99,7 @@ productRouter.delete('/',deleteImageGallery);
 productRouter.post(
   '/upload-csv-body/:userId',
   Csvuplaods,
+  verifyToken,
 
   addCsvfileForProductFromBody
 );
@@ -115,6 +118,8 @@ productRouter.get('/csvInventoryEportFile', exportInventoryCsv);
 productRouter.post(
   '/upload-csv-for-inventory',
   Csvuplaods,
+    verifyToken,
+
   updateInventoryFromCsv
 );
 productRouter.delete("/sel",deleteAll)
