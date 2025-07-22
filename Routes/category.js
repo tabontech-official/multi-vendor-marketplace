@@ -9,14 +9,15 @@ import {
   getSingleCategory,
 } from '../controller/category.js';
 import { cpUpload } from '../middleware/cloudinary.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const categoryRouter = express.Router();
-categoryRouter.post('/createCategory', cpUpload, createCategory);
+categoryRouter.post('/createCategory', verifyToken, cpUpload, createCategory);
 
-categoryRouter.get('/getCategory', getCategory);
-categoryRouter.get('/getCollection/:userId', getCollectionData);
-categoryRouter.get('/category/:categoryId', getSingleCategory);
+categoryRouter.get('/getCategory',verifyToken, getCategory);
+categoryRouter.get('/getCollection/:userId',  getCollectionData);
+categoryRouter.get('/category/:categoryId', verifyToken, getSingleCategory);
 categoryRouter.get('/getCsvForCategories', exportCsvForCategories);
-categoryRouter.delete('/deleteCollection',deleteCollection)
+categoryRouter.delete('/deleteCollection', verifyToken, deleteCollection);
 categoryRouter.delete('/', delet);
 export default categoryRouter;

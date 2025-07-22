@@ -16,7 +16,6 @@ import moment from 'moment';
 import { viewModel } from '../Models/viewModel.js';
 import { categoryModel } from '../Models/category.js';
 
-
 export const shopifyRequest = async (
   url,
   method,
@@ -59,7 +58,6 @@ const generateVariantCombinations = (options, index = 0, current = {}) => {
   });
   return variants;
 };
-
 
 export const addUsedEquipments = async (req, res) => {
   let productId;
@@ -702,7 +700,6 @@ export const updateProductData = async (req, res) => {
   }
 };
 
-
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 
@@ -1185,7 +1182,6 @@ export const fetchProductCount = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch product counts.' });
   }
 };
-
 
 export const fetchProductCountForUser = async (req, res) => {
   try {
@@ -2198,7 +2194,7 @@ export const getImageGallery = async (req, res) => {
                   ...(productId && productId !== 'null'
                     ? [
                         { $eq: ['$$image.productId', productId] },
-                        { $not: ['$$image.productId'] }, 
+                        { $not: ['$$image.productId'] },
                       ]
                     : [
                         {
@@ -2217,14 +2213,12 @@ export const getImageGallery = async (req, res) => {
       },
     ]);
 
-
     res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching image gallery:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 
 export const deleteImageGallery = async (req, res) => {
   try {
@@ -2234,7 +2228,6 @@ export const deleteImageGallery = async (req, res) => {
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
@@ -2613,22 +2606,32 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const optionValues = [[], [], []];
 
           const variants = rows.map((row) => {
-            if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
-            if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
-            if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
+            if (row['Option1 Value'])
+              optionValues[0].push(row['Option1 Value']);
+            if (row['Option2 Value'])
+              optionValues[1].push(row['Option2 Value']);
+            if (row['Option3 Value'])
+              optionValues[2].push(row['Option3 Value']);
 
             return {
               sku: row['Variant SKU'] || '',
               price: row['Variant Price'] || '0.00',
               compare_at_price: row['Variant Compare At Price'] || null,
-              inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
+              inventory_management:
+                row['Variant Inventory Tracker'] === 'shopify'
+                  ? 'shopify'
+                  : null,
               inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
               fulfillment_service: 'manual',
               requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
               taxable: row['Variant Taxable'] === 'TRUE',
               barcode: row['Variant Barcode'] || '',
               weight: parseFloat(row['Variant Grams']) || 0,
-              weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
+              weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
+                row['Variant Weight Unit']
+              )
+                ? row['Variant Weight Unit']
+                : 'g',
               option1: row['Option1 Value'] || null,
               option2: row['Option2 Value'] || null,
               option3: row['Option3 Value'] || null,
@@ -2636,15 +2639,24 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             };
           });
 
-          const uniqueOptions = options.map((name, idx) => ({
-            name,
-            values: [...new Set(optionValues[idx])],
-          })).filter((opt) => opt.name);
+          const uniqueOptions = options
+            .map((name, idx) => ({
+              name,
+              values: [...new Set(optionValues[idx])],
+            }))
+            .filter((opt) => opt.name);
 
-          const images = [...new Set(rows.map(r => cleanUrl(r['Image Src'])).filter(Boolean))].map((src, index) => ({
+          const images = [
+            ...new Set(
+              rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
+            ),
+          ].map((src, index) => ({
             src,
             position: index + 1,
-            alt: rows.find((r) => cleanUrl(r['Image Src']) === src)?.['Image Alt Text'] || null,
+            alt:
+              rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
+                'Image Alt Text'
+              ] || null,
           }));
 
           const isPublished = mainRow['Published']?.toUpperCase() === 'TRUE';
@@ -2652,49 +2664,58 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const categoryTags = [];
           const categoryPathTitles = [];
 
-       const categoryTitles = (
-  mainRow['Category']?.split('|')
-    .map((title) => title.trim().toLowerCase())
-    .filter(Boolean)
-) || [];
+          const categoryTitles =
+            mainRow['Category']
+              ?.split('|')
+              .map((title) => title.trim().toLowerCase())
+              .filter(Boolean) || [];
 
-categoryTitles.forEach((catTitle) => {
-  const matchedCategory = catNoMap[catTitle];
-  if (matchedCategory) {
-    const path = [];
+          categoryTitles.forEach((catTitle) => {
+            const matchedCategory = catNoMap[catTitle];
+            if (matchedCategory) {
+              const path = [];
 
-    if (matchedCategory.level === 'level3') {
-      path.push(matchedCategory.title);
-      const level2 = categories.find(c => c.catNo === matchedCategory.parentCatNo);
-      if (level2) {
-        categoryTags.push(level2.catNo);
-        path.push(level2.title);
-        const level1 = categories.find(c => c.catNo === level2.parentCatNo);
-        if (level1) {
-          categoryTags.push(level1.catNo);
-          path.push(level1.title);
-        }
-      }
-    } else if (matchedCategory.level === 'level2') {
-      path.push(matchedCategory.title);
-      const level1 = categories.find(c => c.catNo === matchedCategory.parentCatNo);
-      if (level1) {
-        categoryTags.push(level1.catNo);
-        path.push(level1.title);
-      }
-    } else if (matchedCategory.level === 'level1') {
-      path.push(matchedCategory.title);
-    }
+              if (matchedCategory.level === 'level3') {
+                path.push(matchedCategory.title);
+                const level2 = categories.find(
+                  (c) => c.catNo === matchedCategory.parentCatNo
+                );
+                if (level2) {
+                  categoryTags.push(level2.catNo);
+                  path.push(level2.title);
+                  const level1 = categories.find(
+                    (c) => c.catNo === level2.parentCatNo
+                  );
+                  if (level1) {
+                    categoryTags.push(level1.catNo);
+                    path.push(level1.title);
+                  }
+                }
+              } else if (matchedCategory.level === 'level2') {
+                path.push(matchedCategory.title);
+                const level1 = categories.find(
+                  (c) => c.catNo === matchedCategory.parentCatNo
+                );
+                if (level1) {
+                  categoryTags.push(level1.catNo);
+                  path.push(level1.title);
+                }
+              } else if (matchedCategory.level === 'level1') {
+                path.push(matchedCategory.title);
+              }
 
-    categoryTags.push(matchedCategory.catNo);
-    categoryPathTitles.push(path.join(' > '));
-  }
-});
+              categoryTags.push(matchedCategory.catNo);
+              categoryPathTitles.push(path.join(' > '));
+            }
+          });
 
-
-          const csvTags = typeof mainRow['Tags'] === 'string'
-            ? mainRow['Tags'].split(',').map(t => t.trim()).filter(Boolean)
-            : [];
+          const csvTags =
+            typeof mainRow['Tags'] === 'string'
+              ? mainRow['Tags']
+                  .split(',')
+                  .map((t) => t.trim())
+                  .filter(Boolean)
+              : [];
 
           const tags = [
             ...new Set([
@@ -2838,7 +2859,9 @@ categoryTitles.forEach((catTitle) => {
                   );
                   variant.image_id = uploadedVariantImages[index].id;
                 } catch (updateError) {
-                  console.error(`Error linking variant image: ${updateError.message}`);
+                  console.error(
+                    `Error linking variant image: ${updateError.message}`
+                  );
                 }
               }
             })
@@ -2896,11 +2919,25 @@ categoryTitles.forEach((catTitle) => {
           results.push({ success: true, productId, title: product.title });
         }
 
+        const orphanedProducts = await listingModel.find({
+          $or: [
+            { userId: { $exists: false } },
+            { userId: null },
+            { userId: '' },
+            { userId: { $not: { $type: 'objectId' } } },
+          ],
+        });
+        console.log(
+          `🧹 Deleting ${orphanedProducts.length} orphaned products...`
+        );
+
         await listingModel.deleteMany({
-          $or: [{ userId: { $exists: false } }, { userId: null }],
+          _id: { $in: orphanedProducts.map((p) => p._id) },
         });
 
-        return res.status(200).json({ message: 'Products processed.', results });
+        return res
+          .status(200)
+          .json({ message: 'Products processed.', results });
       });
   } catch (error) {
     console.error('🔥 Server error:', error.message);
@@ -2911,7 +2948,6 @@ categoryTitles.forEach((catTitle) => {
     });
   }
 };
-
 
 export const updateProductWebhook = async (req, res) => {
   try {
@@ -3189,7 +3225,6 @@ export const updateInventoryQuantity = async (req, res) => {
     res.status(500).json({ message: 'Server error while updating quantity.' });
   }
 };
-
 
 export const exportProducts = async (req, res) => {
   try {
@@ -3808,7 +3843,7 @@ export const deleteAll = async (req, res) => {
 
 export const getProductForCahrts = async (req, res) => {
   try {
-    const { userId } = req.params; 
+    const { userId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: 'Invalid userId' });
@@ -3825,9 +3860,7 @@ export const getProductForCahrts = async (req, res) => {
       },
       {
         $facet: {
-          totalProducts: [
-            { $count: 'count' }
-          ],
+          totalProducts: [{ $count: 'count' }],
           activeProducts: [
             { $match: { status: 'active' } },
             { $count: 'count' },
@@ -3839,10 +3872,7 @@ export const getProductForCahrts = async (req, res) => {
           missingImages: [
             {
               $match: {
-                $or: [
-                  { images: { $exists: false } },
-                  { images: { $size: 0 } },
-                ],
+                $or: [{ images: { $exists: false } }, { images: { $size: 0 } }],
               },
             },
             { $count: 'count' },
@@ -3851,10 +3881,18 @@ export const getProductForCahrts = async (req, res) => {
       },
       {
         $project: {
-          totalCount: { $ifNull: [{ $arrayElemAt: ['$totalProducts.count', 0] }, 0] },
-          activeCount: { $ifNull: [{ $arrayElemAt: ['$activeProducts.count', 0] }, 0] },
-          inactiveCount: { $ifNull: [{ $arrayElemAt: ['$inactiveProducts.count', 0] }, 0] },
-          missingImagesCount: { $ifNull: [{ $arrayElemAt: ['$missingImages.count', 0] }, 0] },
+          totalCount: {
+            $ifNull: [{ $arrayElemAt: ['$totalProducts.count', 0] }, 0],
+          },
+          activeCount: {
+            $ifNull: [{ $arrayElemAt: ['$activeProducts.count', 0] }, 0],
+          },
+          inactiveCount: {
+            $ifNull: [{ $arrayElemAt: ['$inactiveProducts.count', 0] }, 0],
+          },
+          missingImagesCount: {
+            $ifNull: [{ $arrayElemAt: ['$missingImages.count', 0] }, 0],
+          },
         },
       },
     ]);
@@ -3882,7 +3920,6 @@ export const getProductForCahrts = async (req, res) => {
   }
 };
 
-
 export const deleteAllProducts = async (req, res) => {
   try {
     const result = await listingModel.deleteMany();
@@ -3891,7 +3928,6 @@ export const deleteAllProducts = async (req, res) => {
     }
   } catch (error) {}
 };
-
 
 export const trackProductView = async (req, res) => {
   try {
@@ -3985,7 +4021,6 @@ export const getTrackingCountForUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to get user view count' });
   }
 };
-
 
 export const addCsvfileForBulkUploader = async (req, res) => {
   const file = req.file;

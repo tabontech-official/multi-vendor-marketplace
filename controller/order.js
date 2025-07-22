@@ -764,31 +764,180 @@ export const getOrderDatafromShopify = async (req, res) => {
   }
 };
 
+// export const getAllOrdersForAdmin = async (req, res) => {
+//   try {
+//     const allOrders = await orderModel.find({});
+//     const finalOrders = [];
+//     const merchantDetailsMap = new Map();
+//     const merchantStatsMap = new Map();
+//     for (const order of allOrders) {
+//       const merchantGroups = new Map();
+
+//       for (const item of order.lineItems || []) {
+//         const variantId = item.variant_id?.toString();
+//         if (!variantId) continue;
+
+//         const product = await listingModel.findOne({
+//           'variants.id': variantId,
+//         });
+//         if (!product || !product.userId) continue;
+
+//         const merchantId = product.userId.toString();
+
+//         const matchedVariant = product.variants.find((v) => v.id === variantId);
+//         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+//           const image = product.variantImages.find(
+//             (img) => img.id === matchedVariant.image_id
+//           );
+//           if (image) {
+//             item.image = {
+//               id: image.id,
+//               src: image.src,
+//               alt: image.alt,
+//               position: image.position,
+//               width: image.width,
+//               height: image.height,
+//             };
+//           }
+//         }
+
+//         item.orderId = order.orderId;
+//         item.customer = [
+//           {
+//             first_name: order.customer?.first_name || '',
+//             last_name: order.customer?.last_name || '',
+//             email: order.customer?.email || '',
+//             phone: order.customer?.phone || '',
+//             created_at: order.customer?.created_at || '',
+//             default_address: order.customer?.default_address || {},
+//           },
+//         ];
+
+//         if (!merchantGroups.has(merchantId)) {
+//           merchantGroups.set(merchantId, []);
+//         }
+//         merchantGroups.get(merchantId).push(item);
+
+//         if (!merchantDetailsMap.has(merchantId)) {
+//           const merchant = await authModel
+//             .findById(merchantId)
+//             .select('-password');
+//           if (merchant) {
+//             merchantDetailsMap.set(merchantId, {
+//               _id: merchant._id,
+//               name: `${merchant.firstName} ${merchant.lastName}`,
+//               email: merchant.email,
+//               role: merchant.role,
+//               dispatchAddress: merchant.dispatchAddress,
+//               dispatchCountry: merchant.dispatchCountry,
+//             });
+//           }
+//         }
+
+//         if (!merchantStatsMap.has(merchantId)) {
+//           merchantStatsMap.set(merchantId, {
+//             totalOrdersCount: 0,
+//             totalOrderValue: 0,
+//             ordersSeen: new Set(),
+//           });
+//         }
+
+//         const merchantStats = merchantStatsMap.get(merchantId);
+
+//         if (!merchantStats.ordersSeen.has(order.orderId)) {
+//           merchantStats.ordersSeen.add(order.orderId);
+//           merchantStats.totalOrdersCount += 1;
+//         }
+
+//         merchantStats.totalOrderValue +=
+//           (item.price || 0) * (item.quantity || 1);
+//       }
+
+//       const merchantsArray = [];
+//       const lineItemsByMerchant = {};
+
+//       merchantGroups.forEach((items, merchantId) => {
+//         const merchantInfo = merchantDetailsMap.get(merchantId) || {
+//           id: merchantId,
+//         };
+//         const stats = merchantStatsMap.get(merchantId);
+
+//         merchantsArray.push({
+//           id: merchantId,
+//           info: merchantInfo,
+//           totalOrdersCount: stats?.totalOrdersCount || 0,
+//           totalOrderValue: stats?.totalOrderValue || 0,
+//         });
+
+//         lineItemsByMerchant[merchantId] = items;
+//       });
+
+//       finalOrders.push({
+//         serialNo: order.shopifyOrderNo,
+//         merchants: merchantsArray,
+//         lineItemsByMerchant,
+//       });
+//     }
+
+//     // if (finalOrders.length > 0) {
+//     //   return res.status(200).send({
+//     //     message: 'Orders grouped per order (not merged by merchant)',
+//     //     data: finalOrders,
+//     //   });
+//     if (finalOrders.length > 0) {
+//       // Sort so latest orders appear on top
+//       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
+
+//       return res.status(200).send({
+//         message: 'Orders grouped per order (not merged by merchant)',
+//         data: finalOrders,
+//       });
+//     } else {
+//       return res.status(404).send({
+//         message: 'No orders found across merchants',
+//       });
+//     }
+//   } catch (error) {
+//     console.error(' Error in getAllOrdersForAdmin:', error);
+//     res.status(500).send({ message: 'Internal Server Error' });
+//   }
+// };
+
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
     const allOrders = await orderModel.find({});
+    console.log("✅ Total orders fetched from DB:", allOrders.length);
+
     const finalOrders = [];
     const merchantDetailsMap = new Map();
     const merchantStatsMap = new Map();
+
     for (const order of allOrders) {
+      console.log("\n📦 Processing Order:", order.shopifyOrderNo, "Order ID:", order.orderId);
       const merchantGroups = new Map();
 
       for (const item of order.lineItems || []) {
         const variantId = item.variant_id?.toString();
-        if (!variantId) continue;
+        if (!variantId) {
+          console.log("⚠️ Skipped item with no variant_id");
+          continue;
+        }
 
-        const product = await listingModel.findOne({
-          'variants.id': variantId,
-        });
-        if (!product || !product.userId) continue;
+        const product = await listingModel.findOne({ 'variants.id': variantId });
+        if (!product) {
+          console.log("⚠️ Product not found for variant ID:", variantId);
+          continue;
+        }
+        if (!product.userId) {
+          console.log("⚠️ Product found but has no userId");
+          continue;
+        }
 
         const merchantId = product.userId.toString();
-
         const matchedVariant = product.variants.find((v) => v.id === variantId);
+
         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-          const image = product.variantImages.find(
-            (img) => img.id === matchedVariant.image_id
-          );
+          const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
           if (image) {
             item.image = {
               id: image.id,
@@ -798,6 +947,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
               width: image.width,
               height: image.height,
             };
+            console.log("🖼️ Matched variant image set for item:", item.title || item.name);
           }
         }
 
@@ -819,9 +969,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
         merchantGroups.get(merchantId).push(item);
 
         if (!merchantDetailsMap.has(merchantId)) {
-          const merchant = await authModel
-            .findById(merchantId)
-            .select('-password');
+          const merchant = await authModel.findById(merchantId).select('-password');
           if (merchant) {
             merchantDetailsMap.set(merchantId, {
               _id: merchant._id,
@@ -831,6 +979,9 @@ export const getAllOrdersForAdmin = async (req, res) => {
               dispatchAddress: merchant.dispatchAddress,
               dispatchCountry: merchant.dispatchCountry,
             });
+            console.log("👤 Merchant details cached for ID:", merchantId);
+          } else {
+            console.log("⚠️ Merchant not found for ID:", merchantId);
           }
         }
 
@@ -843,23 +994,22 @@ export const getAllOrdersForAdmin = async (req, res) => {
         }
 
         const merchantStats = merchantStatsMap.get(merchantId);
-
         if (!merchantStats.ordersSeen.has(order.orderId)) {
           merchantStats.ordersSeen.add(order.orderId);
           merchantStats.totalOrdersCount += 1;
         }
 
-        merchantStats.totalOrderValue +=
-          (item.price || 0) * (item.quantity || 1);
+        const amount = (item.price || 0) * (item.quantity || 1);
+        merchantStats.totalOrderValue += amount;
+
+        console.log(`💰 Added amount ${amount} to merchant ${merchantId} | Product: ${item.title || item.name}`);
       }
 
       const merchantsArray = [];
       const lineItemsByMerchant = {};
 
       merchantGroups.forEach((items, merchantId) => {
-        const merchantInfo = merchantDetailsMap.get(merchantId) || {
-          id: merchantId,
-        };
+        const merchantInfo = merchantDetailsMap.get(merchantId) || { id: merchantId };
         const stats = merchantStatsMap.get(merchantId);
 
         merchantsArray.push({
@@ -877,31 +1027,28 @@ export const getAllOrdersForAdmin = async (req, res) => {
         merchants: merchantsArray,
         lineItemsByMerchant,
       });
+
+      console.log("✅ Order processed:", order.shopifyOrderNo, "Merchants involved:", merchantsArray.length);
     }
 
-    // if (finalOrders.length > 0) {
-    //   return res.status(200).send({
-    //     message: 'Orders grouped per order (not merged by merchant)',
-    //     data: finalOrders,
-    //   });
     if (finalOrders.length > 0) {
-      // Sort so latest orders appear on top
       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
-
+      console.log("🚀 Returning", finalOrders.length, "orders to client.");
       return res.status(200).send({
         message: 'Orders grouped per order (not merged by merchant)',
         data: finalOrders,
       });
     } else {
-      return res.status(404).send({
-        message: 'No orders found across merchants',
-      });
+      console.log("❌ No final orders found.");
+      return res.status(404).send({ message: 'No orders found across merchants' });
     }
   } catch (error) {
-    console.error(' Error in getAllOrdersForAdmin:', error);
-    res.status(500).send({ message: 'Internal Server Error' });
+    console.error("❌ Error in getAllOrdersForAdmin:", error);
+    return res.status(500).send({ message: 'Internal Server Error' });
   }
 };
+
+
 
 export const addPaypalAccount = async (req, res) => {
   try {

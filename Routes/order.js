@@ -28,34 +28,35 @@ import {
   getFinanceSummaryForUser,
 } from '../controller/order.js';
 import express from 'express';
+import { verifyToken } from '../middleware/verifyToken.js';
 const orderRouter = express.Router();
 orderRouter.post('/addOrder', createOrder);
 orderRouter.post('/fullFillOrder', fulfillOrder);
 
-orderRouter.get('/order/:userId', getOrderById);
+orderRouter.get('/order/:userId',verifyToken, getOrderById);
 // orderRouter.get('/order', getOrderById);
 orderRouter.get('/recurringFinance', getFinanceSummary);
 orderRouter.get('/getOrderByOrderId/:id', getOrderByOrderId);
 orderRouter.get('/getOrderFromShopify/:id/:userId', getOrderDatafromShopify);
-orderRouter.get('/getAllOrderForMerchants', getAllOrdersForAdmin);
+orderRouter.get('/getAllOrderForMerchants',verifyToken, getAllOrdersForAdmin);
 orderRouter.post('/addPaypal', addPaypalAccount);
 orderRouter.post('/addPaypalAccountNo', addPaypalAccountNo);
-orderRouter.post('/addPayOutDates', addPayouts);
-orderRouter.get('/getPayoutsDates', getPayoutDate);
-orderRouter.get('/getPayout', getPayout);
-orderRouter.get('/getPayoutOrders', getPayoutOrders);
+orderRouter.post('/addPayOutDates',verifyToken, addPayouts);
+orderRouter.get('/getPayoutsDates', verifyToken,getPayoutDate);
+orderRouter.get('/getPayout',verifyToken, getPayout);
+orderRouter.get('/getPayoutOrders',verifyToken, getPayoutOrders);
 orderRouter.post('/updatetrackingShopify', updateTrackingInShopify);
-orderRouter.post('/cancelShopifyOrder', cancelShopifyOrder);
-orderRouter.get('/getPayoutOrders', getPayoutOrders);
+orderRouter.post('/cancelShopifyOrder',verifyToken, cancelShopifyOrder);
+orderRouter.get('/getPayoutOrders',verifyToken, getPayoutOrders);
 orderRouter.get("/lineItemCount/:shopifyOrderId",getLineItemCountByShopifyOrderId)
-orderRouter.get("/getCancellationRequests",getAllRequestsGroupedByUser)
+orderRouter.get("/getCancellationRequests",verifyToken,getAllRequestsGroupedByUser)
 orderRouter.get("/getCancellationRequestsByUserId/:id",getRequestById)
-orderRouter.post('/addReferenceNumber', addReferenceToOrders);
-orderRouter.get("/getPayoutByUserId",getPayoutByUserId)
-orderRouter.get('/getPayoutForAllOrders', getPayoutForAllOrders);
-orderRouter.get('/exportAllOrder', exportOrders);
+orderRouter.post('/addReferenceNumber',verifyToken, addReferenceToOrders);
+orderRouter.get("/getPayoutByUserId",verifyToken,getPayoutByUserId)
+orderRouter.get('/getPayoutForAllOrders',verifyToken, getPayoutForAllOrders);
+orderRouter.get('/exportAllOrder',verifyToken, exportOrders);
 orderRouter.get('/exportOrderByUserId', exportProductsForUser);
-orderRouter.get('/getPendingOrder', getPendingOrder);
+orderRouter.get('/getPendingOrder',verifyToken, getPendingOrder);
 orderRouter.get('/getSalesContribution', getSalesContribution);
 orderRouter.get('/getFinanceSummaryForUser/:userId', getFinanceSummaryForUser);
 
