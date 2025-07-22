@@ -18,6 +18,6 @@ categoryRouter.get('/getCategory',verifyToken, getCategory);
 categoryRouter.get('/getCollection/:userId',  getCollectionData);
 categoryRouter.get('/category/:categoryId', verifyToken, getSingleCategory);
 categoryRouter.get('/getCsvForCategories', exportCsvForCategories);
-categoryRouter.delete('/deleteCollection', verifyToken, deleteCollection);
+categoryRouter.delete('/deleteCategory', verifyToken, deleteCollection);
 categoryRouter.delete('/', delet);
 export default categoryRouter;

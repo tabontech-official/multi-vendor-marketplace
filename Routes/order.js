@@ -38,22 +38,22 @@ orderRouter.get('/order/:userId',verifyToken, getOrderById);
 orderRouter.get('/recurringFinance', getFinanceSummary);
 orderRouter.get('/getOrderByOrderId/:id', getOrderByOrderId);
 orderRouter.get('/getOrderFromShopify/:id/:userId', getOrderDatafromShopify);
-orderRouter.get('/getAllOrderForMerchants',verifyToken, getAllOrdersForAdmin);
+orderRouter.get('/getAllOrder',verifyToken, getAllOrdersForAdmin);
 orderRouter.post('/addPaypal', addPaypalAccount);
 orderRouter.post('/addPaypalAccountNo', addPaypalAccountNo);
 orderRouter.post('/addPayOutDates',verifyToken, addPayouts);
 orderRouter.get('/getPayoutsDates', verifyToken,getPayoutDate);
 orderRouter.get('/getPayout',verifyToken, getPayout);
-orderRouter.get('/getPayoutOrders',verifyToken, getPayoutOrders);
+orderRouter.get('/getPayoutByQuery',verifyToken, getPayoutOrders);
 orderRouter.post('/updatetrackingShopify', updateTrackingInShopify);
-orderRouter.post('/cancelShopifyOrder',verifyToken, cancelShopifyOrder);
-orderRouter.get('/getPayoutOrders',verifyToken, getPayoutOrders);
+orderRouter.post('/cancelOrder',verifyToken, cancelShopifyOrder);
+orderRouter.get('/getPayoutByQuery',verifyToken, getPayoutOrders);
 orderRouter.get("/lineItemCount/:shopifyOrderId",getLineItemCountByShopifyOrderId)
 orderRouter.get("/getCancellationRequests",verifyToken,getAllRequestsGroupedByUser)
 orderRouter.get("/getCancellationRequestsByUserId/:id",getRequestById)
 orderRouter.post('/addReferenceNumber',verifyToken, addReferenceToOrders);
 orderRouter.get("/getPayoutByUserId",verifyToken,getPayoutByUserId)
-orderRouter.get('/getPayoutForAllOrders',verifyToken, getPayoutForAllOrders);
+orderRouter.get('/getAllPayouts',verifyToken, getPayoutForAllOrders);
 orderRouter.get('/exportAllOrder',verifyToken, exportOrders);
 orderRouter.get('/exportOrderByUserId', exportProductsForUser);
 orderRouter.get('/getPendingOrder',verifyToken, getPendingOrder);

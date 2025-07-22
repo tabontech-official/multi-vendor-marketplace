@@ -44,14 +44,14 @@ import express from 'express';
 import { Csvuplaods } from '../middleware/multer.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 const productRouter = express.Router();
-productRouter.post('/addEquipment', verifyToken, cpUpload, addUsedEquipments);
+productRouter.post('/createProduct', verifyToken, cpUpload, addUsedEquipments);
 productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/holiday', verifyToken, updateAllProductsStatus);
 productRouter.post('/webhook/product/update', verifyToken, productUpdate);
 productRouter.get('/getProduct/:userId', verifyToken, getProduct);
 productRouter.get('/getAllVariants/:userId', verifyToken, getAllVariants);
 
-productRouter.get('/getAllData', verifyToken, getAllProductData);
+productRouter.get('/getAllProducts', verifyToken, getAllProductData);
 productRouter.put('/publishedProduct/:productId', verifyToken, publishProduct);
 productRouter.put('/unpublished/:productId', verifyToken, unpublishProduct);
 productRouter.patch(
@@ -68,7 +68,7 @@ productRouter.get('/getAllDataForPromotion', getAllProductPromotionStatus);
 productRouter.get('/getPromotionProduct/:userId', getPromotionProduct);
 productRouter.delete('/deleteProduct/:id', verifyToken, deleteProduct);
 productRouter.get(
-  '/getSingleVariant/:productId/variants/:variantId',
+  '/getVariant/:productId/variants/:variantId',
   getSingleVariantData,
   verifyToken
 );
@@ -83,7 +83,7 @@ productRouter.post('/addImageGallery', verifyToken, addImagesGallery);
 productRouter.get('/getImageGallery/:userId/:productId', getImageGallery);
 productRouter.delete('/', deleteImageGallery);
 productRouter.post(
-  '/upload-csv-body/:userId',
+  '/upload-product-csv/:userId',
   Csvuplaods,
   verifyToken,
 
