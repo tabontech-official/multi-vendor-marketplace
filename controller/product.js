@@ -1082,10 +1082,17 @@ export const getAllProductData = async (req, res) => {
     const products = await listingModel.aggregate([
       { $match: matchStage },
       {
-        $addFields: {
-          userId: { $toObjectId: '$userId' },
-        },
-      },
+  $addFields: {
+    userId: {
+      $cond: [
+        { $eq: [{ $type: '$userId' }, 'string'] },
+        { $convert: { input: '$userId', to: 'objectId', onError: null, onNull: null } },
+        '$userId'
+      ]
+    }
+  }
+},
+
       {
         $lookup: {
           from: 'users',
@@ -3044,21 +3051,37 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           results.push({ success: true, productId, title: product.title });
         }
 
-        const orphanedProducts = await listingModel.find({
-          $or: [
-            { userId: { $exists: false } },
-            { userId: null },
-            { userId: '' },
-            { userId: { $not: { $type: 'objectId' } } },
-          ],
-        });
-        console.log(
-          `🧹 Deleting ${orphanedProducts.length} orphaned products...`
-        );
+const orphanedProducts = await listingModel.aggregate([
+  {
+    $match: {
+      $expr: {
+        $or: [
+          { $eq: [{ $type: "$userId" }, "missing"] },
+          { $eq: ["$userId", null] },
+          {
+            $and: [
+              { $eq: [{ $type: "$userId" }, "string"] },
+              { $ne: [{ $strLenBytes: "$userId" }, 24] }
+            ]
+          },
+          { $not: { $eq: [{ $type: "$userId" }, "objectId"] } }
+        ]
+      }
+    }
+  }
+]);
 
-        await listingModel.deleteMany({
-          _id: { $in: orphanedProducts.map((p) => p._id) },
-        });
+console.log(`🗑️ Found ${orphanedProducts.length} orphaned products to delete`);
+
+const idsToDelete = orphanedProducts.map((item) => item._id);
+
+if (idsToDelete.length > 0) {
+  const deleteResult = await listingModel.deleteMany({ _id: { $in: idsToDelete } });
+  console.log(`✅ Deleted ${deleteResult.deletedCount} orphaned products`);
+} else {
+  console.log("✅ No orphaned products found for deletion");
+}
+
 
         return res
           .status(200)
@@ -3072,8 +3095,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       error: error?.message || 'Unknown error',
     });
   }
-};
-
+}
 export const updateProductWebhook = async (req, res) => {
   try {
     const productData = req.body;

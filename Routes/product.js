@@ -85,7 +85,7 @@ productRouter.delete('/', deleteImageGallery);
 productRouter.post(
   '/upload-product-csv/:userId',
   Csvuplaods,
-  verifyToken,
+  // verifyToken,
 
   addCsvfileForProductFromBody
 );

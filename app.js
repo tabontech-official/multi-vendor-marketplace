@@ -16,12 +16,15 @@ import apiCredentialsRouter from './Routes/apiCredentials.js';
 import notificationRouter from './Routes/notification.js';
 import { financeScheduler } from './controller/financeDateSheduler.js';
 import categoryRouter from './Routes/category.js';
+// import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
 setupSwagger(app);
 // Initialize MongoDB connection
 Connect();
 productSubscriptionExpiration();
+// deleteOrphanedProducts();
+
 financeScheduler.start();
 // financeCron()
 app.use(bodyParser.json()); // To handle JSON request bodies
