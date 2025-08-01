@@ -37,6 +37,7 @@ import {
   getTrackingCountForUser,
   fetchProductCountForUser,
   addCsvfileForBulkUploader,
+  getAllProducts,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -80,12 +81,12 @@ productRouter.put(
 productRouter.get('/getSingleProductForVariants/:productId', getsingleProduct);
 productRouter.get('/fetchvarinatimages/:id', fetchVariantsWithImages);
 productRouter.post('/addImageGallery', verifyToken, addImagesGallery);
-productRouter.get('/getImageGallery/:userId/:productId', getImageGallery);
+productRouter.get('/getImageGallery/:productId',verifyToken ,getImageGallery);
 productRouter.delete('/', deleteImageGallery);
 productRouter.post(
-  '/upload-product-csv/:userId',
+  '/upload-product-csv',
   Csvuplaods,
-  // verifyToken,
+  verifyToken,
 
   addCsvfileForProductFromBody
 );
@@ -122,4 +123,19 @@ productRouter.post(
 
   addCsvfileForBulkUploader
 );
+
+
+
+
+//...............thirdPartRoutes.............//
+productRouter.get('/fetchAllProducts',verifyToken,getAllProducts)
+
+
+
+
+
+
+
+
+
 export default productRouter;

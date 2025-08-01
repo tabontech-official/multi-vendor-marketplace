@@ -279,57 +279,157 @@ export const getFinanceSummary = async (req, res) => {
   }
 };
 
+// export const getFinanceSummaryForUser = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+//     console.log('Received userId:', userId); // Log the received userId
+
+//     // Fetch all orders
+//     const allOrders = await orderModel.find();
+//     console.log('All Orders:', allOrders.length); // Log the number of orders fetched
+
+//     let totalIncome = 0;
+//     let netProfit = 0;
+
+//     // Loop through all orders
+//     for (const order of allOrders) {
+//       console.log('Processing Order ID:', order._id); // Log each order ID
+
+//       // Loop through each line item in the order
+//       for (const item of order.lineItems) {
+//         const price = parseFloat(item.price || '0');
+//         const qty = parseFloat(item.quantity || '1');
+//         console.log('Item Price:', price, 'Quantity:', qty); // Log item price and quantity
+//         console.log('Line Item Variant ID:', item.variant_id); // Log the variant_id of each item
+
+//         // Fetch product based on variant_id (using the correct path 'variants.id')
+//         const product = await listingModel.findOne({
+//           'variants.id': item.variant_id,
+//         });
+//         console.log(
+//           'Found Product:',
+//           product ? product._id : 'No product found'
+//         ); // Log product found
+
+//         if (product) {
+//           // Check if product belongs to the current user
+//           if (product.userId.toString() === userId) {
+//             totalIncome += price * qty;
+//             netProfit += price * qty - parseFloat(item.cost || '0') * qty;
+//             console.log(
+//               `Match found for product ${product._id}. Total income and profit updated.`
+//             );
+//           } else {
+//             console.log(`Product ${product._id} does not match the userId`);
+//           }
+//         }
+//       }
+//     }
+
+//     console.log('Total Income:', totalIncome);
+//     console.log('Net Profit:', netProfit);
+
+//     // Calculate Monthly Recurring Revenue (MRR)
+//     const mrr = allOrders
+//       .filter((order) => {
+//         const item = order.lineItems[0];
+//         return (
+//           item.name?.toLowerCase()?.includes('subscription') ||
+//           item.title?.toLowerCase()?.includes('subscription') ||
+//           item.vendor?.toLowerCase()?.includes('recurring')
+//         );
+//       })
+//       .reduce(
+//         (sum, order) =>
+//           sum +
+//           order.lineItems.reduce(
+//             (total, item) => total + parseFloat(item.price || '0'),
+//             0
+//           ),
+//         0
+//       );
+
+//     console.log('Monthly Recurring Revenue (MRR):', mrr);
+
+//     res.status(200).json({
+//       totalIncome: totalIncome.toFixed(2),
+//       netProfit: netProfit.toFixed(2),
+//       mrr: mrr.toFixed(2),
+//     });
+//   } catch (error) {
+//     console.error('Finance summary error for user:', error);
+//     res
+//       .status(500)
+//       .json({ message: 'Error calculating finance summary for user' });
+//   }
+// };
+
+
 export const getFinanceSummaryForUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log('Received userId:', userId); // Log the received userId
-
-    // Fetch all orders
     const allOrders = await orderModel.find();
-    console.log('All Orders:', allOrders.length); // Log the number of orders fetched
 
     let totalIncome = 0;
     let netProfit = 0;
 
-    // Loop through all orders
-    for (const order of allOrders) {
-      console.log('Processing Order ID:', order._id); // Log each order ID
+    let totalOrders = 0;
+    let fulfilledOrdersCount = 0;
+    let unfulfilledOrdersCount = 0;
+    let paidIncome = 0;
+    let unpaidIncome = 0;
 
-      // Loop through each line item in the order
-      for (const item of order.lineItems) {
+    const getOrderIncome = (order) => {
+      return order.lineItems.reduce((total, item) => {
         const price = parseFloat(item.price || '0');
         const qty = parseFloat(item.quantity || '1');
-        console.log('Item Price:', price, 'Quantity:', qty); // Log item price and quantity
-        console.log('Line Item Variant ID:', item.variant_id); // Log the variant_id of each item
+        return total + price * qty;
+      }, 0);
+    };
 
-        // Fetch product based on variant_id (using the correct path 'variants.id')
+    for (const order of allOrders) {
+      let userLineItems = [];
+      let orderIncome = 0;
+      let orderCost = 0;
+
+      for (const item of order.lineItems) {
+        const variantId = item.variant_id;
+
         const product = await listingModel.findOne({
-          'variants.id': item.variant_id,
+          'variants.id': variantId,
         });
-        console.log(
-          'Found Product:',
-          product ? product._id : 'No product found'
-        ); // Log product found
 
-        if (product) {
-          // Check if product belongs to the current user
-          if (product.userId.toString() === userId) {
-            totalIncome += price * qty;
-            netProfit += price * qty - parseFloat(item.cost || '0') * qty;
-            console.log(
-              `Match found for product ${product._id}. Total income and profit updated.`
-            );
-          } else {
-            console.log(`Product ${product._id} does not match the userId`);
-          }
+        if (product && product.userId.toString() === userId) {
+          userLineItems.push(item);
+
+          const price = parseFloat(item.price || '0');
+          const qty = parseFloat(item.quantity || '1');
+          const cost = parseFloat(item.cost || '0');
+
+          orderIncome += price * qty;
+          orderCost += cost * qty;
+        }
+      }
+
+      if (userLineItems.length > 0) {
+        totalOrders += 1;
+        totalIncome += orderIncome;
+        netProfit += orderIncome - orderCost;
+
+        const allFulfilled = userLineItems.every(
+          (item) => item.fulfillment_status === 'fulfilled'
+        );
+
+        if (allFulfilled) {
+          fulfilledOrdersCount += 1;
+          paidIncome += orderIncome;
+        } else {
+          unfulfilledOrdersCount += 1;
+          unpaidIncome += orderIncome;
         }
       }
     }
 
-    console.log('Total Income:', totalIncome);
-    console.log('Net Profit:', netProfit);
-
-    // Calculate Monthly Recurring Revenue (MRR)
     const mrr = allOrders
       .filter((order) => {
         const item = order.lineItems[0];
@@ -339,22 +439,31 @@ export const getFinanceSummaryForUser = async (req, res) => {
           item.vendor?.toLowerCase()?.includes('recurring')
         );
       })
-      .reduce(
-        (sum, order) =>
-          sum +
-          order.lineItems.reduce(
-            (total, item) => total + parseFloat(item.price || '0'),
-            0
-          ),
-        0
-      );
+      .reduce((sum, order) => {
+        let userIncome = 0;
+        for (const item of order.lineItems) {
+          const product =  listingModel.findOne({
+            'variants.id': item.variant_id,
+          });
 
-    console.log('Monthly Recurring Revenue (MRR):', mrr);
+          if (product && product.userId.toString() === userId) {
+            const price = parseFloat(item.price || '0');
+            const qty = parseFloat(item.quantity || '1');
+            userIncome += price * qty;
+          }
+        }
+        return sum + userIncome;
+      }, 0);
 
     res.status(200).json({
       totalIncome: totalIncome.toFixed(2),
       netProfit: netProfit.toFixed(2),
       mrr: mrr.toFixed(2),
+      totalOrdersInDb:totalOrders,
+      paidIncome: paidIncome.toFixed(2),
+      unpaidIncome: unpaidIncome.toFixed(2),
+      fulfilledOrders: fulfilledOrdersCount,
+      unfulfilledOrders: unfulfilledOrdersCount,
     });
   } catch (error) {
     console.error('Finance summary error for user:', error);
@@ -364,10 +473,10 @@ export const getFinanceSummaryForUser = async (req, res) => {
   }
 };
 
+
 export const getOrderById = async (req, res) => {
   try {
-    const userId = req.params.userId;
-
+    const userId = req.userId.toString(); 
     if (!userId) {
       return res.status(400).send({ message: 'User ID is required' });
     }

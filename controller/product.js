@@ -63,6 +63,7 @@ export const addUsedEquipments = async (req, res) => {
   let productId;
   try {
     console.log(req.body);
+    const userId=req.userId
     const {
       title,
       description = '',
@@ -79,7 +80,7 @@ export const addUsedEquipments = async (req, res) => {
       weight = 0,
       weight_unit = 'kg',
       status = 'draft',
-      userId = '',
+      // userId = '',
       productType = '',
       vendor = '',
       keyWord = '',
@@ -439,7 +440,7 @@ export const updateProductData = async (req, res) => {
       return res
         .status(400)
         .json({ error: 'Product ID is required for updating.' });
-
+const userId=req.userId
     const {
       title,
       description,
@@ -455,7 +456,6 @@ export const updateProductData = async (req, res) => {
       weight,
       weight_unit,
       status,
-      userId,
       productType,
       vendor,
       keyWord,
@@ -2209,8 +2209,8 @@ export const fetchVariantsWithImages = async (req, res) => {
 };
 
 export const addImagesGallery = async (req, res) => {
-  const { userId, images: imageUrls } = req.body;
-
+  const {  images: imageUrls } = req.body;
+const userId=req.userId
   if (!Array.isArray(imageUrls)) {
     return res
       .status(400)
@@ -2304,13 +2304,14 @@ export const addImagesGallery = async (req, res) => {
 // };
 
 export const getImageGallery = async (req, res) => {
-  const { userId, productId } = req.params;
+  const { productId } = req.params;
+  const userId = req.userId; 
 
   try {
     const result = await imageGalleryModel.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(userId),
+          userId: userId,
         },
       },
       {
@@ -2351,6 +2352,8 @@ export const getImageGallery = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
 
 export const deleteImageGallery = async (req, res) => {
   try {
@@ -2739,13 +2742,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
-  const userId = req.params;
+const userId = req.userId; // Secure userId from verifyToken
 
   if (!file || !file.buffer) {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
 
-  if (!userId.userId || !mongoose.Types.ObjectId.isValid(userId.userId)) {
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ error: 'Invalid or missing userId.' });
   }
 
@@ -2909,7 +2912,7 @@ if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
               ...csvTags,
               ...categoryTags,
               ...categoryPathTitles,
-              `user_${userId.userId}`,
+              `user_${userId}`,
               `vendor_${mainRow['Vendor'] || ''}`,
             ])];
 
@@ -3068,7 +3071,7 @@ if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
                 images: product.images,
                 variants: shopifyVariants,
                 options: product.options,
-                userId: userId.userId,
+                userId: userId,
                 variantImages: uploadedVariantImages,
                 inventory: inventory,
               },
@@ -3076,7 +3079,7 @@ if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
             );
 
             await new imageGalleryModel({
-              userId: userId.userId,
+              userId: userId,
               images: product.images.map((img) => ({
                 id: img.id?.toString(),
                 product_id: img.product_id?.toString(),
@@ -3142,7 +3145,6 @@ if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
     });
   }
 };
-
 
 
 export const updateProductWebhook = async (req, res) => {
@@ -4460,3 +4462,105 @@ export const addCsvfileForBulkUploader = async (req, res) => {
   }
 };
 
+
+
+
+
+//// thirdParty apis..............///////////
+
+export const getAllProducts = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const userId = req.userId; // Injected by verifyToken middleware
+
+  try {
+    const matchStage = {
+      userId: userId, // Filter only that user's products
+    };
+
+    const products = await listingModel.aggregate([
+      { $match: matchStage },
+      {
+        $addFields: {
+          userId: {
+            $cond: [
+              { $eq: [{ $type: '$userId' }, 'string'] },
+              {
+                $convert: {
+                  input: '$userId',
+                  to: 'objectId',
+                  onError: null,
+                  onNull: null,
+                },
+              },
+              '$userId',
+            ],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      { $sort: { created_at: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 1,
+          id: 1,
+          title: 1,
+          body_html: 1,
+          vendor: 1,
+          product_type: 1,
+          created_at: 1,
+          tags: 1,
+          variants: 1,
+          options: 1,
+          images: 1,
+          variantImages: 1,
+          inventory: 1,
+          shipping: 1,
+          status: 1,
+          userId: 1,
+          oldPrice: 1,
+          shopifyId: 1,
+          username: {
+            $concat: [
+              { $ifNull: ['$user.firstName', ''] },
+              ' ',
+              { $ifNull: ['$user.lastName', ''] },
+            ],
+          },
+          email: '$user.email',
+        },
+      },
+    ]);
+
+    const totalProducts = await listingModel.countDocuments(matchStage);
+
+    if (products.length > 0) {
+      res.status(200).send({
+        products,
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+      });
+    } else {
+      res.status(400).send('No products found');
+    }
+  } catch (error) {
+    console.error('Aggregation error:', error);
+    res.status(500).send({ error: error.message });
+  }
+};

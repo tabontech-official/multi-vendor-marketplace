@@ -33,7 +33,7 @@ const orderRouter = express.Router();
 orderRouter.post('/addOrder', createOrder);
 orderRouter.post('/fullFillOrder', fulfillOrder);
 
-orderRouter.get('/order/:userId',verifyToken, getOrderById);
+orderRouter.get('/order',verifyToken, getOrderById);
 // orderRouter.get('/order', getOrderById);
 orderRouter.get('/recurringFinance', getFinanceSummary);
 orderRouter.get('/getOrderByOrderId/:id', getOrderByOrderId);

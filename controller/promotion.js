@@ -8,6 +8,9 @@ import moment from 'moment';
 
 export const addPromotion = async (req, res) => {
   try {
+    const userId=req.userId
+    console.log(' userId:', userId);
+
     const {
       promoName,
       startDate,
@@ -15,21 +18,18 @@ export const addPromotion = async (req, res) => {
       productSku,
       promoPrice,
       status,
-      userId,
     } = req.body;
 
     const product = await listingModel.findOne({ 'variants.sku': productSku });
 
     if (!product) {
-      return res
-        .status(404)
-        .json({ message: 'Product with this SKU not found.' });
+      return res.status(404).json({ message: 'Product with this SKU not found.' });
     }
 
     const variant = product.variants.find((v) => v.sku === productSku);
 
-    const userRole = await authModel.findById(userId);
-    const createdRole = userRole.role;
+    const user = await authModel.findById(userId);
+    const createdRole = user?.role || 'unknown';
 
     const newPromotion = new PromoModel({
       promoName,
@@ -41,23 +41,26 @@ export const addPromotion = async (req, res) => {
       productName: product.title || '',
       currentStock: variant?.inventory_quantity?.toString() || '0',
       currentPrice: variant.price,
-      userId,
+      userId, // ✅ now casted properly
       createdRole,
     });
 
     await newPromotion.save();
+    console.log('✅ Saved promo:', newPromotion); // 🔍 Check output
 
     product.promoPrice = promoPrice;
     await product.save();
 
-    res
-      .status(201)
-      .json({ message: 'Promotion added and product updated successfully.' });
+    res.status(201).json({
+      message: 'Promotion added and product updated successfully.',
+      promoId: newPromotion._id.toString(),
+    });
   } catch (error) {
-    console.error('Error in addPromotion:', error);
+    console.error('❌ Error in addPromotion:', error.message);
     res.status(500).json({ message: 'Server error while adding promotion.' });
   }
 };
+
 
 export const getAllPromotions = async (req, res) => {
   try {
@@ -425,5 +428,32 @@ export const getPromotionCountForSpecificUser = async (req, res) => {
   } catch (error) {
     console.error('Error fetching promotions data: ', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+export const deleteAll=async(req,res)=>{
+  try {
+    await PromoModel.deleteMany()
+    res.send('success')
+  } catch (error) {
+    
+  }
+}
+
+export const getAllPromotionsbyUserId = async (req, res) => {
+  try {
+    const userId = req.userId.toString(); 
+
+    const result = await PromoModel.findOne({ userId });
+
+    if (!result) {
+      return res.status(404).json({ message: 'No promotions found for this user.' });
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(' Error fetching promotions:', error.message);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
