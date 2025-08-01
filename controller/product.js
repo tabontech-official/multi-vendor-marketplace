@@ -2361,6 +2361,7 @@ export const deleteImageGallery = async (req, res) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
 //   const userId = req.params;
@@ -2380,9 +2381,16 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //     }
 
 //     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+
 //     const allRows = [];
 //     const stream = Readable.from(file.buffer);
 //     const cleanUrl = (url) => url?.split('?')[0];
+
+//     const categories = await categoryModel.find();
+//     const catNoMap = {};
+//     categories.forEach((cat) => {
+//       catNoMap[cat.title.trim().toLowerCase()] = cat;
+//     });
 
 //     stream
 //       .pipe(csv())
@@ -2405,142 +2413,168 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //           const rows = groupedProducts[handle];
 //           const mainRow = rows[0];
 
-//           const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
-//             .map((opt) => mainRow[opt])
-//             .filter(Boolean);
+//           try {
+//             const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
+//               .map((opt) => mainRow[opt])
+//               .filter(Boolean);
 
-//           const optionValues = [[], [], []];
+//             const optionValues = [[], [], []];
 
-//           const variants = rows.map((row) => {
-//             if (row['Option1 Value'])
-//               optionValues[0].push(row['Option1 Value']);
-//             if (row['Option2 Value'])
-//               optionValues[1].push(row['Option2 Value']);
-//             if (row['Option3 Value'])
-//               optionValues[2].push(row['Option3 Value']);
+//             const variants = rows.map((row) => {
+//               if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
+//               if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
+//               if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
 
-//             return {
-//               sku: row['Variant SKU'] || '',
-//               price: row['Variant Price'] || '0.00',
-//               compare_at_price: row['Variant Compare At Price'] || null,
-//               inventory_management:
-//                 row['Variant Inventory Tracker'] === 'shopify'
-//                   ? 'shopify'
-//                   : null,
-//               inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
-//               fulfillment_service: 'manual',
-//               requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
-//               taxable: row['Variant Taxable'] === 'TRUE',
-//               barcode: row['Variant Barcode'] || '',
-//               weight: parseFloat(row['Variant Grams']) || 0,
-//               weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
-//                 row['Variant Weight Unit']
-//               )
-//                 ? row['Variant Weight Unit']
-//                 : 'g',
-//               option1: row['Option1 Value'] || null,
-//               option2: row['Option2 Value'] || null,
-//               option3: row['Option3 Value'] || null,
-//               variant_image: cleanUrl(row['Variant Image']) || null,
-//             };
-//           });
+//               return {
+//                 sku: row['Variant SKU'] || '',
+//                 price: row['Variant Price'] || '0.00',
+//                 compare_at_price: row['Variant Compare At Price'] || null,
+//                 inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
+//                 inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
+//                 fulfillment_service: 'manual',
+//                 requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
+//                 taxable: row['Variant Taxable'] === 'TRUE',
+//                 barcode: row['Variant Barcode'] || '',
+//                 weight: parseFloat(row['Variant Grams']) || 0,
+//                 weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
+//                 option1: row['Option1 Value'] || null,
+//                 option2: row['Option2 Value'] || null,
+//                 option3: row['Option3 Value'] || null,
+//                 variant_image: cleanUrl(row['Variant Image']) || null,
+//               };
+//             });
 
-//           const uniqueOptions = options
-//             .map((name, idx) => ({
+//             const uniqueOptions = options.map((name, idx) => ({
 //               name,
 //               values: [...new Set(optionValues[idx])],
-//             }))
-//             .filter((opt) => opt.name);
+//             })).filter((opt) => opt.name);
 
-//           const images = [
-//             ...new Set(
-//               rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
-//             ),
-//           ].map((src, index) => ({
-//             src,
-//             position: index + 1,
-//             alt:
-//               rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
-//                 'Image Alt Text'
-//               ] || null,
-//           }));
+//             const images = [...new Set(rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean))].map((src, index) => ({
+//               src,
+//               position: index + 1,
+//               alt: rows.find((r) => cleanUrl(r['Image Src']) === src)?.['Image Alt Text'] || null,
+//             }));
 
-//           const isPublished = mainRow['Published']?.toUpperCase() === 'TRUE';
+//             const isPublished = mainRow['Published']?.toUpperCase() === 'TRUE';
 
-//           const productPayload = {
-//             title: mainRow['Title'],
-//             body_html: mainRow['Body (HTML)'] || '',
-//             vendor: mainRow['Vendor'] || '',
-//             product_type: mainRow['Type'] || '',
-//             status: isPublished ? 'active' : 'draft',
-//             published_at: isPublished ? new Date().toISOString() : null,
-//             tags: mainRow['Tags']?.split(',').map((tag) => tag.trim()) || [],
-//             options: uniqueOptions,
-//             images,
-//             variants: variants.map((v) => ({
-//               sku: v.sku,
-//               price: v.price,
-//               compare_at_price: v.compare_at_price,
-//               inventory_management: v.inventory_management,
-//               inventory_quantity: v.inventory_quantity,
-//               fulfillment_service: v.fulfillment_service,
-//               requires_shipping: v.requires_shipping,
-//               taxable: v.taxable,
-//               barcode: v.barcode,
-//               weight: v.weight,
-//               weight_unit: v.weight_unit,
-//               option1: v.option1,
-//               option2: v.option2,
-//               option3: v.option3,
-//             })),
-//           };
+//             const categoryTags = [];
+//             const categoryPathTitles = [];
 
-//           await delay(2000);
+//             const categoryTitles = mainRow['Category']?.split('|').map((title) => title.trim().toLowerCase()).filter(Boolean) || [];
 
-//           let product = null;
+//             categoryTitles.forEach((catTitle) => {
+//               const matchedCategory = catNoMap[catTitle];
+//               if (matchedCategory) {
+//                 const path = [];
+//                 if (matchedCategory.level === 'level3') {
+//                   path.push(matchedCategory.title);
+//                   const level2 = categories.find((c) => c.catNo === matchedCategory.parentCatNo);
+//                   if (level2) {
+//                     categoryTags.push(level2.catNo);
+//                     path.push(level2.title);
+//                     const level1 = categories.find((c) => c.catNo === level2.parentCatNo);
+//                     if (level1) {
+//                       categoryTags.push(level1.catNo);
+//                       path.push(level1.title);
+//                     }
+//                   }
+//                 } else if (matchedCategory.level === 'level2') {
+//                   path.push(matchedCategory.title);
+//                   const level1 = categories.find((c) => c.catNo === matchedCategory.parentCatNo);
+//                   if (level1) {
+//                     categoryTags.push(level1.catNo);
+//                     path.push(level1.title);
+//                   }
+//                 } else if (matchedCategory.level === 'level1') {
+//                   path.push(matchedCategory.title);
+//                 }
 
-//           const existing = await shopifyRequest(
-//             `${shopifyStoreUrl}/admin/api/2024-01/products.json?handle=${handle}`,
-//             'GET',
-//             null,
-//             shopifyApiKey,
-//             shopifyAccessToken
-//           );
+//                 categoryTags.push(matchedCategory.catNo);
+//                 categoryPathTitles.push(path.join(' > '));
+//               }
+//             });
 
-//           if (existing?.products?.length > 0) {
-//             const existingProduct = existing.products[0];
-//             const updateRes = await shopifyRequest(
-//               `${shopifyStoreUrl}/admin/api/2024-01/products/${existingProduct.id}.json`,
-//               'PUT',
-//               { product: { ...productPayload, id: existingProduct.id } },
+//             const csvTags = typeof mainRow['Tags'] === 'string'
+//               ? mainRow['Tags'].split(',').map((t) => t.trim()).filter(Boolean)
+//               : [];
+
+//             const tags = [...new Set([
+//               ...csvTags,
+//               ...categoryTags,
+//               ...categoryPathTitles,
+//               `user_${userId.userId}`,
+//               `vendor_${mainRow['Vendor'] || ''}`,
+//             ])];
+
+//             const productPayload = {
+//               title: mainRow['Title'],
+//               body_html: mainRow['Body (HTML)'] || '',
+//               vendor: mainRow['Vendor'] || '',
+//               product_type: mainRow['Type'] || '',
+//               status: isPublished ? 'active' : 'draft',
+//               published_at: isPublished ? new Date().toISOString() : null,
+//               tags: tags,
+//               options: uniqueOptions,
+//               images,
+//               variants: variants.map((v) => ({
+//                 sku: v.sku,
+//                 price: v.price,
+//                 compare_at_price: v.compare_at_price,
+//                 inventory_management: v.inventory_management,
+//                 inventory_quantity: v.inventory_quantity,
+//                 fulfillment_service: v.fulfillment_service,
+//                 requires_shipping: v.requires_shipping,
+//                 taxable: v.taxable,
+//                 barcode: v.barcode,
+//                 weight: v.weight,
+//                 weight_unit: v.weight_unit,
+//                 option1: v.option1,
+//                 option2: v.option2,
+//                 option3: v.option3,
+//               })),
+//             };
+
+//             await delay(2000);
+
+//             let product = null;
+
+//             const existing = await shopifyRequest(
+//               `${shopifyStoreUrl}/admin/api/2024-01/products.json?handle=${handle}`,
+//               'GET',
+//               null,
 //               shopifyApiKey,
 //               shopifyAccessToken
 //             );
-//             product = updateRes.product;
-//           } else {
-//             const createRes = await shopifyRequest(
-//               `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
-//               'POST',
-//               { product: productPayload },
-//               shopifyApiKey,
-//               shopifyAccessToken
-//             );
-//             product = createRes.product;
-//           }
 
-//           const productId = product.id;
-//           const uploadedVariantImages = [];
+//             if (existing?.products?.length > 0) {
+//               const existingProduct = existing.products[0];
+//               const updateRes = await shopifyRequest(
+//                 `${shopifyStoreUrl}/admin/api/2024-01/products/${existingProduct.id}.json`,
+//                 'PUT',
+//                 { product: { ...productPayload, id: existingProduct.id } },
+//                 shopifyApiKey,
+//                 shopifyAccessToken
+//               );
+//               product = updateRes.product;
+//             } else {
+//               const createRes = await shopifyRequest(
+//                 `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
+//                 'POST',
+//                 { product: productPayload },
+//                 shopifyApiKey,
+//                 shopifyAccessToken
+//               );
+//               product = createRes.product;
+//             }
 
-//           // Upload variant images
-//           await Promise.all(
-//             variants.map(async (variant) => {
+//             const productId = product.id;
+//             const uploadedVariantImages = [];
+
+//             await Promise.all(variants.map(async (variant) => {
 //               if (variant.variant_image) {
 //                 try {
 //                   const imageUploadPayload = {
-//                     image: {
-//                       src: variant.variant_image,
-//                       alt: `Variant Image`,
-//                     },
+//                     image: { src: variant.variant_image, alt: `Variant Image` },
 //                   };
 
 //                   const uploadResponse = await shopifyRequest(
@@ -2569,22 +2603,19 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //                   console.error(`Image upload error: ${uploadError.message}`);
 //                 }
 //               }
-//             })
-//           );
+//             }));
 
-//           const productDetails = await shopifyRequest(
-//             `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
-//             'GET',
-//             null,
-//             shopifyApiKey,
-//             shopifyAccessToken
-//           );
+//             const productDetails = await shopifyRequest(
+//               `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
+//               'GET',
+//               null,
+//               shopifyApiKey,
+//               shopifyAccessToken
+//             );
 
-//           const shopifyVariants = productDetails?.product?.variants || [];
+//             const shopifyVariants = productDetails?.product?.variants || [];
 
-//           // Assign images to variants
-//           await Promise.all(
-//             shopifyVariants.map(async (variant, index) => {
+//             await Promise.all(shopifyVariants.map(async (variant, index) => {
 //               if (uploadedVariantImages[index]) {
 //                 try {
 //                   await shopifyRequest(
@@ -2599,77 +2630,102 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //                     shopifyApiKey,
 //                     shopifyAccessToken
 //                   );
-//                   variant.image_id = uploadedVariantImages[index].id;
 //                 } catch (updateError) {
-//                   console.error(
-//                     `Error linking variant image: ${updateError.message}`
-//                   );
+//                   console.error(`Error linking variant image: ${updateError.message}`);
 //                 }
 //               }
-//             })
-//           );
+//             }));
 
-//           // Build inventory object
-//           const baseVariant = shopifyVariants[0] || {};
-//           const inventory = {
-//             track_quantity: !!baseVariant?.inventory_management,
-//             quantity: baseVariant?.inventory_quantity ?? 0,
-//             continue_selling: true,
-//             has_sku: !!baseVariant?.sku,
-//             sku: baseVariant?.sku || '',
-//             barcode: baseVariant?.barcode || '',
-//           };
+//             const baseVariant = shopifyVariants[0] || {};
+//             const inventory = {
+//               track_quantity: !!baseVariant?.inventory_management,
+//               quantity: baseVariant?.inventory_quantity ?? 0,
+//               continue_selling: true,
+//               has_sku: !!baseVariant?.sku,
+//               sku: baseVariant?.sku || '',
+//               barcode: baseVariant?.barcode || '',
+//             };
 
-//           await listingModel.findOneAndUpdate(
-//             { shopifyId: productId },
-//             {
-//               shopifyId: productId,
-//               id: productId,
-//               title: product.title,
-//               body_html: product.body_html,
-//               vendor: product.vendor,
-//               product_type: product.product_type,
-//               status: product.status,
-//               handle: product.handle,
-//               tags: product.tags,
-//               images: product.images,
-//               variants: shopifyVariants,
-//               options: product.options,
+//             await listingModel.findOneAndUpdate(
+//               { shopifyId: productId },
+//               {
+//                 shopifyId: productId,
+//                 id: productId,
+//                 title: product.title,
+//                 body_html: product.body_html,
+//                 vendor: product.vendor,
+//                 product_type: product.product_type,
+//                 status: product.status,
+//                 handle: product.handle,
+//                 tags: tags,
+//                 images: product.images,
+//                 variants: shopifyVariants,
+//                 options: product.options,
+//                 userId: userId.userId,
+//                 variantImages: uploadedVariantImages,
+//                 inventory: inventory,
+//               },
+//               { upsert: true, new: true }
+//             );
+
+//             await new imageGalleryModel({
 //               userId: userId.userId,
-//               variantImages: uploadedVariantImages,
-//               inventory: inventory,
-//             },
-//             { upsert: true, new: true }
-//           );
+//               images: product.images.map((img) => ({
+//                 id: img.id?.toString(),
+//                 product_id: img.product_id?.toString(),
+//                 position: img.position,
+//                 created_at: img.created_at,
+//                 updated_at: img.updated_at,
+//                 alt: img.alt,
+//                 width: img.width,
+//                 height: img.height,
+//                 src: img.src,
+//                 productId: productId.toString(),
+//               })),
+//             }).save();
 
-//           const imageGallery = new imageGalleryModel({
-//             userId: userId.userId,
-//             images: product.images.map((img) => ({
-//               id: img.id?.toString(),
-//               product_id: img.product_id?.toString(),
-//               position: img.position,
-//               created_at: img.created_at,
-//               updated_at: img.updated_at,
-//               alt: img.alt,
-//               width: img.width,
-//               height: img.height,
-//               src: img.src,
-//               productId: productId.toString(),
-//             })),
-//           });
-//           await imageGallery.save();
+//             results.push({ success: true, handle, productId, title: product.title });
 
-//           results.push({ success: true, productId, title: product.title });
+//           } catch (err) {
+//             console.error(`❌ Failed to process product: ${handle}`, err.message);
+//             results.push({ success: false, handle, error: err.message });
+//             continue;
+//           }
 //         }
 
-//         await listingModel.deleteMany({
-//           $or: [{ userId: { $exists: false } }, { userId: null }],
-//         });
+//         const orphanedProducts = await listingModel.aggregate([
+//           {
+//             $match: {
+//               $expr: {
+//                 $or: [
+//                   { $eq: [{ $type: "$userId" }, "missing"] },
+//                   { $eq: ["$userId", null] },
+//                   {
+//                     $and: [
+//                       { $eq: [{ $type: "$userId" }, "string"] },
+//                       { $ne: [{ $strLenBytes: "$userId" }, 24] }
+//                     ]
+//                   },
+//                   { $not: { $eq: [{ $type: "$userId" }, "objectId"] } }
+//                 ]
+//               }
+//             }
+//           }
+//         ]);
 
-//         return res
-//           .status(200)
-//           .json({ message: 'Products processed.', results });
+//         if (orphanedProducts.length > 0) {
+//           const idsToDelete = orphanedProducts.map((item) => item._id);
+//           await listingModel.deleteMany({ _id: { $in: idsToDelete } });
+//         }
+
+//         return res.status(200).json({
+//           message: 'Products processed.',
+//           successCount: results.filter(r => r.success).length,
+//           failedCount: results.filter(r => !r.success).length,
+//           results
+//         });
 //       });
+
 //   } catch (error) {
 //     console.error('🔥 Server error:', error.message);
 //     return res.status(500).json({
@@ -2679,6 +2735,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //     });
 //   }
 // };
+
 
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
@@ -2732,41 +2789,73 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const mainRow = rows[0];
 
           try {
-            const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
-              .map((opt) => mainRow[opt])
-              .filter(Boolean);
+        const optionValues = [[], [], []];
 
-            const optionValues = [[], [], []];
+// Step 2: Filter only rows with actual variant data
+const variantRows = rows.filter(row => {
+  return row['Variant Price'] || row['Variant SKU'] || row['Option1 Value'];
+});
 
-            const variants = rows.map((row) => {
-              if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
-              if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
-              if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
+// Step 3: Build variants from valid rows
+let variants = variantRows.map((row) => {
+  if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
+  if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
+  if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
 
-              return {
-                sku: row['Variant SKU'] || '',
-                price: row['Variant Price'] || '0.00',
-                compare_at_price: row['Variant Compare At Price'] || null,
-                inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
-                inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
-                fulfillment_service: 'manual',
-                requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
-                taxable: row['Variant Taxable'] === 'TRUE',
-                barcode: row['Variant Barcode'] || '',
-                weight: parseFloat(row['Variant Grams']) || 0,
-                weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
-                option1: row['Option1 Value'] || null,
-                option2: row['Option2 Value'] || null,
-                option3: row['Option3 Value'] || null,
-                variant_image: cleanUrl(row['Variant Image']) || null,
-              };
-            });
+  return {
+    sku: row['Variant SKU'] || '',
+    price: row['Variant Price'] || '0.00',
+    compare_at_price: row['Variant Compare At Price'] || null,
+    inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
+    inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
+    fulfillment_service: 'manual',
+    requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
+    taxable: row['Variant Taxable'] === 'TRUE',
+    barcode: row['Variant Barcode'] || '',
+    weight: parseFloat(row['Variant Grams']) || 0,
+    weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
+    option1: row['Option1 Value'] || 'Default',
+    option2: row['Option2 Value'] || null,
+    option3: row['Option3 Value'] || null,
+    variant_image: cleanUrl(row['Variant Image']) || null,
+  };
+});
 
-            const uniqueOptions = options.map((name, idx) => ({
-              name,
-              values: [...new Set(optionValues[idx])],
-            })).filter((opt) => opt.name);
+// Step 4: Fallback default variant
+if (variants.length === 0) {
+  variants = [{
+    sku: '',
+    price: '0.00',
+    compare_at_price: null,
+    inventory_management: null,
+    inventory_quantity: 0,
+    fulfillment_service: 'manual',
+    requires_shipping: true,
+    taxable: true,
+    barcode: '',
+    weight: 0,
+    weight_unit: 'g',
+    option1: 'Default',
+    option2: null,
+    option3: null,
+    variant_image: null,
+  }];
+}
 
+// Step 5: Build unique options
+let options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
+  .map((opt) => mainRow[opt])
+  .filter(Boolean);
+
+let uniqueOptions = options.map((name, idx) => ({
+  name,
+  values: [...new Set(optionValues[idx])],
+})).filter((opt) => opt.name);
+
+// Step 6: Fallback default option if none found
+if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
+  uniqueOptions = [{ name: 'Title', values: ['Default'] }];
+}
             const images = [...new Set(rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean))].map((src, index) => ({
               src,
               position: index + 1,
@@ -3053,6 +3142,8 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
+
 
 export const updateProductWebhook = async (req, res) => {
   try {
