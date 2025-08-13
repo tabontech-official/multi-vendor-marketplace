@@ -43,6 +43,49 @@
 // export default Connect;
 
 
+// import chalk from 'chalk';
+// import dotenv from 'dotenv';
+// import mongoose from 'mongoose';
+
+// dotenv.config();
+
+// const { cyan, yellow, red } = chalk;
+
+// let isConnected = false;
+
+// const Connect = async () => {
+//   if (isConnected) {
+//     console.log(cyan('✅ MongoDB already connected, reusing connection.'));
+//     return;
+//   }
+
+//   try {
+//     const conn = await mongoose.connect(process.env.DB_URL || "mongodb+srv://multivendor:test123@cluster0.k1cc1.mongodb.net", {
+//       useNewUrlParser: true,
+//       useUnifiedTopology: true,
+//       serverSelectionTimeoutMS: 10000,
+//     });
+
+//     isConnected = true;
+//     console.log(cyan('✅ MongoDB connected to:'), conn.connection.host);
+
+//     mongoose.connection.on('disconnected', () => {
+//       console.log(red('MongoDB disconnected'));
+//       isConnected = false;
+//     });
+
+//     process.on('SIGINT', async () => {
+//       await mongoose.connection.close();
+//       console.log(red('MongoDB disconnected due to app termination'));
+//       process.exit(0);
+//     });
+
+//   } catch (err) {
+//     console.error(yellow('❌ MongoDB connection error:'), err);
+//   }
+// };
+
+// export default Connect;
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -51,37 +94,44 @@ dotenv.config();
 
 const { cyan, yellow, red } = chalk;
 
-let isConnected = false;
+if (!global._mongooseConnection) {
+  global._mongooseConnection = { isConnected: false };
+}
 
 const Connect = async () => {
-  if (isConnected) {
-    console.log(cyan('✅ MongoDB already connected, reusing connection.'));
+  if (global._mongooseConnection.isConnected) {
+    console.log(cyan('✅ Using existing MongoDB connection.'));
     return;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.DB_URL || "mongodb+srv://multivendor:test123@cluster0.k1cc1.mongodb.net", {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000,
-    });
+    const conn = await mongoose.connect(
+      process.env.DB_URL || "mongodb+srv://multivendor:test123@cluster0.k1cc1.mongodb.net",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 10000,
+      }
+    );
 
-    isConnected = true;
+    global._mongooseConnection.isConnected = conn.connections[0].readyState === 1;
+
     console.log(cyan('✅ MongoDB connected to:'), conn.connection.host);
 
     mongoose.connection.on('disconnected', () => {
-      console.log(red('MongoDB disconnected'));
-      isConnected = false;
+      console.log(red('🔌 MongoDB disconnected'));
+      global._mongooseConnection.isConnected = false;
     });
 
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
-      console.log(red('MongoDB disconnected due to app termination'));
+      console.log(red('🛑 MongoDB disconnected due to app termination'));
       process.exit(0);
     });
 
   } catch (err) {
     console.error(yellow('❌ MongoDB connection error:'), err);
+    throw err;
   }
 };
 
