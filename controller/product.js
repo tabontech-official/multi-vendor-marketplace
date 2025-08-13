@@ -2365,15 +2365,16 @@ export const deleteImageGallery = async (req, res) => {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 
+
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
-//   const userId = req.params;
+// const userId = req.userId; // Secure userId from verifyToken
 
 //   if (!file || !file.buffer) {
 //     return res.status(400).json({ error: 'No file uploaded.' });
 //   }
 
-//   if (!userId.userId || !mongoose.Types.ObjectId.isValid(userId.userId)) {
+//   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
 //     return res.status(400).json({ error: 'Invalid or missing userId.' });
 //   }
 
@@ -2417,41 +2418,73 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //           const mainRow = rows[0];
 
 //           try {
-//             const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
-//               .map((opt) => mainRow[opt])
-//               .filter(Boolean);
+//         const optionValues = [[], [], []];
 
-//             const optionValues = [[], [], []];
+// // Step 2: Filter only rows with actual variant data
+// const variantRows = rows.filter(row => {
+//   return row['Variant Price'] || row['Variant SKU'] || row['Option1 Value'];
+// });
 
-//             const variants = rows.map((row) => {
-//               if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
-//               if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
-//               if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
+// // Step 3: Build variants from valid rows
+// let variants = variantRows.map((row) => {
+//   if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
+//   if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
+//   if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
 
-//               return {
-//                 sku: row['Variant SKU'] || '',
-//                 price: row['Variant Price'] || '0.00',
-//                 compare_at_price: row['Variant Compare At Price'] || null,
-//                 inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
-//                 inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
-//                 fulfillment_service: 'manual',
-//                 requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
-//                 taxable: row['Variant Taxable'] === 'TRUE',
-//                 barcode: row['Variant Barcode'] || '',
-//                 weight: parseFloat(row['Variant Grams']) || 0,
-//                 weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
-//                 option1: row['Option1 Value'] || null,
-//                 option2: row['Option2 Value'] || null,
-//                 option3: row['Option3 Value'] || null,
-//                 variant_image: cleanUrl(row['Variant Image']) || null,
-//               };
-//             });
+//   return {
+//     sku: row['Variant SKU'] || '',
+//     price: row['Variant Price'] || '0.00',
+//     compare_at_price: row['Variant Compare At Price'] || null,
+//     inventory_management: row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
+//     inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
+//     fulfillment_service: 'manual',
+//     requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
+//     taxable: row['Variant Taxable'] === 'TRUE',
+//     barcode: row['Variant Barcode'] || '',
+//     weight: parseFloat(row['Variant Grams']) || 0,
+//     weight_unit: ['g', 'kg', 'oz', 'lb'].includes(row['Variant Weight Unit']) ? row['Variant Weight Unit'] : 'g',
+//     option1: row['Option1 Value'] || 'Default',
+//     option2: row['Option2 Value'] || null,
+//     option3: row['Option3 Value'] || null,
+//     variant_image: cleanUrl(row['Variant Image']) || null,
+//   };
+// });
 
-//             const uniqueOptions = options.map((name, idx) => ({
-//               name,
-//               values: [...new Set(optionValues[idx])],
-//             })).filter((opt) => opt.name);
+// // Step 4: Fallback default variant
+// if (variants.length === 0) {
+//   variants = [{
+//     sku: '',
+//     price: '0.00',
+//     compare_at_price: null,
+//     inventory_management: null,
+//     inventory_quantity: 0,
+//     fulfillment_service: 'manual',
+//     requires_shipping: true,
+//     taxable: true,
+//     barcode: '',
+//     weight: 0,
+//     weight_unit: 'g',
+//     option1: 'Default',
+//     option2: null,
+//     option3: null,
+//     variant_image: null,
+//   }];
+// }
 
+// // Step 5: Build unique options
+// let options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
+//   .map((opt) => mainRow[opt])
+//   .filter(Boolean);
+
+// let uniqueOptions = options.map((name, idx) => ({
+//   name,
+//   values: [...new Set(optionValues[idx])],
+// })).filter((opt) => opt.name);
+
+// // Step 6: Fallback default option if none found
+// if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
+//   uniqueOptions = [{ name: 'Title', values: ['Default'] }];
+// }
 //             const images = [...new Set(rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean))].map((src, index) => ({
 //               src,
 //               position: index + 1,
@@ -2505,7 +2538,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //               ...csvTags,
 //               ...categoryTags,
 //               ...categoryPathTitles,
-//               `user_${userId.userId}`,
+//               `user_${userId}`,
 //               `vendor_${mainRow['Vendor'] || ''}`,
 //             ])];
 
@@ -2664,7 +2697,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //                 images: product.images,
 //                 variants: shopifyVariants,
 //                 options: product.options,
-//                 userId: userId.userId,
+//                 userId: userId,
 //                 variantImages: uploadedVariantImages,
 //                 inventory: inventory,
 //               },
@@ -2672,7 +2705,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //             );
 
 //             await new imageGalleryModel({
-//               userId: userId.userId,
+//               userId: userId,
 //               images: product.images.map((img) => ({
 //                 id: img.id?.toString(),
 //                 product_id: img.product_id?.toString(),
@@ -2983,10 +3016,16 @@ if (!uniqueOptions.length || uniqueOptions.every(opt => !opt.values.length)) {
             await Promise.all(variants.map(async (variant) => {
               if (variant.variant_image) {
                 try {
-                  const imageUploadPayload = {
-                    image: { src: variant.variant_image, alt: `Variant Image` },
-                  };
+                 const optionValues = Object.keys(variant)
+        .filter(key => key.toLowerCase().startsWith('option') && variant[key])
+        .map(key => variant[key]);
 
+      // Combine SKU + option values
+      const variantNameWithSku = [variant.sku, ...optionValues].filter(Boolean).join('-');
+
+      const imageUploadPayload = {
+        image: { src: variant.variant_image, alt: variantNameWithSku },
+      };
                   const uploadResponse = await shopifyRequest(
                     `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
                     'POST',
@@ -3944,12 +3983,102 @@ export const exportInventoryCsv = async (req, res) => {
   }
 };
 
+// export const getAllVariants = async (req, res) => {
+//   try {
+//     const userId = req.params.userId;
+
+//     if (!userId) {
+//       return res.status(400).json({ error: 'userId is required.' });
+//     }
+
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const objectIdUserId = new mongoose.Types.ObjectId(userId);
+
+//     const products = await listingModel.aggregate([
+//       {
+//         $match: {
+//           userId: objectIdUserId,
+//         },
+//       },
+//       {
+//         $sort: { created_at: -1 },
+//       },
+//       {
+//         $project: {
+//           variants: 1,
+//           images: 1,
+//           status: 1,
+//           shopifyId: 1,
+//           variantImages: 1,
+//           productId: '$_id',
+//         },
+//       },
+//       {
+//         $unwind: '$variants',
+//       },
+//       {
+//         $replaceRoot: {
+//           newRoot: {
+//             $mergeObjects: [
+//               '$variants',
+//               {
+//                 productId: '$productId',
+//                 status: '$status',
+//                 shopifyId: '$shopifyId',
+//                 variantImages: '$images',
+//               },
+//             ],
+//           },
+//         },
+//       },
+//       {
+//         $skip: skip,
+//       },
+//       {
+//         $limit: limit,
+//       },
+//     ]);
+
+//     const productCount = await listingModel.aggregate([
+//       { $match: { userId: objectIdUserId } },
+//       { $project: { variantsCount: { $size: '$variants' } } },
+//       {
+//         $group: {
+//           _id: null,
+//           totalVariants: { $sum: '$variantsCount' },
+//         },
+//       },
+//     ]);
+
+//     const totalVariants = productCount[0]?.totalVariants || 0;
+
+//     if (products.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: 'No variants found for this user.' });
+//     }
+
+//     res.status(200).json({
+//       variants: products,
+//       currentPage: page,
+//       totalPages: Math.ceil(totalVariants / limit),
+//       totalVariants,
+//     });
+//   } catch (error) {
+//     console.error('Error in getAllVariants function:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 export const getAllVariants = async (req, res) => {
   try {
     const userId = req.params.userId;
 
     if (!userId) {
-      return res.status(400).json({ error: 'userId is required.' });
+      return res.status(400).json({ error: "userId is required." });
     }
 
     const page = parseInt(req.query.page) || 1;
@@ -3958,7 +4087,7 @@ export const getAllVariants = async (req, res) => {
 
     const objectIdUserId = new mongoose.Types.ObjectId(userId);
 
-    const products = await listingModel.aggregate([
+    let products = await listingModel.aggregate([
       {
         $match: {
           userId: objectIdUserId,
@@ -3974,22 +4103,23 @@ export const getAllVariants = async (req, res) => {
           status: 1,
           shopifyId: 1,
           variantImages: 1,
-          productId: '$_id',
+          productId: "$_id",
         },
       },
       {
-        $unwind: '$variants',
+        $unwind: "$variants",
       },
       {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
-              '$variants',
+              "$variants",
               {
-                productId: '$productId',
-                status: '$status',
-                shopifyId: '$shopifyId',
-                variantImages: '$images',
+                productId: "$productId",
+                status: "$status",
+                shopifyId: "$shopifyId",
+                productImages: "$images",
+                variantImages: "$variantImages",
               },
             ],
           },
@@ -4005,11 +4135,11 @@ export const getAllVariants = async (req, res) => {
 
     const productCount = await listingModel.aggregate([
       { $match: { userId: objectIdUserId } },
-      { $project: { variantsCount: { $size: '$variants' } } },
+      { $project: { variantsCount: { $size: "$variants" } } },
       {
         $group: {
           _id: null,
-          totalVariants: { $sum: '$variantsCount' },
+          totalVariants: { $sum: "$variantsCount" },
         },
       },
     ]);
@@ -4019,8 +4149,58 @@ export const getAllVariants = async (req, res) => {
     if (products.length === 0) {
       return res
         .status(404)
-        .json({ message: 'No variants found for this user.' });
+        .json({ message: "No variants found for this user." });
     }
+
+    const normalizeString = (str) =>
+      String(str || "").replace(/['"]/g, "").trim().toLowerCase();
+
+    products = products.map((variant, idx) => {
+      let matchedImage = null;
+      const titleKey = normalizeString(variant.title);
+
+      if (variant.image_id) {
+        matchedImage =
+          variant.variantImages?.find(
+            (img) => String(img.id) === String(variant.image_id)
+          ) ||
+          variant.productImages?.find(
+            (img) => String(img.id) === String(variant.image_id)
+          );
+      }
+
+      if (!matchedImage && variant.variantImages) {
+        matchedImage = variant.variantImages.find((img) =>
+          normalizeString(img.alt).includes(titleKey)
+        );
+      }
+
+      if (!matchedImage && variant.productImages?.length > 0) {
+        matchedImage = variant.productImages[0];
+      }
+
+      console.log(
+        `Variant: ${variant.title} | Match type: ${
+          variant.image_id
+            ? matchedImage
+              ? "Matched by image_id"
+              : "image_id present but not found"
+            : matchedImage
+            ? "Fallback"
+            : "No image"
+        } | Image: ${matchedImage?.src || "N/A"}`
+      );
+
+      return {
+        ...variant,
+        finalImage: matchedImage
+          ? {
+              src: matchedImage.src,
+              alt: matchedImage.alt || variant.title || "Variant Image",
+            }
+          : null,
+      };
+    });
 
     res.status(200).json({
       variants: products,
@@ -4029,10 +4209,11 @@ export const getAllVariants = async (req, res) => {
       totalVariants,
     });
   } catch (error) {
-    console.error('Error in getAllVariants function:', error);
+    console.error("Error in getAllVariants function:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const deleteAll = async (req, res) => {
   await listingModel.deleteMany();
