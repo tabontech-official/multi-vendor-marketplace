@@ -26,12 +26,12 @@ const promotionSchema = new mongoose.Schema({
   currentPrice: {
     type: Number,
   },
- status: {
-  type: String,
-  enum: ['active', 'inactive'],
-  default: 'inactive',
-  required: true,
-},
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'inactive',
+    required: true,
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
   },
@@ -44,15 +44,15 @@ const promotionSchema = new mongoose.Schema({
   oldPrice: {
     type: Number,
   },
-  variantId:{
-    type:String
+  variantId: {
+    type: String,
   },
-  variantName:{
-    type:String
+  variantName: {
+    type: String,
   },
-  variantQuantity:{
-    type:String
-  }
+  variantQuantity: {
+    type: String,
+  },
 });
 
 export const PromoModel = mongoose.model('promotions', promotionSchema);

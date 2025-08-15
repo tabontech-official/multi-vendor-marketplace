@@ -41,7 +41,7 @@ export const addPromotion = async (req, res) => {
       productName: product.title || '',
       currentStock: variant?.inventory_quantity?.toString() || '0',
       currentPrice: variant.price,
-      userId, // ✅ now casted properly
+      userId, 
       createdRole,
     });
 
@@ -189,8 +189,8 @@ export const deletePromotion = async (req, res) => {
 export const addPromotionDataFromProductDb = async (req, res) => {
   try {
     const { id: variantId } = req.params;
-    const { promoPrice, startDate, endDate, userId } = req.body;
-
+    const { promoPrice, startDate, endDate } = req.body;
+const userId=req.userId
     const product = await listingModel.findOne({
       'variants.id': variantId,
     });
@@ -443,7 +443,7 @@ export const deleteAll=async(req,res)=>{
 
 export const getAllPromotionsbyUserId = async (req, res) => {
   try {
-    const userId = req.userId.toString(); 
+    const userId = req.userId; 
 
     const result = await PromoModel.findOne({ userId });
 
