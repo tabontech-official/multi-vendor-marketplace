@@ -34,6 +34,6 @@ export const verifyToken = async (req, res, next) => {
     return res.status(403).json({ error: "Invalid API credentials" });
   }
 
-  req.userId = credential.userId; // <- Important: Attach userId
+  req.userId = credential.userId; 
   next();
 };

@@ -16,6 +16,7 @@ import apiCredentialsRouter from './Routes/apiCredentials.js';
 import notificationRouter from './Routes/notification.js';
 import { financeScheduler } from './controller/financeDateSheduler.js';
 import categoryRouter from './Routes/category.js';
+import approvalRouter from './Routes/approval.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -48,6 +49,7 @@ app.use('/consultation', consultationRouter);
 app.use('/generateAcessKeys', apiCredentialsRouter);
 app.use('/notifications', notificationRouter);
 app.use('/category', categoryRouter);
+app.use('/approval', approvalRouter);
 
 
 app.use((req, res, next) => {

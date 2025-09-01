@@ -38,6 +38,8 @@ import {
   fetchProductCountForUser,
   addCsvfileForBulkUploader,
   getAllProducts,
+  getAllProductWithApprovalStatus,
+  approvelProduct,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -50,10 +52,15 @@ productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/holiday', verifyToken, updateAllProductsStatus);
 productRouter.post('/webhook/product/update', verifyToken, productUpdate);
 productRouter.get('/getProduct/:userId', verifyToken, getProduct);
+
+productRouter.get('/getProductWithApprovalStatus', verifyToken, getAllProductWithApprovalStatus);
+
 productRouter.get('/getAllVariants/:userId', verifyToken, getAllVariants);
 
 productRouter.get('/getAllProducts', verifyToken, getAllProductData);
 productRouter.put('/publishedProduct/:productId', verifyToken, publishProduct);
+productRouter.put('/approvedProduct/:productId', verifyToken, approvelProduct);
+
 productRouter.put('/unpublished/:productId', verifyToken, unpublishProduct);
 productRouter.patch(
   '/updateProducts/:id',

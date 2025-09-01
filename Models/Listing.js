@@ -110,6 +110,11 @@ const listingSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
     },
+    approvalStatus: {
+  type: String,
+  enum: ["pending", "approved", "rejected", null],
+  default: null,
+},
     status: {
       type: String,
       enum: ['active', 'draft'],
