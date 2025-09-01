@@ -348,12 +348,11 @@ export const addUsedEquipments = async (req, res) => {
 let approvalStatus = "approved";
 
 if (user.role === "Merchant") {
-  // kyunki aapke paas ek hi approval setting hoti hai
   const approvalSetting = await approvalModel.findOne();
 
   if (approvalSetting?.approvalMode === "Manual") {
-    productStatus = "draft";       // force draft
-    approvalStatus = "pending";    // approval required
+    productStatus = "draft";      
+    approvalStatus = "pending";   
   }
 }
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
@@ -5021,7 +5020,7 @@ export const getAllProductWithApprovalStatus = async (req, res) => {
   try {
     const matchStage = {
       userId: { $exists: true, $ne: null },
-      approvalStatus: "pending",   // ✅ fetch only pending
+      approvalStatus: "pending",   
     };
 
     const products = await listingModel.aggregate([
@@ -5155,7 +5154,7 @@ export const approvelProduct = async (req, res) => {
       productId,
       { 
         status: 'active', 
-        approvalStatus: 'approved',   // ✅ approval updated
+        approvalStatus: 'approved',   
         expiresAt 
       },
       { new: true }
