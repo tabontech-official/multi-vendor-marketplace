@@ -89,12 +89,22 @@ const authSchema = new mongoose.Schema(
     dispatchAddress: String,
     shopifyAccessToken: String,
     shopifyApiKey: String,
-    paypalAccount: {
-      type: String,
-      default: '',
-    },
+    // 🟢 PayPal Details
+    paypalAccount: { type: String, default: '' },   // PayPal Email / ID
+    paypalAccountNo: { type: String, default: '' }, // Optional account number
+    paypalReferenceNo: { type: String, default: '' },
     referenceNo:{
       type:String
+    },
+    bankDetails: {
+      accountHolderName: { type: String, default: '' },
+      accountNumber: { type: String, default: '' },
+      bankName: { type: String, default: '' },
+      branchName: { type: String, default: '' },
+      ifscCode: { type: String, default: '' }, // For India
+      swiftCode: { type: String, default: '' }, // For International transfers
+      iban: { type: String, default: '' }, // For EU transfers
+      country: { type: String, default: '' },
     },
      paypalAccountNo: {
       type: String,

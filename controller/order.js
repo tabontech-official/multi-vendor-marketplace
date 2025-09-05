@@ -2135,6 +2135,205 @@ export const getPayoutOrders = async (req, res) => {
   }
 };
 
+// export const getPayoutForAllOrders = async (req, res) => {
+//   try {
+//     const { payoutDate, status } = req.query;
+
+//     const config = await PayoutConfig.findOne({});
+//     if (!config) {
+//       return res.status(400).json({ error: 'Payout config not found.' });
+//     }
+
+//     const orders = await orderModel.find({});
+//     const updates = [];
+//     let totalPayoutAmount = 0;
+
+//     const allUserIds = new Set();
+//     const grouped = {};
+
+//     for (const order of orders) {
+//       const createdAt = dayjs(order.createdAt);
+//       if (!order.scheduledPayoutDate || !order.eligibleDate) {
+//         const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
+//         const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
+
+//         if (!order.eligibleDate) {
+//           order.eligibleDate = eligibleDate.toDate();
+//         }
+
+//         if (!order.scheduledPayoutDate) {
+//           order.scheduledPayoutDate = payoutDateObj.toDate();
+//         }
+//       }
+
+//       const lineItems = order.lineItems ?? [];
+//       let payoutAmount = 0;
+//       let refundAmount = 0;
+//       const products = [];
+
+//       for (const item of lineItems) {
+//         const price = Number(item.price) || 0;
+//         const qty = Number(item.quantity) || 0;
+//         const total = price * qty;
+//         const cancelled = item.fulfillment_status === 'cancelled';
+
+//         let userId = null;
+
+//         if (item.variant_id) {
+//           const listing = await listingModel
+//             .findOne({
+//               'variants.id': String(item.variant_id),
+//             })
+//             .select('userId');
+
+//           userId = listing?.userId?.toString() || null;
+
+//           if (userId) allUserIds.add(userId);
+//         }
+
+//         const productData = {
+//           title: item.title || '',
+//           variantTitle: item.variant_title || '',
+//           price,
+//           quantity: qty,
+//           total,
+//           fulfillment_status: item.fulfillment_status || 'fulfilled',
+//           cancelled,
+//           userId,
+//         };
+
+//         if (cancelled) {
+//           refundAmount += total;
+//         } else {
+//           payoutAmount += total;
+//         }
+
+//         products.push(productData);
+//       }
+
+//       order.payoutAmount = payoutAmount;
+//       order.refundAmount = refundAmount;
+//       await order.save();
+
+//       totalPayoutAmount += payoutAmount;
+
+//       updates.push({
+//         orderId: order.orderId,
+//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
+//         eligibleDate: order.eligibleDate,
+//         scheduledPayoutDate: order.scheduledPayoutDate,
+//         payoutStatus: order.payoutStatus || 'pending',
+//         payoutAmount,
+//         refundAmount,
+//         createdAt: order.createdAt,
+//         products,
+//       });
+//     }
+
+//     const userDataMap = {};
+//     const userList = await authModel
+//       .find({
+//         _id: { $in: Array.from(allUserIds) },
+//       })
+//       .select('_id referenceNo paypalAccount');
+
+//     userList.forEach((user) => {
+//       userDataMap[user._id.toString()] = {
+//         referenceNo: user.referenceNo || '',
+//         paypalAccount: user.paypalAccount || '',
+//       };
+//     });
+
+//     updates.forEach((order) => {
+//       order.products.forEach((product) => {
+//         if (product.userId) {
+//           const userData = userDataMap[product.userId] || {};
+//           product.referenceNo = userData.referenceNo || '';
+//           product.paypalAccount = userData.paypalAccount || '';
+//         }
+//       });
+
+//       const userRef = order.products.find(
+//         (p) => p.userId && userDataMap[p.userId]
+//       );
+//       order.referenceNo = userRef?.userId
+//         ? userDataMap[userRef.userId].referenceNo
+//         : '';
+
+//       order.paypalAccount = userRef?.userId
+//         ? userDataMap[userRef.userId].paypalAccount
+//         : '';
+//     });
+
+//     updates.forEach((order) => {
+//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
+//       if (!grouped[key]) {
+//         grouped[key] = {
+//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
+//           createdAts: [],
+//           totalAmount: 0,
+//           totalRefundAmount: 0,
+//           orders: [],
+//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+//         };
+//       }
+
+//       grouped[key].createdAts.push(dayjs(order.createdAt));
+//       grouped[key].totalAmount += order.payoutAmount || 0;
+//       grouped[key].totalRefundAmount += order.refundAmount || 0;
+
+//       grouped[key].orders.push({
+//         orderId: order.orderId,
+//         shopifyOrderNo: order.shopifyOrderNo,
+//         amount: order.payoutAmount,
+//         refund: order.refundAmount,
+//         status: order.payoutStatus,
+//         createdAt: order.createdAt,
+//         referenceNo: order.referenceNo || '',
+//         paypalAccount: order.paypalAccount || '',
+//         products: order.products || [],
+//       });
+//     });
+
+//     let payouts = Object.values(grouped)
+//       .map((group) => {
+//         const minDate = dayjs.min(group.createdAts);
+//         const maxDate = dayjs.max(group.createdAts);
+//         return {
+//           payoutDate: group.payoutDate,
+//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
+//           status: group.status,
+//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
+//           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
+//           orders: group.orders,
+//           sortKey: group.sortKey,
+//         };
+//       })
+//       .sort((a, b) => {
+//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+//         return b.sortKey - a.sortKey;
+//       });
+
+//     if (payoutDate && status) {
+//       payouts = payouts.filter(
+//         (p) =>
+//           p.payoutDate === payoutDate &&
+//           p.status.toLowerCase() === status.toLowerCase()
+//       );
+//     }
+
+//     res.json({
+//       message: 'Payouts calculated',
+//       totalAmount: totalPayoutAmount,
+//       payouts,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Server error while calculating payouts' });
+//   }
+// };
+
 export const getPayoutForAllOrders = async (req, res) => {
   try {
     const { payoutDate, status } = req.query;
@@ -2160,7 +2359,6 @@ export const getPayoutForAllOrders = async (req, res) => {
         if (!order.eligibleDate) {
           order.eligibleDate = eligibleDate.toDate();
         }
-
         if (!order.scheduledPayoutDate) {
           order.scheduledPayoutDate = payoutDateObj.toDate();
         }
@@ -2181,13 +2379,10 @@ export const getPayoutForAllOrders = async (req, res) => {
 
         if (item.variant_id) {
           const listing = await listingModel
-            .findOne({
-              'variants.id': String(item.variant_id),
-            })
+            .findOne({ 'variants.id': String(item.variant_id) })
             .select('userId');
 
           userId = listing?.userId?.toString() || null;
-
           if (userId) allUserIds.add(userId);
         }
 
@@ -2197,7 +2392,7 @@ export const getPayoutForAllOrders = async (req, res) => {
           price,
           quantity: qty,
           total,
-          fulfillment_status: item.fulfillment_status || 'fulfilled',
+          fulfillment_status: item.fulfillment_status || 'Unfulfilled',
           cancelled,
           userId,
         };
@@ -2232,15 +2427,18 @@ export const getPayoutForAllOrders = async (req, res) => {
 
     const userDataMap = {};
     const userList = await authModel
-      .find({
-        _id: { $in: Array.from(allUserIds) },
-      })
-      .select('_id referenceNo paypalAccount');
+      .find({ _id: { $in: Array.from(allUserIds) } })
+      .select(
+        '_id referenceNo paypalAccount paypalAccountNo paypalReferenceNo bankDetails'
+      );
 
     userList.forEach((user) => {
       userDataMap[user._id.toString()] = {
         referenceNo: user.referenceNo || '',
         paypalAccount: user.paypalAccount || '',
+        paypalAccountNo: user.paypalAccountNo || '',
+        paypalReferenceNo: user.paypalReferenceNo || '',
+        bankDetails: user.bankDetails || {},
       };
     });
 
@@ -2250,23 +2448,25 @@ export const getPayoutForAllOrders = async (req, res) => {
           const userData = userDataMap[product.userId] || {};
           product.referenceNo = userData.referenceNo || '';
           product.paypalAccount = userData.paypalAccount || '';
+          product.bankDetails = userData.bankDetails || {};
         }
       });
 
       const userRef = order.products.find(
         (p) => p.userId && userDataMap[p.userId]
       );
-      order.referenceNo = userRef?.userId
-        ? userDataMap[userRef.userId].referenceNo
-        : '';
 
-      order.paypalAccount = userRef?.userId
-        ? userDataMap[userRef.userId].paypalAccount
-        : '';
+      if (userRef?.userId) {
+        order.referenceNo = userDataMap[userRef.userId].referenceNo || '';
+        order.paypalAccount = userDataMap[userRef.userId].paypalAccount || '';
+        order.bankDetails = userDataMap[userRef.userId].bankDetails || {};
+      }
     });
 
     updates.forEach((order) => {
-      const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
+      const key = `${dayjs(order.scheduledPayoutDate).format(
+        'YYYY-MM-DD'
+      )}__${order.payoutStatus}`;
       if (!grouped[key]) {
         grouped[key] = {
           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
@@ -2292,6 +2492,7 @@ export const getPayoutForAllOrders = async (req, res) => {
         createdAt: order.createdAt,
         referenceNo: order.referenceNo || '',
         paypalAccount: order.paypalAccount || '',
+        bankDetails: order.bankDetails || {},
         products: order.products || [],
       });
     });
@@ -2302,7 +2503,9 @@ export const getPayoutForAllOrders = async (req, res) => {
         const maxDate = dayjs.max(group.createdAts);
         return {
           payoutDate: group.payoutDate,
-          transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
+          transactionDates: `${minDate.format('MMM D')} – ${maxDate.format(
+            'MMM D, YYYY'
+          )}`,
           status: group.status,
           amount: `$${group.totalAmount.toFixed(2)} AUD`,
           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
@@ -2333,6 +2536,7 @@ export const getPayoutForAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
+
 
 export const updateTrackingInShopify = async (req, res) => {
   try {

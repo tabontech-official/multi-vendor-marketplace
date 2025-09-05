@@ -2002,3 +2002,78 @@ export const signInForBulkUploader = async (req, res) => {
     res.status(500).json({ error: 'Server error during sign in.' });
   }
 };
+
+
+export const addMerchantAccDetails=async(req,res)=>{
+   try {
+    const { userId, method, paypalDetails, bankDetails } = req.body;
+
+    if (!userId || !method) {
+      return res
+        .status(400)
+        .json({ message: "userId and payout method are required." });
+    }
+
+    // ✅ Find user if exists
+    let user = await authModel.findById(userId);
+
+    
+
+    // ✅ Update PayPal
+    if (method === "paypal") {
+      if (!paypalDetails?.paypalAccount) {
+        return res.status(400).json({ message: "PayPal account is required." });
+      }
+      user.paypalAccount = paypalDetails.paypalAccount || "";
+      user.paypalAccountNo = paypalDetails.paypalAccount || "";
+      user.paypalReferenceNo = paypalDetails.paypalReferenceNo || "";
+
+      // clear bank if switching
+      user.bankDetails = {};
+    }
+
+    // ✅ Update Bank
+    else if (method === "bank") {
+      if (!bankDetails?.accountNumber || !bankDetails?.accountHolderName) {
+        return res.status(400).json({
+          message: "Bank account number & holder name are required.",
+        });
+      }
+
+      user.bankDetails = {
+        accountHolderName: bankDetails.accountHolderName || "",
+        accountNumber: bankDetails.accountNumber || "",
+        bankName: bankDetails.bankName || "",
+        branchName: bankDetails.branchName || "",
+        ifscCode: bankDetails.ifscCode || "",
+        swiftCode: bankDetails.swiftCode || "",
+        iban: bankDetails.iban || "",
+        country: bankDetails.country || "",
+      };
+
+      // clear paypal if switching
+      user.paypalAccount = "";
+      user.paypalAccountNo = "";
+      user.paypalReferenceNo = "";
+    } else {
+      return res.status(400).json({ message: "Invalid payout method." });
+    }
+
+    // ✅ Save user (update if exist, create if new)
+    await user.save();
+
+    res.status(200).json({
+      message: "Payout details saved successfully.",
+      data: {
+        method,
+        paypalAccount: user.paypalAccount,
+        bankDetails: user.bankDetails,
+      },
+    });
+  } catch (error) {
+    console.error("Update payout error:", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+}
