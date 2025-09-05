@@ -1443,17 +1443,24 @@ export const unpublishProduct = async (req, res) => {
 //   const limit = parseInt(req.query.limit) || 10;
 
 //   try {
+//     const matchStage = {
+//       userId: { $exists: true, $ne: null },
+//     };
+
 //     const products = await listingModel.aggregate([
+//       { $match: matchStage },
 //       {
-//         $match: {
-//           userId: { $exists: true, $ne: null },
-//         },
-//       },
-//       {
-//         $addFields: {
-//           userId: { $toObjectId: '$userId' },
-//         },
-//       },
+//   $addFields: {
+//     userId: {
+//       $cond: [
+//         { $eq: [{ $type: '$userId' }, 'string'] },
+//         { $convert: { input: '$userId', to: 'objectId', onError: null, onNull: null } },
+//         '$userId'
+//       ]
+//     }
+//   }
+// },
+
 //       {
 //         $lookup: {
 //           from: 'users',
@@ -1468,15 +1475,9 @@ export const unpublishProduct = async (req, res) => {
 //           preserveNullAndEmptyArrays: true,
 //         },
 //       },
-//       {
-//         $sort: { created_at: -1 },
-//       },
-//       {
-//         $skip: (page - 1) * limit,
-//       },
-//       {
-//         $limit: limit,
-//       },
+//       { $sort: { created_at: -1 } },
+//       { $skip: (page - 1) * limit },
+//       { $limit: limit },
 //       {
 //         $project: {
 //           _id: 1,
@@ -1497,6 +1498,7 @@ export const unpublishProduct = async (req, res) => {
 //           userId: 1,
 //           oldPrice: 1,
 //           shopifyId: 1,
+//           approvalStatus:1,
 //           username: {
 //             $concat: [
 //               { $ifNull: ['$user.firstName', ''] },
@@ -1509,7 +1511,7 @@ export const unpublishProduct = async (req, res) => {
 //       },
 //     ]);
 
-//     const totalProducts = await listingModel.countDocuments();
+//     const totalProducts = await listingModel.countDocuments(matchStage);
 
 //     if (products.length > 0) {
 //       res.status(200).send({
@@ -1527,40 +1529,50 @@ export const unpublishProduct = async (req, res) => {
 //   }
 // };
 
+
 export const getAllProductData = async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-
   try {
-    const matchStage = {
-      userId: { $exists: true, $ne: null },
-    };
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
+    // Match condition
+    const matchStage = { userId: { $exists: true, $ne: null } };
+
+    // Total count first (without pagination)
+    const totalProducts = await listingModel.countDocuments(matchStage);
+
+    // Aggregation with pagination
     const products = await listingModel.aggregate([
       { $match: matchStage },
       {
-  $addFields: {
-    userId: {
-      $cond: [
-        { $eq: [{ $type: '$userId' }, 'string'] },
-        { $convert: { input: '$userId', to: 'objectId', onError: null, onNull: null } },
-        '$userId'
-      ]
-    }
-  }
-},
-
+        $addFields: {
+          userId: {
+            $cond: [
+              { $eq: [{ $type: "$userId" }, "string"] },
+              {
+                $convert: {
+                  input: "$userId",
+                  to: "objectId",
+                  onError: null,
+                  onNull: null,
+                },
+              },
+              "$userId",
+            ],
+          },
+        },
+      },
       {
         $lookup: {
-          from: 'users',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'user',
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
         },
       },
       {
         $unwind: {
-          path: '$user',
+          path: "$user",
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -1587,34 +1599,29 @@ export const getAllProductData = async (req, res) => {
           userId: 1,
           oldPrice: 1,
           shopifyId: 1,
-          approvalStatus:1,
+          approvalStatus: 1,
           username: {
             $concat: [
-              { $ifNull: ['$user.firstName', ''] },
-              ' ',
-              { $ifNull: ['$user.lastName', ''] },
+              { $ifNull: ["$user.firstName", ""] },
+              " ",
+              { $ifNull: ["$user.lastName", ""] },
             ],
           },
-          email: '$user.email',
+          email: "$user.email",
         },
       },
     ]);
 
-    const totalProducts = await listingModel.countDocuments(matchStage);
-
-    if (products.length > 0) {
-      res.status(200).send({
-        products,
-        currentPage: page,
-        totalPages: Math.ceil(totalProducts / limit),
-        totalProducts,
-      });
-    } else {
-      res.status(400).send('No products found');
-    }
+    res.status(200).json({
+      products,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit), // e.g. 530/50 = 11
+      totalProducts,
+      limit,
+    });
   } catch (error) {
-    console.error('Aggregation error:', error);
-    res.status(500).send({ error: error.message });
+    console.error("Aggregation error:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
