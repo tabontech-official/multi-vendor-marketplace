@@ -873,31 +873,42 @@ export const getOrderDatafromShopify = async (req, res) => {
   }
 };
 
+
 // export const getAllOrdersForAdmin = async (req, res) => {
 //   try {
 //     const allOrders = await orderModel.find({});
+//     console.log("✅ Total orders fetched from DB:", allOrders.length);
+
 //     const finalOrders = [];
 //     const merchantDetailsMap = new Map();
 //     const merchantStatsMap = new Map();
+
 //     for (const order of allOrders) {
+//       console.log("\n📦 Processing Order:", order.shopifyOrderNo, "Order ID:", order.orderId);
 //       const merchantGroups = new Map();
 
 //       for (const item of order.lineItems || []) {
 //         const variantId = item.variant_id?.toString();
-//         if (!variantId) continue;
+//         if (!variantId) {
+//           console.log("⚠️ Skipped item with no variant_id");
+//           continue;
+//         }
 
-//         const product = await listingModel.findOne({
-//           'variants.id': variantId,
-//         });
-//         if (!product || !product.userId) continue;
+//         const product = await listingModel.findOne({ 'variants.id': variantId });
+//         if (!product) {
+//           console.log("⚠️ Product not found for variant ID:", variantId);
+//           continue;
+//         }
+//         if (!product.userId) {
+//           console.log("⚠️ Product found but has no userId");
+//           continue;
+//         }
 
 //         const merchantId = product.userId.toString();
-
 //         const matchedVariant = product.variants.find((v) => v.id === variantId);
+
 //         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-//           const image = product.variantImages.find(
-//             (img) => img.id === matchedVariant.image_id
-//           );
+//           const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
 //           if (image) {
 //             item.image = {
 //               id: image.id,
@@ -907,6 +918,7 @@ export const getOrderDatafromShopify = async (req, res) => {
 //               width: image.width,
 //               height: image.height,
 //             };
+//             console.log("🖼️ Matched variant image set for item:", item.title || item.name);
 //           }
 //         }
 
@@ -928,9 +940,7 @@ export const getOrderDatafromShopify = async (req, res) => {
 //         merchantGroups.get(merchantId).push(item);
 
 //         if (!merchantDetailsMap.has(merchantId)) {
-//           const merchant = await authModel
-//             .findById(merchantId)
-//             .select('-password');
+//           const merchant = await authModel.findById(merchantId).select('-password');
 //           if (merchant) {
 //             merchantDetailsMap.set(merchantId, {
 //               _id: merchant._id,
@@ -940,6 +950,9 @@ export const getOrderDatafromShopify = async (req, res) => {
 //               dispatchAddress: merchant.dispatchAddress,
 //               dispatchCountry: merchant.dispatchCountry,
 //             });
+//             console.log("👤 Merchant details cached for ID:", merchantId);
+//           } else {
+//             console.log("⚠️ Merchant not found for ID:", merchantId);
 //           }
 //         }
 
@@ -952,23 +965,22 @@ export const getOrderDatafromShopify = async (req, res) => {
 //         }
 
 //         const merchantStats = merchantStatsMap.get(merchantId);
-
 //         if (!merchantStats.ordersSeen.has(order.orderId)) {
 //           merchantStats.ordersSeen.add(order.orderId);
 //           merchantStats.totalOrdersCount += 1;
 //         }
 
-//         merchantStats.totalOrderValue +=
-//           (item.price || 0) * (item.quantity || 1);
+//         const amount = (item.price || 0) * (item.quantity || 1);
+//         merchantStats.totalOrderValue += amount;
+
+//         console.log(`💰 Added amount ${amount} to merchant ${merchantId} | Product: ${item.title || item.name}`);
 //       }
 
 //       const merchantsArray = [];
 //       const lineItemsByMerchant = {};
 
 //       merchantGroups.forEach((items, merchantId) => {
-//         const merchantInfo = merchantDetailsMap.get(merchantId) || {
-//           id: merchantId,
-//         };
+//         const merchantInfo = merchantDetailsMap.get(merchantId) || { id: merchantId };
 //         const stats = merchantStatsMap.get(merchantId);
 
 //         merchantsArray.push({
@@ -986,31 +998,27 @@ export const getOrderDatafromShopify = async (req, res) => {
 //         merchants: merchantsArray,
 //         lineItemsByMerchant,
 //       });
+
+//       console.log("✅ Order processed:", order.shopifyOrderNo, "Merchants involved:", merchantsArray.length);
 //     }
 
-//     // if (finalOrders.length > 0) {
-//     //   return res.status(200).send({
-//     //     message: 'Orders grouped per order (not merged by merchant)',
-//     //     data: finalOrders,
-//     //   });
 //     if (finalOrders.length > 0) {
-//       // Sort so latest orders appear on top
 //       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
-
+//       console.log("🚀 Returning", finalOrders.length, "orders to client.");
 //       return res.status(200).send({
 //         message: 'Orders grouped per order (not merged by merchant)',
 //         data: finalOrders,
 //       });
 //     } else {
-//       return res.status(404).send({
-//         message: 'No orders found across merchants',
-//       });
+//       console.log("❌ No final orders found.");
+//       return res.status(404).send({ message: 'No orders found across merchants' });
 //     }
 //   } catch (error) {
-//     console.error(' Error in getAllOrdersForAdmin:', error);
-//     res.status(500).send({ message: 'Internal Server Error' });
+//     console.error("❌ Error in getAllOrdersForAdmin:", error);
+//     return res.status(500).send({ message: 'Internal Server Error' });
 //   }
 // };
+
 
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
@@ -1045,20 +1053,34 @@ export const getAllOrdersForAdmin = async (req, res) => {
         const merchantId = product.userId.toString();
         const matchedVariant = product.variants.find((v) => v.id === variantId);
 
-        if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-          const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
-          if (image) {
-            item.image = {
-              id: image.id,
-              src: image.src,
-              alt: image.alt,
-              position: image.position,
-              width: image.width,
-              height: image.height,
-            };
-            console.log("🖼️ Matched variant image set for item:", item.title || item.name);
-          }
-        }
+       if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+  const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
+  if (image) {
+    item.image = {
+      id: image.id,
+      src: image.src,
+      alt: image.alt,
+      position: image.position,
+      width: image.width,
+      height: image.height,
+    };
+    console.log("🖼️ Matched variant image set for item:", item.title || item.name);
+  }
+}
+
+// ✅ Fallback Product Image (if no variant image was set)
+if (!item.image && Array.isArray(product.images) && product.images.length > 0) {
+  const defaultImage = product.images[0];
+  item.image = {
+    id: defaultImage.id || null,
+    src: defaultImage.src,
+    alt: defaultImage.alt || '',
+    position: defaultImage.position || 1,
+    width: defaultImage.width || null,
+    height: defaultImage.height || null,
+  };
+  console.log("🖼️ Default product image set for item:", item.title || item.name);
+}
 
         item.orderId = order.orderId;
         item.customer = [
@@ -1156,7 +1178,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
     return res.status(500).send({ message: 'Internal Server Error' });
   }
 };
-
 
 
 export const addPaypalAccount = async (req, res) => {
@@ -2840,28 +2861,130 @@ export const exportOrders = async (req, res) => {
   }
 };
 
+// export const exportProductsForUser = async (req, res) => {
+//   try {
+//     const userId = req.userId?.toString();
+//     console.log(userId)
+//     if (!userId) {
+//       return res.status(400).json({ message: 'Missing userId' });
+//     }
+
+//     // Replace this with your actual data fetch function for that user
+//     const response = await fetch(
+//       `https://multi-vendor-marketplace.vercel.app/order/order/${userId}`
+//     );
+//     const result = await response.json();
+
+//     if (!Array.isArray(result.data) || result.data.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: 'No orders found for this user.' });
+//     }
+
+//     const rows = [];
+
+//     for (const order of result.data) {
+//       const {
+//         orderId,
+//         shopifyOrderNo,
+//         serialNumber,
+//         payoutAmount,
+//         payoutStatus,
+//         createdAt,
+//         updatedAt,
+//         eligibleDate,
+//         scheduledPayoutDate,
+//         customer,
+//         lineItems = [],
+//       } = order;
+
+//       for (const item of lineItems) {
+//         rows.push({
+//           OrderID: orderId,
+//           ShopifyOrderNo: shopifyOrderNo,
+//           SerialNumber: serialNumber,
+//           ProductName: item.name || '',
+//           SKU: item.sku || '',
+//           Vendor: item.vendor || '',
+//           Price: item.price || '',
+//           Quantity: item.quantity || '',
+//           FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
+//           VariantTitle: item.variant_title || '',
+//           ProductID: item.product_id || '',
+//           VariantID: item.variant_id || '',
+//           PayoutAmount: payoutAmount || '',
+//           PayoutStatus: payoutStatus || '',
+//           EligiblePayoutDate: eligibleDate
+//             ? new Date(eligibleDate).toLocaleDateString()
+//             : '',
+//           ScheduledPayoutDate: scheduledPayoutDate
+//             ? new Date(scheduledPayoutDate).toLocaleDateString()
+//             : '',
+//           OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : '',
+//           OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : '',
+//           CustomerEmail: customer?.email || '',
+//           CustomerName: `${customer?.first_name || ''} ${customer?.last_name || ''}`,
+//           CustomerPhone: customer?.phone || '',
+//           CustomerCreated: customer?.created_at || '',
+//           CustomerCity: customer?.default_address?.city || '',
+//           CustomerCountry: customer?.default_address?.country || '',
+//         });
+//       }
+//     }
+
+//     if (rows.length === 0) {
+//       return res.status(404).json({ message: 'No products found in orders.' });
+//     }
+
+//     const fields = Object.keys(rows[0]);
+//     const parser = new Parser({ fields });
+//     const csv = parser.parse(rows);
+
+//     const filename = `export-user-${userId}-${Date.now()}.csv`;
+//     const isVercel = process.env.VERCEL === '1';
+//     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+
+//     if (!isVercel && !fs.existsSync(exportDir)) {
+//       fs.mkdirSync(exportDir, { recursive: true });
+//     }
+
+//     const filePath = path.join(exportDir, filename);
+//     fs.writeFileSync(filePath, csv);
+
+//     res.download(filePath, filename, (err) => {
+//       if (err) {
+//         console.error('Download error:', err);
+//         res.status(500).send('Download failed');
+//       }
+//       fs.unlinkSync(filePath);
+//     });
+//   } catch (err) {
+//     console.error('Export Error:', err);
+//     res.status(500).json({ message: 'Export failed', error: err.message });
+//   }
+// };
+
 export const exportProductsForUser = async (req, res) => {
   try {
-    const { userId } = req.query;
+    const userId = req.userId?.toString();
+    console.log("🔹 UserId from request:", userId);
+
     if (!userId) {
-      return res.status(400).json({ message: 'Missing userId' });
+      console.log("❌ Missing userId in request");
+      return res.status(400).json({ message: "Missing userId" });
     }
 
-    // Replace this with your actual data fetch function for that user
-    const response = await fetch(
-      `https://multi-vendor-marketplace.vercel.app/order/order/${userId}`
-    );
-    const result = await response.json();
+    console.log(`🔹 Fetching orders directly from DB for userId: ${userId}`);
 
-    if (!Array.isArray(result.data) || result.data.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No orders found for this user.' });
-    }
+    // ✅ Orders DB se lao (assume aapka model ka naam orderModel hai)
+    const orders = await orderModel.find({});
+    console.log("🔹 Total orders fetched:", orders.length);
 
     const rows = [];
 
-    for (const order of result.data) {
+    for (const order of orders) {
+      console.log("➡️ Checking order:", order.orderId);
+
       const {
         orderId,
         shopifyOrderNo,
@@ -2877,70 +3000,104 @@ export const exportProductsForUser = async (req, res) => {
       } = order;
 
       for (const item of lineItems) {
+        // ✅ Product check
+        const product = await listingModel.findOne({ id: item.product_id });
+
+        if (!product) {
+          console.log(`⚠️ Product not found for product_id: ${item.product_id}`);
+          continue;
+        }
+
+        if (product.userId?.toString() !== userId) {
+          console.log(
+            `⚠️ Product ${item.product_id} does not belong to user ${userId}`
+          );
+          continue;
+        }
+
+        console.log(
+          `✅ Adding line item ${item.name} from product ${item.product_id} for user ${userId}`
+        );
+
         rows.push({
           OrderID: orderId,
           ShopifyOrderNo: shopifyOrderNo,
           SerialNumber: serialNumber,
-          ProductName: item.name || '',
-          SKU: item.sku || '',
-          Vendor: item.vendor || '',
-          Price: item.price || '',
-          Quantity: item.quantity || '',
-          FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
-          VariantTitle: item.variant_title || '',
-          ProductID: item.product_id || '',
-          VariantID: item.variant_id || '',
-          PayoutAmount: payoutAmount || '',
-          PayoutStatus: payoutStatus || '',
+          ProductName: item.name || "",
+          SKU: item.sku || "",
+          Vendor: item.vendor || "",
+          Price: item.price || "",
+          Quantity: item.quantity || "",
+          FulfillmentStatus: item.fulfillment_status || "unfulfilled",
+          VariantTitle: item.variant_title || "",
+          ProductID: item.product_id || "",
+          VariantID: item.variant_id || "",
+          PayoutAmount: payoutAmount || "",
+          PayoutStatus: payoutStatus || "",
           EligiblePayoutDate: eligibleDate
             ? new Date(eligibleDate).toLocaleDateString()
-            : '',
+            : "",
           ScheduledPayoutDate: scheduledPayoutDate
             ? new Date(scheduledPayoutDate).toLocaleDateString()
-            : '',
-          OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : '',
-          OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : '',
-          CustomerEmail: customer?.email || '',
-          CustomerName: `${customer?.first_name || ''} ${customer?.last_name || ''}`,
-          CustomerPhone: customer?.phone || '',
-          CustomerCreated: customer?.created_at || '',
-          CustomerCity: customer?.default_address?.city || '',
-          CustomerCountry: customer?.default_address?.country || '',
+            : "",
+          OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : "",
+          OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : "",
+          CustomerEmail: customer?.email || "",
+          CustomerName: `${customer?.first_name || ""} ${customer?.last_name || ""}`,
+          CustomerPhone: customer?.phone || "",
+          CustomerCreated: customer?.created_at || "",
+          CustomerCity: customer?.default_address?.city || "",
+          CustomerCountry: customer?.default_address?.country || "",
         });
       }
     }
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: 'No products found in orders.' });
+      console.log("⚠️ No products found in orders for user:", userId);
+      return res
+        .status(404)
+        .json({ message: "No products found in orders for this user." });
     }
+
+    console.log("✅ Total rows prepared for CSV:", rows.length);
 
     const fields = Object.keys(rows[0]);
     const parser = new Parser({ fields });
     const csv = parser.parse(rows);
+    console.log("✅ CSV data parsed successfully");
 
     const filename = `export-user-${userId}-${Date.now()}.csv`;
-    const isVercel = process.env.VERCEL === '1';
-    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+    const isVercel = process.env.VERCEL === "1";
+    const exportDir = isVercel ? "/tmp" : path.join(process.cwd(), "exports");
 
     if (!isVercel && !fs.existsSync(exportDir)) {
+      console.log("📂 Creating export directory:", exportDir);
       fs.mkdirSync(exportDir, { recursive: true });
     }
 
     const filePath = path.join(exportDir, filename);
+    console.log("📂 Writing CSV file at:", filePath);
     fs.writeFileSync(filePath, csv);
 
     res.download(filePath, filename, (err) => {
       if (err) {
-        console.error('Download error:', err);
-        res.status(500).send('Download failed');
+        console.error("❌ Download error:", err);
+        res.status(500).send("Download failed");
+      } else {
+        console.log("✅ File download initiated:", filename);
       }
       fs.unlinkSync(filePath);
+      console.log("🗑️ Temp file deleted:", filePath);
     });
   } catch (err) {
-    console.error('Export Error:', err);
-    res.status(500).json({ message: 'Export failed', error: err.message });
+    console.error("❌ Export Error:", err);
+    res
+      .status(500)
+      .json({ message: "Export failed", error: err.message });
   }
 };
+
+
 
 export const getPendingOrder = async (req, res) => {
   try {

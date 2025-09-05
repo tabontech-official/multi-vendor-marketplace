@@ -55,7 +55,7 @@ orderRouter.post('/addReferenceNumber',verifyToken, addReferenceToOrders);
 orderRouter.get("/getPayoutByUserId",verifyToken,getPayoutByUserId)
 orderRouter.get('/getAllPayouts',verifyToken, getPayoutForAllOrders);
 orderRouter.get('/exportAllOrder',verifyToken, exportOrders);
-orderRouter.get('/exportOrderByUserId', exportProductsForUser);
+orderRouter.get('/exportOrderByUserId',verifyToken, exportProductsForUser);
 orderRouter.get('/getPendingOrder',verifyToken, getPendingOrder);
 orderRouter.get('/getSalesContribution', getSalesContribution);
 orderRouter.get('/getFinanceSummaryForUser/:userId', getFinanceSummaryForUser);
