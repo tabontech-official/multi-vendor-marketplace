@@ -5756,6 +5756,35 @@ export const addCsvfileForBulkUploader = async (req, res) => {
 };
 
 
+export const getTrackingCountForAdmin = async (req, res) => {
+  try {
+    const allUsersViewData = await viewModel.find();
+
+    if (!allUsersViewData || allUsersViewData.length === 0) {
+      return res.status(404).json({ message: "No view data found" });
+    }
+
+    // Admin dashboard ke liye aggregate totals
+    const totalViews = allUsersViewData.reduce((sum, u) => sum + (u.totalViews || 0), 0);
+    const weeklyViews = allUsersViewData.reduce((sum, u) => sum + (u.weeklyViews || 0), 0);
+    const monthlyViews = allUsersViewData.reduce((sum, u) => sum + (u.monthlyViews || 0), 0);
+
+    res.status(200).json({
+      totalViews,
+      weeklyViews,
+      monthlyViews,
+      users: allUsersViewData.map((u) => ({
+        userId: u.userId,
+        totalViews: u.totalViews,
+        weeklyViews: u.weeklyViews,
+        monthlyViews: u.monthlyViews,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching admin view count:", error);
+    res.status(500).json({ message: "Failed to get admin view count" });
+  }
+};
 
 
 
@@ -6019,3 +6048,5 @@ export const approvelProduct = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+

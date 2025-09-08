@@ -26,12 +26,14 @@ import {
   getPendingOrder,
   getSalesContribution,
   getFinanceSummaryForUser,
+  getMonthlyRevenue,
 } from '../controller/order.js';
 import express from 'express';
 import { verifyToken } from '../middleware/verifyToken.js';
 const orderRouter = express.Router();
 orderRouter.post('/addOrder', createOrder);
 orderRouter.post('/fullFillOrder', fulfillOrder);
+orderRouter.get('/monthlyRevenue',verifyToken, getMonthlyRevenue);
 
 orderRouter.get('/order',verifyToken, getOrderById);
 // orderRouter.get('/order', getOrderById);

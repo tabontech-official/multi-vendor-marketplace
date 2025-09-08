@@ -3417,3 +3417,57 @@ export const getSalesContribution = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+
+export const getMonthlyRevenue = async (req, res) => {
+  try {
+
+    const allOrders = await orderModel.find({});
+
+    const revenueByMonth = {};
+
+    for (const order of allOrders) {
+
+      for (const item of order.lineItems || []) {
+        const variantId = item.variant_id?.toString();
+
+        if (!variantId) {
+          continue;
+        }
+
+        const orderDate = new Date(order.createdAt);
+        const monthKey = `${orderDate.getFullYear()}-${(
+          orderDate.getMonth() + 1
+        )
+          .toString()
+          .padStart(2, "0")}`;
+
+
+        const lineRevenue =
+          parseFloat(item.price || 0) * (item.quantity || 1);
+
+      
+
+        if (!revenueByMonth[monthKey]) {
+          revenueByMonth[monthKey] = 0;
+        }
+        revenueByMonth[monthKey] += lineRevenue;
+
+      
+      }
+    }
+
+
+    if (Object.keys(revenueByMonth).length > 0) {
+      return res.status(200).json({
+        message: "Monthly revenue calculated for all users",
+        revenue: revenueByMonth,
+      });
+    } else {
+      return res.status(404).json({ message: "No revenue data found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
