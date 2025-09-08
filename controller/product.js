@@ -571,6 +571,354 @@ if (user.role === "Merchant") {
 };
 
 
+// export const duplicateProduct = async (req, res) => {
+//   let newProductId;
+//   try {
+//     const userId = req.userId;
+//     const user = await authModel.findById(userId);
+//     if (!user) return res.status(404).json({ error: "User not found" });
+
+//     const { productId } = req.params;
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration)
+//       return res
+//         .status(404)
+//         .json({ error: "Shopify configuration not found." });
+
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfiguration;
+
+//     // Find existing product in DB
+//     const existingProduct = await listingModel.findOne({ shopifyId: productId });
+//     if (!existingProduct) {
+//       return res.status(404).json({ error: "Product not found in database." });
+//     }
+
+//     // Duplicate title + handle
+//     const duplicateTitle = `Copy of ${existingProduct.title}`;
+//     const duplicateHandle = `copy-of-${existingProduct.title
+//       .toLowerCase()
+//       .replace(/\s+/g, "-")}`;
+
+//     // ✅ Clean variants
+//     const shopifyVariants = existingProduct.variants.map((variant, idx) => ({
+//       option1: variant.option1 || "Default",
+//       option2: variant.option2 || null,
+//       option3: variant.option3 || null,
+//       price: variant.price || "0.00",
+//       compare_at_price: variant.compare_at_price || null,
+//       sku: variant.sku ? `${variant.sku}-copy-${idx + 1}` : null,
+//       inventory_management: variant.inventory_management || null,
+//       inventory_quantity: 0, // new duplicate = no stock
+//       weight: variant.weight || 0.0,
+//       weight_unit: variant.weight_unit || "kg",
+//     }));
+
+//     // ✅ Images prepare karo
+//     const shopifyImages =
+//       existingProduct.images?.map((img) => ({
+//         src: img.src || img.cloudUrl || img.localUrl,
+//       })) || [];
+
+//     // ✅ Build payload for Shopify
+//     const shopifyPayload = {
+//       product: {
+//         title: duplicateTitle,
+//         body_html: existingProduct.body_html || "",
+//         vendor: existingProduct.vendor,
+//         product_type: existingProduct.product_type,
+//         status: "draft",
+//         options:
+//           existingProduct.options && existingProduct.options.length > 0
+//             ? existingProduct.options
+//             : [{ name: "Title", values: ["Default"] }],
+//         variants:
+//           shopifyVariants.length > 0
+//             ? shopifyVariants
+//             : [
+//                 {
+//                   option1: "Default",
+//                   price: existingProduct.variants?.[0]?.price || "0.00",
+//                   inventory_quantity: 0,
+//                 },
+//               ],
+//         images: shopifyImages,
+//         tags: [
+//           ...(Array.isArray(existingProduct.tags)
+//             ? existingProduct.tags
+//             : [existingProduct.tags]),
+//           `copy_of_${productId}`,
+//         ],
+//         handle: duplicateHandle,
+//       },
+//     };
+
+//     // ✅ Create on Shopify
+//     const productResponse = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
+//       "POST",
+//       shopifyPayload,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     if (!productResponse?.product?.id) {
+//       throw new Error("Failed to duplicate product in Shopify.");
+//     }
+
+//     newProductId = productResponse.product.id;
+
+//     // ✅ Save duplicate in DB (including images)
+//     const duplicateProduct = new listingModel({
+//       id: newProductId,
+//       title: duplicateTitle,
+//       body_html: existingProduct.body_html,
+//       vendor: existingProduct.vendor,
+//       approvalStatus: "approved",
+//       product_type: existingProduct.product_type,
+//       options: shopifyPayload.product.options,
+//       created_at: new Date(),
+//       tags: productResponse.product.tags,
+//       variants: productResponse.product.variants,
+//       images: productResponse.product.images || [], // ✅ images bhi save
+//       inventory: {
+//         track_quantity: false,
+//         quantity: 0,
+//         continue_selling: false,
+//         has_sku: existingProduct.inventory?.has_sku || false,
+//         sku: existingProduct.inventory?.sku || "",
+//         barcode: existingProduct.inventory?.barcode || "",
+//       },
+//       shipping: existingProduct.shipping,
+//       userId,
+//       status: "draft",
+//       shopifyId: newProductId,
+//       categories: existingProduct.categories,
+//     });
+
+//     await duplicateProduct.save();
+
+//     return res.status(201).json({
+//       message: "Product duplicated successfully.",
+//       product: duplicateProduct,
+//     });
+//   } catch (error) {
+//     console.error("Error duplicating product:", error);
+
+//     if (newProductId) {
+//       try {
+//         await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}.json`,
+//           "DELETE",
+//           null,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+//       } catch (deleteError) {
+//         console.error("Error rolling back duplicate product:", deleteError);
+//       }
+//     }
+
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+export const duplicateProduct = async (req, res) => {
+  let newProductId;
+  try {
+    const userId = req.userId;
+    const user = await authModel.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const { productId } = req.params;
+
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration)
+      return res
+        .status(404)
+        .json({ error: "Shopify configuration not found." });
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
+
+    // Find existing product in DB
+    const existingProduct = await listingModel.findOne({ shopifyId: productId });
+    if (!existingProduct) {
+      return res.status(404).json({ error: "Product not found in database." });
+    }
+
+    // Duplicate title + handle
+    const duplicateTitle = `Copy of ${existingProduct.title}`;
+    const duplicateHandle = `copy-of-${existingProduct.title
+      .toLowerCase()
+      .replace(/\s+/g, "-")}`;
+
+    // ✅ Prepare images
+    const shopifyImages =
+      existingProduct.images?.map((img) => ({
+        src: img.src || img.cloudUrl || img.localUrl,
+        alt: img.alt || "",
+      })) || [];
+
+    // ✅ Build initial payload (without image_id in variants)
+   // ✅ Build Shopify payload
+const shopifyPayload = {
+  product: {
+    title: duplicateTitle,
+    body_html: existingProduct.body_html || "",
+    vendor: existingProduct.vendor,
+    product_type: existingProduct.product_type,
+    status: "draft",
+    options:
+      existingProduct.options && existingProduct.options.length > 0
+        ? existingProduct.options
+        : [{ name: "Title", values: ["Default"] }],
+    variants: existingProduct.variants.map((variant, idx) => ({
+      option1: variant.option1 || "Default",
+      option2: variant.option2 || null,
+      option3: variant.option3 || null,
+      price: variant.price || "0.00",
+      compare_at_price: variant.compare_at_price || null,
+      sku: variant.sku ? `${variant.sku}-copy-${idx + 1}` : null,
+      inventory_management: variant.inventory_management || null,
+      inventory_quantity: 0,
+      weight: variant.weight || 0.0,
+      weight_unit: variant.weight_unit || "kg",
+      // 👇 NOTE: abhi image_id empty rakho, Shopify khud assign karega
+    })),
+    images:
+      existingProduct.images?.map((img) => ({
+        src: img.src || img.cloudUrl || img.localUrl,
+      })) || [],
+    tags: [
+      ...(Array.isArray(existingProduct.tags)
+        ? existingProduct.tags
+        : [existingProduct.tags]),
+      `copy_of_${productId}`,
+    ],
+    handle: duplicateHandle,
+  },
+};
+
+
+    // ✅ Create product on Shopify (images upload + product shell)
+    const productResponse = await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
+      "POST",
+      shopifyPayload,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    if (!productResponse?.product?.id) {
+      throw new Error("Failed to duplicate product in Shopify.");
+    }
+
+    newProductId = productResponse.product.id;
+
+    // ✅ Map new image IDs from Shopify response
+    const newImages = productResponse.product.images; // Shopify ne nayi ids di hain
+    const imageMap = {};
+    (existingProduct.images || []).forEach((oldImg, idx) => {
+      if (newImages[idx]) {
+        imageMap[oldImg.src] = newImages[idx].id; // map old src → new id
+      }
+    });
+
+    // ✅ Prepare variants with correct image_id mapping
+    const shopifyVariants = existingProduct.variants.map((variant, idx) => {
+      let imageId = null;
+      if (variant.image_id && existingProduct.images) {
+        const oldImage = existingProduct.images.find(
+          (img) => String(img.id) === String(variant.image_id)
+        );
+        if (oldImage && imageMap[oldImage.src]) {
+          imageId = imageMap[oldImage.src];
+        }
+      }
+
+      return {
+        option1: variant.option1 || "Default",
+        option2: variant.option2 || null,
+        option3: variant.option3 || null,
+        price: variant.price || "0.00",
+        compare_at_price: variant.compare_at_price || null,
+        sku: variant.sku ? `${variant.sku}-copy-${idx + 1}` : null,
+        inventory_management: variant.inventory_management || null,
+        inventory_quantity: 0,
+        weight: variant.weight || 0.0,
+        weight_unit: variant.weight_unit || "kg",
+        image_id: imageId, // ✅ link new image id
+      };
+    });
+
+    // ✅ Update product variants with correct images
+    const variantUpdateResponse = await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}.json`,
+      "PUT",
+      { product: { id: newProductId, variants: shopifyVariants } },
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    // ✅ Save duplicate in DB
+    const duplicateProduct = new listingModel({
+      id: newProductId,
+      title: duplicateTitle,
+      body_html: existingProduct.body_html,
+      vendor: existingProduct.vendor,
+      approvalStatus: "approved",
+      product_type: existingProduct.product_type,
+      options: shopifyPayload.product.options,
+      created_at: new Date(),
+      tags: productResponse.product.tags,
+      variants: variantUpdateResponse.product.variants,
+      images: newImages, // ✅ new images with new IDs
+      inventory: {
+        track_quantity: false,
+        quantity: 0,
+        continue_selling: false,
+        has_sku: existingProduct.inventory?.has_sku || false,
+        sku: existingProduct.inventory?.sku || "",
+        barcode: existingProduct.inventory?.barcode || "",
+      },
+      shipping: existingProduct.shipping,
+      userId,
+      status: "draft",
+      shopifyId: newProductId,
+      categories: existingProduct.categories,
+    });
+
+    await duplicateProduct.save();
+
+    return res.status(201).json({
+      message: "Product duplicated successfully with images.",
+      product: duplicateProduct,
+    });
+  } catch (error) {
+    console.error("Error duplicating product:", error);
+
+    if (newProductId) {
+      try {
+        await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}.json`,
+          "DELETE",
+          null,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+      } catch (deleteError) {
+        console.error("Error rolling back duplicate product:", deleteError);
+      }
+    }
+
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 export const getProduct = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -4600,12 +4948,13 @@ export const exportInventoryCsv = async (req, res) => {
   }
 };
 
+
 // export const getAllVariants = async (req, res) => {
 //   try {
 //     const userId = req.params.userId;
 
 //     if (!userId) {
-//       return res.status(400).json({ error: 'userId is required.' });
+//       return res.status(400).json({ error: "userId is required." });
 //     }
 
 //     const page = parseInt(req.query.page) || 1;
@@ -4614,7 +4963,7 @@ export const exportInventoryCsv = async (req, res) => {
 
 //     const objectIdUserId = new mongoose.Types.ObjectId(userId);
 
-//     const products = await listingModel.aggregate([
+//     let products = await listingModel.aggregate([
 //       {
 //         $match: {
 //           userId: objectIdUserId,
@@ -4630,22 +4979,23 @@ export const exportInventoryCsv = async (req, res) => {
 //           status: 1,
 //           shopifyId: 1,
 //           variantImages: 1,
-//           productId: '$_id',
+//           productId: "$_id",
 //         },
 //       },
 //       {
-//         $unwind: '$variants',
+//         $unwind: "$variants",
 //       },
 //       {
 //         $replaceRoot: {
 //           newRoot: {
 //             $mergeObjects: [
-//               '$variants',
+//               "$variants",
 //               {
-//                 productId: '$productId',
-//                 status: '$status',
-//                 shopifyId: '$shopifyId',
-//                 variantImages: '$images',
+//                 productId: "$productId",
+//                 status: "$status",
+//                 shopifyId: "$shopifyId",
+//                 productImages: "$images",
+//                 variantImages: "$variantImages",
 //               },
 //             ],
 //           },
@@ -4661,11 +5011,11 @@ export const exportInventoryCsv = async (req, res) => {
 
 //     const productCount = await listingModel.aggregate([
 //       { $match: { userId: objectIdUserId } },
-//       { $project: { variantsCount: { $size: '$variants' } } },
+//       { $project: { variantsCount: { $size: "$variants" } } },
 //       {
 //         $group: {
 //           _id: null,
-//           totalVariants: { $sum: '$variantsCount' },
+//           totalVariants: { $sum: "$variantsCount" },
 //         },
 //       },
 //     ]);
@@ -4675,8 +5025,58 @@ export const exportInventoryCsv = async (req, res) => {
 //     if (products.length === 0) {
 //       return res
 //         .status(404)
-//         .json({ message: 'No variants found for this user.' });
+//         .json({ message: "No variants found for this user." });
 //     }
+
+//     const normalizeString = (str) =>
+//       String(str || "").replace(/['"]/g, "").trim().toLowerCase();
+
+//     products = products.map((variant, idx) => {
+//       let matchedImage = null;
+//       const titleKey = normalizeString(variant.title);
+
+//       if (variant.image_id) {
+//         matchedImage =
+//           variant.variantImages?.find(
+//             (img) => String(img.id) === String(variant.image_id)
+//           ) ||
+//           variant.productImages?.find(
+//             (img) => String(img.id) === String(variant.image_id)
+//           );
+//       }
+
+//       if (!matchedImage && variant.variantImages) {
+//         matchedImage = variant.variantImages.find((img) =>
+//           normalizeString(img.alt).includes(titleKey)
+//         );
+//       }
+
+//       if (!matchedImage && variant.productImages?.length > 0) {
+//         matchedImage = variant.productImages[0];
+//       }
+
+//       console.log(
+//         `Variant: ${variant.title} | Match type: ${
+//           variant.image_id
+//             ? matchedImage
+//               ? "Matched by image_id"
+//               : "image_id present but not found"
+//             : matchedImage
+//             ? "Fallback"
+//             : "No image"
+//         } | Image: ${matchedImage?.src || "N/A"}`
+//       );
+
+//       return {
+//         ...variant,
+//         finalImage: matchedImage
+//           ? {
+//               src: matchedImage.src,
+//               alt: matchedImage.alt || variant.title || "Variant Image",
+//             }
+//           : null,
+//       };
+//     });
 
 //     res.status(200).json({
 //       variants: products,
@@ -4685,10 +5085,11 @@ export const exportInventoryCsv = async (req, res) => {
 //       totalVariants,
 //     });
 //   } catch (error) {
-//     console.error('Error in getAllVariants function:', error);
+//     console.error("Error in getAllVariants function:", error);
 //     res.status(500).json({ error: error.message });
 //   }
 // };
+
 
 export const getAllVariants = async (req, res) => {
   try {
@@ -4706,15 +5107,15 @@ export const getAllVariants = async (req, res) => {
 
     let products = await listingModel.aggregate([
       {
-        $match: {
-          userId: objectIdUserId,
-        },
+        $match: { userId: objectIdUserId },
       },
       {
         $sort: { created_at: -1 },
       },
       {
         $project: {
+          title: 1,              // 👈 product title
+          created_at: 1,         // 👈 product created date
           variants: 1,
           images: 1,
           status: 1,
@@ -4733,6 +5134,8 @@ export const getAllVariants = async (req, res) => {
               "$variants",
               {
                 productId: "$productId",
+                productTitle: "$title",           // 👈 product name
+                productCreatedAt: "$created_at",  // 👈 product created_at
                 status: "$status",
                 shopifyId: "$shopifyId",
                 productImages: "$images",
@@ -4742,22 +5145,15 @@ export const getAllVariants = async (req, res) => {
           },
         },
       },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limit,
-      },
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
     const productCount = await listingModel.aggregate([
       { $match: { userId: objectIdUserId } },
       { $project: { variantsCount: { $size: "$variants" } } },
       {
-        $group: {
-          _id: null,
-          totalVariants: { $sum: "$variantsCount" },
-        },
+        $group: { _id: null, totalVariants: { $sum: "$variantsCount" } },
       },
     ]);
 
@@ -4772,7 +5168,7 @@ export const getAllVariants = async (req, res) => {
     const normalizeString = (str) =>
       String(str || "").replace(/['"]/g, "").trim().toLowerCase();
 
-    products = products.map((variant, idx) => {
+    products = products.map((variant) => {
       let matchedImage = null;
       const titleKey = normalizeString(variant.title);
 
@@ -4796,17 +5192,115 @@ export const getAllVariants = async (req, res) => {
         matchedImage = variant.productImages[0];
       }
 
-      console.log(
-        `Variant: ${variant.title} | Match type: ${
-          variant.image_id
-            ? matchedImage
-              ? "Matched by image_id"
-              : "image_id present but not found"
-            : matchedImage
-            ? "Fallback"
-            : "No image"
-        } | Image: ${matchedImage?.src || "N/A"}`
-      );
+      return {
+        ...variant,
+        finalImage: matchedImage
+          ? {
+              src: matchedImage.src,
+              alt: matchedImage.alt || variant.title || "Variant Image",
+            }
+          : null,
+      };
+    });
+
+    res.status(200).json({
+      variants: products,
+      currentPage: page,
+      totalPages: Math.ceil(totalVariants / limit),
+      totalVariants,
+    });
+  } catch (error) {
+    console.error("Error in getAllVariants function:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAllVariantsForAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    let products = await listingModel.aggregate([
+      {
+        $sort: { created_at: -1 },
+      },
+      {
+        $project: {
+          title: 1,              // product title
+          created_at: 1,         // product created date
+          variants: 1,
+          images: 1,
+          status: 1,
+          shopifyId: 1,
+          variantImages: 1,
+          productId: "$_id",
+          userId: 1,             // optional: expose userId too
+        },
+      },
+      {
+        $unwind: "$variants",
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              "$variants",
+              {
+                productId: "$productId",
+                productTitle: "$title",
+                productCreatedAt: "$created_at",
+                status: "$status",
+                shopifyId: "$shopifyId",
+                productImages: "$images",
+                variantImages: "$variantImages",
+                userId: "$userId",
+              },
+            ],
+          },
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
+    const productCount = await listingModel.aggregate([
+      { $project: { variantsCount: { $size: "$variants" } } },
+      { $group: { _id: null, totalVariants: { $sum: "$variantsCount" } } },
+    ]);
+
+    const totalVariants = productCount[0]?.totalVariants || 0;
+
+    if (products.length === 0) {
+      return res.status(404).json({ message: "No variants found." });
+    }
+
+    const normalizeString = (str) =>
+      String(str || "").replace(/['"]/g, "").trim().toLowerCase();
+
+    products = products.map((variant) => {
+      let matchedImage = null;
+      const titleKey = normalizeString(variant.title);
+
+      if (variant.image_id) {
+        matchedImage =
+          variant.variantImages?.find(
+            (img) => String(img.id) === String(variant.image_id)
+          ) ||
+          variant.productImages?.find(
+            (img) => String(img.id) === String(variant.image_id)
+          );
+      }
+
+      if (!matchedImage && variant.variantImages) {
+        matchedImage = variant.variantImages.find((img) =>
+          normalizeString(img.alt).includes(titleKey)
+        );
+      }
+
+      if (!matchedImage && variant.productImages?.length > 0) {
+        matchedImage = variant.productImages[0];
+      }
 
       return {
         ...variant,
@@ -4830,6 +5324,7 @@ export const getAllVariants = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 export const deleteAll = async (req, res) => {

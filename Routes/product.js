@@ -40,6 +40,8 @@ import {
   getAllProducts,
   getAllProductWithApprovalStatus,
   approvelProduct,
+  duplicateProduct,
+  getAllVariantsForAdmin,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -48,6 +50,8 @@ import { Csvuplaods } from '../middleware/multer.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 const productRouter = express.Router();
 productRouter.post('/createProduct', verifyToken, cpUpload, addUsedEquipments);
+productRouter.post('/duplicateProduct/:productId', verifyToken,  duplicateProduct);
+
 productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/holiday', verifyToken, updateAllProductsStatus);
 productRouter.post('/webhook/product/update', verifyToken, productUpdate);
@@ -56,6 +60,7 @@ productRouter.get('/getProduct/:userId', verifyToken, getProduct);
 productRouter.get('/getProductWithApprovalStatus', verifyToken, getAllProductWithApprovalStatus);
 
 productRouter.get('/getAllVariants/:userId', verifyToken, getAllVariants);
+productRouter.get('/getAllVariants', verifyToken, getAllVariantsForAdmin);
 
 productRouter.get('/getAllProducts', verifyToken, getAllProductData);
 productRouter.put('/publishedProduct/:productId', verifyToken, publishProduct);
