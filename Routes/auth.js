@@ -25,6 +25,7 @@ import {
   signInForBulkUploader,
   signUpForBulkUploader,
   addMerchantAccDetails,
+  getMerchantAccDetails,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -57,5 +58,6 @@ authRouter.post('/addRequestForOrderCancellation/:id', addOrderRequest);
 authRouter.get('/getCollcetion/:id', getCollectionId);
 authRouter.get('/getBrandAssets/:id', getBrandAssets);
 authRouter.post('/addMerchantAccountDetails', addMerchantAccDetails);
+authRouter.get('/getMerchantAccountDetails/:userId', getMerchantAccDetails);
 
 export default authRouter;

@@ -2004,8 +2004,8 @@ export const signInForBulkUploader = async (req, res) => {
 };
 
 
-export const addMerchantAccDetails=async(req,res)=>{
-   try {
+export const addMerchantAccDetails = async (req, res) => {
+  try {
     const { userId, method, paypalDetails, bankDetails } = req.body;
 
     if (!userId || !method) {
@@ -2016,16 +2016,18 @@ export const addMerchantAccDetails=async(req,res)=>{
 
     // ✅ Find user if exists
     let user = await authModel.findById(userId);
-
-    
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
     // ✅ Update PayPal
     if (method === "paypal") {
       if (!paypalDetails?.paypalAccount) {
         return res.status(400).json({ message: "PayPal account is required." });
       }
+
       user.paypalAccount = paypalDetails.paypalAccount || "";
-      user.paypalAccountNo = paypalDetails.paypalAccount || "";
+      user.paypalAccountNo = paypalDetails.paypalAccountNo || "";
       user.paypalReferenceNo = paypalDetails.paypalReferenceNo || "";
 
       // clear bank if switching
@@ -2059,7 +2061,7 @@ export const addMerchantAccDetails=async(req,res)=>{
       return res.status(400).json({ message: "Invalid payout method." });
     }
 
-    // ✅ Save user (update if exist, create if new)
+    // ✅ Save user
     await user.save();
 
     res.status(200).json({
@@ -2067,6 +2069,8 @@ export const addMerchantAccDetails=async(req,res)=>{
       data: {
         method,
         paypalAccount: user.paypalAccount,
+        paypalAccountNo: user.paypalAccountNo,
+        paypalReferenceNo: user.paypalReferenceNo,
         bankDetails: user.bankDetails,
       },
     });
@@ -2076,4 +2080,33 @@ export const addMerchantAccDetails=async(req,res)=>{
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
   }
-}
+};
+
+
+export const getMerchantAccDetails = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "UserId is required." });
+    }
+
+    // ✅ Find full user
+    const user = await authModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({
+      message: "User details fetched successfully.",
+      data: user,
+    });
+  } catch (error) {
+    console.error("Fetch user error:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
