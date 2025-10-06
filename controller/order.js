@@ -159,19 +159,10 @@ export const createOrder = async (req, res) => {
       let productSnapshot = null;
 
       if (variantId) {
-        const product = await listingModel
-          .findOne({ 'variants.id': variantId })
-          .lean();
-
+        // ⚡ fetch complete product and convert to plain object
+        const product = await listingModel.findOne({ 'variants.id': variantId }).lean();
         if (product) {
-          productSnapshot = {
-            _id: product._id,
-            title: product.title,
-            description: product.description,
-            images: product.images,
-            variants: product.variants,
-            userId: product.userId,
-          };
+          productSnapshot = product; // ✅ save full product document
         }
       }
 
@@ -183,7 +174,7 @@ export const createOrder = async (req, res) => {
         quantity: item.quantity,
         sku: item.sku,
         image: item.image || {},
-        productSnapshot,
+        productSnapshot,   // ⚡ now contains full product
       });
     }
 
@@ -226,7 +217,7 @@ export const createOrder = async (req, res) => {
     }
 
     res.status(200).json({
-      message: 'Order saved with product snapshot',
+      message: 'Order saved with FULL product snapshot',
       orderId,
       shopifyOrderNo,
       serialNumber,
@@ -236,6 +227,7 @@ export const createOrder = async (req, res) => {
     res.status(500).send('Error saving order');
   }
 };
+
 
 export const getFinanceSummary = async (req, res) => {
   try {
@@ -416,9 +408,115 @@ export const getFinanceSummaryForUser = async (req, res) => {
 
 
 
+// export const getOrderById = async (req, res) => {
+//   try {
+//     const userId = req.userId.toString();
+//     if (!userId) {
+//       return res.status(400).send({ message: 'User ID is required' });
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(userId)) {
+//       return res.status(400).send({ message: 'Invalid user ID' });
+//     }
+
+//     const allOrders = await orderModel.find({});
+//     console.log('📦 Total Orders Found:', allOrders.length);
+
+//     const ordersGroupedByOrderId = new Map();
+
+//     for (const order of allOrders) {
+//       const filteredLineItems = [];
+
+//       for (const item of order.lineItems || []) {
+//         const variantId = item.variant_id?.toString();
+//         if (!variantId) continue;
+
+//         const product = await listingModel.findOne({
+//           'variants.id': variantId,
+//         });
+
+//         if (product && product.userId && product.userId.toString() === userId) {
+//           const matchedVariant = product.variants.find((v) => v.id === variantId);
+
+//           let imageData = null;
+
+//           // ✅ 1) Variant-specific image check
+//           if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+//             const image = product.variantImages.find(
+//               (img) => img.id === matchedVariant.image_id
+//             );
+//             if (image) {
+//               imageData = {
+//                 id: image.id,
+//                 src: image.src,
+//                 alt: image.alt,
+//                 position: image.position,
+//                 width: image.width,
+//                 height: image.height,
+//               };
+//             }
+//           }
+
+//           // ✅ 2) Fallback to first product image
+//           if (!imageData && Array.isArray(product.images) && product.images.length > 0) {
+//             const fallback = product.images[0]; // first product image
+//             imageData = {
+//               id: fallback.id,
+//               src: fallback.src,
+//               alt: fallback.alt || 'Product image',
+//               position: fallback.position,
+//               width: fallback.width,
+//               height: fallback.height,
+//             };
+//           }
+
+//           if (imageData) {
+//             item.image = imageData;
+//           }
+
+//           filteredLineItems.push(item);
+//         }
+//       }
+
+//       if (filteredLineItems.length > 0) {
+//         const orderForUser = order.toObject();
+//         orderForUser.lineItems = filteredLineItems;
+
+//         if (ordersGroupedByOrderId.has(order.orderId)) {
+//           const existingOrder = ordersGroupedByOrderId.get(order.orderId);
+//           existingOrder.lineItems.push(...filteredLineItems);
+
+//           existingOrder.lineItems = Array.from(
+//             new Map(existingOrder.lineItems.map((item) => [item.variant_id, item]))
+//           ).map(([_, item]) => item);
+//         } else {
+//           ordersGroupedByOrderId.set(order.orderId, orderForUser);
+//         }
+//       }
+//     }
+
+//     const matchedOrders = Array.from(ordersGroupedByOrderId.values());
+
+//     if (matchedOrders.length > 0) {
+//       return res.status(200).send({
+//         message: 'Orders found for user',
+//         data: matchedOrders,
+//       });
+//     } else {
+//       return res.status(404).send({
+//         message: "No orders found for this user's products",
+//       });
+//     }
+//   } catch (error) {
+//     console.error('❌ Error fetching user orders:', error);
+//     res.status(500).send({ message: 'Internal Server Error' });
+//   }
+// };
+
 export const getOrderById = async (req, res) => {
   try {
-    const userId = req.userId.toString();
+    const userId = req.userId?.toString();
+
     if (!userId) {
       return res.status(400).send({ message: 'User ID is required' });
     }
@@ -437,52 +535,73 @@ export const getOrderById = async (req, res) => {
 
       for (const item of order.lineItems || []) {
         const variantId = item.variant_id?.toString();
-        if (!variantId) continue;
 
-        const product = await listingModel.findOne({
-          'variants.id': variantId,
-        });
+        // 1️⃣ Prefer the saved snapshot to decide if this belongs to user
+        const snap = item.productSnapshot;
 
-        if (product && product.userId && product.userId.toString() === userId) {
-          const matchedVariant = product.variants.find((v) => v.id === variantId);
+        let belongsToUser = false;
+        let imageData = null;
 
-          let imageData = null;
+        if (snap?.userId?.toString() === userId) {
+          belongsToUser = true;
 
-          // ✅ 1) Variant-specific image check
-          if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-            const image = product.variantImages.find(
-              (img) => img.id === matchedVariant.image_id
-            );
-            if (image) {
+          // If snapshot has images, use them
+          if (snap.images?.length > 0) {
+            const img = snap.images[0];
+            imageData = {
+              id: img.id,
+              src: img.src,
+              alt: img.alt || 'Product image',
+              position: img.position,
+              width: img.width,
+              height: img.height,
+            };
+          }
+        }
+
+        // 2️⃣ If product still exists in DB, refresh its info
+        if (variantId) {
+          const product = await listingModel.findOne({ 'variants.id': variantId }).lean();
+
+          if (product && product.userId?.toString() === userId) {
+            belongsToUser = true;
+
+            const matchedVariant = product.variants.find((v) => v.id === variantId);
+
+            // Try variant-specific image
+            if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+              const image = product.variantImages.find((img) => img.id === matchedVariant.image_id);
+              if (image) {
+                imageData = {
+                  id: image.id,
+                  src: image.src,
+                  alt: image.alt,
+                  position: image.position,
+                  width: image.width,
+                  height: image.height,
+                };
+              }
+            }
+
+            // Fallback to first product image
+            if (!imageData && Array.isArray(product.images) && product.images.length > 0) {
+              const fallback = product.images[0];
               imageData = {
-                id: image.id,
-                src: image.src,
-                alt: image.alt,
-                position: image.position,
-                width: image.width,
-                height: image.height,
+                id: fallback.id,
+                src: fallback.src,
+                alt: fallback.alt || 'Product image',
+                position: fallback.position,
+                width: fallback.width,
+                height: fallback.height,
               };
             }
           }
+        }
 
-          // ✅ 2) Fallback to first product image
-          if (!imageData && Array.isArray(product.images) && product.images.length > 0) {
-            const fallback = product.images[0]; // first product image
-            imageData = {
-              id: fallback.id,
-              src: fallback.src,
-              alt: fallback.alt || 'Product image',
-              position: fallback.position,
-              width: fallback.width,
-              height: fallback.height,
-            };
-          }
-
-          if (imageData) {
-            item.image = imageData;
-          }
-
-          filteredLineItems.push(item);
+        if (belongsToUser) {
+          const enrichedItem = { ...item };
+          if (imageData) enrichedItem.image = imageData;
+          filteredLineItems.push(enrichedItem);
         }
       }
 
@@ -494,6 +613,7 @@ export const getOrderById = async (req, res) => {
           const existingOrder = ordersGroupedByOrderId.get(order.orderId);
           existingOrder.lineItems.push(...filteredLineItems);
 
+          // remove duplicates by variant_id
           existingOrder.lineItems = Array.from(
             new Map(existingOrder.lineItems.map((item) => [item.variant_id, item]))
           ).map(([_, item]) => item);
@@ -520,6 +640,7 @@ export const getOrderById = async (req, res) => {
     res.status(500).send({ message: 'Internal Server Error' });
   }
 };
+
 
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {

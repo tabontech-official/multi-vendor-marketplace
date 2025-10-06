@@ -68,7 +68,7 @@ const productSnapshotSchema = new mongoose.Schema(
         image_id: String,
       },
     ],
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // seller id
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { _id: false }
 );
@@ -76,7 +76,7 @@ const productSnapshotSchema = new mongoose.Schema(
 const lineItemSchema = new mongoose.Schema(
   {
     variant_id: String,
-    product_id: String, // Shopify product id if available
+    product_id: String, 
     title: String,
     price: Number,
     quantity: Number,
@@ -88,22 +88,21 @@ const lineItemSchema = new mongoose.Schema(
       width: Number,
       height: Number,
     },
-    productSnapshot: productSnapshotSchema, // 👈 full product info at time of order
+    productSnapshot: productSnapshotSchema, 
   },
   { _id: false }
 );
 
 const orderSchema = new mongoose.Schema(
   {
-    orderId: { type: String, required: true }, // Shopify order id
-    customer: { type: Object },                // Shopify customer data
-    lineItems: [lineItemSchema],               // enriched line items
+    orderId: { type: String, required: true }, 
+    customer: { type: Object },              
+    lineItems: [lineItemSchema],             
     createdAt: { type: Date },
     expiresAt: { type: Date },
     serialNumber: { type: Number },
     shopifyOrderNo: { type: Number },
 
-    // --- payout/merchant fields ---
     merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     eligibleDate: { type: Date },
     scheduledPayoutDate: { type: Date },
