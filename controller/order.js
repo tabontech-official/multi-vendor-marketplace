@@ -59,136 +59,40 @@ async function checkProductExists(productId) {
   }
 }
 
-// export const createOrder = async (req, res) => {
-//   try {
-//     const orderData = req.body;
-//     const orderId = String(orderData.id);
-//     const shopifyOrderNo = orderData.order_number;
-
-//     const productId = orderData.line_items?.[0]?.product_id;
-
-//     if (!productId) return res.status(400).send('Missing product ID');
-
-//     const productExists = await checkProductExists(productId);
-//     if (!productExists) {
-//       return res.status(404).send('Product does not exist');
-//     }
-
-//     const quantity = orderData.line_items[0]?.quantity || 0;
-
-//     let existingOrder = await orderModel.findOne({ orderId });
-
-//     let serialNumber;
-
-//     if (existingOrder) {
-//       serialNumber = existingOrder.serialNumber;
-
-//       await orderModel.updateOne(
-//         { orderId },
-//         {
-//           $set: {
-//             customer: orderData.customer,
-//             lineItems: orderData.line_items,
-//             createdAt: orderData.created_at,
-//             shopifyOrderNo,
-//           },
-//         }
-//       );
-//     } else {
-//       const lastOrder = await orderModel
-//         .findOne({ serialNumber: { $ne: null } })
-//         .sort({ serialNumber: -1 });
-
-//       const lastSerial =
-//         typeof lastOrder?.serialNumber === 'number' &&
-//         !isNaN(lastOrder.serialNumber)
-//           ? lastOrder.serialNumber
-//           : 100;
-
-//       serialNumber = lastSerial + 1;
-
-//       await orderModel.create({
-//         orderId,
-//         customer: orderData.customer,
-//         lineItems: orderData.line_items,
-//         createdAt: orderData.created_at,
-//         serialNumber,
-//         shopifyOrderNo,
-//       });
-//     }
-
-//     const user = await authModel.findOne({ email: orderData.customer.email });
-//     if (!user) return res.status(404).send('User not found');
-
-//     if (user.subscription) {
-//       user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
-//     } else {
-//       user.subscription = { quantity };
-//     }
-
-//     await user.save();
-
-//     res.status(200).json({
-//       message: 'Order saved (or updated) and user updated',
-//       orderId,
-//       shopifyOrderNo,
-
-//       serialNumber,
-//     });
-//   } catch (error) {
-//     console.error(' Error saving order:', error);
-//     res.status(500).send('Error saving order');
-//   }
-// };
-
-
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
     const orderId = String(orderData.id);
     const shopifyOrderNo = orderData.order_number;
 
-    const rawItems = orderData.line_items || [];
-    if (!rawItems.length)
-      return res.status(400).send('No line items in order');
-
-    const enrichedItems = [];
-
-    for (const item of rawItems) {
-      const variantId = item.variant_id?.toString();
-      let productSnapshot = null;
-
-      if (variantId) {
-        // ⚡ fetch complete product and convert to plain object
-        const product = await listingModel.findOne({ 'variants.id': variantId }).lean();
-        if (product) {
-          productSnapshot = product; // ✅ save full product document
-        }
-      }
-
-      enrichedItems.push({
-        variant_id: variantId,
-        product_id: item.product_id?.toString(),
-        title: item.title,
-        price: Number(item.price) || 0,
-        quantity: item.quantity,
-        sku: item.sku,
-        image: item.image || {},
-        productSnapshot,   // ⚡ now contains full product
-      });
+    const productId = orderData.line_items?.[0]?.product_id;
+    if (!productId) {
+      return res.status(400).send('Missing product ID');
     }
+
+    const product = await listingModel.findOne({ id: productId }).lean();
+    if (!product) {
+      return res.status(404).send('Product does not exist');
+    }
+
+    const quantity = orderData.line_items?.reduce(
+      (sum, i) => sum + (i.quantity || 0),
+      0
+    );
 
     let existingOrder = await orderModel.findOne({ orderId });
     let serialNumber;
 
     if (existingOrder) {
       serialNumber = existingOrder.serialNumber;
+
       await orderModel.updateOne(
         { orderId },
         {
           $set: {
             customer: orderData.customer,
-            lineItems: enrichedItems,
+            lineItems: orderData.line_items,
+            ProductSnapshot: product, 
             createdAt: orderData.created_at,
             shopifyOrderNo,
           },
@@ -200,7 +104,8 @@ export const createOrder = async (req, res) => {
         .sort({ serialNumber: -1 });
 
       const lastSerial =
-        typeof lastOrder?.serialNumber === 'number' && !isNaN(lastOrder.serialNumber)
+        typeof lastOrder?.serialNumber === 'number' &&
+        !isNaN(lastOrder.serialNumber)
           ? lastOrder.serialNumber
           : 100;
 
@@ -209,25 +114,36 @@ export const createOrder = async (req, res) => {
       await orderModel.create({
         orderId,
         customer: orderData.customer,
-        lineItems: enrichedItems,
+        lineItems: orderData.line_items,
+        ProductSnapshot: product, 
         createdAt: orderData.created_at,
         serialNumber,
         shopifyOrderNo,
       });
     }
 
+    const user = await authModel.findOne({ email: orderData.customer.email });
+    if (user) {
+      if (user.subscription) {
+        user.subscription.quantity =
+          (user.subscription.quantity || 0) + quantity;
+      } else {
+        user.subscription = { quantity };
+      }
+      await user.save();
+    }
+
     res.status(200).json({
-      message: 'Order saved with FULL product snapshot',
+      message: 'Order saved (or updated) with product snapshot',
       orderId,
       shopifyOrderNo,
       serialNumber,
     });
-  } catch (err) {
-    console.error('Error saving order:', err);
+  } catch (error) {
+    console.error('❌ Error saving order:', error);
     res.status(500).send('Error saving order');
   }
 };
-
 
 export const getFinanceSummary = async (req, res) => {
   try {
@@ -295,8 +211,6 @@ export const getFinanceSummary = async (req, res) => {
     res.status(500).json({ message: 'Error calculating finance summary' });
   }
 };
-
-
 
 export const getFinanceSummaryForUser = async (req, res) => {
   try {
@@ -375,7 +289,7 @@ export const getFinanceSummaryForUser = async (req, res) => {
       .reduce((sum, order) => {
         let userIncome = 0;
         for (const item of order.lineItems) {
-          const product =  listingModel.findOne({
+          const product = listingModel.findOne({
             'variants.id': item.variant_id,
           });
 
@@ -392,7 +306,7 @@ export const getFinanceSummaryForUser = async (req, res) => {
       totalIncome: totalIncome.toFixed(2),
       netProfit: netProfit.toFixed(2),
       mrr: mrr.toFixed(2),
-      totalOrdersInDb:totalOrders,
+      totalOrdersInDb: totalOrders,
       paidIncome: paidIncome.toFixed(2),
       unpaidIncome: unpaidIncome.toFixed(2),
       fulfilledOrders: fulfilledOrdersCount,
@@ -405,8 +319,6 @@ export const getFinanceSummaryForUser = async (req, res) => {
       .json({ message: 'Error calculating finance summary for user' });
   }
 };
-
-
 
 // export const getOrderById = async (req, res) => {
 //   try {
@@ -516,7 +428,6 @@ export const getFinanceSummaryForUser = async (req, res) => {
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.userId?.toString();
-
     if (!userId) {
       return res.status(400).send({ message: 'User ID is required' });
     }
@@ -536,16 +447,15 @@ export const getOrderById = async (req, res) => {
       for (const item of order.lineItems || []) {
         const variantId = item.variant_id?.toString();
 
-        // 1️⃣ Prefer the saved snapshot to decide if this belongs to user
+        // ✅ 1) Check saved product snapshot first
         const snap = item.productSnapshot;
-
         let belongsToUser = false;
         let imageData = null;
 
         if (snap?.userId?.toString() === userId) {
           belongsToUser = true;
 
-          // If snapshot has images, use them
+          // if snapshot has images
           if (snap.images?.length > 0) {
             const img = snap.images[0];
             imageData = {
@@ -559,18 +469,25 @@ export const getOrderById = async (req, res) => {
           }
         }
 
-        // 2️⃣ If product still exists in DB, refresh its info
+        // ✅ 2) If product still exists, refresh info (optional but keeps UI updated)
         if (variantId) {
-          const product = await listingModel.findOne({ 'variants.id': variantId }).lean();
-
+          const product = await listingModel
+            .findOne({ 'variants.id': variantId })
+            .lean();
           if (product && product.userId?.toString() === userId) {
             belongsToUser = true;
+            const matchedVariant = product.variants.find(
+              (v) => v.id === variantId
+            );
 
-            const matchedVariant = product.variants.find((v) => v.id === variantId);
-
-            // Try variant-specific image
-            if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-              const image = product.variantImages.find((img) => img.id === matchedVariant.image_id);
+            // variant-specific image
+            if (
+              matchedVariant?.image_id &&
+              Array.isArray(product.variantImages)
+            ) {
+              const image = product.variantImages.find(
+                (img) => img.id === matchedVariant.image_id
+              );
               if (image) {
                 imageData = {
                   id: image.id,
@@ -583,8 +500,12 @@ export const getOrderById = async (req, res) => {
               }
             }
 
-            // Fallback to first product image
-            if (!imageData && Array.isArray(product.images) && product.images.length > 0) {
+            // fallback to first product image
+            if (
+              !imageData &&
+              Array.isArray(product.images) &&
+              product.images.length > 0
+            ) {
               const fallback = product.images[0];
               imageData = {
                 id: fallback.id,
@@ -615,7 +536,9 @@ export const getOrderById = async (req, res) => {
 
           // remove duplicates by variant_id
           existingOrder.lineItems = Array.from(
-            new Map(existingOrder.lineItems.map((item) => [item.variant_id, item]))
+            new Map(
+              existingOrder.lineItems.map((item) => [item.variant_id, item])
+            )
           ).map(([_, item]) => item);
         } else {
           ordersGroupedByOrderId.set(order.orderId, orderForUser);
@@ -640,8 +563,6 @@ export const getOrderById = async (req, res) => {
     res.status(500).send({ message: 'Internal Server Error' });
   }
 };
-
-
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {
     if (result) {
@@ -948,70 +869,86 @@ export const getOrderDatafromShopify = async (req, res) => {
   }
 };
 
-
-
-
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
     const allOrders = await orderModel.find({});
-    console.log("✅ Total orders fetched from DB:", allOrders.length);
+    console.log('✅ Total orders fetched from DB:', allOrders.length);
 
     const finalOrders = [];
     const merchantDetailsMap = new Map();
     const merchantStatsMap = new Map();
 
     for (const order of allOrders) {
-      console.log("\n📦 Processing Order:", order.shopifyOrderNo, "Order ID:", order.orderId);
+      console.log(
+        '\n📦 Processing Order:',
+        order.shopifyOrderNo,
+        'Order ID:',
+        order.orderId
+      );
       const merchantGroups = new Map();
 
       for (const item of order.lineItems || []) {
         const variantId = item.variant_id?.toString();
         if (!variantId) {
-          console.log("⚠️ Skipped item with no variant_id");
+          console.log('⚠️ Skipped item with no variant_id');
           continue;
         }
 
-        const product = await listingModel.findOne({ 'variants.id': variantId });
+        const product = await listingModel.findOne({
+          'variants.id': variantId,
+        });
         if (!product) {
-          console.log("⚠️ Product not found for variant ID:", variantId);
+          console.log('⚠️ Product not found for variant ID:', variantId);
           continue;
         }
         if (!product.userId) {
-          console.log("⚠️ Product found but has no userId");
+          console.log('⚠️ Product found but has no userId');
           continue;
         }
 
         const merchantId = product.userId.toString();
         const matchedVariant = product.variants.find((v) => v.id === variantId);
 
-       if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-  const image = product.variantImages.find(img => img.id === matchedVariant.image_id);
-  if (image) {
-    item.image = {
-      id: image.id,
-      src: image.src,
-      alt: image.alt,
-      position: image.position,
-      width: image.width,
-      height: image.height,
-    };
-    console.log("🖼️ Matched variant image set for item:", item.title || item.name);
-  }
-}
+        if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+          const image = product.variantImages.find(
+            (img) => img.id === matchedVariant.image_id
+          );
+          if (image) {
+            item.image = {
+              id: image.id,
+              src: image.src,
+              alt: image.alt,
+              position: image.position,
+              width: image.width,
+              height: image.height,
+            };
+            console.log(
+              '🖼️ Matched variant image set for item:',
+              item.title || item.name
+            );
+          }
+        }
 
-// ✅ Fallback Product Image (if no variant image was set)
-if (!item.image && Array.isArray(product.images) && product.images.length > 0) {
-  const defaultImage = product.images[0];
-  item.image = {
-    id: defaultImage.id || null,
-    src: defaultImage.src,
-    alt: defaultImage.alt || '',
-    position: defaultImage.position || 1,
-    width: defaultImage.width || null,
-    height: defaultImage.height || null,
-  };
-  console.log("🖼️ Default product image set for item:", item.title || item.name);
-}
+        // ✅ Fallback Product Image (if no variant image was set)
+        if (
+          !item.image &&
+          Array.isArray(product.images) &&
+          product.images.length > 0
+        ) {
+          const defaultImage = product.images[0];
+          item.image = {
+            id: defaultImage.id || null,
+            src: defaultImage.src,
+            alt: defaultImage.alt || '',
+            position: defaultImage.position || 1,
+            width: defaultImage.width || null,
+            height: defaultImage.height || null,
+          };
+          console.log(
+            '🖼️ Default product image set for item:',
+            item.title || item.name
+          );
+        }
 
         item.orderId = order.orderId;
         item.customer = [
@@ -1031,7 +968,9 @@ if (!item.image && Array.isArray(product.images) && product.images.length > 0) {
         merchantGroups.get(merchantId).push(item);
 
         if (!merchantDetailsMap.has(merchantId)) {
-          const merchant = await authModel.findById(merchantId).select('-password');
+          const merchant = await authModel
+            .findById(merchantId)
+            .select('-password');
           if (merchant) {
             merchantDetailsMap.set(merchantId, {
               _id: merchant._id,
@@ -1041,9 +980,9 @@ if (!item.image && Array.isArray(product.images) && product.images.length > 0) {
               dispatchAddress: merchant.dispatchAddress,
               dispatchCountry: merchant.dispatchCountry,
             });
-            console.log("👤 Merchant details cached for ID:", merchantId);
+            console.log('👤 Merchant details cached for ID:', merchantId);
           } else {
-            console.log("⚠️ Merchant not found for ID:", merchantId);
+            console.log('⚠️ Merchant not found for ID:', merchantId);
           }
         }
 
@@ -1064,14 +1003,18 @@ if (!item.image && Array.isArray(product.images) && product.images.length > 0) {
         const amount = (item.price || 0) * (item.quantity || 1);
         merchantStats.totalOrderValue += amount;
 
-        console.log(`💰 Added amount ${amount} to merchant ${merchantId} | Product: ${item.title || item.name}`);
+        console.log(
+          `💰 Added amount ${amount} to merchant ${merchantId} | Product: ${item.title || item.name}`
+        );
       }
 
       const merchantsArray = [];
       const lineItemsByMerchant = {};
 
       merchantGroups.forEach((items, merchantId) => {
-        const merchantInfo = merchantDetailsMap.get(merchantId) || { id: merchantId };
+        const merchantInfo = merchantDetailsMap.get(merchantId) || {
+          id: merchantId,
+        };
         const stats = merchantStatsMap.get(merchantId);
 
         merchantsArray.push({
@@ -1090,26 +1033,32 @@ if (!item.image && Array.isArray(product.images) && product.images.length > 0) {
         lineItemsByMerchant,
       });
 
-      console.log("✅ Order processed:", order.shopifyOrderNo, "Merchants involved:", merchantsArray.length);
+      console.log(
+        '✅ Order processed:',
+        order.shopifyOrderNo,
+        'Merchants involved:',
+        merchantsArray.length
+      );
     }
 
     if (finalOrders.length > 0) {
       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
-      console.log("🚀 Returning", finalOrders.length, "orders to client.");
+      console.log('🚀 Returning', finalOrders.length, 'orders to client.');
       return res.status(200).send({
         message: 'Orders grouped per order (not merged by merchant)',
         data: finalOrders,
       });
     } else {
-      console.log("❌ No final orders found.");
-      return res.status(404).send({ message: 'No orders found across merchants' });
+      console.log('❌ No final orders found.');
+      return res
+        .status(404)
+        .send({ message: 'No orders found across merchants' });
     }
   } catch (error) {
-    console.error("❌ Error in getAllOrdersForAdmin:", error);
+    console.error('❌ Error in getAllOrdersForAdmin:', error);
     return res.status(500).send({ message: 'Internal Server Error' });
   }
 };
-
 
 export const addPaypalAccount = async (req, res) => {
   try {
@@ -1348,7 +1297,6 @@ function getNextPayoutDate(startDate, config) {
   const next = possible.find((d) => d.isAfter(base));
   return next || possible[0];
 }
-
 
 export const getPayout = async (req, res) => {
   try {
@@ -1886,7 +1834,6 @@ export const getPayoutOrders = async (req, res) => {
   }
 };
 
-
 export const getPayoutForAllOrders = async (req, res) => {
   try {
     const { payoutDate, status } = req.query;
@@ -2089,7 +2036,6 @@ export const getPayoutForAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
 
 export const updateTrackingInShopify = async (req, res) => {
   try {
@@ -2724,23 +2670,23 @@ export const exportOrders = async (req, res) => {
 export const exportProductsForUser = async (req, res) => {
   try {
     const userId = req.userId?.toString();
-    console.log("🔹 UserId from request:", userId);
+    console.log('🔹 UserId from request:', userId);
 
     if (!userId) {
-      console.log("❌ Missing userId in request");
-      return res.status(400).json({ message: "Missing userId" });
+      console.log('❌ Missing userId in request');
+      return res.status(400).json({ message: 'Missing userId' });
     }
 
     console.log(`🔹 Fetching orders directly from DB for userId: ${userId}`);
 
     // ✅ Orders DB se lao (assume aapka model ka naam orderModel hai)
     const orders = await orderModel.find({});
-    console.log("🔹 Total orders fetched:", orders.length);
+    console.log('🔹 Total orders fetched:', orders.length);
 
     const rows = [];
 
     for (const order of orders) {
-      console.log("➡️ Checking order:", order.orderId);
+      console.log('➡️ Checking order:', order.orderId);
 
       const {
         orderId,
@@ -2761,7 +2707,9 @@ export const exportProductsForUser = async (req, res) => {
         const product = await listingModel.findOne({ id: item.product_id });
 
         if (!product) {
-          console.log(`⚠️ Product not found for product_id: ${item.product_id}`);
+          console.log(
+            `⚠️ Product not found for product_id: ${item.product_id}`
+          );
           continue;
         }
 
@@ -2780,81 +2728,77 @@ export const exportProductsForUser = async (req, res) => {
           OrderID: orderId,
           ShopifyOrderNo: shopifyOrderNo,
           SerialNumber: serialNumber,
-          ProductName: item.name || "",
-          SKU: item.sku || "",
-          Vendor: item.vendor || "",
-          Price: item.price || "",
-          Quantity: item.quantity || "",
-          FulfillmentStatus: item.fulfillment_status || "unfulfilled",
-          VariantTitle: item.variant_title || "",
-          ProductID: item.product_id || "",
-          VariantID: item.variant_id || "",
-          PayoutAmount: payoutAmount || "",
-          PayoutStatus: payoutStatus || "",
+          ProductName: item.name || '',
+          SKU: item.sku || '',
+          Vendor: item.vendor || '',
+          Price: item.price || '',
+          Quantity: item.quantity || '',
+          FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
+          VariantTitle: item.variant_title || '',
+          ProductID: item.product_id || '',
+          VariantID: item.variant_id || '',
+          PayoutAmount: payoutAmount || '',
+          PayoutStatus: payoutStatus || '',
           EligiblePayoutDate: eligibleDate
             ? new Date(eligibleDate).toLocaleDateString()
-            : "",
+            : '',
           ScheduledPayoutDate: scheduledPayoutDate
             ? new Date(scheduledPayoutDate).toLocaleDateString()
-            : "",
-          OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : "",
-          OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : "",
-          CustomerEmail: customer?.email || "",
-          CustomerName: `${customer?.first_name || ""} ${customer?.last_name || ""}`,
-          CustomerPhone: customer?.phone || "",
-          CustomerCreated: customer?.created_at || "",
-          CustomerCity: customer?.default_address?.city || "",
-          CustomerCountry: customer?.default_address?.country || "",
+            : '',
+          OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : '',
+          OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : '',
+          CustomerEmail: customer?.email || '',
+          CustomerName: `${customer?.first_name || ''} ${customer?.last_name || ''}`,
+          CustomerPhone: customer?.phone || '',
+          CustomerCreated: customer?.created_at || '',
+          CustomerCity: customer?.default_address?.city || '',
+          CustomerCountry: customer?.default_address?.country || '',
         });
       }
     }
 
     if (rows.length === 0) {
-      console.log("⚠️ No products found in orders for user:", userId);
+      console.log('⚠️ No products found in orders for user:', userId);
       return res
         .status(404)
-        .json({ message: "No products found in orders for this user." });
+        .json({ message: 'No products found in orders for this user.' });
     }
 
-    console.log("✅ Total rows prepared for CSV:", rows.length);
+    console.log('✅ Total rows prepared for CSV:', rows.length);
 
     const fields = Object.keys(rows[0]);
     const parser = new Parser({ fields });
     const csv = parser.parse(rows);
-    console.log("✅ CSV data parsed successfully");
+    console.log('✅ CSV data parsed successfully');
 
     const filename = `export-user-${userId}-${Date.now()}.csv`;
-    const isVercel = process.env.VERCEL === "1";
-    const exportDir = isVercel ? "/tmp" : path.join(process.cwd(), "exports");
+    const isVercel = process.env.VERCEL === '1';
+    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
 
     if (!isVercel && !fs.existsSync(exportDir)) {
-      console.log("📂 Creating export directory:", exportDir);
+      console.log('📂 Creating export directory:', exportDir);
       fs.mkdirSync(exportDir, { recursive: true });
     }
 
     const filePath = path.join(exportDir, filename);
-    console.log("📂 Writing CSV file at:", filePath);
+    console.log('📂 Writing CSV file at:', filePath);
     fs.writeFileSync(filePath, csv);
 
     res.download(filePath, filename, (err) => {
       if (err) {
-        console.error("❌ Download error:", err);
-        res.status(500).send("Download failed");
+        console.error('❌ Download error:', err);
+        res.status(500).send('Download failed');
       } else {
-        console.log("✅ File download initiated:", filename);
+        console.log('✅ File download initiated:', filename);
       }
       fs.unlinkSync(filePath);
-      console.log("🗑️ Temp file deleted:", filePath);
+      console.log('🗑️ Temp file deleted:', filePath);
     });
   } catch (err) {
-    console.error("❌ Export Error:", err);
-    res
-      .status(500)
-      .json({ message: "Export failed", error: err.message });
+    console.error('❌ Export Error:', err);
+    res.status(500).json({ message: 'Export failed', error: err.message });
   }
 };
-
-
 
 export const getPendingOrder = async (req, res) => {
   try {
@@ -2971,17 +2915,13 @@ export const getSalesContribution = async (req, res) => {
   }
 };
 
-
-
 export const getMonthlyRevenue = async (req, res) => {
   try {
-
     const allOrders = await orderModel.find({});
 
     const revenueByMonth = {};
 
     for (const order of allOrders) {
-
       for (const item of order.lineItems || []) {
         const variantId = item.variant_id?.toString();
 
@@ -2994,33 +2934,26 @@ export const getMonthlyRevenue = async (req, res) => {
           orderDate.getMonth() + 1
         )
           .toString()
-          .padStart(2, "0")}`;
+          .padStart(2, '0')}`;
 
-
-        const lineRevenue =
-          parseFloat(item.price || 0) * (item.quantity || 1);
-
-      
+        const lineRevenue = parseFloat(item.price || 0) * (item.quantity || 1);
 
         if (!revenueByMonth[monthKey]) {
           revenueByMonth[monthKey] = 0;
         }
         revenueByMonth[monthKey] += lineRevenue;
-
-      
       }
     }
 
-
     if (Object.keys(revenueByMonth).length > 0) {
       return res.status(200).json({
-        message: "Monthly revenue calculated for all users",
+        message: 'Monthly revenue calculated for all users',
         revenue: revenueByMonth,
       });
     } else {
-      return res.status(404).json({ message: "No revenue data found" });
+      return res.status(404).json({ message: 'No revenue data found' });
     }
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
