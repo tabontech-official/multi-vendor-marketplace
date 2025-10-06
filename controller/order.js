@@ -59,36 +59,145 @@ async function checkProductExists(productId) {
   }
 }
 
+// export const createOrder = async (req, res) => {
+//   try {
+//     const orderData = req.body;
+//     const orderId = String(orderData.id);
+//     const shopifyOrderNo = orderData.order_number;
+
+//     const productId = orderData.line_items?.[0]?.product_id;
+
+//     if (!productId) return res.status(400).send('Missing product ID');
+
+//     const productExists = await checkProductExists(productId);
+//     if (!productExists) {
+//       return res.status(404).send('Product does not exist');
+//     }
+
+//     const quantity = orderData.line_items[0]?.quantity || 0;
+
+//     let existingOrder = await orderModel.findOne({ orderId });
+
+//     let serialNumber;
+
+//     if (existingOrder) {
+//       serialNumber = existingOrder.serialNumber;
+
+//       await orderModel.updateOne(
+//         { orderId },
+//         {
+//           $set: {
+//             customer: orderData.customer,
+//             lineItems: orderData.line_items,
+//             createdAt: orderData.created_at,
+//             shopifyOrderNo,
+//           },
+//         }
+//       );
+//     } else {
+//       const lastOrder = await orderModel
+//         .findOne({ serialNumber: { $ne: null } })
+//         .sort({ serialNumber: -1 });
+
+//       const lastSerial =
+//         typeof lastOrder?.serialNumber === 'number' &&
+//         !isNaN(lastOrder.serialNumber)
+//           ? lastOrder.serialNumber
+//           : 100;
+
+//       serialNumber = lastSerial + 1;
+
+//       await orderModel.create({
+//         orderId,
+//         customer: orderData.customer,
+//         lineItems: orderData.line_items,
+//         createdAt: orderData.created_at,
+//         serialNumber,
+//         shopifyOrderNo,
+//       });
+//     }
+
+//     const user = await authModel.findOne({ email: orderData.customer.email });
+//     if (!user) return res.status(404).send('User not found');
+
+//     if (user.subscription) {
+//       user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
+//     } else {
+//       user.subscription = { quantity };
+//     }
+
+//     await user.save();
+
+//     res.status(200).json({
+//       message: 'Order saved (or updated) and user updated',
+//       orderId,
+//       shopifyOrderNo,
+
+//       serialNumber,
+//     });
+//   } catch (error) {
+//     console.error(' Error saving order:', error);
+//     res.status(500).send('Error saving order');
+//   }
+// };
+
+
 export const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
     const orderId = String(orderData.id);
     const shopifyOrderNo = orderData.order_number;
 
-    const productId = orderData.line_items?.[0]?.product_id;
+    const rawItems = orderData.line_items || [];
+    if (!rawItems.length)
+      return res.status(400).send('No line items in order');
 
-    if (!productId) return res.status(400).send('Missing product ID');
+    const enrichedItems = [];
 
-    const productExists = await checkProductExists(productId);
-    if (!productExists) {
-      return res.status(404).send('Product does not exist');
+    for (const item of rawItems) {
+      const variantId = item.variant_id?.toString();
+      let productSnapshot = null;
+
+      if (variantId) {
+        const product = await listingModel
+          .findOne({ 'variants.id': variantId })
+          .lean();
+
+        if (product) {
+          productSnapshot = {
+            _id: product._id,
+            title: product.title,
+            description: product.description,
+            images: product.images,
+            variants: product.variants,
+            userId: product.userId,
+          };
+        }
+      }
+
+      enrichedItems.push({
+        variant_id: variantId,
+        product_id: item.product_id?.toString(),
+        title: item.title,
+        price: Number(item.price) || 0,
+        quantity: item.quantity,
+        sku: item.sku,
+        image: item.image || {},
+        productSnapshot,
+      });
     }
 
-    const quantity = orderData.line_items[0]?.quantity || 0;
-
     let existingOrder = await orderModel.findOne({ orderId });
-
     let serialNumber;
 
     if (existingOrder) {
       serialNumber = existingOrder.serialNumber;
-
       await orderModel.updateOne(
         { orderId },
         {
           $set: {
             customer: orderData.customer,
-            lineItems: orderData.line_items,
+            lineItems: enrichedItems,
             createdAt: orderData.created_at,
             shopifyOrderNo,
           },
@@ -100,8 +209,7 @@ export const createOrder = async (req, res) => {
         .sort({ serialNumber: -1 });
 
       const lastSerial =
-        typeof lastOrder?.serialNumber === 'number' &&
-        !isNaN(lastOrder.serialNumber)
+        typeof lastOrder?.serialNumber === 'number' && !isNaN(lastOrder.serialNumber)
           ? lastOrder.serialNumber
           : 100;
 
@@ -110,33 +218,21 @@ export const createOrder = async (req, res) => {
       await orderModel.create({
         orderId,
         customer: orderData.customer,
-        lineItems: orderData.line_items,
+        lineItems: enrichedItems,
         createdAt: orderData.created_at,
         serialNumber,
         shopifyOrderNo,
       });
     }
 
-    const user = await authModel.findOne({ email: orderData.customer.email });
-    if (!user) return res.status(404).send('User not found');
-
-    if (user.subscription) {
-      user.subscription.quantity = (user.subscription.quantity || 0) + quantity;
-    } else {
-      user.subscription = { quantity };
-    }
-
-    await user.save();
-
     res.status(200).json({
-      message: 'Order saved (or updated) and user updated',
+      message: 'Order saved with product snapshot',
       orderId,
       shopifyOrderNo,
-
       serialNumber,
     });
-  } catch (error) {
-    console.error(' Error saving order:', error);
+  } catch (err) {
+    console.error('Error saving order:', err);
     res.status(500).send('Error saving order');
   }
 };
