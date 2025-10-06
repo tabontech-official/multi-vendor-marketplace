@@ -27,6 +27,7 @@ import {
   getSalesContribution,
   getFinanceSummaryForUser,
   getMonthlyRevenue,
+  addComission,
 } from '../controller/order.js';
 import express from 'express';
 import { verifyToken } from '../middleware/verifyToken.js';
@@ -61,7 +62,7 @@ orderRouter.get('/exportOrderByUserId',verifyToken, exportProductsForUser);
 orderRouter.get('/getPendingOrder',verifyToken, getPendingOrder);
 orderRouter.get('/getSalesContribution', getSalesContribution);
 orderRouter.get('/getFinanceSummaryForUser/:userId', getFinanceSummaryForUser);
-
+orderRouter.post('/addCommision',addComission)
 
 orderRouter.delete('/', deleteUser);
 export default orderRouter;

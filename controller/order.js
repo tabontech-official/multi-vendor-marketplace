@@ -15,6 +15,40 @@ import fs from 'fs';
 dayjs.extend(customParseFormat);
 dayjs.extend(minMax);
 
+
+export const addComission = async (req, res) => {
+  try {
+    const { comission } = req.body;
+
+    if (comission === undefined || comission === null) {
+      return res.status(400).json({ message: "Commission is required" });
+    }
+
+    if (isNaN(comission) || comission < 0 || comission > 100) {
+      return res
+        .status(400)
+        .json({ message: "Commission must be between 0 and 100" });
+    }
+
+    const payoutConfig = await PayoutConfig.findOne();
+    if (!payoutConfig) {
+      return res
+        .status(404)
+        .json({ message: "No payout configuration found to update" });
+    }
+
+    payoutConfig.Comission = comission;
+    await payoutConfig.save();
+
+    return res.status(200).json({
+      message: "Commission updated successfully",
+      data: payoutConfig,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const shopifyRequest = async (
   url,
   method,
@@ -1147,7 +1181,6 @@ export const getOrderDatafromShopify = async (req, res) => {
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
     const allOrders = await orderModel.find({});
-    console.log("✅ Total orders fetched from DB:", allOrders.length);
 
     const finalOrders = [];
     const merchantDetailsMap = new Map();
@@ -1155,7 +1188,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
     for (const order of allOrders) {
       console.log(
-        "\n📦 Processing Order:",
+        "\n Processing Order:",
         order.shopifyOrderNo,
         "Order ID:",
         order.orderId
@@ -1169,7 +1202,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
         let merchantId = snapshot?.userId?.toString() || null;
         let imageData = null;
 
-        // ✅ 1) Use snapshot first
         if (snapshot) {
           if (snapshot?.images?.length > 0) {
             const img = snapshot.images[0];
@@ -1184,7 +1216,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
           }
         }
 
-        // ✅ 2) Try to refresh product info if product still exists
         if (variantId) {
           const product = await listingModel
             .findOne({ "variants.id": variantId })
@@ -1197,7 +1228,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
               (v) => v.id === variantId
             );
 
-            // variant-specific image
             if (
               matchedVariant?.image_id &&
               Array.isArray(product.variantImages)
@@ -1217,7 +1247,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
               }
             }
 
-            // fallback to first product image
             if (
               !imageData &&
               Array.isArray(product.images) &&
@@ -1236,7 +1265,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
           }
         }
 
-        // ✅ Skip only if no merchantId found at all
         if (!merchantId) {
           console.log(
             "⚠️ Skipped item because merchantId could not be determined"
@@ -1265,7 +1293,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
         }
         merchantGroups.get(merchantId).push(enrichedItem);
 
-        // ✅ Merchant details cache
         if (!merchantDetailsMap.has(merchantId)) {
           const merchant = await authModel
             .findById(merchantId)
@@ -1284,7 +1311,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
           }
         }
 
-        // ✅ Merchant stats
         if (!merchantStatsMap.has(merchantId)) {
           merchantStatsMap.set(merchantId, {
             totalOrdersCount: 0,
@@ -1302,7 +1328,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
         stats.totalOrderValue += amount;
       }
 
-      // ✅ Build final object
       const merchantsArray = [];
       const lineItemsByMerchant = {};
 
