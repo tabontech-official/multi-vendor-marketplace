@@ -1987,168 +1987,154 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 
 export const updateImages = async (req, res) => {
   const { id } = req.params;
-  const imageUrls = req.body.images || []; // frontend payload (kept images)
-  const variantImages = req.body.variantImages || []; // frontend payload (kept variant images)
+  const imageUrls = req.body.images || [];
+  const variantImages = req.body.variantImages || [];
+  console.log('🟦 ====== updateImages API called ======');
 
   try {
     const product = await listingModel.findOne({ id });
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-    const shopifyConfig = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfig) {
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
-    }
+    console.log('Product found:', product.title);
+    const oldVariantImages = product.variantImages || [];
+    const oldMediaImages = product.images || [];
 
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig)
+      return res.status(404).json({ error: 'Shopify config not found.' });
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfig;
 
-    // ✅ Step 1: Fetch existing images from Shopify (only for duplicate check, not deletion)
-    const existingImagesRes = await shopifyRequest(
-      `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-      'GET',
-      null,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-    const existingImages = existingImagesRes?.images || [];
-    console.log(
-      '🔹 Existing Shopify images:',
-      existingImages.map((img) => img.src)
-    );
-
-    // ✅ Step 2: Upload new product images (skip duplicates)
-    const imagesDataToPush = [];
+    const uploadedMediaImages = [];
     for (let i = 0; i < imageUrls.length; i++) {
-      const imageUrl = imageUrls[i];
-      const alreadyExists = existingImages.some((img) => img.src === imageUrl);
+      const url = imageUrls[i];
+      if (!url) continue;
+
+      const alreadyExists = oldMediaImages.some((img) => img.src === url);
       if (alreadyExists) continue;
 
       const payload = {
-        image: { src: imageUrl, alt: `Image ${i + 1}`, position: i + 1 },
+        image: { src: url, alt: `Image ${i + 1}`, position: i + 1 },
       };
-      const uploadRes = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-        'POST',
-        payload,
-        shopifyApiKey,
-        shopifyAccessToken
-      );
-
-      const transformedUrl = transformCloudinaryToShopifyCdn(imageUrl);
-      imagesDataToPush.push({
-        src: transformedUrl,
-        alt: `Image ${i + 1}`,
-        position: i + 1,
-        id: uploadRes?.image?.id,
-      });
-    }
-
-    // ✅ Step 3: Upload new variant images (skip duplicates)
-    const uploadedVariantImages = [];
-    for (let i = 0; i < variantImages.length; i++) {
-      const originalUrl = variantImages[i]?.url;
-      if (!originalUrl) continue;
-
-      const alreadyExists = existingImages.some(
-        (img) => img.src === originalUrl
-      );
-      if (alreadyExists) continue;
-
-      const payload = {
-        image: { src: originalUrl, alt: `Variant Image ${i + 1}` },
-      };
-      const uploadResponse = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-        'POST',
-        payload,
-        shopifyApiKey,
-        shopifyAccessToken
-      );
-
-      if (uploadResponse?.image) {
-        const transformedUrl = transformCloudinaryToShopifyCdn(originalUrl);
-        uploadedVariantImages.push({
-          ...uploadResponse.image,
-          src: transformedUrl,
-        });
+      try {
+        const uploadRes = await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+          'POST',
+          payload,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+        if (uploadRes?.image)
+          uploadedMediaImages.push({ ...uploadRes.image, src: url });
+      } catch (err) {
+        console.log('Media upload failed:', err.message);
       }
     }
 
-    // ✅ Step 4: Assign variant images to variants
-    const productResponse = await shopifyRequest(
+    const uploadedVariantImages = [];
+    for (const variant of variantImages) {
+      const { key, url } = variant;
+      if (!url) continue;
+
+      const alreadyExists = oldVariantImages.some((img) => img.src === url);
+      if (alreadyExists) continue;
+
+      const payload = { image: { src: url, alt: `Variant Image ${key}` } };
+      try {
+        const uploadRes = await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+          'POST',
+          payload,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+        if (uploadRes?.image)
+          uploadedVariantImages.push({
+            ...uploadRes.image,
+            src: url,
+            variantKey: key,
+          });
+      } catch (err) {
+        console.log(`Variant [${key}] upload failed:`, err.message);
+      }
+    }
+
+    const shopifyProduct = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
       'GET',
       null,
       shopifyApiKey,
       shopifyAccessToken
     );
-    const variantsFromShopify = productResponse?.product?.variants || [];
+    const shopifyVariants = shopifyProduct?.product?.variants || [];
     const updatedVariants = [];
 
-    for (let i = 0; i < variantsFromShopify.length; i++) {
-      const variant = variantsFromShopify[i];
-      const image = uploadedVariantImages[i];
-
-      if (variant && image) {
+    for (const variant of shopifyVariants) {
+      const match = uploadedVariantImages.find(
+        (img) => img.variantKey?.toLowerCase() === variant.title?.toLowerCase()
+      );
+      if (match) {
         await shopifyRequest(
           `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
           'PUT',
-          { variant: { id: variant.id, image_id: image.id } },
+          { variant: { id: variant.id, image_id: match.id } },
           shopifyApiKey,
           shopifyAccessToken
         );
-        updatedVariants.push({ ...variant, image_id: image.id });
+        updatedVariants.push({ ...variant, image_id: match.id });
       } else {
-        updatedVariants.push(variant);
-      }
-    }
-
-    // ✅ Step 5: Merge payload + existing + new (instead of overwriting)
-    let finalImages = [];
-    for (const url of imageUrls) {
-      const existing = (product.images || []).find((img) => img.src === url);
-      if (existing) {
-        finalImages.push(existing);
-      } else {
-        const uploaded = imagesDataToPush.find((img) => img.src === url);
-        if (uploaded) {
-          finalImages.push(uploaded);
+        const stillExists = variantImages.some(
+          (v) =>
+            v.key?.toLowerCase() === variant.title?.toLowerCase() && !!v.url
+        );
+        if (!stillExists) {
+          await shopifyRequest(
+            `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+            'PUT',
+            { variant: { id: variant.id, image_id: null } },
+            shopifyApiKey,
+            shopifyAccessToken
+          );
+          updatedVariants.push({ ...variant, image_id: null });
+          console.log(`🧹 Cleared image for variant ${variant.title}`);
         } else {
-          finalImages.push({ src: url });
+          const old = product.variants.find((v) => v.id === variant.id);
+          updatedVariants.push(old || variant);
         }
       }
     }
 
-    let finalVariantImages = [];
-    for (const v of variantImages) {
-      const existing = (product.variantImages || []).find(
-        (img) => img.src === v.url
+    const newVariantUrls = variantImages.map((v) => v.url);
+    const syncedVariantImages = oldVariantImages.filter((oldImg) =>
+      newVariantUrls.includes(oldImg.src)
+    );
+
+    const finalVariantImages = [
+      ...syncedVariantImages,
+      ...uploadedVariantImages.map(({ variantKey, ...rest }) => rest),
+    ];
+
+    const finalImages = imageUrls.map((url, i) => {
+      const existing = oldMediaImages.find((img) => img.src === url);
+      return (
+        existing || {
+          src: url,
+          alt: `Image ${i + 1}`,
+          position: i + 1,
+          created_at: new Date(),
+        }
       );
-      if (existing) {
-        finalVariantImages.push(existing);
-      } else {
-        const uploaded = uploadedVariantImages.find((img) => img.src === v.url);
-        if (uploaded) {
-          finalVariantImages.push(uploaded);
-        } else {
-          finalVariantImages.push({ src: v.url });
-        }
-      }
-    }
+    });
 
-    // ✅ Step 6: Sync Cloudinary → Shopify mapping in imageGalleryModel
-    const allCloudinaryUrls = [
-      ...imageUrls,
-      ...variantImages.map((v) => v?.url),
-    ].filter((url) => url?.includes('cloudinary.com'));
+    console.log(
+      '✅ Final Media:',
+      finalImages.map((x) => x.src)
+    );
+    console.log(
+      '✅ Final Variants:',
+      finalVariantImages.map((x) => x.src)
+    );
 
-    if (allCloudinaryUrls.length > 0) {
-      await updateGalleryUrls(allCloudinaryUrls, product.id);
-    }
-
-    // ✅ Step 7: Update MongoDB
     const updatedProduct = await listingModel.findOneAndUpdate(
       { id },
       {
@@ -2159,19 +2145,15 @@ export const updateImages = async (req, res) => {
       { new: true }
     );
 
+    console.log('✅ MongoDB updated successfully.');
     res.status(200).json({
       message:
-        '✅ Product and variant images successfully updated (Shopify unchanged, MongoDB synced).',
+        'Media and Variant images fully synced (removed missing, kept existing).',
       product: updatedProduct,
-      shopifyImages: finalImages,
-      variantImages: finalVariantImages,
     });
-  } catch (error) {
-    console.error(
-      '❌ Error updating images:',
-      error?.response?.data || error.message
-    );
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error('❌ updateImages error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -2204,7 +2186,7 @@ export const updateVariantImages = async (req, res) => {
         image: {
           src: url,
           alt: `Variant Image for ${variantId}`,
-          variant_id: variantId, // Attach variant ID
+          variant_id: variantId,
         },
       };
 
@@ -2336,7 +2318,6 @@ export const updateSingleVariant = async (req, res) => {
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfiguration;
 
-    // Step 1: Update variant fields (price, SKU, etc.)
     const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/variants/${variantId}.json`;
 
     const variantPayload = {
@@ -2363,7 +2344,6 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    // Step 2: Update inventory quantity (MUST be done separately)
     const inventoryItemId = updatedVariant?.variant?.inventory_item_id;
 
     if (!inventoryItemId) {
@@ -2372,7 +2352,6 @@ export const updateSingleVariant = async (req, res) => {
         .json({ error: 'Missing inventory_item_id from variant.' });
     }
 
-    // Get inventory location
     const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
     const inventoryLevelsRes = await shopifyRequest(
       inventoryLevelsUrl,
@@ -2407,7 +2386,6 @@ export const updateSingleVariant = async (req, res) => {
       );
     }
 
-    // Step 3: Update your local DB
     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
     const productResponse = await shopifyRequest(
       productUrl,
@@ -3118,7 +3096,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
-  const userId = req.userId; // Secure userId from verifyToken
+  const userId = req.userId;
 
   if (!file || !file.buffer) {
     return res.status(400).json({ error: 'No file uploaded.' });
@@ -3170,7 +3148,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           try {
             const optionValues = [[], [], []];
 
-            // Step 2: Filter only rows with actual variant data
             const variantRows = rows.filter((row) => {
               return (
                 row['Variant Price'] ||
@@ -3179,7 +3156,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               );
             });
 
-            // Step 3: Build variants from valid rows
             let variants = variantRows.map((row) => {
               if (row['Option1 Value'])
                 optionValues[0].push(row['Option1 Value']);
@@ -3214,7 +3190,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               };
             });
 
-            // Step 4: Fallback default variant
             if (variants.length === 0) {
               variants = [
                 {
@@ -3237,7 +3212,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               ];
             }
 
-            // Step 5: Build unique options
             let options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
               .map((opt) => mainRow[opt])
               .filter(Boolean);
@@ -3249,7 +3223,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               }))
               .filter((opt) => opt.name);
 
-            // Step 6: Fallback default option if none found
             if (
               !uniqueOptions.length ||
               uniqueOptions.every((opt) => !opt.values.length)
@@ -3541,10 +3514,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               title: product.title,
             });
           } catch (err) {
-            console.error(
-              `❌ Failed to process product: ${handle}`,
-              err.message
-            );
+            console.error(`Failed to process product: ${handle}`, err.message);
             results.push({ success: false, handle, error: err.message });
             continue;
           }
@@ -3583,7 +3553,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
         });
       });
   } catch (error) {
-    console.error('🔥 Server error:', error.message);
+    console.error('Server error:', error.message);
     return res.status(500).json({
       success: false,
       message: 'Unexpected error during CSV upload.',
