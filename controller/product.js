@@ -4468,12 +4468,13 @@ export const exportInventoryCsv = async (req, res) => {
   }
 };
 
+
 // export const getAllVariants = async (req, res) => {
 //   try {
 //     const userId = req.params.userId;
 
 //     if (!userId) {
-//       return res.status(400).json({ error: "userId is required." });
+//       return res.status(400).json({ error: 'userId is required.' });
 //     }
 
 //     const page = parseInt(req.query.page) || 1;
@@ -4484,58 +4485,53 @@ export const exportInventoryCsv = async (req, res) => {
 
 //     let products = await listingModel.aggregate([
 //       {
-//         $match: {
-//           userId: objectIdUserId,
-//         },
+//         $match: { userId: objectIdUserId },
 //       },
 //       {
 //         $sort: { created_at: -1 },
 //       },
 //       {
 //         $project: {
+//           title: 1, // 👈 product title
+//           created_at: 1, // 👈 product created date
 //           variants: 1,
 //           images: 1,
 //           status: 1,
 //           shopifyId: 1,
 //           variantImages: 1,
-//           productId: "$_id",
+//           productId: '$_id',
 //         },
 //       },
 //       {
-//         $unwind: "$variants",
+//         $unwind: '$variants',
 //       },
 //       {
 //         $replaceRoot: {
 //           newRoot: {
 //             $mergeObjects: [
-//               "$variants",
+//               '$variants',
 //               {
-//                 productId: "$productId",
-//                 status: "$status",
-//                 shopifyId: "$shopifyId",
-//                 productImages: "$images",
-//                 variantImages: "$variantImages",
+//                 productId: '$productId',
+//                 productTitle: '$title', // 👈 product name
+//                 productCreatedAt: '$created_at', // 👈 product created_at
+//                 status: '$status',
+//                 shopifyId: '$shopifyId',
+//                 productImages: '$images',
+//                 variantImages: '$variantImages',
 //               },
 //             ],
 //           },
 //         },
 //       },
-//       {
-//         $skip: skip,
-//       },
-//       {
-//         $limit: limit,
-//       },
+//       { $skip: skip },
+//       { $limit: limit },
 //     ]);
 
 //     const productCount = await listingModel.aggregate([
 //       { $match: { userId: objectIdUserId } },
-//       { $project: { variantsCount: { $size: "$variants" } } },
+//       { $project: { variantsCount: { $size: '$variants' } } },
 //       {
-//         $group: {
-//           _id: null,
-//           totalVariants: { $sum: "$variantsCount" },
-//         },
+//         $group: { _id: null, totalVariants: { $sum: '$variantsCount' } },
 //       },
 //     ]);
 
@@ -4544,13 +4540,16 @@ export const exportInventoryCsv = async (req, res) => {
 //     if (products.length === 0) {
 //       return res
 //         .status(404)
-//         .json({ message: "No variants found for this user." });
+//         .json({ message: 'No variants found for this user.' });
 //     }
 
 //     const normalizeString = (str) =>
-//       String(str || "").replace(/['"]/g, "").trim().toLowerCase();
+//       String(str || '')
+//         .replace(/['"]/g, '')
+//         .trim()
+//         .toLowerCase();
 
-//     products = products.map((variant, idx) => {
+//     products = products.map((variant) => {
 //       let matchedImage = null;
 //       const titleKey = normalizeString(variant.title);
 
@@ -4574,24 +4573,12 @@ export const exportInventoryCsv = async (req, res) => {
 //         matchedImage = variant.productImages[0];
 //       }
 
-//       console.log(
-//         `Variant: ${variant.title} | Match type: ${
-//           variant.image_id
-//             ? matchedImage
-//               ? "Matched by image_id"
-//               : "image_id present but not found"
-//             : matchedImage
-//             ? "Fallback"
-//             : "No image"
-//         } | Image: ${matchedImage?.src || "N/A"}`
-//       );
-
 //       return {
 //         ...variant,
 //         finalImage: matchedImage
 //           ? {
 //               src: matchedImage.src,
-//               alt: matchedImage.alt || variant.title || "Variant Image",
+//               alt: matchedImage.alt || variant.title || 'Variant Image',
 //             }
 //           : null,
 //       };
@@ -4604,7 +4591,7 @@ export const exportInventoryCsv = async (req, res) => {
 //       totalVariants,
 //     });
 //   } catch (error) {
-//     console.error("Error in getAllVariants function:", error);
+//     console.error('Error in getAllVariants function:', error);
 //     res.status(500).json({ error: error.message });
 //   }
 // };
@@ -4614,7 +4601,7 @@ export const getAllVariants = async (req, res) => {
     const userId = req.params.userId;
 
     if (!userId) {
-      return res.status(400).json({ error: 'userId is required.' });
+      return res.status(400).json({ error: "userId is required." });
     }
 
     const page = parseInt(req.query.page) || 1;
@@ -4632,32 +4619,32 @@ export const getAllVariants = async (req, res) => {
       },
       {
         $project: {
-          title: 1, // 👈 product title
-          created_at: 1, // 👈 product created date
+          title: 1,
+          created_at: 1,
           variants: 1,
           images: 1,
           status: 1,
           shopifyId: 1,
           variantImages: 1,
-          productId: '$_id',
+          productId: "$_id",
         },
       },
       {
-        $unwind: '$variants',
+        $unwind: "$variants",
       },
       {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
-              '$variants',
+              "$variants",
               {
-                productId: '$productId',
-                productTitle: '$title', // 👈 product name
-                productCreatedAt: '$created_at', // 👈 product created_at
-                status: '$status',
-                shopifyId: '$shopifyId',
-                productImages: '$images',
-                variantImages: '$variantImages',
+                productId: "$productId",
+                productTitle: "$title",
+                productCreatedAt: "$created_at",
+                status: "$status",
+                shopifyId: "$shopifyId",
+                productImages: "$images",
+                variantImages: "$variantImages",
               },
             ],
           },
@@ -4669,9 +4656,9 @@ export const getAllVariants = async (req, res) => {
 
     const productCount = await listingModel.aggregate([
       { $match: { userId: objectIdUserId } },
-      { $project: { variantsCount: { $size: '$variants' } } },
+      { $project: { variantsCount: { $size: "$variants" } } },
       {
-        $group: { _id: null, totalVariants: { $sum: '$variantsCount' } },
+        $group: { _id: null, totalVariants: { $sum: "$variantsCount" } },
       },
     ]);
 
@@ -4680,12 +4667,12 @@ export const getAllVariants = async (req, res) => {
     if (products.length === 0) {
       return res
         .status(404)
-        .json({ message: 'No variants found for this user.' });
+        .json({ message: "No variants found for this user." });
     }
 
     const normalizeString = (str) =>
-      String(str || '')
-        .replace(/['"]/g, '')
+      String(str || "")
+        .replace(/['"]/g, "")
         .trim()
         .toLowerCase();
 
@@ -4703,24 +4690,21 @@ export const getAllVariants = async (req, res) => {
           );
       }
 
-      if (!matchedImage && variant.variantImages) {
+      if (!matchedImage && variant.variantImages?.length > 0) {
         matchedImage = variant.variantImages.find((img) =>
           normalizeString(img.alt).includes(titleKey)
         );
       }
 
-      if (!matchedImage && variant.productImages?.length > 0) {
-        matchedImage = variant.productImages[0];
-      }
 
       return {
         ...variant,
         finalImage: matchedImage
           ? {
               src: matchedImage.src,
-              alt: matchedImage.alt || variant.title || 'Variant Image',
+              alt: matchedImage.alt || variant.title || "Variant Image",
             }
-          : null,
+          : null, 
       };
     });
 
@@ -4731,7 +4715,7 @@ export const getAllVariants = async (req, res) => {
       totalVariants,
     });
   } catch (error) {
-    console.error('Error in getAllVariants function:', error);
+    console.error("Error in getAllVariants function:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -4743,39 +4727,35 @@ export const getAllVariantsForAdmin = async (req, res) => {
     const skip = (page - 1) * limit;
 
     let products = await listingModel.aggregate([
-      {
-        $sort: { created_at: -1 },
-      },
+      { $sort: { created_at: -1 } },
       {
         $project: {
-          title: 1, // product title
-          created_at: 1, // product created date
+          title: 1,
+          created_at: 1,
           variants: 1,
           images: 1,
           status: 1,
           shopifyId: 1,
           variantImages: 1,
-          productId: '$_id',
-          userId: 1, // optional: expose userId too
+          userId: 1,
+          productId: "$_id",
         },
       },
-      {
-        $unwind: '$variants',
-      },
+      { $unwind: "$variants" },
       {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
-              '$variants',
+              "$variants",
               {
-                productId: '$productId',
-                productTitle: '$title',
-                productCreatedAt: '$created_at',
-                status: '$status',
-                shopifyId: '$shopifyId',
-                productImages: '$images',
-                variantImages: '$variantImages',
-                userId: '$userId',
+                productId: "$productId",
+                productTitle: "$title",
+                productCreatedAt: "$created_at",
+                status: "$status",
+                shopifyId: "$shopifyId",
+                productImages: "$images",
+                variantImages: "$variantImages",
+                userId: "$userId",
               },
             ],
           },
@@ -4786,19 +4766,19 @@ export const getAllVariantsForAdmin = async (req, res) => {
     ]);
 
     const productCount = await listingModel.aggregate([
-      { $project: { variantsCount: { $size: '$variants' } } },
-      { $group: { _id: null, totalVariants: { $sum: '$variantsCount' } } },
+      { $project: { variantsCount: { $size: "$variants" } } },
+      { $group: { _id: null, totalVariants: { $sum: "$variantsCount" } } },
     ]);
 
     const totalVariants = productCount[0]?.totalVariants || 0;
 
     if (products.length === 0) {
-      return res.status(404).json({ message: 'No variants found.' });
+      return res.status(404).json({ message: "No variants found." });
     }
 
     const normalizeString = (str) =>
-      String(str || '')
-        .replace(/['"]/g, '')
+      String(str || "")
+        .replace(/['"]/g, "")
         .trim()
         .toLowerCase();
 
@@ -4816,24 +4796,21 @@ export const getAllVariantsForAdmin = async (req, res) => {
           );
       }
 
-      if (!matchedImage && variant.variantImages) {
+      if (!matchedImage && variant.variantImages?.length > 0) {
         matchedImage = variant.variantImages.find((img) =>
           normalizeString(img.alt).includes(titleKey)
         );
       }
 
-      if (!matchedImage && variant.productImages?.length > 0) {
-        matchedImage = variant.productImages[0];
-      }
 
       return {
         ...variant,
         finalImage: matchedImage
           ? {
               src: matchedImage.src,
-              alt: matchedImage.alt || variant.title || 'Variant Image',
+              alt: matchedImage.alt || variant.title || "Variant Image",
             }
-          : null,
+          : null, 
       };
     });
 
@@ -4844,10 +4821,11 @@ export const getAllVariantsForAdmin = async (req, res) => {
       totalVariants,
     });
   } catch (error) {
-    console.error('Error in getAllVariants function:', error);
+    console.error("Error in getAllVariantsForAdmin function:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const deleteAll = async (req, res) => {
   await listingModel.deleteMany();
