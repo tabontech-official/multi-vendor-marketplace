@@ -2,7 +2,7 @@ import { VariantOption } from '../Models/VariantOption.js';
 import csv from "csv-parser";
 import { Readable } from "stream";
 import { Parser } from 'json2csv';
-
+import mongoose from 'mongoose';
 export const getAllOptions = async (req, res) => {
   try {
     const options = await VariantOption.find();
@@ -39,49 +39,109 @@ export const addOptions = async (req, res) => {
 
 export const importOptions = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    const file = req.file;
+    const userId = req.userId; 
+
+    if (!file || !file.buffer) {
+      return res.status(400).json({ error: "No file uploaded." });
     }
 
-    const results = [];
+    if (userId && !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId format." });
+    }
 
-    const stream = Readable.from(req.file.buffer);
+    const allRows = [];
+    const stream = Readable.from(file.buffer);
 
     stream
       .pipe(csv())
       .on("data", (row) => {
-        const optionNames = row.optionName
-          ? row.optionName.split(",").map((v) => v.trim())
-          : [];
-        const optionValues = row.optionValues
-          ? row.optionValues.split(",").map((v) => v.trim())
-          : [];
-
-        if (optionNames.length && optionValues.length) {
-          results.push({ optionName: optionNames, optionValues: optionValues });
-        }
+        allRows.push(row);
       })
       .on("end", async () => {
         try {
-          await VariantOption.insertMany(results);
-          res.status(201).json({
-            message: "CSV imported successfully",
-            count: results.length,
+          if (allRows.length === 0) {
+            return res
+              .status(400)
+              .json({ error: "The uploaded CSV is empty or invalid." });
+          }
+
+          const results = [];
+          let successCount = 0;
+          let failCount = 0;
+
+          for (const row of allRows) {
+            try {
+              const optionNames = row.optionName
+                ? row.optionName.split(",").map((v) => v.trim())
+                : [];
+              const optionValues = row.optionValues
+                ? row.optionValues.split(",").map((v) => v.trim())
+                : [];
+
+              if (!optionNames.length || !optionValues.length) {
+                results.push({
+                  success: false,
+                  row,
+                  message: "Missing optionName or optionValues",
+                });
+                failCount++;
+                continue;
+              }
+
+              const optionDoc = new VariantOption({
+                optionName: optionNames,
+                optionValues: optionValues,
+                ...(userId && { userId }), 
+              });
+
+              await optionDoc.save();
+
+              results.push({
+                success: true,
+                optionName: optionNames,
+                optionValues: optionValues,
+              });
+              successCount++;
+            } catch (rowError) {
+              console.error("Row error:", rowError.message);
+              results.push({
+                success: false,
+                message: rowError.message,
+              });
+              failCount++;
+            }
+          }
+
+          return res.status(201).json({
+            message: "CSV processed successfully",
+            totalRows: allRows.length,
+            successCount,
+            failCount,
+            results,
           });
-        } catch (dbError) {
-          console.error("DB Error:", dbError);
-          res
-            .status(500)
-            .json({ message: "Error inserting options into database" });
+        } catch (processingError) {
+          console.error("Processing error:", processingError.message);
+          return res.status(500).json({
+            error: "Error processing CSV content.",
+            details: processingError.message,
+          });
         }
       })
-      .on("error", (err) => {
-        console.error("Stream error:", err);
-        res.status(500).json({ message: "Error processing CSV" });
+      .on("error", (streamError) => {
+        console.error("Stream error:", streamError.message);
+        return res.status(500).json({
+          error: "Error reading CSV stream.",
+          details: streamError.message,
+        });
       });
   } catch (error) {
-    console.error("Import Error:", error);
-    res.status(500).json({ message: "Unexpected error importing CSV" });
+    console.error("Server error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected error during CSV import.",
+      error: error.message || "Unknown error",
+    });
   }
 };
 
