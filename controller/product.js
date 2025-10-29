@@ -2175,7 +2175,7 @@ export const updateImages = async (req, res) => {
       finalImages.map((x) => ({ src: x.src, alt: x.alt }))
     );
     console.log(
-      "✅ Final Variants:",
+      " Final Variants:",
       finalVariantImages.map((x) => ({ src: x.src, alt: x.alt }))
     );
 
@@ -2189,14 +2189,14 @@ export const updateImages = async (req, res) => {
       { new: true }
     );
 
-    console.log("✅ MongoDB updated successfully.");
+    console.log("MongoDB updated successfully.");
     res.status(200).json({
       message:
         "Media and Variant images synced successfully with proper alt handles.",
       product: updatedProduct,
     });
   } catch (err) {
-    console.error("❌ updateImages error:", err.message);
+    console.error(" updateImages error:", err.message);
     res.status(500).json({ error: err.message });
   }
 };
