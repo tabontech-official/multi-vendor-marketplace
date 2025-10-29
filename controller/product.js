@@ -3158,10 +3158,9 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     }
 
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
-
     const allRows = [];
     const stream = Readable.from(file.buffer);
-    const cleanUrl = (url) => url?.split('?')[0];
+    const cleanUrl = (url) => (url ? url.split('?')[0].trim() : null);
 
     const categories = await categoryModel.find();
     const catNoMap = {};
@@ -3191,32 +3190,23 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           const mainRow = rows[0];
 
           try {
+            // --- Parse Variants ---
             const optionValues = [[], [], []];
-
-            const variantRows = rows.filter((row) => {
-              return (
-                row['Variant Price'] ||
-                row['Variant SKU'] ||
-                row['Option1 Value']
-              );
-            });
+            const variantRows = rows.filter(
+              (r) => r['Variant Price'] || r['Variant SKU'] || r['Option1 Value']
+            );
 
             let variants = variantRows.map((row) => {
-              if (row['Option1 Value'])
-                optionValues[0].push(row['Option1 Value']);
-              if (row['Option2 Value'])
-                optionValues[1].push(row['Option2 Value']);
-              if (row['Option3 Value'])
-                optionValues[2].push(row['Option3 Value']);
+              if (row['Option1 Value']) optionValues[0].push(row['Option1 Value']);
+              if (row['Option2 Value']) optionValues[1].push(row['Option2 Value']);
+              if (row['Option3 Value']) optionValues[2].push(row['Option3 Value']);
 
               return {
                 sku: row['Variant SKU'] || '',
                 price: row['Variant Price'] || '0.00',
                 compare_at_price: row['Variant Compare At Price'] || null,
                 inventory_management:
-                  row['Variant Inventory Tracker'] === 'shopify'
-                    ? 'shopify'
-                    : null,
+                  row['Variant Inventory Tracker'] === 'shopify' ? 'shopify' : null,
                 inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
                 fulfillment_service: 'manual',
                 requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
@@ -3231,7 +3221,11 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                 option1: row['Option1 Value'] || 'Default',
                 option2: row['Option2 Value'] || null,
                 option3: row['Option3 Value'] || null,
-                variant_image: cleanUrl(row['Variant Image']) || null,
+                // Keep variant image(s)
+                variant_images: Object.keys(row)
+                  .filter((k) => k.toLowerCase().startsWith('variant image'))
+                  .map((k) => cleanUrl(row[k]))
+                  .filter(Boolean),
               };
             });
 
@@ -3252,12 +3246,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                   option1: 'Default',
                   option2: null,
                   option3: null,
-                  variant_image: null,
+                  variant_images: [],
                 },
               ];
             }
 
-            let options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
+            const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
               .map((opt) => mainRow[opt])
               .filter(Boolean);
 
@@ -3268,74 +3262,23 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               }))
               .filter((opt) => opt.name);
 
-            if (
-              !uniqueOptions.length ||
-              uniqueOptions.every((opt) => !opt.values.length)
-            ) {
+            if (!uniqueOptions.length || uniqueOptions.every((opt) => !opt.values.length)) {
               uniqueOptions = [{ name: 'Title', values: ['Default'] }];
             }
-            const images = [
-              ...new Set(
-                rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
-              ),
+
+            const productImages = [
+              ...new Set(rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)),
             ].map((src, index) => ({
               src,
               position: index + 1,
               alt:
-                rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
-                  'Image Alt Text'
-                ] || null,
+                rows.find((r) => cleanUrl(r['Image Src']) === src)?.['Image Alt Text'] ||
+                null,
             }));
 
             const isPublished = mainRow['Published']?.toUpperCase() === 'TRUE';
 
-            const categoryTags = [];
-            const categoryPathTitles = [];
-
-            const categoryTitles =
-              mainRow['Category']
-                ?.split('|')
-                .map((title) => title.trim().toLowerCase())
-                .filter(Boolean) || [];
-
-            categoryTitles.forEach((catTitle) => {
-              const matchedCategory = catNoMap[catTitle];
-              if (matchedCategory) {
-                const path = [];
-                if (matchedCategory.level === 'level3') {
-                  path.push(matchedCategory.title);
-                  const level2 = categories.find(
-                    (c) => c.catNo === matchedCategory.parentCatNo
-                  );
-                  if (level2) {
-                    categoryTags.push(level2.catNo);
-                    path.push(level2.title);
-                    const level1 = categories.find(
-                      (c) => c.catNo === level2.parentCatNo
-                    );
-                    if (level1) {
-                      categoryTags.push(level1.catNo);
-                      path.push(level1.title);
-                    }
-                  }
-                } else if (matchedCategory.level === 'level2') {
-                  path.push(matchedCategory.title);
-                  const level1 = categories.find(
-                    (c) => c.catNo === matchedCategory.parentCatNo
-                  );
-                  if (level1) {
-                    categoryTags.push(level1.catNo);
-                    path.push(level1.title);
-                  }
-                } else if (matchedCategory.level === 'level1') {
-                  path.push(matchedCategory.title);
-                }
-
-                categoryTags.push(matchedCategory.catNo);
-                categoryPathTitles.push(path.join(' > '));
-              }
-            });
-
+            // --- Tags, Categories ---
             const csvTags =
               typeof mainRow['Tags'] === 'string'
                 ? mainRow['Tags']
@@ -3347,13 +3290,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             const tags = [
               ...new Set([
                 ...csvTags,
-                ...categoryTags,
-                ...categoryPathTitles,
                 `user_${userId}`,
                 `vendor_${mainRow['Vendor'] || ''}`,
               ]),
             ];
 
+            // --- Product Payload ---
             const productPayload = {
               title: mainRow['Title'],
               body_html: mainRow['Body (HTML)'] || '',
@@ -3363,7 +3305,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               published_at: isPublished ? new Date().toISOString() : null,
               tags: tags,
               options: uniqueOptions,
-              images,
+              images: productImages,
               variants: variants.map((v) => ({
                 sku: v.sku,
                 price: v.price,
@@ -3382,10 +3324,10 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               })),
             };
 
+            // --- Create / Update Product ---
             await delay(2000);
 
             let product = null;
-
             const existing = await shopifyRequest(
               `${shopifyStoreUrl}/admin/api/2024-01/products.json?handle=${handle}`,
               'GET',
@@ -3418,57 +3360,52 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             const productId = product.id;
             const uploadedVariantImages = [];
 
-            await Promise.all(
-              variants.map(async (variant) => {
-                if (variant.variant_image) {
-                  try {
-                    const optionValues = Object.keys(variant)
-                      .filter(
-                        (key) =>
-                          key.toLowerCase().startsWith('option') && variant[key]
-                      )
-                      .map((key) => variant[key]);
+            // --- Upload Variant Images & Link ---
+            for (const variant of variants) {
+              const optionValues = [variant.option1, variant.option2, variant.option3]
+                .filter(Boolean)
+                .join(' - ');
+              const altBase = [variant.sku, optionValues].filter(Boolean).join(' - ');
 
-                    // Combine SKU + option values
-                    const variantNameWithSku = [variant.sku, ...optionValues]
-                      .filter(Boolean)
-                      .join('-');
+              for (let i = 0; i < variant.variant_images.length; i++) {
+                const imgUrl = variant.variant_images[i];
+                if (!imgUrl) continue;
 
-                    const imageUploadPayload = {
-                      image: {
-                        src: variant.variant_image,
-                        alt: variantNameWithSku,
-                      },
-                    };
-                    const uploadResponse = await shopifyRequest(
-                      `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
-                      'POST',
-                      imageUploadPayload,
-                      shopifyApiKey,
-                      shopifyAccessToken
-                    );
+                try {
+                  const uploadPayload = {
+                    image: {
+                      src: imgUrl,
+                      alt:
+                        variant.variant_images.length > 1
+                          ? `${altBase} (Image ${i + 1})`
+                          : altBase,
+                    },
+                  };
 
-                    if (uploadResponse?.image) {
-                      const img = uploadResponse.image;
-                      uploadedVariantImages.push({
-                        id: img.id?.toString() || '',
-                        alt: img.alt || '',
-                        position: img.position || 0,
-                        product_id: img.product_id?.toString() || '',
-                        created_at: img.created_at || '',
-                        updated_at: img.updated_at || '',
-                        width: img.width || 0,
-                        height: img.height || 0,
-                        src: img.src || '',
-                      });
-                    }
-                  } catch (uploadError) {
-                    console.error(`Image upload error: ${uploadError.message}`);
+                  const uploadRes = await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+                    'POST',
+                    uploadPayload,
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+
+                  if (uploadRes?.image) {
+                    uploadedVariantImages.push({
+                      variantSku: variant.sku,
+                      image_id: uploadRes.image.id,
+                      src: uploadRes.image.src,
+                    });
                   }
+                } catch (err) {
+                  console.error(`Image upload failed for ${variant.sku}: ${err.message}`);
                 }
-              })
-            );
+              }
+            }
 
+            await delay(2000);
+
+            // --- Get Variants & Link images ---
             const productDetails = await shopifyRequest(
               `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
               'GET',
@@ -3479,41 +3416,31 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
             const shopifyVariants = productDetails?.product?.variants || [];
 
-            await Promise.all(
-              shopifyVariants.map(async (variant, index) => {
-                if (uploadedVariantImages[index]) {
-                  try {
-                    await shopifyRequest(
-                      `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-                      'PUT',
-                      {
-                        variant: {
-                          id: variant.id,
-                          image_id: uploadedVariantImages[index].id,
-                        },
+            for (const variant of shopifyVariants) {
+              const match = uploadedVariantImages.find(
+                (img) => img.variantSku === variant.sku
+              );
+              if (match?.image_id) {
+                try {
+                  await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+                    'PUT',
+                    {
+                      variant: {
+                        id: variant.id,
+                        image_id: match.image_id,
                       },
-                      shopifyApiKey,
-                      shopifyAccessToken
-                    );
-                  } catch (updateError) {
-                    console.error(
-                      `Error linking variant image: ${updateError.message}`
-                    );
-                  }
+                    },
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+                } catch (err) {
+                  console.error(`Error linking variant ${variant.sku}: ${err.message}`);
                 }
-              })
-            );
+              }
+            }
 
-            const baseVariant = shopifyVariants[0] || {};
-            const inventory = {
-              track_quantity: !!baseVariant?.inventory_management,
-              quantity: baseVariant?.inventory_quantity ?? 0,
-              continue_selling: true,
-              has_sku: !!baseVariant?.sku,
-              sku: baseVariant?.sku || '',
-              barcode: baseVariant?.barcode || '',
-            };
-
+            // --- Save to DB ---
             await listingModel.findOneAndUpdate(
               { shopifyId: productId },
               {
@@ -3525,13 +3452,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                 product_type: product.product_type,
                 status: product.status,
                 handle: product.handle,
-                tags: tags,
+                tags,
                 images: product.images,
                 variants: shopifyVariants,
                 options: product.options,
                 userId: userId,
                 variantImages: uploadedVariantImages,
-                inventory: inventory,
               },
               { upsert: true, new: true }
             );
@@ -3542,11 +3468,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                 id: img.id?.toString(),
                 product_id: img.product_id?.toString(),
                 position: img.position,
-                created_at: img.created_at,
-                updated_at: img.updated_at,
                 alt: img.alt,
-                width: img.width,
-                height: img.height,
                 src: img.src,
                 productId: productId.toString(),
               })),
@@ -3561,37 +3483,11 @@ export const addCsvfileForProductFromBody = async (req, res) => {
           } catch (err) {
             console.error(`Failed to process product: ${handle}`, err.message);
             results.push({ success: false, handle, error: err.message });
-            continue;
           }
         }
 
-        const orphanedProducts = await listingModel.aggregate([
-          {
-            $match: {
-              $expr: {
-                $or: [
-                  { $eq: [{ $type: '$userId' }, 'missing'] },
-                  { $eq: ['$userId', null] },
-                  {
-                    $and: [
-                      { $eq: [{ $type: '$userId' }, 'string'] },
-                      { $ne: [{ $strLenBytes: '$userId' }, 24] },
-                    ],
-                  },
-                  { $not: { $eq: [{ $type: '$userId' }, 'objectId'] } },
-                ],
-              },
-            },
-          },
-        ]);
-
-        if (orphanedProducts.length > 0) {
-          const idsToDelete = orphanedProducts.map((item) => item._id);
-          await listingModel.deleteMany({ _id: { $in: idsToDelete } });
-        }
-
         return res.status(200).json({
-          message: 'Products processed.',
+          message: 'Products processed successfully.',
           successCount: results.filter((r) => r.success).length,
           failedCount: results.filter((r) => !r.success).length,
           results,
@@ -3606,6 +3502,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
 
 export const updateProductWebhook = async (req, res) => {
   try {
@@ -5198,32 +5095,80 @@ export const addCsvfileForBulkUploader = async (req, res) => {
             const uploadedVariantImages = [];
 
             await Promise.all(
-              variants.map(async (variant) => {
-                if (variant.variant_image) {
-                  try {
-                    const imagePayload = {
-                      image: { src: variant.variant_image },
-                    };
-                    const uploadRes = await shopifyRequest(
-                      `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
-                      'POST',
-                      imagePayload,
-                      shopifyApiKey,
-                      shopifyAccessToken
-                    );
-                    uploadedVariantImages.push({
-                      image_id: uploadRes?.image?.id,
-                      src: uploadRes?.image?.src,
-                    });
-                  } catch (imgErr) {
-                    console.error(
-                      '❌ Error uploading variant image',
-                      imgErr.message
-                    );
-                  }
-                }
-              })
-            );
+  variants.map(async (variant) => {
+    try {
+      // collect all image URLs for this variant (e.g., Variant Image 1, 2, 3)
+      const variantImageUrls = Object.keys(mainRow)
+        .filter((key) =>
+          key.toLowerCase().startsWith('variant image')
+        )
+        .map((key) => cleanUrl(variant[key] || mainRow[key]))
+        .filter(Boolean);
+
+      if (variant.variant_image) {
+        variantImageUrls.push(cleanUrl(variant.variant_image));
+      }
+
+      // remove duplicates
+      const uniqueVariantImages = [...new Set(variantImageUrls)];
+
+      if (uniqueVariantImages.length === 0) return;
+
+      // Create alt text from SKU + variant options
+      const optionValues = Object.keys(variant)
+        .filter(
+          (key) =>
+            key.toLowerCase().startsWith('option') && variant[key]
+        )
+        .map((key) => variant[key]);
+
+      const variantAltBase = [variant.sku, ...optionValues]
+        .filter(Boolean)
+        .join(' - ');
+
+      // Upload all variant images
+      for (let i = 0; i < uniqueVariantImages.length; i++) {
+        const imgUrl = uniqueVariantImages[i];
+        const imageUploadPayload = {
+          image: {
+            src: imgUrl,
+            alt:
+              uniqueVariantImages.length > 1
+                ? `${variantAltBase} (Image ${i + 1})`
+                : variantAltBase,
+          },
+        };
+
+        const uploadResponse = await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+          'POST',
+          imageUploadPayload,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+
+        if (uploadResponse?.image) {
+          const img = uploadResponse.image;
+          uploadedVariantImages.push({
+            id: img.id?.toString() || '',
+            alt: img.alt || '',
+            position: img.position || 0,
+            product_id: img.product_id?.toString() || '',
+            created_at: img.created_at || '',
+            updated_at: img.updated_at || '',
+            width: img.width || 0,
+            height: img.height || 0,
+            src: img.src || '',
+            variantSku: variant.sku || '',
+          });
+        }
+      }
+    } catch (uploadError) {
+      console.error(`Image upload error for SKU ${variant.sku}: ${uploadError.message}`);
+    }
+  })
+);
+
 
             const productDetails = await shopifyRequest(
               `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
