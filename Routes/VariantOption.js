@@ -11,7 +11,6 @@ import { Csvuplaods } from "../middleware/multer.js";
 
 const variantOptionRouter = express.Router();
 
-const upload = multer({ dest: "uploads/" });
 
 variantOptionRouter.get("/getOptions", getAllOptions);
 
