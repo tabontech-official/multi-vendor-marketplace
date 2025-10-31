@@ -3945,7 +3945,6 @@ export const exportProducts = async (req, res) => {
     const rows = [];
     const allMetafieldsSet = new Set();
 
-    // 🧩 Step 1: Gather all metafields used by all products
     for (const dbProduct of products) {
       const productId = dbProduct.id;
       if (!productId) continue;
@@ -3969,7 +3968,6 @@ export const exportProducts = async (req, res) => {
       }
     }
 
-    // 🧩 Step 2: Export product + variant data
     for (const dbProduct of products) {
       const shopifyProductId = dbProduct.id;
       if (!shopifyProductId) continue;
@@ -3986,7 +3984,6 @@ export const exportProducts = async (req, res) => {
       const product = productResponse?.product;
       if (!product) continue;
 
-      // Fetch metafields for this product
       const metafieldsResponse = await shopifyRequest(
         `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}/metafields.json`,
         "GET",
@@ -3996,7 +3993,6 @@ export const exportProducts = async (req, res) => {
       );
       const metafields = metafieldsResponse?.metafields || [];
 
-      // Prepare a map for quick lookup
       const metafieldMap = {};
       metafields.forEach((mf) => {
         const header = `${mf.key} (product.metafields.${mf.namespace}.${mf.key})`;
@@ -4006,13 +4002,11 @@ export const exportProducts = async (req, res) => {
       const productImages = product.images || [];
       const variantImages = dbProduct.variantImages || [];
 
-      // Create rows for each variant
       product.variants.forEach((variant, index) => {
         const variantImgList = variantImages
           .filter((img) => img.variantSku === variant.sku)
           .map((img) => img.src);
 
-        // Build base row
         const row = {
           Handle: product.handle || "",
           Title: index === 0 ? product.title : "",
@@ -4051,7 +4045,6 @@ export const exportProducts = async (req, res) => {
           Status: product.status || "active",
         };
 
-        // 🧩 Add all metafields (fill empty if missing)
         allMetafieldsSet.forEach((header) => {
           row[header] = metafieldMap[header] || "";
         });
@@ -4064,7 +4057,6 @@ export const exportProducts = async (req, res) => {
       return res.status(404).json({ message: "No Shopify product data found." });
     }
 
-    // 🧾 Step 3: Define column order (same as import CSV)
     const baseColumns = [
       "Handle",
       "Title",
@@ -4099,7 +4091,7 @@ export const exportProducts = async (req, res) => {
       "Variant Image Src 3",
       "Variant Image Alt",
       "Variant Image Position",
-      ...Array.from(allMetafieldsSet), // include all metafields last
+      ...Array.from(allMetafieldsSet), 
       "Status",
     ];
 
