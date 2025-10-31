@@ -111,10 +111,10 @@ const listingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
     },
     approvalStatus: {
-  type: String,
-  enum: ["pending", "approved", "rejected", null],
-  default: null,
-},
+      type: String,
+      enum: ['pending', 'approved', 'rejected', null],
+      default: null,
+    },
     status: {
       type: String,
       enum: ['active', 'draft'],
@@ -126,11 +126,17 @@ const listingSchema = new mongoose.Schema(
     promoPrice: String,
     expiresAt: { type: Date },
     credit_required: { type: Number },
-    categories:[String],
+    categories: [String],
     options: [
       {
         name: { type: String, required: true },
         values: { type: [String], required: true },
+      },
+    ],
+    metafields: [
+      {
+        label: { type: String, trim: true },
+        value: { type: String, trim: true },
       },
     ],
   },

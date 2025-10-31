@@ -6,6 +6,7 @@ import {
   importOptions,
   deleteOption,
   exportCsv,
+  updateOption,
 } from "../controller/variantoption.js";
 import { Csvuplaods } from "../middleware/multer.js";
 
@@ -14,12 +15,13 @@ const variantOptionRouter = express.Router();
 
 variantOptionRouter.get("/getOptions", getAllOptions);
 
-variantOptionRouter.post("/addOption", addOptions);
+variantOptionRouter.post("/addOptions", addOptions);
 
 variantOptionRouter.post("/importOptions", Csvuplaods, importOptions);
 
 variantOptionRouter.delete("/deleteOptions", deleteOption);
 
 variantOptionRouter.get("/getCsvForOptions", exportCsv);
+variantOptionRouter.put("/updateOption", updateOption);
 
 export default variantOptionRouter;
