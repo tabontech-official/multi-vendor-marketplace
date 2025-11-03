@@ -504,65 +504,48 @@ export const addUsedEquipments = async (req, res) => {
 
     productId = productResponse.product.id;
 
-    // 🧩 METAFIELDS HANDLING
-    if (Array.isArray(metafields) && metafields.length > 0) {
-      for (const field of metafields) {
-        const label = field.label?.trim();
-        const value = field.value?.trim();
+    // 🧩 METAFIELDS HANDLING (Static 4 metafields: custom_1..custom_4)
+if (Array.isArray(metafields) && metafields.length > 0) {
+  // Ensure exactly 4 metafields (fill missing with nulls)
+  const limitedMetafields = metafields.slice(0, 4);
 
-        if (!label || !value) continue;
+  for (let i = 0; i < 4; i++) {
+    const field = limitedMetafields[i];
+    if (!field) continue; // skip if less than 4 given
 
-        try {
-          // Check if metafield already exists
-          const existingMeta = await shopifyRequest(
-            `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
-            "GET",
-            null,
-            shopifyApiKey,
-            shopifyAccessToken
-          );
+    const label = field.label?.trim();
+    const value = field.value?.trim();
 
-          const found = existingMeta?.metafields?.find(
-            (mf) => mf.key === label || mf.namespace === label
-          );
+    if (!label || !value) continue;
 
-          if (found) {
-            // ✅ Update existing metafield
-            await shopifyRequest(
-              `${shopifyStoreUrl}/admin/api/2024-01/metafields/${found.id}.json`,
-              "PUT",
-              {
-                metafield: {
-                  id: found.id,
-                  value,
-                  type: "single_line_text_field",
-                },
-              },
-              shopifyApiKey,
-              shopifyAccessToken
-            );
-          } else {
-            // ✅ Create new metafield
-            await shopifyRequest(
-              `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
-              "POST",
-              {
-                metafield: {
-                  namespace: "custom",
-                  key: label,
-                  value,
-                  type: "single_line_text_field",
-                },
-              },
-              shopifyApiKey,
-              shopifyAccessToken
-            );
-          }
-        } catch (metaErr) {
-          console.error(`Metafield error for ${label}:`, metaErr.message);
-        }
-      }
+    const metafieldKey = `custom_${i + 1}`;
+    const metafieldValue = `${label}_${value}`; // Shopify format "Label_Value"
+
+    // 🧱 Each metafield is its own object
+    const metafieldObject = {
+      metafield: {
+        namespace: "custom",
+        key: metafieldKey,
+        value: metafieldValue,
+        type: "single_line_text_field",
+      },
+    };
+
+    try {
+      // Create metafield in Shopify (one request per metafield)
+      await shopifyRequest(
+        `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
+        "POST",
+        metafieldObject,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+    } catch (metaErr) {
+      console.error(`Error creating metafield ${metafieldKey}:`, metaErr.message);
     }
+  }
+}
+
 
     const newProduct = new listingModel({
       id: productId,
