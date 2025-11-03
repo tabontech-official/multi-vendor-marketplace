@@ -1253,88 +1253,56 @@ export const updateProductData = async (req, res) => {
     }
 
 if (Array.isArray(metafields) && metafields.length > 0) {
-  try {
-    console.log("🧩 Starting metafield sync with Shopify...");
+  console.log("🧩 Starting metafield sync with Shopify...");
 
-    // Fetch all existing metafields once (outside the loop)
-    const existingMetafieldsUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}/metafields.json`;
-    console.log(`📡 Fetching existing metafields for product: ${shopifyProductId}`);
+  // Limit to 4 metafields
+  const limitedMetafields = metafields.slice(0, 4);
 
-    const existingMetafieldsResponse = await shopifyRequest(
-      existingMetafieldsUrl,
-      "GET",
-      null,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
+  for (let i = 0; i < 4; i++) {
+    const field = limitedMetafields[i];
+    if (!field) continue;
 
-    const existingMetas = existingMetafieldsResponse?.metafields || [];
-    console.log(`🧾 Found ${existingMetas.length} existing metafields on Shopify.`);
+    const label = field.label?.trim();
+    const value = field.value?.trim();
 
-    // Loop through metafields and create or update
-    for (const meta of metafields) {
-      if (!meta.label?.trim() || !meta.value?.trim()) {
-        console.log(`⚠️ Skipping empty metafield:`, meta);
-        continue;
-      }
+    // Skip empty entries
+    if (!label || !value) continue;
 
-      const key = meta.label.trim().replace(/\s+/g, "_").toLowerCase();
-      const value = meta.value.trim();
+    const metafieldKey = `custom_${i + 1}`;
+    const metafieldValue = `${label}_${value}`;
 
-      const existingMeta = existingMetas.find((m) => m.key === key);
+    const metafieldObject = {
+      metafield: {
+        namespace: "custom",
+        key: metafieldKey,
+        value: metafieldValue,
+        type: "single_line_text_field",
+      },
+    };
 
-      if (existingMeta) {
-        console.log(
-          `🟡 Updating existing metafield [${key}] (ID: ${existingMeta.id}) → Value: ${value}`
-        );
+    try {
+      await shopifyRequest(
+        `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}/metafields.json`,
+        "POST",
+        metafieldObject,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
 
-        // ✅ Update existing metafield (Shopify requires only value + type)
-        const updateMetaUrl = `${shopifyStoreUrl}/admin/api/2024-01/metafields/${existingMeta.id}.json`;
-
-        await shopifyRequest(
-          updateMetaUrl,
-          "PUT",
-          {
-            metafield: {
-              id: existingMeta.id,
-              value,
-              type: "single_line_text_field",
-            },
-          },
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-
-        console.log(`✅ Updated metafield successfully: ${key}`);
-      } else {
-        console.log(`🟢 Creating new metafield [${key}] → Value: ${value}`);
-
-        await shopifyRequest(
-          existingMetafieldsUrl,
-          "POST",
-          {
-            metafield: {
-              namespace: "Aydi",
-              key,
-              value,
-              type: "single_line_text_field",
-            },
-          },
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-
-        console.log(` Created new metafield successfully: ${key}`);
-      }
+      console.log(`✅ Synced metafield ${metafieldKey} successfully.`);
+    } catch (metaErr) {
+      console.error(
+        `❌ Error syncing metafield ${metafieldKey}:`,
+        metaErr.message
+      );
     }
-
-    console.log("🎉 Metafields synced successfully with Shopify.");
-  } catch (metaError) {
-    console.error(" Error syncing metafields to Shopify:", metaError);
   }
 } else {
-  console.log("ℹ️ No metafields provided in request — skipping Shopify metafield sync.");
+  console.log(
+    "ℹ️ No metafields provided in request — skipping Shopify metafield sync."
+  );
 }
+
 
 
 
