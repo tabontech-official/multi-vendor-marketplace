@@ -17,50 +17,62 @@ export const getAllOptions = async (req, res) => {
 
 export const addOptions = async (req, res) => {
   try {
-    let { optionName, optionValues } = req.body;
+    let { name, aliases, optionValues } = req.body;
 
-    if (!optionName || !optionValues) {
+    if (!name || !optionValues) {
       return res.status(400).json({
         success: false,
-        message: "Missing fields: optionName or optionValues",
+        message: "Missing fields: name or optionValues",
       });
     }
 
-    if (typeof optionName === "string") {
-      optionName = optionName.split(",").map((n) => n.trim());
+    // Clean and normalize inputs
+    name = name.trim();
+
+    if (typeof aliases === "string") {
+      aliases = aliases.split(",").map((a) => a.trim());
     }
+
+    if (!Array.isArray(aliases)) aliases = [];
+
     if (typeof optionValues === "string") {
       optionValues = optionValues.split(",").map((v) => v.trim());
     }
 
-    optionName = [...new Set(optionName.filter((n) => n))];
+    aliases = [...new Set(aliases.filter((a) => a))];
     optionValues = [...new Set(optionValues.filter((v) => v))];
 
-    if (optionName.length === 0 || optionValues.length === 0) {
+    if (!name || optionValues.length === 0) {
       return res.status(400).json({
         success: false,
         message: "At least one valid name and one value are required.",
       });
     }
 
+    // ✅ Check if variant option already exists (by main name)
     const existing = await VariantOption.findOne({
-      optionName: { $regex: new RegExp(optionName.join("|"), "i") },
+      name: { $regex: new RegExp(`^${name}$`, "i") },
     });
 
     if (existing) {
-      existing.optionName = optionName;
-      existing.optionValues = optionValues;
-
+      existing.optionName = aliases; // update aliases
+      existing.optionValues = optionValues; // update values
       await existing.save();
 
       return res.status(200).json({
         success: true,
-        message: `Option "${optionName.join(", ")}" already existed and has been fully updated.`,
+        message: `Option "${name}" already existed and has been updated.`,
         data: existing,
       });
     }
 
-    const newOption = new VariantOption({ optionName, optionValues });
+    // ✅ Create new option
+    const newOption = new VariantOption({
+      name,
+      optionName: aliases,
+      optionValues,
+    });
+
     await newOption.save();
 
     return res.status(201).json({
@@ -112,39 +124,42 @@ export const importOptions = async (req, res) => {
           });
         }
 
-        let successCount = 0;
+        let createdCount = 0;
         let updatedCount = 0;
-        let failCount = 0;
+        let failedCount = 0;
         const results = [];
 
         // 4️⃣ Process each row
         for (const [index, row] of allRows.entries()) {
           try {
-            let optionName = row.optionName
-              ? row.optionName.split(",").map((n) => n.trim()).filter(Boolean)
+            // ✅ Expecting headers: optionName, aliases, optionValues
+            const optionName = row.optionName ? row.optionName.trim() : "";
+            const aliases = row.aliases
+              ? row.aliases.split(",").map((a) => a.trim()).filter(Boolean)
               : [];
-            let optionValues = row.optionValues
+            const optionValues = row.optionValues
               ? row.optionValues.split(",").map((v) => v.trim()).filter(Boolean)
               : [];
 
-            if (!optionName.length || !optionValues.length) {
+            if (!optionName || optionValues.length === 0) {
+              failedCount++;
               results.push({
                 success: false,
                 row: index + 1,
-                message: "Missing optionName or optionValues",
+                message: "Missing 'optionName' or 'optionValues'.",
               });
-              failCount++;
               continue;
             }
 
-            // 5️⃣ Check for existing option (case-insensitive)
+            // 🔍 Check for existing by main name (case-insensitive)
             const existing = await VariantOption.findOne({
-              optionName: { $regex: new RegExp(optionName.join("|"), "i") },
+              name: { $regex: new RegExp(`^${optionName}$`, "i") },
             });
 
             if (existing) {
-              // 6️⃣ Update existing option (replace both name & values)
-              existing.optionName = optionName;
+              // 🆙 Update existing record
+              existing.name = optionName;
+              existing.optionName = aliases;
               existing.optionValues = optionValues;
               if (userId) existing.userId = userId;
 
@@ -156,46 +171,49 @@ export const importOptions = async (req, res) => {
                 action: "updated",
                 row: index + 1,
                 optionName,
+                aliases,
                 optionValues,
               });
             } else {
-              // 7️⃣ Create new option
+              // ➕ Create new record
               const newOption = new VariantOption({
-                optionName,
+                name: optionName,
+                optionName: aliases,
                 optionValues,
                 ...(userId && { userId }),
               });
 
               await newOption.save();
-              successCount++;
+              createdCount++;
 
               results.push({
                 success: true,
                 action: "created",
                 row: index + 1,
                 optionName,
+                aliases,
                 optionValues,
               });
             }
           } catch (rowError) {
             console.error(`Row ${index + 1} error:`, rowError.message);
+            failedCount++;
             results.push({
               success: false,
               row: index + 1,
               message: rowError.message,
             });
-            failCount++;
           }
         }
 
-        // 8️⃣ Send summary response
+        // 5️⃣ Summary Response
         return res.status(201).json({
           success: true,
           message: "CSV processed successfully.",
           totalRows: allRows.length,
-          created: successCount,
+          created: createdCount,
           updated: updatedCount,
-          failed: failCount,
+          failed: failedCount,
           results,
         });
       })
@@ -231,92 +249,139 @@ export const deleteOption=async(req,res)=>{
   } 
 }
 
-export const exportCsv=async(req,res)=>{
-   try {
-    const options = await VariantOption.find().lean();
+
+export const exportCsv = async (req, res) => {
+  try {
+    const userId = req.userId; // optional, if auth used
+
+    // 1️⃣ Fetch data (optionally filter by user)
+    const query = userId ? { userId } : {};
+    const options = await VariantOption.find(query).lean();
+
     if (!options.length) {
-      return res.status(404).json({ message: "No data available" });
+      return res.status(404).json({
+        success: false,
+        message: "No variant options found to export.",
+      });
     }
 
-    const csvFields = ["optionName", "optionValues"];
+    // 2️⃣ Prepare CSV headers
+    const csvFields = ["optionName", "aliases", "optionValues"];
     const parser = new Parser({ fields: csvFields });
-    const csv = parser.parse(
-      options.map((opt) => ({
-        optionName: opt.optionName.join(", "),
-        optionValues: opt.optionValues.join(", "),
-      }))
-    );
 
+    // 3️⃣ Format data
+    const csvData = options.map((opt) => ({
+      optionName: opt.name || "",
+      aliases: Array.isArray(opt.optionName)
+        ? opt.optionName.join(", ")
+        : opt.optionName || "",
+      optionValues: Array.isArray(opt.optionValues)
+        ? opt.optionValues.join(", ")
+        : opt.optionValues || "",
+    }));
+
+    const csv = parser.parse(csvData);
+
+    // 4️⃣ Send CSV file as attachment
     res.header("Content-Type", "text/csv");
-    res.attachment("variant_options.csv");
-    return res.send(csv);
+    res.attachment("variant_options_export.csv");
+
+    // 5️⃣ Log and send success summary
+    console.log(`✅ Exported ${options.length} variant options.`);
+    return res.status(200).send(csv);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error exporting CSV" });
-  } 
-}
+    console.error("❌ Error exporting variant options:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected error during CSV export.",
+      error: error.message,
+    });
+  }
+};
 
 
 export const updateOption = async (req, res) => {
   try {
-    const { _id, optionName, optionValues } = req.body;
+    const { _id, name, optionName, optionValues } = req.body;
 
+    // 🔹 Basic validation
     if (!_id) {
-      return res.status(400).json({ message: "Missing field: _id (option ID is required)" });
+      return res
+        .status(400)
+        .json({ message: "Missing field: _id (option ID is required)" });
     }
-    if (!optionName || !optionValues) {
-      return res.status(400).json({ message: "Missing fields: optionName or optionValues" });
+    if (!name || !optionValues) {
+      return res
+        .status(400)
+        .json({ message: "Missing fields: name or optionValues" });
     }
 
-    let normalizedNames =
+    // 🔹 Normalize inputs
+    const cleanName = name.trim();
+
+    let normalizedAliases =
       typeof optionName === "string"
-        ? optionName.split(",").map((n) => n.trim())
-        : optionName;
+        ? optionName
+            .split(",")
+            .map((n) => n.trim())
+            .filter(Boolean)
+        : Array.isArray(optionName)
+        ? optionName.map((n) => n.trim()).filter(Boolean)
+        : [];
+
     let normalizedValues =
       typeof optionValues === "string"
-        ? optionValues.split(",").map((v) => v.trim())
-        : optionValues;
+        ? optionValues
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean)
+        : Array.isArray(optionValues)
+        ? optionValues.map((v) => v.trim()).filter(Boolean)
+        : [];
 
-    normalizedNames = [...new Set(normalizedNames.filter((n) => n))];
-    normalizedValues = [...new Set(normalizedValues.filter((v) => v))];
-
-    if (normalizedNames.length === 0 || normalizedValues.length === 0) {
+    if (!cleanName || normalizedValues.length === 0) {
       return res.status(400).json({
         message: "At least one valid option name and value are required.",
       });
     }
 
+    // 🔹 Check if option exists
     const existingOption = await VariantOption.findById(_id);
     if (!existingOption) {
       return res.status(404).json({ message: "Option not found." });
     }
 
+    // 🔹 Prevent duplicate main names in other records
     const duplicate = await VariantOption.findOne({
       _id: { $ne: _id },
-      optionName: { $in: normalizedNames },
+      name: { $regex: new RegExp(`^${cleanName}$`, "i") },
     });
     if (duplicate) {
       return res.status(409).json({
-        message: `Another option already exists with similar name(s): ${duplicate.optionName.join(", ")}`,
+        message: `Another option already exists with the name "${duplicate.name}".`,
       });
     }
 
-    existingOption.optionName = normalizedNames;
+    // 🔹 Update fields
+    existingOption.name = cleanName;
+    existingOption.optionName = normalizedAliases;
     existingOption.optionValues = normalizedValues;
 
+    // 🔹 Save
     const updatedOption = await existingOption.save();
 
     return res.status(200).json({
       success: true,
-      message: "Option updated successfully",
+      message: "Option updated successfully.",
       data: updatedOption,
     });
   } catch (error) {
     console.error("Error updating option:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Server error while updating option",
+      message: "Server error while updating option.",
       error: error.message,
     });
   }
 };
+

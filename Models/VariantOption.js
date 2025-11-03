@@ -1,16 +1,20 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { type } from 'os';
 
 const variantOptionSchema = new mongoose.Schema(
   {
     optionName: {
-      type: [String], 
+      type: [String],
       required: true,
       validate: {
         validator: function (arr) {
           return arr.length > 0;
         },
-        message: "At least one option name is required",
+        message: 'At least one option name is required',
       },
+    },
+    name: {
+      type: String,
     },
     optionValues: {
       type: [String],
@@ -21,4 +25,7 @@ const variantOptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const VariantOption = mongoose.model("VariantOption", variantOptionSchema);
+export const VariantOption = mongoose.model(
+  'VariantOption',
+  variantOptionSchema
+);

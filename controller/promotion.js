@@ -445,17 +445,14 @@ export const getAllPromotionsbyUserId = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // 🔹 Fetch ALL promotions created by this user
     const promotions = await PromoModel.find({ userId }).sort({ createdAt: -1 });
 
     if (!promotions || promotions.length === 0) {
       return res.status(404).json({ message: "No promotions found for this user." });
     }
 
-    // 🔹 Send full array
     res.status(200).json(promotions);
   } catch (error) {
-    console.error("❌ Error fetching promotions:", error.message);
     res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
