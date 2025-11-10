@@ -18,6 +18,7 @@ import { financeScheduler } from './controller/financeDateSheduler.js';
 import categoryRouter from './Routes/category.js';
 import approvalRouter from './Routes/approval.js';
 import variantOptionRouter from './Routes/VariantOption.js';
+import shippingRouter from './Routes/shippingProfile.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -52,6 +53,7 @@ app.use('/notifications', notificationRouter);
 app.use('/category', categoryRouter);
 app.use('/approval', approvalRouter);
 app.use('/variantOption', variantOptionRouter);
+app.use('/shippingProfile', shippingRouter);
 
 
 app.use((req, res, next) => {
