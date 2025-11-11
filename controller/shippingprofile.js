@@ -2,6 +2,7 @@ import { shippingProfileModel } from '../Models/shippingProfileModel.js';
 import { shopifyRequest } from './product.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { userShippingProfileModel } from '../Models/userShippingProfileModel.js';
+import { listingModel } from '../Models/Listing.js';
 
 export const createBulkShippingProfiles = async (req, res) => {
   try {
@@ -469,6 +470,9 @@ export const listAllShopifyProfiles = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
 export const getShippingProfiles = async (req, res) => {
   try {
     const profiles = await shippingProfileModel.find().sort({ ratePrice: 1 });
@@ -569,5 +573,43 @@ export const getUserActiveProfiles = async (req, res) => {
     res
       .status(500)
       .json({ message: "Server error fetching user active profiles" });
+  }
+};
+
+
+export const getShippingProfilesWithCounts = async (req, res) => {
+  try {
+    console.log("🟦 [ADMIN API] getShippingProfilesWithCounts — START");
+
+    const profiles = await shippingProfileModel.find().sort({ ratePrice: 1 });
+    console.log(`✅ Found ${profiles.length} shipping profiles.`);
+
+    const profilesWithCounts = await Promise.all(
+      profiles.map(async (profile) => {
+        const count = await listingModel.countDocuments({
+          "shipping.profile.profileId": profile.profileId,
+        });
+
+        return {
+          ...profile.toObject(),
+          productCount: count,
+        };
+      })
+    );
+
+    res.status(200).json({
+      message: "All shipping profiles with linked product counts fetched successfully.",
+      profiles: profilesWithCounts,
+    });
+
+    console.log("✅ [ADMIN API] Successfully fetched shipping profile counts.");
+  } catch (error) {
+    console.error("❌ [ADMIN API] Error fetching shipping profiles with counts:", error);
+    res.status(500).json({
+      message: "Server error while fetching shipping profiles with product counts.",
+      error: error.message,
+    });
+  } finally {
+    console.log("🟨 [ADMIN API] getShippingProfilesWithCounts — END\n");
   }
 };
