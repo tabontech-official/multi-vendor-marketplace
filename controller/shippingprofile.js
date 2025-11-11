@@ -1,6 +1,7 @@
 import { shippingProfileModel } from '../Models/shippingProfileModel.js';
 import { shopifyRequest } from './product.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
+import { userShippingProfileModel } from '../Models/userShippingProfileModel.js';
 
 export const createBulkShippingProfiles = async (req, res) => {
   try {
@@ -470,10 +471,103 @@ export const listAllShopifyProfiles = async (req, res) => {
 };
 export const getShippingProfiles = async (req, res) => {
   try {
-    const profiles = await shippingProfileModel.find().sort({ ratePrice: 1 }); // sort by price if you like
-    res.status(200).json(profiles);
+    const profiles = await shippingProfileModel.find().sort({ ratePrice: 1 });
+
+    // 🧠 Remove duplicates by profileName (or profileId)
+    const uniqueProfiles = profiles.filter(
+      (p, index, self) =>
+        index ===
+        self.findIndex(
+          (x) =>
+            x.profileId === p.profileId || // unique by Shopify profile
+            x.profileName?.toLowerCase() === p.profileName?.toLowerCase()
+        )
+    );
+
+    res.status(200).json(uniqueProfiles);
   } catch (error) {
     console.error("Error fetching shipping profiles:", error);
     res.status(500).json({ message: "Server error fetching shipping profiles" });
+  }
+};
+
+
+export const activateShippingProfile = async (req, res) => {
+  try {
+    const { userId, profile } = req.body;
+
+    let userRecord = await userShippingProfileModel.findOne({ userId });
+
+    if (!userRecord) {
+      userRecord = new userShippingProfileModel({
+        userId,
+        activeProfiles: [profile],
+      });
+    } else {
+      // prevent duplicates
+      const alreadyActive = userRecord.activeProfiles.some(
+        (p) => p.profileId === profile.profileId
+      );
+      if (!alreadyActive) {
+        userRecord.activeProfiles.push(profile);
+      }
+    }
+
+    await userRecord.save();
+
+    res.status(200).json({
+      message: "Profile activated successfully",
+      data: userRecord,
+    });
+  } catch (error) {
+    console.error("Error activating profile:", error);
+    res.status(500).json({ message: "Failed to activate profile" });
+  }
+};
+
+
+export const deactivateShippingProfile = async (req, res) => {
+  try {
+    const { userId, profileId } = req.body;
+
+    const userRecord = await userShippingProfileModel.findOne({ userId });
+    if (!userRecord) {
+      return res.status(404).json({ message: "User profile not found" });
+    }
+
+    userRecord.activeProfiles = userRecord.activeProfiles.filter(
+      (p) => p.profileId !== profileId
+    );
+
+    await userRecord.save();
+
+    res.status(200).json({
+      message: "Profile deactivated successfully",
+      data: userRecord,
+    });
+  } catch (error) {
+    console.error("Error deactivating profile:", error);
+    res.status(500).json({ message: "Failed to deactivate profile" });
+  }
+};
+  
+
+
+export const getUserActiveProfiles = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const record = await userShippingProfileModel.findOne({ userId });
+
+    if (!record || !record.activeProfiles.length) {
+      return res.status(200).json([]); // return empty array if none active
+    }
+
+    res.status(200).json(record.activeProfiles);
+  } catch (error) {
+    console.error("Error fetching user active profiles:", error);
+    res
+      .status(500)
+      .json({ message: "Server error fetching user active profiles" });
   }
 };

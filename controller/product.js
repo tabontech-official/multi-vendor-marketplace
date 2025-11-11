@@ -243,14 +243,21 @@ export const addUsedEquipments = async (req, res) => {
     productId = productResponse.product.id;
 
     // ✅ Assign Shopify Delivery Profile via GraphQL (Shopify Admin style)
-    // ✅ Assign Shopify Delivery Profile via GraphQL (Shopify Admin exact format)
     if (
       shippingProfileData?.profileId &&
       productResponse?.product?.variants?.length > 0
     ) {
       try {
         console.log(
-          '🚀 [GRAPHQL] Assigning variants to delivery profile (Shopify Admin format)...'
+          '🚀 [GRAPHQL] START — Assigning variants to delivery profile...'
+        );
+        console.log(
+          '🔹 shippingProfileData:',
+          JSON.stringify(shippingProfileData, null, 2)
+        );
+        console.log(
+          '🔹 Product Variants:',
+          JSON.stringify(productResponse.product.variants, null, 2)
         );
 
         const profileGID = shippingProfileData.profileId;
@@ -258,25 +265,35 @@ export const addUsedEquipments = async (req, res) => {
           (v) => `gid://shopify/ProductVariant/${v.id}`
         );
 
+        console.log('📦 Profile GID:', profileGID);
+        console.log('🧩 Variant GIDs:', variantGIDs);
+
         // 🧠 Skip Default profile (Shopify doesn’t allow updates)
         if (shippingProfileData?.profileName?.toLowerCase() === 'default') {
           console.log(
             '⚠️ Skipping — cannot modify the default Shopify delivery profile.'
           );
+          console.log('🏁 [GRAPHQL] END — Skipped (Default Profile)');
           return;
         }
 
-        console.log('📦 Profile GID:', profileGID);
-        console.log('🧩 Variant GIDs:', variantGIDs);
-
-        // 🧾 Build GraphQL mutation in the same format Shopify Admin uses
         const graphqlQuery = {
+          operationName: 'UpdateDeliveryProfile',
           query: `
-    mutation AssignVariantsToProfile($profileId: ID!, $variantIds: [ID!]!) {
-      deliveryProfileAssignProductVariants(
-        id: $profileId,
-        variantIds: $variantIds
+    mutation UpdateDeliveryProfile(
+      $id: ID!,
+      $profile: DeliveryProfileInput!,
+      $leaveLegacyModeProfiles: Boolean!
+    ) {
+      deliveryProfileUpdate(
+        id: $id,
+        profile: $profile,
+        leaveLegacyModeProfiles: $leaveLegacyModeProfiles
       ) {
+        profile {
+          id
+          name
+        }
         userErrors {
           field
           message
@@ -285,10 +302,11 @@ export const addUsedEquipments = async (req, res) => {
     }
   `,
           variables: {
-            profileId: shippingProfileData.profileId,
-            variantIds: productResponse.product.variants.map(
-              (v) => `gid://shopify/ProductVariant/${v.id}`
-            ),
+            id: profileGID,
+            leaveLegacyModeProfiles: true,
+            profile: {
+              variantsToAssociate: variantGIDs,
+            },
           },
         };
 
@@ -297,10 +315,16 @@ export const addUsedEquipments = async (req, res) => {
           JSON.stringify(graphqlQuery, null, 2)
         );
 
-        const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
+        const graphqlUrl = `${shopifyStoreUrl}/admin/api/2025-10/graphql.json`;
         console.log('🌍 Shopify GraphQL Endpoint:', graphqlUrl);
+        console.log('🔑 API Key:', shopifyApiKey ? '✅ Exists' : '❌ Missing');
+        console.log(
+          '🔑 Access Token:',
+          shopifyAccessToken ? '✅ Exists' : '❌ Missing'
+        );
 
         // 🚀 Send Request
+        console.log('📤 Sending GraphQL request to Shopify...');
         const assignResponse = await shopifyRequest(
           graphqlUrl,
           'POST',
@@ -309,41 +333,55 @@ export const addUsedEquipments = async (req, res) => {
           shopifyAccessToken
         );
 
-        console.log('🔍 Full GraphQL Response from Shopify:');
+        console.log('📥 Received response from Shopify GraphQL:');
         console.log(JSON.stringify(assignResponse, null, 2));
 
-        // ✅ Extract results
-        const deliveryProfile =
+        // ✅ Extract results (corrected property names)
+        const deliveryProfileData =
           assignResponse?.data?.deliveryProfileUpdate?.profile || null;
         const userErrors =
           assignResponse?.data?.deliveryProfileUpdate?.userErrors || [];
 
+        console.log(
+          '🔎 Extracted deliveryProfile data:',
+          JSON.stringify(deliveryProfileData, null, 2)
+        );
+        console.log('🔎 User Errors:', JSON.stringify(userErrors, null, 2));
+        console.log(
+          '🔎 Extracted deliveryProfile data:',
+          JSON.stringify(deliveryProfile, null, 2)
+        );
+        console.log('🔎 User Errors:', JSON.stringify(userErrors, null, 2));
+
         if (userErrors.length > 0) {
           console.error('⚠️ Shopify returned user errors:');
-          userErrors.forEach((err, idx) =>
+          userErrors.forEach((err, idx) => {
             console.error(
               `   ${idx + 1}. Field: ${err.field || 'N/A'}, Message: ${err.message}`
-            )
-          );
-        } else if (deliveryProfile) {
+            );
+          });
+        } else {
           console.log('✅ Product successfully assigned to delivery profile!');
-          console.log('📦 Assigned Profile:', deliveryProfile.name);
-          console.log(
-            '💰 Shipping Rate:',
-            shippingProfileData.rateName,
-            '-',
-            shippingProfileData.ratePrice
-          );
-          console.log('🧾 Variants Assigned:', variantGIDs.length);
+          console.log('📦 Assigned Profile ID:', profileGID);
+          console.log('💰 Shipping Rate Info:', {
+            rateName: shippingProfileData.rateName,
+            ratePrice: shippingProfileData.ratePrice,
+          });
+          console.log('🧾 Variants Assigned Count:', variantGIDs.length);
         }
 
-        console.log('🏁 [GRAPHQL] Delivery profile assignment finished.');
+        console.log('🏁 [GRAPHQL] END — Delivery profile assignment complete.');
       } catch (assignErr) {
-        console.error('❌ [GRAPHQL] Failed to assign delivery profile!');
         console.error(
-          '📄 Error Details:',
-          assignErr.response?.data || assignErr.message
+          '❌ [GRAPHQL] ERROR — Failed to assign delivery profile!'
         );
+        console.error('📄 assignErr Object:', assignErr);
+        console.error(
+          '📄 assignErr.response?.data:',
+          JSON.stringify(assignErr.response?.data || {}, null, 2)
+        );
+        console.error('📄 assignErr.message:', assignErr.message);
+        console.error('🏁 [GRAPHQL] END — Error Block.');
       }
     }
 
@@ -2602,7 +2640,6 @@ export const deleteImageGallery = async (req, res) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
   const userId = req.userId;
@@ -3300,7 +3337,6 @@ export const updateInventoryQuantity = async (req, res) => {
     res.status(500).json({ message: 'Server error while updating quantity.' });
   }
 };
-
 
 export const exportProducts = async (req, res) => {
   try {

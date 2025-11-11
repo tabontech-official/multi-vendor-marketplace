@@ -473,7 +473,8 @@ export const checkShopifyAdminTag = async (email) => {
     'Finance',
     'Manage Categories',
     'Documentation',
-    'Approval'
+    'Approval',
+    'Manage Shipping'
   ];
 
   try {
