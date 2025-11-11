@@ -242,128 +242,208 @@ export const addUsedEquipments = async (req, res) => {
 
     productId = productResponse.product.id;
 
+    // if (shippingProfileData?.profileId && productResponse?.product?.variants?.length > 0) {
+    //   try {
+    //     console.log('🚀 [GRAPHQL] START — Assigning variants to delivery profile...');
+    //     console.log('🔹 shippingProfileData:', JSON.stringify(shippingProfileData, null, 2));
+    //     console.log('🔹 Product Variants:', JSON.stringify(productResponse.product.variants, null, 2));
 
-if (shippingProfileData?.profileId && productResponse?.product?.variants?.length > 0) {
-  try {
-    console.log('🚀 [GRAPHQL] START — Assigning variants to delivery profile...');
-    console.log('🔹 shippingProfileData:', JSON.stringify(shippingProfileData, null, 2));
-    console.log('🔹 Product Variants:', JSON.stringify(productResponse.product.variants, null, 2));
+    //     const profileGID = shippingProfileData.profileId;
+    //     const variantGIDs = productResponse.product.variants.map(
+    //       (v) => `gid://shopify/ProductVariant/${v.id}`
+    //     );
 
-    const profileGID = shippingProfileData.profileId;
-    const variantGIDs = productResponse.product.variants.map(
-      (v) => `gid://shopify/ProductVariant/${v.id}`
-    );
+    //     console.log('📦 Profile GID:', profileGID);
+    //     console.log('🧩 Variant GIDs:', JSON.stringify(variantGIDs, null, 2));
 
-    console.log('📦 Profile GID:', profileGID);
-    console.log('🧩 Variant GIDs:', JSON.stringify(variantGIDs, null, 2));
+    //     // 🧠 Skip Default profile (Shopify doesn’t allow updates)
+    //     if (shippingProfileData?.profileName?.toLowerCase() === 'default') {
+    //       console.log('⚠️ Skipping — cannot modify the default Shopify delivery profile.');
+    //       console.log('🏁 [GRAPHQL] END — Skipped (Default Profile)');
+    //       return;
+    //     }
 
-    // 🧠 Skip Default profile (Shopify doesn’t allow updates)
-    if (shippingProfileData?.profileName?.toLowerCase() === 'default') {
-      console.log('⚠️ Skipping — cannot modify the default Shopify delivery profile.');
-      console.log('🏁 [GRAPHQL] END — Skipped (Default Profile)');
-      return;
-    }
+    //     // 🧾 GraphQL Mutation (clean of hidden chars)
+    // const graphqlQuery = {
+    //   operationName: "UpdateDeliveryProfile",
+    //   query: `
+    //     mutation UpdateDeliveryProfile(
+    //       $id: ID!,
+    //       $profile: DeliveryProfileInput!,
+    //       $leaveLegacyModeProfiles: Boolean!
+    //     ) {
+    //       deliveryProfileUpdate(
+    //         id: $id,
+    //         profile: $profile,
+    //         leaveLegacyModeProfiles: $leaveLegacyModeProfiles
+    //       ) {
+    //         profile {
+    //           id
+    //           name
+    //           productVariantsCount {
+    //             count
+    //           }
+    //         }
+    //         userErrors {
+    //           field
+    //           message
+    //         }
+    //       }
+    //     }
+    //   `,
+    //   variables: {
+    //     id: profileGID,
+    //     leaveLegacyModeProfiles: true,
+    //     profile: {
+    //       name: shippingProfileData.profileName,     // required
+    //       variantsToAssociate: variantGIDs           // the variants you want to attach
+    //     }
+    //   }
+    // };
 
-    // 🧾 GraphQL Mutation (clean of hidden chars)
-const graphqlQuery = {
-  operationName: "UpdateDeliveryProfile",
-  query: `
-    mutation UpdateDeliveryProfile(
-      $id: ID!,
-      $profile: DeliveryProfileInput!,
-      $leaveLegacyModeProfiles: Boolean!
-    ) {
-      deliveryProfileUpdate(
-        id: $id,
-        profile: $profile,
-        leaveLegacyModeProfiles: $leaveLegacyModeProfiles
+    //     console.log('🧾 GraphQL Mutation Body:', JSON.stringify(graphqlQuery, null, 2));
+
+    //     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2025-10/graphql.json`;
+    //     console.log('🌍 Shopify GraphQL Endpoint:', graphqlUrl);
+    //     console.log('🔑 API Key:', shopifyApiKey ? '✅ Exists' : '❌ Missing');
+    //     console.log('🔑 Access Token:', shopifyAccessToken ? '✅ Exists' : '❌ Missing');
+
+    //     // 🚀 Send Request
+    //     console.log('📤 Sending GraphQL request to Shopify...');
+    //     const startTime = Date.now();
+    //     const assignResponse = await shopifyRequest(
+    //       graphqlUrl,
+    //       'POST',
+    //       graphqlQuery,
+    //       shopifyApiKey,
+    //       shopifyAccessToken
+    //     );
+    //     const endTime = Date.now();
+    //     console.log(`⏱️ Shopify GraphQL request completed in ${endTime - startTime}ms`);
+
+    //     console.log('📥 Received response from Shopify GraphQL:');
+    //     console.log(JSON.stringify(assignResponse, null, 2));
+
+    //     // 🔎 Extracted data
+    //     const deliveryProfileData = assignResponse?.data?.deliveryProfileUpdate?.profile || null;
+    //     const userErrors = assignResponse?.data?.deliveryProfileUpdate?.userErrors || [];
+
+    //     console.log('🔎 Extracted deliveryProfile data:', JSON.stringify(deliveryProfileData, null, 2));
+    //     console.log('🔎 User Errors:', JSON.stringify(userErrors, null, 2));
+
+    //     // ✅ Handle results
+    //     if (userErrors.length > 0) {
+    //       console.error(`❌ Assignment failed for profile "${shippingProfileData.profileName}"`);
+    //       userErrors.forEach((err, idx) =>
+    //         console.error(`   ${idx + 1}. Field: ${err.field || 'N/A'} — Message: ${err.message}`)
+    //       );
+    //     } else if (assignResponse.errors?.length > 0) {
+    //       console.error('⚠️ Shopify returned GraphQL-level errors:', assignResponse.errors);
+    //     } else {
+    //       console.log('✅ Product successfully assigned to delivery profile!');
+    //       console.log('📦 Assigned Profile ID:', profileGID);
+    //       console.log('💰 Shipping Rate Info:', {
+    //         rateName: shippingProfileData.rateName,
+    //         ratePrice: shippingProfileData.ratePrice,
+    //       });
+    //       console.log('🧾 Variants Assigned Count:', variantGIDs.length);
+    //     }
+
+    //     console.log('🏁 [GRAPHQL] END — Delivery profile assignment complete.');
+    //   } catch (assignErr) {
+    //     console.error('❌ [GRAPHQL] ERROR — Failed to assign delivery profile!');
+    //     console.error('📄 assignErr Object:', assignErr);
+    //     console.error('📄 assignErr.response?.data:', JSON.stringify(assignErr.response?.data || {}, null, 2));
+    //     console.error('📄 assignErr.message:', assignErr.message);
+    //     console.error('🏁 [GRAPHQL] END — Error Block.');
+    //   }
+    // }
+
+    if (shippingProfileData && productResponse?.product?.variants?.length > 0) {
+      if (
+        shippingProfileData.profileName?.toLowerCase().includes('free shipping')
       ) {
-        profile {
-          id
-          name
-          productVariantsCount {
-            count
+        console.log('🟢 Free Shipping detected — skipping Shopify assignment.');
+      } else if (shippingProfileData?.profileId) {
+        try {
+          console.log(
+            '🚀 [GRAPHQL] START — Assigning variants to delivery profile...'
+          );
+          const profileGID = shippingProfileData.profileId;
+          const variantGIDs = productResponse.product.variants.map(
+            (v) => `gid://shopify/ProductVariant/${v.id}`
+          );
+
+          if (shippingProfileData?.profileName?.toLowerCase() === 'default') {
+            console.log(
+              '⚠️ Skipping — cannot modify the default Shopify delivery profile.'
+            );
+          } else {
+            const graphqlQuery = {
+              operationName: 'UpdateDeliveryProfile',
+              query: `
+            mutation UpdateDeliveryProfile(
+              $id: ID!,
+              $profile: DeliveryProfileInput!,
+              $leaveLegacyModeProfiles: Boolean!
+            ) {
+              deliveryProfileUpdate(
+                id: $id,
+                profile: $profile,
+                leaveLegacyModeProfiles: $leaveLegacyModeProfiles
+              ) {
+                profile {
+                  id
+                  name
+                  productVariantsCount {
+                    count
+                  }
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+          `,
+              variables: {
+                id: profileGID,
+                leaveLegacyModeProfiles: true,
+                profile: {
+                  name: shippingProfileData.profileName,
+                  variantsToAssociate: variantGIDs,
+                },
+              },
+            };
+
+            const graphqlUrl = `${shopifyStoreUrl}/admin/api/2025-10/graphql.json`;
+            const assignResponse = await shopifyRequest(
+              graphqlUrl,
+              'POST',
+              graphqlQuery,
+              shopifyApiKey,
+              shopifyAccessToken
+            );
+
+            const userErrors =
+              assignResponse?.data?.deliveryProfileUpdate?.userErrors || [];
+
+            if (userErrors.length > 0) {
+              console.error('❌ Shopify assignment failed:', userErrors);
+            } else {
+              console.log(
+                '✅ Product successfully assigned to delivery profile!'
+              );
+            }
           }
-        }
-        userErrors {
-          field
-          message
+        } catch (assignErr) {
+          console.error(
+            '❌ [GRAPHQL] ERROR — Failed to assign delivery profile!',
+            assignErr
+          );
         }
       }
     }
-  `,
-  variables: {
-    id: profileGID,
-    leaveLegacyModeProfiles: true,
-    profile: {
-      name: shippingProfileData.profileName,     // required
-      variantsToAssociate: variantGIDs           // the variants you want to attach
-    }
-  }
-};
-
-
-
-    console.log('🧾 GraphQL Mutation Body:', JSON.stringify(graphqlQuery, null, 2));
-
-    const graphqlUrl = `${shopifyStoreUrl}/admin/api/2025-10/graphql.json`;
-    console.log('🌍 Shopify GraphQL Endpoint:', graphqlUrl);
-    console.log('🔑 API Key:', shopifyApiKey ? '✅ Exists' : '❌ Missing');
-    console.log('🔑 Access Token:', shopifyAccessToken ? '✅ Exists' : '❌ Missing');
-
-    // 🚀 Send Request
-    console.log('📤 Sending GraphQL request to Shopify...');
-    const startTime = Date.now();
-    const assignResponse = await shopifyRequest(
-      graphqlUrl,
-      'POST',
-      graphqlQuery,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-    const endTime = Date.now();
-    console.log(`⏱️ Shopify GraphQL request completed in ${endTime - startTime}ms`);
-
-    console.log('📥 Received response from Shopify GraphQL:');
-    console.log(JSON.stringify(assignResponse, null, 2));
-
-    // 🔎 Extracted data
-    const deliveryProfileData = assignResponse?.data?.deliveryProfileUpdate?.profile || null;
-    const userErrors = assignResponse?.data?.deliveryProfileUpdate?.userErrors || [];
-
-    console.log('🔎 Extracted deliveryProfile data:', JSON.stringify(deliveryProfileData, null, 2));
-    console.log('🔎 User Errors:', JSON.stringify(userErrors, null, 2));
-
-    // ✅ Handle results
-    if (userErrors.length > 0) {
-      console.error(`❌ Assignment failed for profile "${shippingProfileData.profileName}"`);
-      userErrors.forEach((err, idx) =>
-        console.error(`   ${idx + 1}. Field: ${err.field || 'N/A'} — Message: ${err.message}`)
-      );
-    } else if (assignResponse.errors?.length > 0) {
-      console.error('⚠️ Shopify returned GraphQL-level errors:', assignResponse.errors);
-    } else {
-      console.log('✅ Product successfully assigned to delivery profile!');
-      console.log('📦 Assigned Profile ID:', profileGID);
-      console.log('💰 Shipping Rate Info:', {
-        rateName: shippingProfileData.rateName,
-        ratePrice: shippingProfileData.ratePrice,
-      });
-      console.log('🧾 Variants Assigned Count:', variantGIDs.length);
-    }
-
-    console.log('🏁 [GRAPHQL] END — Delivery profile assignment complete.');
-  } catch (assignErr) {
-    console.error('❌ [GRAPHQL] ERROR — Failed to assign delivery profile!');
-    console.error('📄 assignErr Object:', assignErr);
-    console.error('📄 assignErr.response?.data:', JSON.stringify(assignErr.response?.data || {}, null, 2));
-    console.error('📄 assignErr.message:', assignErr.message);
-    console.error('🏁 [GRAPHQL] END — Error Block.');
-  }
-}
-
-
-
 
     if (Array.isArray(metafields) && metafields.length > 0) {
       const limitedMetafields = metafields.slice(0, 4);
@@ -426,19 +506,33 @@ const graphqlQuery = {
         sku: sku,
         barcode: barcode,
       },
-      shipping: {
-        track_shipping: track_shipping || false,
-        weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
-        weight_unit: weight_unit || 'kg',
-        profile: shippingProfileData
-          ? {
-              profileId: shippingProfileData.profileId,
-              profileName: shippingProfileData.profileName,
-              rateName: shippingProfileData.rateName,
-              ratePrice: shippingProfileData.ratePrice,
-            }
-          : null,
-      },
+      shipping: (() => {
+        const shippingData = {
+          track_shipping: track_shipping || false,
+          weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
+          weight_unit: weight_unit || 'kg',
+        };
+
+        if (
+          shippingProfileData?.profileName
+            ?.toLowerCase()
+            .includes('free shipping')
+        ) {
+          shippingData.freeShipping = true;
+        } else if (shippingProfileData?.profileId) {
+          shippingData.profile = {
+            profileId: shippingProfileData.profileId,
+            profileName: shippingProfileData.profileName,
+            rateName: shippingProfileData.rateName,
+            ratePrice: shippingProfileData.ratePrice,
+          };
+          shippingData.freeShipping = false;
+        } else {
+          shippingData.freeShipping = false;
+        }
+
+        return shippingData;
+      })(),
 
       userId,
       status: productStatus,
@@ -872,6 +966,7 @@ export const updateProductData = async (req, res) => {
       variantSku,
       categories,
       metafields = [],
+      shippingProfileData = null,
     } = req.body;
 
     const variantQtyArray = variantQuantites || variantQuantities || [];
@@ -990,7 +1085,98 @@ export const updateProductData = async (req, res) => {
       console.log('❌ [ERROR] Shopify product update failed');
       return res.status(500).json({ error: 'Shopify product update failed.' });
     }
+    if (shippingProfileData && updateResponse?.product?.variants?.length > 0) {
+      if (
+        shippingProfileData.profileName?.toLowerCase().includes('free shipping')
+      ) {
+        console.log('🟢 Free Shipping detected — skipping Shopify assignment.');
+      } else if (shippingProfileData?.profileId) {
+        try {
+          console.log(
+            '🚀 [GRAPHQL] START — Assigning variants to delivery profile...'
+          );
+          const profileGID = shippingProfileData.profileId;
+          const variantGIDs = updateResponse.product.variants.map(
+            (v) => `gid://shopify/ProductVariant/${v.id}`
+          );
 
+          if (shippingProfileData?.profileName?.toLowerCase() === 'default') {
+            console.log(
+              '⚠️ Skipping — cannot modify the default Shopify delivery profile.'
+            );
+          } else {
+            const graphqlQuery = {
+              operationName: 'UpdateDeliveryProfile',
+              query: `
+            mutation UpdateDeliveryProfile(
+              $id: ID!,
+              $profile: DeliveryProfileInput!,
+              $leaveLegacyModeProfiles: Boolean!
+            ) {
+              deliveryProfileUpdate(
+                id: $id,
+                profile: $profile,
+                leaveLegacyModeProfiles: $leaveLegacyModeProfiles
+              ) {
+                profile {
+                  id
+                  name
+                  productVariantsCount {
+                    count
+                  }
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+          `,
+              variables: {
+                id: profileGID,
+                leaveLegacyModeProfiles: true,
+                profile: {
+                  name: shippingProfileData.profileName,
+                  variantsToAssociate: variantGIDs,
+                },
+              },
+            };
+
+            const graphqlUrl = `${shopifyStoreUrl}/admin/api/2025-10/graphql.json`;
+
+            console.log('📦 Assigning variants to profile:', {
+              profileGID,
+              profileName: shippingProfileData.profileName,
+              variantCount: variantGIDs.length,
+            });
+
+            const assignResponse = await shopifyRequest(
+              graphqlUrl,
+              'POST',
+              graphqlQuery,
+              shopifyApiKey,
+              shopifyAccessToken
+            );
+
+            const userErrors =
+              assignResponse?.data?.deliveryProfileUpdate?.userErrors || [];
+
+            if (userErrors.length > 0) {
+              console.error('❌ Shopify assignment failed:', userErrors);
+            } else {
+              console.log(
+                '✅ Product successfully assigned to delivery profile!'
+              );
+            }
+          }
+        } catch (assignErr) {
+          console.error(
+            '❌ [GRAPHQL] ERROR — Failed to assign delivery profile!',
+            assignErr
+          );
+        }
+      }
+    }
     if (Array.isArray(metafields) && metafields.length > 0) {
       console.log('🧩 Starting metafield sync with Shopify...');
 
@@ -1059,6 +1245,33 @@ export const updateProductData = async (req, res) => {
       metafields: Array.isArray(metafields)
         ? metafields.filter((m) => m.label?.trim() && m.value?.trim())
         : product.metafields || [],
+      shipping: (() => {
+        const shippingData = {
+          track_shipping: track_shipping || false,
+          weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
+          weight_unit: weight_unit || 'kg',
+        };
+
+        if (
+          shippingProfileData?.profileName
+            ?.toLowerCase()
+            .includes('free shipping')
+        ) {
+          shippingData.freeShipping = true;
+        } else if (shippingProfileData?.profileId) {
+          shippingData.profile = {
+            profileId: shippingProfileData.profileId,
+            profileName: shippingProfileData.profileName,
+            rateName: shippingProfileData.rateName,
+            ratePrice: shippingProfileData.ratePrice,
+          };
+          shippingData.freeShipping = false;
+        } else {
+          shippingData.freeShipping = false;
+        }
+
+        return shippingData;
+      })(),
     };
 
     const updatedInDb = await listingModel.findByIdAndUpdate(
@@ -2620,7 +2833,6 @@ export const deleteImageGallery = async (req, res) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
   const userId = req.userId;
@@ -3318,7 +3530,6 @@ export const updateInventoryQuantity = async (req, res) => {
     res.status(500).json({ message: 'Server error while updating quantity.' });
   }
 };
-
 
 export const exportProducts = async (req, res) => {
   try {

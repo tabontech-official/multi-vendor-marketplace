@@ -98,15 +98,30 @@ const listingSchema = new mongoose.Schema(
     shipping: {
       track_shipping: {
         type: Boolean,
-        // default: false,
+        default: false,
       },
       weight: {
         type: Number,
+        default: 0,
       },
       weight_unit: {
         type: String,
+        default: 'kg',
+      },
+      // ✅ Add Free Shipping flag
+      freeShipping: {
+        type: Boolean,
+        default: false,
+      },
+      // ✅ Properly define profile subfields
+      profile: {
+        profileId: { type: String },
+        profileName: { type: String },
+        rateName: { type: String },
+        ratePrice: { type: Number },
       },
     },
+
     userId: {
       type: mongoose.Schema.Types.ObjectId,
     },
