@@ -704,7 +704,6 @@ export const getUserActiveProfiles = async (req, res) => {
 
 export const getShippingProfilesWithCounts = async (req, res) => {
   try {
-    console.log('🟦 [ADMIN API] getShippingProfilesWithCounts — START');
 
     const profiles = await shippingProfileModel.find().sort({ createdAt: -1 });
 
@@ -727,12 +726,8 @@ export const getShippingProfilesWithCounts = async (req, res) => {
       profiles: profilesWithCounts,
     });
 
-    console.log('✅ [ADMIN API] Successfully fetched shipping profile counts.');
   } catch (error) {
-    console.error(
-      '❌ [ADMIN API] Error fetching shipping profiles with counts:',
-      error
-    );
+   
     res.status(500).json({
       message:
         'Server error while fetching shipping profiles with product counts.',
