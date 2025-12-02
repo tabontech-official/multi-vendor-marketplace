@@ -8,5 +8,9 @@ const categorySchema = new mongoose.Schema({
   parentCatNo: { type: String, default: '' },
   imageUrl: { type: String, default: '' }, 
   categoryId: { type: String },
-});
+},
+{
+  timestamps:true
+}
+);
 export const categoryModel = mongoose.model('Category', categorySchema);
