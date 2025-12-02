@@ -7,6 +7,8 @@ import fs from 'fs';
 import { Parser } from 'json2csv';
 import path from 'path';
 import { listingModel } from '../Models/Listing.js';
+import csv from "csv-parser";
+import { Readable } from "stream";
 
 const generateUniqueCatNo = async () => {
   try {
@@ -255,28 +257,25 @@ const extractCategoryAndChildren = (categories) => {
 
 export const getCategory = async (req, res) => {
   try {
-
     const categories = await categoryModel.find();
 
     if (!categories.length) {
       return res.status(404).json({ message: "No categories found" });
     }
 
+    // Run productCount queries in parallel
+    const updatedCategories = await Promise.all(
+      categories.map(async (cat) => {
+        const productCount = await listingModel.countDocuments({
+          tags: cat.catNo,
+        });
 
-    const updatedCategories = [];
-
-    for (let cat of categories) {
-
-      const productCount = await listingModel.countDocuments({
-        tags: cat.catNo,
-      });
-
-
-      updatedCategories.push({
-        ...cat._doc,
-        productCount,
-      });
-    }
+        return {
+          ...cat._doc,     // includes createdAt & updatedAt
+          productCount,
+        };
+      })
+    );
 
     return res.status(200).json(updatedCategories);
 
@@ -288,19 +287,113 @@ export const getCategory = async (req, res) => {
 };
 
 
+
+// export const uploadCsvForCategories = async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ error: "CSV file is required" });
+//     }
+
+//     const rows = [];
+
+//     // Convert buffer to stream
+//     const stream = Readable.from(req.file.buffer.toString());
+
+//     stream
+//       .pipe(csv())
+//       .on("data", (row) => rows.push(row))
+//       .on("end", async () => {
+//         console.log("📥 CSV Import Started");
+
+//         const saved = [];
+//         const failed = [];
+
+//         for (let row of rows) {
+//           try {
+//             const { title, description, level, parentCatNo, handle } = row;
+
+//             if (!title || !level) {
+//               failed.push({ row, error: "Missing required fields" });
+//               continue;
+//             }
+
+//             const catNo = await generateUniqueCatNo();
+
+//             console.log(`➡ Creating category: ${title} (${catNo})`);
+
+//             const newCategory = new categoryModel({
+//               title,
+//               description,
+//               level,
+//               catNo,
+//               parentCatNo: parentCatNo || "",
+//             });
+
+//             await newCategory.save();
+
+//             // SHOPIFY RULES
+//             const collectionRules = [
+//               {
+//                 column: "TAG",
+//                 relation: "EQUALS",
+//                 condition: catNo,
+//               },
+//             ];
+
+//             const collectionId = await createShopifyCollection(
+//               description,
+//               title,
+//               collectionRules,
+//               handle
+//             );
+
+//             newCategory.categoryId = collectionId;
+//             await newCategory.save();
+
+//             saved.push({
+//               title,
+//               catNo,
+//               status: "success",
+//             });
+
+//           } catch (err) {
+//             console.error("❌ Error:", err);
+//             failed.push({ row, error: err.message });
+//           }
+//         }
+
+//         return res.status(200).json({
+//           message: "CSV import completed",
+//           saved,
+//           failed,
+//         });
+//       });
+//   } catch (error) {
+//     console.error("🔥 Error processing CSV:", error);
+//     return res.status(500).json({
+//       error: "Internal server error while uploading CSV",
+//     });
+//   }
+// };
+
+
 export const uploadCsvForCategories = async (req, res) => {
   try {
-    if (!req.file) {
+    const file = req.file;
+
+    if (!file || !file.buffer) {
       return res.status(400).json({ error: "CSV file is required" });
     }
 
     const rows = [];
+    const stream = Readable.from(file.buffer); // ✅ Vercel-safe (no fs)
 
-    fs.createReadStream(req.file.path)
+    stream
       .pipe(csv())
       .on("data", (row) => rows.push(row))
       .on("end", async () => {
         console.log("📥 CSV Import Started");
+
         const saved = [];
         const failed = [];
 
@@ -308,10 +401,15 @@ export const uploadCsvForCategories = async (req, res) => {
           try {
             const { title, description, level, parentCatNo, handle } = row;
 
-            const catNo = await generateUniqueCatNo();
+            if (!title || !level) {
+              failed.push({ row, error: "Missing required fields" });
+              continue;
+            }
 
+            const catNo = await generateUniqueCatNo();
             console.log(`➡ Creating category: ${title} (${catNo})`);
 
+            // Create New Category
             const newCategory = new categoryModel({
               title,
               description,
@@ -322,6 +420,7 @@ export const uploadCsvForCategories = async (req, res) => {
 
             await newCategory.save();
 
+            // Shopify auto rules
             const collectionRules = [
               {
                 column: "TAG",
@@ -330,6 +429,7 @@ export const uploadCsvForCategories = async (req, res) => {
               },
             ];
 
+            // Create Shopify Collection
             const collectionId = await createShopifyCollection(
               description,
               title,
@@ -340,19 +440,20 @@ export const uploadCsvForCategories = async (req, res) => {
             newCategory.categoryId = collectionId;
             await newCategory.save();
 
-            console.log(`✅ Saved: ${title} | Shopify ID: ${collectionId}`);
-            saved.push({ title, catNo, status: "success" });
+            saved.push({
+              title,
+              catNo,
+              status: "success",
+            });
 
           } catch (err) {
-            console.error("❌ Error saving row:", err);
+            console.error("❌ Save error:", err);
             failed.push({
               row,
               error: err.message,
             });
           }
         }
-
-        fs.unlinkSync(req.file.path);
 
         return res.status(200).json({
           message: "CSV import completed",
@@ -361,12 +462,102 @@ export const uploadCsvForCategories = async (req, res) => {
         });
       });
   } catch (error) {
-    console.error("🔥 Error processing CSV:", error);
+    console.error("🔥 Fatal CSV processing error:", error);
     return res.status(500).json({
       error: "Internal server error while uploading CSV",
     });
   }
 };
+
+export const replaceAndDeleteCategory = async (req, res) => {
+  try {
+    const { replaceData } = req.body;
+
+    if (!replaceData || !Array.isArray(replaceData)) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    const ACCESS_TOKEN = shopifyConfig.shopifyAccessToken;
+    const SHOPIFY_STORE_URL = shopifyConfig.shopifyStoreUrl;
+
+    for (const item of replaceData) {
+      const { oldCategoryId, newCategoryId } = item;
+
+      const oldCategory = await categoryModel.findById(oldCategoryId);
+      const newCategory = await categoryModel.findById(newCategoryId);
+
+      if (!oldCategory || !newCategory) continue;
+
+      // STEP 1A — Remove old tag from products
+      await listingModel.updateMany(
+        { tags: oldCategory.catNo },
+        { $pull: { tags: oldCategory.catNo } }
+      );
+
+      // STEP 1B — Add new tag to products
+      await listingModel.updateMany(
+        { tags: { $ne: newCategory.catNo } },
+        { $addToSet: { tags: newCategory.catNo } }
+      );
+
+      // STEP 1C — FIX hierarchy when deleting
+      if (oldCategory.level === "level1") {
+        await categoryModel.updateMany(
+          { parentCatNo: oldCategory.catNo },
+          { $set: { parentCatNo: newCategory.catNo } }
+        );
+
+        await categoryModel.updateMany(
+          { parentCatNo: oldCategory.catNo },
+          { $set: { parentCatNo: newCategory.catNo } }
+        );
+      }
+
+      if (oldCategory.level === "level2") {
+        await categoryModel.updateMany(
+          { parentCatNo: oldCategory.catNo },
+          { $set: { parentCatNo: newCategory.catNo } }
+        );
+      }
+
+      // STEP 2 — Delete Shopify collection
+      if (oldCategory.categoryId) {
+        const mutation = `
+          mutation collectionDelete($input: CollectionDeleteInput!) {
+            collectionDelete(input: $input) {
+              deletedCollectionId
+              userErrors { field message }
+            }
+          }
+        `;
+        const variables = { input: { id: oldCategory.categoryId } };
+
+        await axios.post(
+          `${SHOPIFY_STORE_URL}/admin/api/2024-04/graphql.json`,
+          { query: mutation, variables },
+          {
+            headers: {
+              "X-Shopify-Access-Token": ACCESS_TOKEN,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
+      // STEP 3 — Delete category from DB
+      await categoryModel.findByIdAndDelete(oldCategoryId);
+    }
+
+    res.status(200).json({
+      message: "Products moved & hierarchy updated & categories deleted",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 
 
 
@@ -644,3 +835,93 @@ export const deleteCollection = async (req, res) => {
       .json({ error: 'Something went wrong during deletion' });
   }
 };
+
+
+export const updateCategory = async (req, res) => {
+  try {
+    const { replaceData } = req.body;
+
+    if (!replaceData || !Array.isArray(replaceData) || replaceData.length === 0) {
+      return res.status(400).json({ error: "replaceData must be a non-empty array" });
+    }
+
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(500).json({ error: "Shopify configuration missing in DB" });
+    }
+
+    const ACCESS_TOKEN = shopifyConfig.shopifyAccessToken;
+    const SHOPIFY_STORE_URL = shopifyConfig.shopifyStoreUrl;
+
+    for (let item of replaceData) {
+      const { categoryId, newName } = item;
+
+      if (!categoryId) return res.status(400).json({ error: "Category ID is required" });
+
+      const category = await categoryModel.findById(categoryId);
+      if (!category) continue;
+
+      category.title = newName;
+      category.description = ""; 
+      await category.save();
+
+
+      if (category.categoryId) {
+        const mutation = `
+          mutation UpdateCollection($input: CollectionInput!) {
+            collectionUpdate(input: $input) {
+              collection {
+                id
+                title
+                descriptionHtml
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            id: category.categoryId,   
+            title: newName,
+            descriptionHtml: "",     
+          },
+        };
+
+        try {
+          const shopifyRes = await axios.post(
+            `${SHOPIFY_STORE_URL}/admin/api/2024-04/graphql.json`,
+            { query: mutation, variables },
+            {
+              headers: {
+                "X-Shopify-Access-Token": ACCESS_TOKEN,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const errors =
+            shopifyRes.data?.data?.collectionUpdate?.userErrors || [];
+
+          if (errors.length > 0) {
+            console.error("Shopify Error:", errors);
+          }
+        } catch (err) {
+          console.error("Shopify Update Error:", err.message);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      message: "Categories updated in DB & Shopify",
+    });
+
+  } catch (error) {
+    console.error("Update Instead Delete Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
