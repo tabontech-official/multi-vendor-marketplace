@@ -3,6 +3,7 @@ import {
   createCategory,
   delet,
   deleteCollection,
+  deleteLevel3Categories,
   exportCsvForCategories,
   getCategory,
   getCollectionData,
@@ -27,5 +28,6 @@ categoryRouter.delete('/', delet);
 categoryRouter.put('/updateCategoryInsteadDelete', updateCategory);
 categoryRouter.post('/uploadCsvForCategories',Csvuplaods,  uploadCsvForCategories);
 categoryRouter.put('/replaceAndDeleteCategory', replaceAndDeleteCategory);
+categoryRouter.delete("/delete-level3", deleteLevel3Categories)
 
 export default categoryRouter;

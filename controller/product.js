@@ -95,6 +95,8 @@ export const addUsedEquipments = async (req, res) => {
       categories = [],
       metafields = [],
       shippingProfileData = null,
+      size_chart_image,
+      size_chart_id 
     } = req.body;
     let productStatus =
       status === 'publish' || status === 'active' ? 'active' : 'draft';
@@ -444,7 +446,29 @@ export const addUsedEquipments = async (req, res) => {
         }
       }
     }
+if (size_chart_image) {
+  const sizeChartMetafield = {
+    metafield: {
+      namespace: 'custom',
+      key: 'size-chart',
+      value: size_chart_image,
+      type: 'single_line_text_field',
+    },
+  };
 
+  try {
+    await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
+      'POST',
+      sizeChartMetafield,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+    console.log("✅ Size chart metafield added");
+  } catch (err) {
+    console.error("❌ Error adding size chart metafield:", err.message);
+  }
+}
     if (Array.isArray(metafields) && metafields.length > 0) {
       const limitedMetafields = metafields.slice(0, 4);
 
@@ -497,6 +521,11 @@ export const addUsedEquipments = async (req, res) => {
       created_at: new Date(),
       tags: productResponse.product.tags,
       variants: productResponse.product.variants,
+    custom: {
+  size_chart: size_chart_image || null,
+  size_chart_id: size_chart_id || null,
+},
+
       inventory: {
         track_quantity: !!track_quantity || false,
         quantity:
@@ -582,7 +611,6 @@ export const duplicateProduct = async (req, res) => {
     const { productId } = req.params;
     console.log('🔹 Product ID to duplicate:', productId);
 
-    // 🔹 Shopify Config
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     if (!shopifyConfiguration)
       return res
@@ -593,7 +621,6 @@ export const duplicateProduct = async (req, res) => {
     shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
     shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
 
-    // 🔹 Get original product from Shopify
     const shopifyProductRes = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
       'GET',
@@ -606,12 +633,10 @@ export const duplicateProduct = async (req, res) => {
     if (!shopifyProduct)
       return res.status(404).json({ error: 'Product not found on Shopify.' });
 
-    // 🔹 Fetch original product from DB for metafields, images, etc.
     const originalProductFromDb = await listingModel.findOne({ id: productId });
     if (!originalProductFromDb)
       throw new Error('Original product not found in DB.');
 
-    // 🔹 Clone product payload for Shopify
     const clonePayload = {
       product: {
         title: `Copy of ${shopifyProduct.title}`,
@@ -637,7 +662,6 @@ export const duplicateProduct = async (req, res) => {
       },
     };
 
-    // 🔹 Create duplicated product on Shopify
     const productResponse = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
       'POST',
@@ -650,9 +674,7 @@ export const duplicateProduct = async (req, res) => {
       throw new Error('Failed to clone product on Shopify.');
 
     newProductId = productResponse.product.id;
-    console.log('✅ Shopify clone created:', newProductId);
 
-    // 🔹 Metafields (4 static)
     const metafields = originalProductFromDb.metafields || [];
     if (Array.isArray(metafields) && metafields.length > 0) {
       const limitedMetafields = metafields.slice(0, 4);
@@ -867,6 +889,7 @@ export const getProduct = async (req, res) => {
           categories: 1,
           oldPrice: 1,
           shopifyId: 1,
+          custom:1,
           approvalStatus: 1,
           metafields: 1,
           username: {
@@ -1640,6 +1663,7 @@ export const getAllProductData = async (req, res) => {
           oldPrice: 1,
           shopifyId: 1,
           approvalStatus: 1,
+          custom:1,
           metafields: 1,
           username: {
             $concat: [

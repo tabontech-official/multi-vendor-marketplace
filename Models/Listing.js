@@ -82,11 +82,9 @@ const listingSchema = new mongoose.Schema(
       },
       continue_selling: {
         type: Boolean,
-        // default: false,
       },
       has_sku: {
         type: Boolean,
-        // default: false,
       },
       sku: {
         type: String,
@@ -108,12 +106,10 @@ const listingSchema = new mongoose.Schema(
         type: String,
         default: 'kg',
       },
-      // ✅ Add Free Shipping flag
       freeShipping: {
         type: Boolean,
         default: false,
       },
-      // ✅ Properly define profile subfields
       profile: {
         profileId: { type: String },
         profileName: { type: String },
@@ -154,6 +150,12 @@ const listingSchema = new mongoose.Schema(
         value: { type: String, trim: true },
       },
     ],
+    custom: {
+      size_chart: { type: String, default: null },
+      size_chart_id:{
+        type:mongoose.Schema.Types.ObjectId
+      },
+    },
   },
   {
     timestamps: true,

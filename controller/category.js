@@ -1047,3 +1047,92 @@ export const updateCategory = async (req, res) => {
   }
 };
 
+
+export const deleteLevel3Categories = async (req, res) => {
+  try {
+    console.log("🔥 Starting Level 3 Category Deletion...");
+
+    // Fetch Level 3 categories
+    const level3Categories = await categoryModel.find({
+      level: { $in: ["level3", "Level 3", "3", "level 3"] }
+    });
+
+    if (!level3Categories.length) {
+      return res.status(404).json({ message: "No Level 3 categories found" });
+    }
+
+    console.log(`🔍 Found ${level3Categories.length} Level 3 categories`);
+
+    // Shopify Config
+    const cfg = await shopifyConfigurationModel.findOne();
+    if (!cfg) {
+      return res.status(500).json({ error: "Shopify configuration missing" });
+    }
+
+    const ACCESS_TOKEN = cfg.shopifyAccessToken;
+    const STORE_URL = cfg.shopifyStoreUrl;
+
+    // Delete each Level 3 category
+    for (const cat of level3Categories) {
+      console.log(`\n🟥 Deleting Level 3 Category: ${cat.title} (${cat.catNo})`);
+
+      // -----------------------------
+      // DELETE FROM SHOPIFY
+      // -----------------------------
+      if (cat.categoryId) {
+        console.log(`📌 Shopify Collection → ${cat.categoryId}`);
+
+        const mutation = `
+          mutation collectionDelete($input: CollectionDeleteInput!) {
+            collectionDelete(input: $input) {
+              deletedCollectionId
+              userErrors { field message }
+            }
+          }
+        `;
+
+        try {
+          const resp = await axios.post(
+            `${STORE_URL}/admin/api/2024-04/graphql.json`,
+            {
+              query: mutation,
+              variables: { input: { id: cat.categoryId } },
+            },
+            {
+              headers: {
+                "X-Shopify-Access-Token": ACCESS_TOKEN,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const errors =
+            resp.data?.data?.collectionDelete?.userErrors || [];
+
+          if (errors.length > 0) {
+            console.error("❌ Shopify Error:", errors);
+          } else {
+            console.log("✔ Shopify collection deleted");
+          }
+        } catch (err) {
+          console.error("❌ Shopify Delete Error:", err.message);
+        }
+      }
+
+      // -----------------------------
+      // DELETE FROM MONGODB
+      // -----------------------------
+      await categoryModel.deleteOne({ _id: cat._id });
+      console.log(`✔ Deleted from MongoDB: ${cat.title}`);
+    }
+
+    return res.status(200).json({
+      message: "All Level 3 categories deleted from Shopify + MongoDB",
+      deletedCount: level3Categories.length,
+    });
+
+  } catch (error) {
+    console.error("🔥 Error deleting Level 3 categories:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
