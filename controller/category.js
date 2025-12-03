@@ -379,37 +379,69 @@ export const getCategory = async (req, res) => {
 
 export const uploadCsvForCategories = async (req, res) => {
   try {
+    console.log("🔥 CSV Upload API Hit");
+
     const file = req.file;
 
     if (!file || !file.buffer) {
+      console.log("❌ No file or buffer found");
       return res.status(400).json({ error: "CSV file is required" });
     }
 
+    console.log("📄 File received. Size:", file.buffer.length);
+
     const rows = [];
-    const stream = Readable.from(file.buffer); // ✅ Vercel-safe (no fs)
+    const stream = Readable.from(file.buffer);
 
     stream
       .pipe(csv())
-      .on("data", (row) => rows.push(row))
+      .on("data", (row) => {
+        console.log("➡ CSV Row:", row);
+        rows.push(row);
+      })
       .on("end", async () => {
-        console.log("📥 CSV Import Started");
+        console.log("📥 CSV Parsing Completed. Total rows:", rows.length);
 
         const saved = [];
         const failed = [];
 
         for (let row of rows) {
+          console.log("\n==============================");
+          console.log("🚀 Processing Row:", row);
+
           try {
             const { title, description, level, parentCatNo, handle } = row;
 
             if (!title || !level) {
+              console.log("❌ Missing required fields:", row);
               failed.push({ row, error: "Missing required fields" });
               continue;
             }
 
-            const catNo = await generateUniqueCatNo();
-            console.log(`➡ Creating category: ${title} (${catNo})`);
+            console.log(`📌 Level: ${level}, Parent: ${parentCatNo}`);
 
-            // Create New Category
+            // 🔍 Debug: Check parentCatNo exists for Level 2
+            if (level == "2") {
+              const parent = await categoryModel.findOne({ catNo: parentCatNo });
+              console.log("🔎 Parent Lookup:", parent);
+
+              if (!parent) {
+                console.log("❌ Parent category not found for Level 2");
+                failed.push({
+                  row,
+                  error: "Parent category not found for Level 2",
+                });
+                continue;
+              }
+            }
+
+            // ========= Generate catNo ==========
+            const catNo = await generateUniqueCatNo();
+            console.log(`✨ Generated catNo: ${catNo}`);
+
+            // ========= MongoDB Save ==========
+            console.log("💾 Saving new category in DB...");
+
             const newCategory = new categoryModel({
               title,
               description,
@@ -419,8 +451,9 @@ export const uploadCsvForCategories = async (req, res) => {
             });
 
             await newCategory.save();
+            console.log("✅ Saved in MongoDB");
 
-            // Shopify auto rules
+            // ========= Shopify Rules ==========
             const collectionRules = [
               {
                 column: "TAG",
@@ -429,7 +462,8 @@ export const uploadCsvForCategories = async (req, res) => {
               },
             ];
 
-            // Create Shopify Collection
+            console.log("🛒 Creating Shopify Collection with rules:", collectionRules);
+
             const collectionId = await createShopifyCollection(
               description,
               title,
@@ -437,8 +471,12 @@ export const uploadCsvForCategories = async (req, res) => {
               handle
             );
 
+            console.log("🆔 Shopify Collection Created:", collectionId);
+
             newCategory.categoryId = collectionId;
             await newCategory.save();
+
+            console.log("📌 Category updated with Shopify collectionId");
 
             saved.push({
               title,
@@ -447,13 +485,18 @@ export const uploadCsvForCategories = async (req, res) => {
             });
 
           } catch (err) {
-            console.error("❌ Save error:", err);
+            console.error("❌ Error while saving row:", row, " Error:", err);
             failed.push({
               row,
               error: err.message,
             });
           }
         }
+
+        console.log("\n==============================");
+        console.log("🎉 CSV Import Completed");
+        console.log("✔ Saved:", saved.length);
+        console.log("❌ Failed:", failed.length);
 
         return res.status(200).json({
           message: "CSV import completed",
@@ -469,60 +512,112 @@ export const uploadCsvForCategories = async (req, res) => {
   }
 };
 
+
+
 export const replaceAndDeleteCategory = async (req, res) => {
   try {
+    console.log("======== 🟦 CATEGORY REPLACEMENT STARTED 🟦 ========");
+
     const { replaceData } = req.body;
 
     if (!replaceData || !Array.isArray(replaceData)) {
       return res.status(400).json({ error: "Invalid request" });
     }
 
-    const shopifyConfig = await shopifyConfigurationModel.findOne();
-    const ACCESS_TOKEN = shopifyConfig.shopifyAccessToken;
-    const SHOPIFY_STORE_URL = shopifyConfig.shopifyStoreUrl;
+    const cfg = await shopifyConfigurationModel.findOne();
+    const ACCESS_TOKEN = cfg.shopifyAccessToken;
+    const STORE_URL = cfg.shopifyStoreUrl;
 
     for (const item of replaceData) {
       const { oldCategoryId, newCategoryId } = item;
 
-      const oldCategory = await categoryModel.findById(oldCategoryId);
-      const newCategory = await categoryModel.findById(newCategoryId);
+      console.log(`\n🔄 Processing: OLD=${oldCategoryId} → NEW=${newCategoryId}`);
 
-      if (!oldCategory || !newCategory) continue;
+      const oldCat = await categoryModel.findById(oldCategoryId);
+      const newCat = await categoryModel.findById(newCategoryId);
 
-      // STEP 1A — Remove old tag from products
-      await listingModel.updateMany(
-        { tags: oldCategory.catNo },
-        { $pull: { tags: oldCategory.catNo } }
-      );
-
-      // STEP 1B — Add new tag to products
-      await listingModel.updateMany(
-        { tags: { $ne: newCategory.catNo } },
-        { $addToSet: { tags: newCategory.catNo } }
-      );
-
-      // STEP 1C — FIX hierarchy when deleting
-      if (oldCategory.level === "level1") {
-        await categoryModel.updateMany(
-          { parentCatNo: oldCategory.catNo },
-          { $set: { parentCatNo: newCategory.catNo } }
-        );
-
-        await categoryModel.updateMany(
-          { parentCatNo: oldCategory.catNo },
-          { $set: { parentCatNo: newCategory.catNo } }
-        );
+      if (!oldCat || !newCat) {
+        console.log("❌ Category not found");
+        continue;
       }
 
-      if (oldCategory.level === "level2") {
-        await categoryModel.updateMany(
-          { parentCatNo: oldCategory.catNo },
-          { $set: { parentCatNo: newCategory.catNo } }
+      console.log(`📌 OLD TAG = ${oldCat.catNo}`);
+      console.log(`📌 NEW TAG = ${newCat.catNo}`);
+
+      // ============================================================
+      // STEP 1 → FETCH PRODUCTS WHICH ACTUALLY HAVE OLD TAG
+      // ============================================================
+      const products = await listingModel.find({ tags: oldCat.catNo });
+      console.log(`🔍 Found ${products.length} products with OLD TAG`);
+
+      for (const product of products) {
+        const beforeTags = [...product.tags];
+
+        // Remove old
+        product.tags = product.tags.filter((t) => t !== oldCat.catNo);
+
+        // Add new
+        if (!product.tags.includes(newCat.catNo))
+          product.tags.push(newCat.catNo);
+
+        await product.save();
+
+        console.log(
+          `✔ Updated Mongo Product ${product._id}: ${beforeTags.join(",")} → ${product.tags.join(",")}`
         );
+
+        // ============================================================
+        // STEP 1B → ALSO UPDATE TAGS IN SHOPIFY PRODUCT
+        // ============================================================
+        if (product.productId) {
+          console.log(`🔵 Updating Shopify Product: ${product.productId}`);
+
+          try {
+            await axios.put(
+              `${STORE_URL}/admin/api/2024-04/products/${product.productId}.json`,
+              {
+                product: {
+                  id: product.productId,
+                  tags: product.tags.join(", "),
+                },
+              },
+              {
+                headers: {
+                  "X-Shopify-Access-Token": ACCESS_TOKEN,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            console.log("   ✔ Shopify tags updated");
+          } catch (err) {
+            console.error(
+              "   ❌ Shopify tag update failed:",
+              err.response?.data || err.message
+            );
+          }
+        }
       }
 
-      // STEP 2 — Delete Shopify collection
-      if (oldCategory.categoryId) {
+      // ============================================================
+      // STEP 2 → FIX HIERARCHY
+      // ============================================================
+      console.log("\n🟧 Fixing hierarchy...");
+
+      if (oldCat.level === "level1" || oldCat.level === "level2") {
+        await categoryModel.updateMany(
+          { parentCatNo: oldCat.catNo },
+          { $set: { parentCatNo: newCat.catNo } }
+        );
+        console.log("✔ Children categories updated");
+      }
+
+      // ============================================================
+      // STEP 3 → DELETE SHOPIFY COLLECTION
+      // ============================================================
+      if (oldCat.categoryId) {
+        console.log(`🟥 Deleting Shopify Collection: ${oldCat.categoryId}`);
+
         const mutation = `
           mutation collectionDelete($input: CollectionDeleteInput!) {
             collectionDelete(input: $input) {
@@ -531,32 +626,43 @@ export const replaceAndDeleteCategory = async (req, res) => {
             }
           }
         `;
-        const variables = { input: { id: oldCategory.categoryId } };
 
-        await axios.post(
-          `${SHOPIFY_STORE_URL}/admin/api/2024-04/graphql.json`,
-          { query: mutation, variables },
-          {
-            headers: {
-              "X-Shopify-Access-Token": ACCESS_TOKEN,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        try {
+          await axios.post(
+            `${STORE_URL}/admin/api/2024-04/graphql.json`,
+            { query: mutation, variables: { input: { id: oldCat.categoryId } } },
+            {
+              headers: {
+                "X-Shopify-Access-Token": ACCESS_TOKEN,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          console.log("✔ Shopify Collection Deleted");
+        } catch (err) {
+          console.log("❌ Shopify Delete Error", err.response?.data || err.message);
+        }
       }
 
-      // STEP 3 — Delete category from DB
+      // ============================================================
+      // STEP 4 → DELETE OLD CATEGORY
+      // ============================================================
       await categoryModel.findByIdAndDelete(oldCategoryId);
+      console.log(`✔ Deleted OLD category: ${oldCat.title}`);
     }
 
+    console.log("======== 🟩 PROCESS COMPLETED 🟩 ========");
+
     res.status(200).json({
-      message: "Products moved & hierarchy updated & categories deleted",
+      message:
+        "Tags updated in DB + Shopify, hierarchy fixed, old categories removed",
     });
   } catch (error) {
-    console.log(error);
+    console.error("🔥 ERROR:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 
 
@@ -633,11 +739,19 @@ export const exportCsvForCategories = async (req, res) => {
   try {
     const categories = await categoryModel.find();
 
-    if (!categories || categories.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No categories found for export.' });
+    if (!categories.length) {
+      return res.status(404).json({ message: "No categories found for export." });
     }
+
+    const normalize = (val) => (val ? val.toString().trim().toLowerCase() : "");
+
+    const formatLevel = (level) => {
+      const lvl = normalize(level);
+      if (lvl === "level1" || lvl === "1" || lvl === "level 1") return "Level 1";
+      if (lvl === "level2" || lvl === "2" || lvl === "level 2") return "Level 2";
+      if (lvl === "level3" || lvl === "3" || lvl === "level 3") return "Level 3";
+      return level; // default if dirty
+    };
 
     const rows = [];
 
@@ -648,66 +762,72 @@ export const exportCsvForCategories = async (req, res) => {
       while (parentCatNo) {
         const parent = categories.find((c) => c.catNo === parentCatNo);
         if (parent) {
-          title = parent.title + ' > ' + title;
+          title = parent.title + " > " + title;
           parentCatNo = parent.parentCatNo;
-        } else {
-          break;
-        }
+        } else break;
       }
-
       return title;
     };
 
-    categories
-      .filter((level1) => level1.level === 'level1')
-      .forEach((level1) => {
-        // Level 1 Row
-        rows.push({
-          catNo: level1.catNo,
-          title: level1.title,
-        });
+    const level1Cats = categories.filter((c) =>
+      ["level1", "1", "level 1"].includes(normalize(c.level))
+    );
 
-        categories
-          .filter(
-            (level2) =>
-              level2.parentCatNo === level1.catNo && level2.level === 'level2'
-          )
-          .forEach((level2) => {
-            // Level 2 Row
-            rows.push({
-              catNo: level2.catNo,
-              title: getFullTitle(level2),
-            });
-
-            categories
-              .filter(
-                (level3) =>
-                  level3.parentCatNo === level2.catNo &&
-                  level3.level === 'level3'
-              )
-              .forEach((level3) => {
-                // Level 3 Row (immediately after Level 2)
-                rows.push({
-                  catNo: level3.catNo,
-                  title: getFullTitle(level3),
-                });
-              });
-          });
+    if (!level1Cats.length) {
+      return res.status(404).json({
+        message: "No Level 1 categories found for export.",
       });
-
-    if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No category hierarchy found for export.' });
     }
 
-    const fields = ['catNo', 'title'];
-    const parser = new Parser({ fields, header: false }); // ✅ No headers
+    level1Cats.forEach((level1) => {
+      rows.push({
+        catNo: level1.catNo,
+        title: level1.title,
+        level: "Level 1",
+      });
+
+      const level2Cats = categories.filter(
+        (c) =>
+          c.parentCatNo === level1.catNo &&
+          ["level2", "2", "level 2"].includes(normalize(c.level))
+      );
+
+      level2Cats.forEach((level2) => {
+        rows.push({
+          catNo: level2.catNo,
+          title: getFullTitle(level2),
+          level: "Level 2",
+        });
+
+        const level3Cats = categories.filter(
+          (c) =>
+            c.parentCatNo === level2.catNo &&
+            ["level3", "3", "level 3"].includes(normalize(c.level))
+        );
+
+        level3Cats.forEach((level3) => {
+          rows.push({
+            catNo: level3.catNo,
+            title: getFullTitle(level3),
+            level: "Level 3",
+          });
+        });
+      });
+    });
+
+    if (!rows.length) {
+      return res.status(404).json({
+        message: "No category hierarchy found for export.",
+      });
+    }
+
+    const fields = ["catNo", "title", "level"];
+    const parser = new Parser({ fields, header: true });
     const csv = parser.parse(rows);
 
     const filename = `categories_export_${Date.now()}.csv`;
-    const isVercel = process.env.VERCEL === '1';
-    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+    const isVercel = process.env.VERCEL === "1";
+    const exportDir = isVercel ? "/tmp" : path.join(process.cwd(), "exports");
 
     if (!isVercel && !fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
@@ -718,16 +838,18 @@ export const exportCsvForCategories = async (req, res) => {
 
     res.download(filePath, filename, (err) => {
       if (err) {
-        console.error('Download error:', err);
-        res.status(500).send('Error downloading file');
+        console.error("Download error:", err);
+        res.status(500).send("Error downloading file");
       }
       fs.unlinkSync(filePath);
     });
   } catch (error) {
-    console.error('CSV Export Error:', error);
-    res.status(500).json({ error: 'Server error during categories export.' });
+    console.error("CSV Export Error:", error);
+    res.status(500).json({ error: "Server error during categories export." });
   }
 };
+
+
 
 export const deleteCollection = async (req, res) => {
   const { categoryIds } = req.body;
