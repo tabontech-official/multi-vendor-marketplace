@@ -437,73 +437,105 @@ export const getFinanceSummaryForUser = async (req, res) => {
   }
 };
 
+
+
+
 // export const getOrderById = async (req, res) => {
 //   try {
-//     const userId = req.userId.toString();
+//     const userId = req.userId?.toString();
 //     if (!userId) {
-//       return res.status(400).send({ message: 'User ID is required' });
+//       return res.status(400).send({ message: "User ID is required" });
 //     }
 
 //     if (!mongoose.Types.ObjectId.isValid(userId)) {
-//       return res.status(400).send({ message: 'Invalid user ID' });
+//       return res.status(400).send({ message: "Invalid user ID" });
 //     }
 
 //     const allOrders = await orderModel.find({});
-//     console.log('📦 Total Orders Found:', allOrders.length);
+//     console.log("📦 Total Orders Found:", allOrders.length);
 
 //     const ordersGroupedByOrderId = new Map();
 
 //     for (const order of allOrders) {
 //       const filteredLineItems = [];
 
+//       // ✅ check order.ProductSnapshot to see if this order belongs to current user
+//       const snapshot = order.ProductSnapshot;
+//       const belongsToUser =
+//         snapshot?.userId?.toString?.() === userId ||
+//         (snapshot?.userId && snapshot.userId.toString() === userId);
+
+//       let defaultImage = null;
+//       if (belongsToUser && snapshot?.images?.length > 0) {
+//         const img = snapshot.images[0];
+//         defaultImage = {
+//           id: img.id,
+//           src: img.src,
+//           alt: img.alt || "Product image",
+//           position: img.position,
+//           width: img.width,
+//           height: img.height,
+//         };
+//       }
+
 //       for (const item of order.lineItems || []) {
+//         let imageData = defaultImage;
 //         const variantId = item.variant_id?.toString();
-//         if (!variantId) continue;
 
-//         const product = await listingModel.findOne({
-//           'variants.id': variantId,
-//         });
-
-//         if (product && product.userId && product.userId.toString() === userId) {
-//           const matchedVariant = product.variants.find((v) => v.id === variantId);
-
-//           let imageData = null;
-
-//           // ✅ 1) Variant-specific image check
-//           if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-//             const image = product.variantImages.find(
-//               (img) => img.id === matchedVariant.image_id
+//         // 🔄 if product still exists, try to refresh the image
+//         if (variantId) {
+//           const product = await listingModel
+//             .findOne({ "variants.id": variantId })
+//             .lean();
+//           if (product && product.userId?.toString() === userId) {
+//             const matchedVariant = product.variants.find(
+//               (v) => v.id === variantId
 //             );
-//             if (image) {
+
+//             // variant-specific image
+//             if (
+//               matchedVariant?.image_id &&
+//               Array.isArray(product.variantImages)
+//             ) {
+//               const image = product.variantImages.find(
+//                 (img) => img.id === matchedVariant.image_id
+//               );
+//               if (image) {
+//                 imageData = {
+//                   id: image.id,
+//                   src: image.src,
+//                   alt: image.alt,
+//                   position: image.position,
+//                   width: image.width,
+//                   height: image.height,
+//                 };
+//               }
+//             }
+
+//             // fallback to first product image
+//             if (
+//               !imageData &&
+//               Array.isArray(product.images) &&
+//               product.images.length > 0
+//             ) {
+//               const fallback = product.images[0];
 //               imageData = {
-//                 id: image.id,
-//                 src: image.src,
-//                 alt: image.alt,
-//                 position: image.position,
-//                 width: image.width,
-//                 height: image.height,
+//                 id: fallback.id,
+//                 src: fallback.src,
+//                 alt: fallback.alt || "Product image",
+//                 position: fallback.position,
+//                 width: fallback.width,
+//                 height: fallback.height,
 //               };
 //             }
 //           }
+//         }
 
-//           // ✅ 2) Fallback to first product image
-//           if (!imageData && Array.isArray(product.images) && product.images.length > 0) {
-//             const fallback = product.images[0]; // first product image
-//             imageData = {
-//               id: fallback.id,
-//               src: fallback.src,
-//               alt: fallback.alt || 'Product image',
-//               position: fallback.position,
-//               width: fallback.width,
-//               height: fallback.height,
-//             };
-//           }
-
-//           if (imageData) {
-//             item.image = imageData;
-//           }
-
-//           filteredLineItems.push(item);
+//         // ✅ include only if this order belongs to the user
+//         if (belongsToUser) {
+//           const enrichedItem = { ...item };
+//           if (imageData) enrichedItem.image = imageData;
+//           filteredLineItems.push(enrichedItem);
 //         }
 //       }
 
@@ -515,8 +547,11 @@ export const getFinanceSummaryForUser = async (req, res) => {
 //           const existingOrder = ordersGroupedByOrderId.get(order.orderId);
 //           existingOrder.lineItems.push(...filteredLineItems);
 
+//           // remove duplicates by variant_id
 //           existingOrder.lineItems = Array.from(
-//             new Map(existingOrder.lineItems.map((item) => [item.variant_id, item]))
+//             new Map(
+//               existingOrder.lineItems.map((item) => [item.variant_id, item])
+//             )
 //           ).map(([_, item]) => item);
 //         } else {
 //           ordersGroupedByOrderId.set(order.orderId, orderForUser);
@@ -528,7 +563,7 @@ export const getFinanceSummaryForUser = async (req, res) => {
 
 //     if (matchedOrders.length > 0) {
 //       return res.status(200).send({
-//         message: 'Orders found for user',
+//         message: "Orders found for user",
 //         data: matchedOrders,
 //       });
 //     } else {
@@ -537,16 +572,16 @@ export const getFinanceSummaryForUser = async (req, res) => {
 //       });
 //     }
 //   } catch (error) {
-//     console.error('❌ Error fetching user orders:', error);
-//     res.status(500).send({ message: 'Internal Server Error' });
+//     console.error("❌ Error fetching user orders:", error);
+//     res.status(500).send({ message: "Internal Server Error" });
 //   }
 // };
-
 
 
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.userId?.toString();
+
     if (!userId) {
       return res.status(400).send({ message: "User ID is required" });
     }
@@ -556,73 +591,94 @@ export const getOrderById = async (req, res) => {
     }
 
     const allOrders = await orderModel.find({});
-    console.log("📦 Total Orders Found:", allOrders.length);
 
-    const ordersGroupedByOrderId = new Map();
+    const ordersGrouped = new Map();
 
     for (const order of allOrders) {
-      const filteredLineItems = [];
 
-      // ✅ check order.ProductSnapshot to see if this order belongs to current user
       const snapshot = order.ProductSnapshot;
-      const belongsToUser =
-        snapshot?.userId?.toString?.() === userId ||
-        (snapshot?.userId && snapshot.userId.toString() === userId);
 
-      let defaultImage = null;
-      if (belongsToUser && snapshot?.images?.length > 0) {
-        const img = snapshot.images[0];
-        defaultImage = {
-          id: img.id,
-          src: img.src,
-          alt: img.alt || "Product image",
-          position: img.position,
-          width: img.width,
-          height: img.height,
-        };
+      const belongsToUser =
+        snapshot?.userId?.toString() === userId;
+
+
+      if (!belongsToUser) {
+        continue;
       }
 
-      for (const item of order.lineItems || []) {
-        let imageData = defaultImage;
-        const variantId = item.variant_id?.toString();
+      let snapshotFallback = null;
+      if (snapshot?.images?.length > 0) {
+        snapshotFallback = {
+          id: snapshot.images[0].id,
+          src: snapshot.images[0].src,
+          alt: snapshot.images[0].alt || "Snapshot image",
+          position: snapshot.images[0].position,
+          width: snapshot.images[0].width,
+          height: snapshot.images[0].height,
+        };
 
-        // 🔄 if product still exists, try to refresh the image
+        console.log("📸 SNAPSHOT FALLBACK Image:", snapshotFallback);
+      }
+
+      const filteredLineItems = [];
+
+      for (const item of order.lineItems || []) {
+       
+
+        const variantId = item.variant_id?.toString();
+     
+
+        let imageData = null;
+
+        let product = null;
+
         if (variantId) {
-          const product = await listingModel
-            .findOne({ "variants.id": variantId })
-            .lean();
-          if (product && product.userId?.toString() === userId) {
+
+          product = await listingModel.findOne({
+            "variants.id": variantId,
+          }).lean();
+
+          if (product) {
+            console.log("📦 PRODUCT FOUND:", product.title);
+
             const matchedVariant = product.variants.find(
-              (v) => v.id === variantId
+              (v) => v.id.toString() === variantId
             );
 
-            // variant-specific image
+            console.log("🎯 Matched Variant:", matchedVariant);
+
+         
             if (
               matchedVariant?.image_id &&
               Array.isArray(product.variantImages)
             ) {
-              const image = product.variantImages.find(
-                (img) => img.id === matchedVariant.image_id
+              console.log("🖼 Variant has image_id, searching in variantImages…");
+
+              const variantImg = product.variantImages.find(
+                (img) =>
+                  img.id.toString() === matchedVariant.image_id.toString()
               );
-              if (image) {
+
+              if (variantImg) {
                 imageData = {
-                  id: image.id,
-                  src: image.src,
-                  alt: image.alt,
-                  position: image.position,
-                  width: image.width,
-                  height: image.height,
+                  id: variantImg.id,
+                  src: variantImg.src,
+                  alt: variantImg.alt || "Variant image",
+                  position: variantImg.position,
+                  width: variantImg.width,
+                  height: variantImg.height,
                 };
+
+                console.log("📸 USING VARIANT IMAGE:", imageData);
               }
             }
 
-            // fallback to first product image
-            if (
-              !imageData &&
-              Array.isArray(product.images) &&
-              product.images.length > 0
-            ) {
+      
+            if (!imageData && product.images?.length > 0) {
+              console.log("🖼 Using PRODUCT IMAGE fallback");
+
               const fallback = product.images[0];
+
               imageData = {
                 id: fallback.id,
                 src: fallback.src,
@@ -631,55 +687,68 @@ export const getOrderById = async (req, res) => {
                 width: fallback.width,
                 height: fallback.height,
               };
+
+              console.log("📸 USING PRODUCT IMAGE:", imageData);
             }
           }
         }
 
-        // ✅ include only if this order belongs to the user
-        if (belongsToUser) {
-          const enrichedItem = { ...item };
-          if (imageData) enrichedItem.image = imageData;
-          filteredLineItems.push(enrichedItem);
+ 
+        if (!imageData && snapshotFallback) {
+          console.log("🖼 Using SNAPSHOT fallback");
+          imageData = snapshotFallback;
         }
+
+
+        filteredLineItems.push({
+          ...item,
+          image: imageData,
+        });
       }
 
-      if (filteredLineItems.length > 0) {
-        const orderForUser = order.toObject();
-        orderForUser.lineItems = filteredLineItems;
+      console.log("📦 Filtered line items count:", filteredLineItems.length);
 
-        if (ordersGroupedByOrderId.has(order.orderId)) {
-          const existingOrder = ordersGroupedByOrderId.get(order.orderId);
-          existingOrder.lineItems.push(...filteredLineItems);
+      if (!filteredLineItems.length) continue;
 
-          // remove duplicates by variant_id
-          existingOrder.lineItems = Array.from(
-            new Map(
-              existingOrder.lineItems.map((item) => [item.variant_id, item])
-            )
-          ).map(([_, item]) => item);
-        } else {
-          ordersGroupedByOrderId.set(order.orderId, orderForUser);
-        }
+      const orderData = order.toObject();
+      orderData.lineItems = filteredLineItems;
+
+      if (ordersGrouped.has(order.orderId)) {
+        console.log("🔄 Merging Order Items");
+
+        const existing = ordersGrouped.get(order.orderId);
+        existing.lineItems.push(...filteredLineItems);
+
+        existing.lineItems = Array.from(
+          new Map(existing.lineItems.map((li) => [li.variant_id, li])).values()
+        );
+      } else {
+        console.log("🆕 Adding new order");
+        ordersGrouped.set(order.orderId, orderData);
       }
     }
 
-    const matchedOrders = Array.from(ordersGroupedByOrderId.values());
+    const finalOrders = Array.from(ordersGrouped.values());
 
-    if (matchedOrders.length > 0) {
+
+    if (finalOrders.length > 0) {
       return res.status(200).send({
-        message: "Orders found for user",
-        data: matchedOrders,
-      });
-    } else {
-      return res.status(404).send({
-        message: "No orders found for this user's products",
+        message: "Orders found",
+        data: finalOrders,
       });
     }
+
+    return res.status(404).send({
+      message: "No orders found",
+    });
   } catch (error) {
-    console.error("❌ Error fetching user orders:", error);
     res.status(500).send({ message: "Internal Server Error" });
   }
 };
+
+
+
+
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {
     if (result) {
@@ -986,196 +1055,6 @@ export const getOrderDatafromShopify = async (req, res) => {
   }
 };
 
-// export const getAllOrdersForAdmin = async (req, res) => {
-//   try {
-//     const allOrders = await orderModel.find({});
-//     console.log('✅ Total orders fetched from DB:', allOrders.length);
-
-//     const finalOrders = [];
-//     const merchantDetailsMap = new Map();
-//     const merchantStatsMap = new Map();
-
-//     for (const order of allOrders) {
-//       console.log(
-//         '\n📦 Processing Order:',
-//         order.shopifyOrderNo,
-//         'Order ID:',
-//         order.orderId
-//       );
-//       const merchantGroups = new Map();
-
-//       for (const item of order.lineItems || []) {
-//         const variantId = item.variant_id?.toString();
-//         if (!variantId) {
-//           console.log('⚠️ Skipped item with no variant_id');
-//           continue;
-//         }
-
-//         const product = await listingModel.findOne({
-//           'variants.id': variantId,
-//         });
-//         if (!product) {
-//           console.log('⚠️ Product not found for variant ID:', variantId);
-//           continue;
-//         }
-//         if (!product.userId) {
-//           console.log('⚠️ Product found but has no userId');
-//           continue;
-//         }
-
-//         const merchantId = product.userId.toString();
-//         const matchedVariant = product.variants.find((v) => v.id === variantId);
-
-//         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-//           const image = product.variantImages.find(
-//             (img) => img.id === matchedVariant.image_id
-//           );
-//           if (image) {
-//             item.image = {
-//               id: image.id,
-//               src: image.src,
-//               alt: image.alt,
-//               position: image.position,
-//               width: image.width,
-//               height: image.height,
-//             };
-//             console.log(
-//               '🖼️ Matched variant image set for item:',
-//               item.title || item.name
-//             );
-//           }
-//         }
-
-//         // ✅ Fallback Product Image (if no variant image was set)
-//         if (
-//           !item.image &&
-//           Array.isArray(product.images) &&
-//           product.images.length > 0
-//         ) {
-//           const defaultImage = product.images[0];
-//           item.image = {
-//             id: defaultImage.id || null,
-//             src: defaultImage.src,
-//             alt: defaultImage.alt || '',
-//             position: defaultImage.position || 1,
-//             width: defaultImage.width || null,
-//             height: defaultImage.height || null,
-//           };
-//           console.log(
-//             '🖼️ Default product image set for item:',
-//             item.title || item.name
-//           );
-//         }
-
-//         item.orderId = order.orderId;
-//         item.customer = [
-//           {
-//             first_name: order.customer?.first_name || '',
-//             last_name: order.customer?.last_name || '',
-//             email: order.customer?.email || '',
-//             phone: order.customer?.phone || '',
-//             created_at: order.customer?.created_at || '',
-//             default_address: order.customer?.default_address || {},
-//           },
-//         ];
-
-//         if (!merchantGroups.has(merchantId)) {
-//           merchantGroups.set(merchantId, []);
-//         }
-//         merchantGroups.get(merchantId).push(item);
-
-//         if (!merchantDetailsMap.has(merchantId)) {
-//           const merchant = await authModel
-//             .findById(merchantId)
-//             .select('-password');
-//           if (merchant) {
-//             merchantDetailsMap.set(merchantId, {
-//               _id: merchant._id,
-//               name: `${merchant.firstName} ${merchant.lastName}`,
-//               email: merchant.email,
-//               role: merchant.role,
-//               dispatchAddress: merchant.dispatchAddress,
-//               dispatchCountry: merchant.dispatchCountry,
-//             });
-//             console.log('👤 Merchant details cached for ID:', merchantId);
-//           } else {
-//             console.log('⚠️ Merchant not found for ID:', merchantId);
-//           }
-//         }
-
-//         if (!merchantStatsMap.has(merchantId)) {
-//           merchantStatsMap.set(merchantId, {
-//             totalOrdersCount: 0,
-//             totalOrderValue: 0,
-//             ordersSeen: new Set(),
-//           });
-//         }
-
-//         const merchantStats = merchantStatsMap.get(merchantId);
-//         if (!merchantStats.ordersSeen.has(order.orderId)) {
-//           merchantStats.ordersSeen.add(order.orderId);
-//           merchantStats.totalOrdersCount += 1;
-//         }
-
-//         const amount = (item.price || 0) * (item.quantity || 1);
-//         merchantStats.totalOrderValue += amount;
-
-//         console.log(
-//           `💰 Added amount ${amount} to merchant ${merchantId} | Product: ${item.title || item.name}`
-//         );
-//       }
-
-//       const merchantsArray = [];
-//       const lineItemsByMerchant = {};
-
-//       merchantGroups.forEach((items, merchantId) => {
-//         const merchantInfo = merchantDetailsMap.get(merchantId) || {
-//           id: merchantId,
-//         };
-//         const stats = merchantStatsMap.get(merchantId);
-
-//         merchantsArray.push({
-//           id: merchantId,
-//           info: merchantInfo,
-//           totalOrdersCount: stats?.totalOrdersCount || 0,
-//           totalOrderValue: stats?.totalOrderValue || 0,
-//         });
-
-//         lineItemsByMerchant[merchantId] = items;
-//       });
-
-//       finalOrders.push({
-//         serialNo: order.shopifyOrderNo,
-//         merchants: merchantsArray,
-//         lineItemsByMerchant,
-//       });
-
-//       console.log(
-//         '✅ Order processed:',
-//         order.shopifyOrderNo,
-//         'Merchants involved:',
-//         merchantsArray.length
-//       );
-//     }
-
-//     if (finalOrders.length > 0) {
-//       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
-//       console.log('🚀 Returning', finalOrders.length, 'orders to client.');
-//       return res.status(200).send({
-//         message: 'Orders grouped per order (not merged by merchant)',
-//         data: finalOrders,
-//       });
-//     } else {
-//       console.log('❌ No final orders found.');
-//       return res
-//         .status(404)
-//         .send({ message: 'No orders found across merchants' });
-//     }
-//   } catch (error) {
-//     console.error('❌ Error in getAllOrdersForAdmin:', error);
-//     return res.status(500).send({ message: 'Internal Server Error' });
-//   }
-// };
 
 
 export const getAllOrdersForAdmin = async (req, res) => {
