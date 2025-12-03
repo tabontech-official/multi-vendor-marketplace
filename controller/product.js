@@ -990,6 +990,7 @@ export const updateProductData = async (req, res) => {
       categories,
       metafields = [],
       shippingProfileData = null,
+       size_chart_image, size_chart_id 
     } = req.body;
 
     const variantQtyArray = variantQuantites || variantQuantities || [];
@@ -1200,6 +1201,30 @@ export const updateProductData = async (req, res) => {
         }
       }
     }
+    if (size_chart_image) {
+  const sizeChartMetafield = {
+    metafield: {
+      namespace: 'custom',
+      key: 'size-chart',
+      value: size_chart_image,
+      type: 'single_line_text_field',
+    },
+  };
+
+  try {
+    await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
+      'POST',
+      sizeChartMetafield,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+    console.log("✅ Size chart metafield added");
+  } catch (err) {
+    console.error("❌ Error adding size chart metafield:", err.message);
+  }
+}
+
     if (Array.isArray(metafields) && metafields.length > 0) {
       console.log('🧩 Starting metafield sync with Shopify...');
 
@@ -1262,6 +1287,10 @@ export const updateProductData = async (req, res) => {
       options: shopifyOptions || product.options,
       userId: userId || product.userId,
       status: productStatus || product.status,
+      custom: {
+  size_chart: size_chart_image || product?.custom?.size_chart || null,
+  size_chart_id: size_chart_id || product?.custom?.size_chart_id || null,
+},
       categories: Array.isArray(categories)
         ? categories
         : product.categories || [],
