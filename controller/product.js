@@ -3676,7 +3676,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               {
                 metafield: {
                   namespace: 'custom',
-                  key: 'size_chart',
+                  key: 'size-chart',
                   value: sizeChartUrl,
                   type: 'single_line_text_field',
                 },
