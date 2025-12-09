@@ -3503,26 +3503,24 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             typeof publishedValue === 'string' &&
             publishedValue.trim().toUpperCase() === 'TRUE';
 
-         let tags = [];
+          let tags = [];
 
-// Take value from CSV column "Product Category"
-const categoryString = mainRow["Product Category"];
+          // Take value from CSV column "Product Category"
+          const categoryString = mainRow['Product Category'];
 
-// extract cat_#
-const categoryTag = extractCategoryCode(categoryString);
+          // extract cat_#
+          const categoryTag = extractCategoryCode(categoryString);
 
-if (categoryTag) {
-  tags.push(categoryTag); // only cat_x
-}
+          if (categoryTag) {
+            tags.push(categoryTag); // only cat_x
+          }
 
-// always add user tag
-tags.push(`user_${userId}`);
+          // always add user tag
+          tags.push(`user_${userId}`);
 
-console.log("🏷 Final Shopify Tags:", tags);
+          console.log('🏷 Final Shopify Tags:', tags);
 
-
-console.log("🏷 Final Tags Sent to Shopify:", tags);
-
+          console.log('🏷 Final Tags Sent to Shopify:', tags);
 
           console.log('🏷 Tags:', tags);
 

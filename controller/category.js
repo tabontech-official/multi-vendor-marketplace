@@ -257,34 +257,60 @@ const extractCategoryAndChildren = (categories) => {
 
 export const getCategory = async (req, res) => {
   try {
-    const categories = await categoryModel.find();
+    // Read pagination from query
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
 
-    if (!categories.length) {
+    // Count total categories
+    const totalCategories = await categoryModel.countDocuments();
+
+    if (totalCategories === 0) {
       return res.status(404).json({ message: "No categories found" });
     }
 
-    // Run productCount queries in parallel
+    // Fetch categories for selected page
+    const categories = await categoryModel
+      .find()
+.sort({
+  level: 1,        // level-wise sorting
+  title: 1         // optional secondary sorting (A → Z)
+})      .skip(skip)
+      .limit(limit);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalCategories / limit);
+
+    // Add productCount for each category
     const updatedCategories = await Promise.all(
       categories.map(async (cat) => {
         const productCount = await listingModel.countDocuments({
-          tags: cat.catNo,
+          tags: cat.catNo, // count products containing catNo in tags
         });
 
         return {
-          ...cat._doc,     // includes createdAt & updatedAt
+          ...cat._doc,
           productCount,
         };
       })
     );
 
-    return res.status(200).json(updatedCategories);
-
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      totalCategories,
+      totalPages,
+      categories: updatedCategories,
+    });
   } catch (error) {
+    console.log("❌ Category Fetch Error:", error.message);
     return res
       .status(500)
       .json({ error: "Internal server error while fetching categories" });
   }
 };
+
 
 
 
