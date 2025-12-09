@@ -6,6 +6,7 @@ import {
   deleteLevel3Categories,
   exportCsvForCategories,
   getCategory,
+  getCategoryForProduct,
   getCollectionData,
   getSingleCategory,
   replaceAndDeleteCategory,
@@ -20,6 +21,8 @@ const categoryRouter = express.Router();
 categoryRouter.post('/createCategory', verifyToken, cpUpload, createCategory);
 
 categoryRouter.get('/getCategory',verifyToken, getCategory);
+categoryRouter.get('/getCategoryForProduct',verifyToken, getCategoryForProduct);
+
 categoryRouter.get('/getCollection/:userId',  getCollectionData);
 categoryRouter.get('/category/:categoryId', verifyToken, getSingleCategory);
 categoryRouter.get('/getCsvForCategories', exportCsvForCategories);

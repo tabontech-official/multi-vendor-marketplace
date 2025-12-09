@@ -17,6 +17,7 @@ import { viewModel } from '../Models/viewModel.js';
 import { categoryModel } from '../Models/category.js';
 import { approvalModel } from '../Models/ApprovalSetting.js';
 import XLSX from 'xlsx';
+import { brandAssetModel } from '../Models/brandAsset.js';
 
 export const shopifyRequest = async (
   url,
@@ -67,6 +68,18 @@ export const addUsedEquipments = async (req, res) => {
     console.log(req.body);
     const userId = req.userId;
     const user = await authModel.findById(userId);
+    let sellerTag = '';
+
+    if (user?.shopifyCollectionId) {
+      const brandAsset = await brandAssetModel.findOne({
+        shopifyCollectionId: user.shopifyCollectionId,
+      });
+
+      if (brandAsset?.sellerName) {
+        sellerTag = `col_${brandAsset.sellerName.replace(/\s+/g, '_')}`;
+      }
+    }
+
     if (!user) return res.status(404).json({ error: 'User not found' });
     const {
       title,
@@ -228,6 +241,7 @@ export const addUsedEquipments = async (req, res) => {
           ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
           `user_${userId}`,
           `vendor_${vendor}`,
+          ...(sellerTag ? [sellerTag] : []),
         ],
       },
     };
@@ -607,6 +621,18 @@ export const duplicateProduct = async (req, res) => {
     console.log('🔹 Duplicate request by user:', userId);
 
     const user = await authModel.findById(userId);
+    let sellerTag = "";
+
+if (user?.shopifyCollectionId) {
+  const brandAsset = await brandAssetModel.findOne({
+    shopifyCollectionId: user.shopifyCollectionId,
+  });
+
+  if (brandAsset?.sellerName) {
+    sellerTag = `col_${brandAsset.sellerName.replace(/\s+/g, "_")}`;
+  }
+}
+
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const { productId } = req.params;
@@ -645,7 +671,10 @@ export const duplicateProduct = async (req, res) => {
         vendor: shopifyProduct.vendor,
         product_type: shopifyProduct.product_type,
         status: 'draft',
-        tags: shopifyProduct.tags,
+tags: [
+  ...(shopifyProduct.tags ? shopifyProduct.tags.split(",").map(t => t.trim()) : []),
+  ...(sellerTag ? [sellerTag] : [])
+].join(","),
         options: shopifyProduct.options,
         variants: shopifyProduct.variants.map((v) => ({
           option1: v.option1,

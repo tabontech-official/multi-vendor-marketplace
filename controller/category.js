@@ -237,22 +237,22 @@ const extractCategoryAndChildren = (categories) => {
   });
 };
 
-// export const getCategory = async (req, res) => {
-//   try {
-//     const result = await categoryModel.find();
+export const getCategoryForProduct = async (req, res) => {
+  try {
+    const result = await categoryModel.find();
 
-//     if (result && result.length > 0) {
-//       res.status(200).send(result);
-//     } else {
-//       res.status(404).json({ message: 'No categories found' });
-//     }
-//   } catch (error) {
-//     console.error('Error fetching categories:', error);
-//     res
-//       .status(500)
-//       .json({ error: 'Internal server error while fetching categories' });
-//   }
-// };
+    if (result && result.length > 0) {
+      res.status(200).send(result);
+    } else {
+      res.status(404).json({ message: 'No categories found' });
+    }
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res
+      .status(500)
+      .json({ error: 'Internal server error while fetching categories' });
+  }
+};
 
 
 export const getCategory = async (req, res) => {
