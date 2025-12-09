@@ -1661,13 +1661,10 @@ export const getAllProductData = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    // Match condition
     const matchStage = { userId: { $exists: true, $ne: null } };
 
-    // Total count first (without pagination)
     const totalProducts = await listingModel.countDocuments(matchStage);
 
-    // Aggregation with pagination
     const products = await listingModel.aggregate([
       { $match: matchStage },
       {
@@ -1743,7 +1740,7 @@ export const getAllProductData = async (req, res) => {
     res.status(200).json({
       products,
       currentPage: page,
-      totalPages: Math.ceil(totalProducts / limit), // e.g. 530/50 = 11
+      totalPages: Math.ceil(totalProducts / limit),
       totalProducts,
       limit,
     });
@@ -2254,7 +2251,6 @@ export const updateImages = async (req, res) => {
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfig;
 
-    // 🔹 Upload main media images (normal gallery)
     const uploadedMediaImages = [];
     for (let i = 0; i < imageUrls.length; i++) {
       const url = imageUrls[i];
@@ -3344,7 +3340,6 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function extractCategoryCode(categoryString) {
   if (!categoryString) return null;
 
-  // find cat_1, cat_7, cat_25 etc
   const match = categoryString.match(/cat_\d+/i);
   return match ? match[0] : null;
 }
@@ -3387,9 +3382,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     const cleanUrl = (url) => (url ? url.split('?')[0].trim() : null);
 
-    // --------------------------------------------------
-    // HEADER MAPPING (Your new names → Shopify names)
-    // --------------------------------------------------
+   
     function mapHeaders(row) {
       console.log('🔄 Mapping Row Headers...');
       const mapped = {};
@@ -3659,12 +3652,9 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             product = createRes.product;
           }
 
-          console.log('✅ Shopify Product ID:', product.id);
 
           const productId = product.id;
-          // --------------------------------------------------
-          // SAVE SIZE CHART META FIELD IF PROVIDED
-          // --------------------------------------------------
+
           if (mainRow['Size Chart'] && mainRow['Size Chart'].trim() !== '') {
             const sizeChartUrl = mainRow['Size Chart'].trim();
 
@@ -3686,9 +3676,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             );
           }
 
-          // --------------------------------------------------
-          // CUSTOM FIELDS (MERGE LABEL + VALUE)
-          // --------------------------------------------------
+
           console.log('🧾 Processing Custom Field Labels & Values...');
 
           for (let i = 1; i <= 4; i++) {
@@ -3717,9 +3705,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             );
           }
 
-          // --------------------------------------------------
-          // UPLOAD VARIANT IMAGES
-          // --------------------------------------------------
           console.log('🖼 Uploading Variant Images...');
 
           let uploadedVariantImages = [];
@@ -3765,9 +3750,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             }
           }
 
-          // --------------------------------------------------
-          // LINK VARIANTS TO THEIR IMAGES
-          // --------------------------------------------------
+
           console.log('🔗 Linking Variant Images...');
 
           const productDetails = await shopifyRequest(
@@ -3805,11 +3788,17 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             }
           }
 
-          // --------------------------------------------------
-          // SAVE TO DATABASE
-          // --------------------------------------------------
-          console.log('💾 Saving to local database...');
 
+          console.log('💾 Saving to local database...');
+const metafieldArray = [];
+for (let i = 1; i <= 4; i++) {
+  const label = mainRow[`Custom Field Label ${i}`]?.trim() || "";
+  const value = mainRow[`Custom Field Value ${i}`]?.trim() || "";
+
+  if (label || value) {
+    metafieldArray.push({ label, value });
+  }
+}
           await listingModel.findOneAndUpdate(
             { shopifyId: productId },
             {
@@ -3826,6 +3815,8 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               approvalStatus: 'approved',
               variants: shopifyVariants,
               options: product.options,
+                  metafields: metafieldArray,
+
               userId,
             },
             { upsert: true, new: true }
@@ -3854,9 +3845,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       });
     };
 
-    // --------------------------------------------------
-    // READ CSV OR EXCEL FILE
-    // --------------------------------------------------
+    
     if (isExcel) {
       console.log('📥 Reading EXCEL File...');
       const workbook = XLSX.read(file.buffer, { type: 'buffer' });
@@ -4079,7 +4068,6 @@ export const updateInventoryQuantity = async (req, res) => {
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfig;
 
-    // Get Shopify variant details to obtain inventory_item_id
     const variantDetailsUrl = `${shopifyStoreUrl}/admin/api/2023-10/variants/${variant.id}.json`;
     const variantResponse = await shopifyRequest(
       variantDetailsUrl,
@@ -4096,7 +4084,6 @@ export const updateInventoryQuantity = async (req, res) => {
         .json({ message: 'Missing inventory_item_id for variant.' });
     }
 
-    // Get inventory level info
     const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
     const inventoryLevelsRes = await shopifyRequest(
       inventoryLevelsUrl,
@@ -4115,7 +4102,6 @@ export const updateInventoryQuantity = async (req, res) => {
 
     const locationId = currentInventoryLevel.location_id;
 
-    // Update inventory level on Shopify
     const inventorySetUrl = `${shopifyStoreUrl}/admin/api/2023-10/inventory_levels/set.json`;
     const inventoryPayload = {
       location_id: locationId,
@@ -4131,7 +4117,6 @@ export const updateInventoryQuantity = async (req, res) => {
       shopifyAccessToken
     );
 
-    // Atomic update in MongoDB
     const updatedProduct = await listingModel.findOneAndUpdate(
       { 'variants.id': variantId },
       {

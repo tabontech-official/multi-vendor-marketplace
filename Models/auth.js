@@ -51,7 +51,7 @@ const authSchema = new mongoose.Schema(
     },
     subscription: {
       id: {
-        type: String, // Subscription ID from payment service
+        type: String,
       },
       status: {
         type: String,
@@ -89,9 +89,8 @@ const authSchema = new mongoose.Schema(
     dispatchAddress: String,
     shopifyAccessToken: String,
     shopifyApiKey: String,
-    // 🟢 PayPal Details
-    paypalAccount: { type: String, default: '' },   // PayPal Email / ID
-    paypalAccountNo: { type: String, default: '' }, // Optional account number
+    paypalAccount: { type: String, default: '' }, 
+    paypalAccountNo: { type: String, default: '' }, 
     paypalReferenceNo: { type: String, default: '' },
     referenceNo:{
       type:String
@@ -101,9 +100,9 @@ const authSchema = new mongoose.Schema(
       accountNumber: { type: String, default: '' },
       bankName: { type: String, default: '' },
       branchName: { type: String, default: '' },
-      ifscCode: { type: String, default: '' }, // For India
-      swiftCode: { type: String, default: '' }, // For International transfers
-      iban: { type: String, default: '' }, // For EU transfers
+      ifscCode: { type: String, default: '' }, 
+      swiftCode: { type: String, default: '' }, 
+      iban: { type: String, default: '' }, 
       country: { type: String, default: '' },
     },
      paypalAccountNo: {

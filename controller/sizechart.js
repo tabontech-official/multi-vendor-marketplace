@@ -4,12 +4,10 @@ import { SizeChartModel } from "../Models/SizeChart.js";
 
 export const createSizeChart = async (req, res) => {
   try {
-    console.log("FILES RECEIVED:", req.files);
-    console.log("BODY RECEIVED:", req.body);
+
 
     const { name, userId } = req.body;
 
-    // Cloudinary field from cpUploads → image = array
     const imageFile = req?.files?.image?.[0];
 
     if (!imageFile) {
@@ -19,9 +17,7 @@ export const createSizeChart = async (req, res) => {
       });
     }
 
-    // Cloudinary Storage returns:
-    // imageFile.path       = secure URL
-    // imageFile.filename   = public_id
+  
     const imageUrl = imageFile.path;
 
     const newChart = await SizeChartModel.create({
@@ -36,7 +32,6 @@ export const createSizeChart = async (req, res) => {
     });
 
   } catch (error) {
-    console.log("🔥 Error creating size chart:", error);
 
     return res.status(500).json({
       message: "Server error",
@@ -45,7 +40,6 @@ export const createSizeChart = async (req, res) => {
   }
 };
 
-// GET all for a user
 export const getAllSizeCharts = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -57,7 +51,6 @@ export const getAllSizeCharts = async (req, res) => {
   }
 };
 
-// DELETE
 export const deleteSizeChart = async (req, res) => {
   try {
     await SizeChartModel.findByIdAndDelete(req.params.id);
@@ -67,17 +60,15 @@ export const deleteSizeChart = async (req, res) => {
   }
 };
 
-// UPDATE
 export const updateSizeChart = async (req, res) => {
   try {
     const { name } = req.body;
 
     const updateData = { name };
 
-    // If new image uploaded
     const imageFile = req?.files?.image?.[0];
     if (imageFile) {
-      updateData.image = imageFile.path; // cloudinary URL
+      updateData.image = imageFile.path; 
     }
 
     const updated = await SizeChartModel.findByIdAndUpdate(
@@ -98,16 +89,12 @@ export const updateSizeChart = async (req, res) => {
 
 export const getAllSizeChartsForAdmin = async (req, res) => {
   try {
-    // Check role (optional)
-    // If you want only admin to access:
-    // if (req.role !== "Master Admin" && req.role !== "Dev Admin") {
-    //   return res.status(403).json({ message: "Unauthorized" });
-    // }
+    
 
     const sizeCharts = await SizeChartModel.find()
       .populate({
         path: "userId",
-        select: "firstName lastName userName email", // Only required fields
+        select: "firstName lastName userName email", 
       })
       .lean();
 
@@ -115,7 +102,6 @@ export const getAllSizeChartsForAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "No size charts found" });
     }
 
-    // Format response
     const formatted = sizeCharts.map((chart) => ({
       _id: chart._id,
       name: chart.name,

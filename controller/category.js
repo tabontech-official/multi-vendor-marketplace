@@ -257,35 +257,30 @@ export const getCategoryForProduct = async (req, res) => {
 
 export const getCategory = async (req, res) => {
   try {
-    // Read pagination from query
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Count total categories
     const totalCategories = await categoryModel.countDocuments();
 
     if (totalCategories === 0) {
       return res.status(404).json({ message: "No categories found" });
     }
 
-    // Fetch categories for selected page
     const categories = await categoryModel
       .find()
 .sort({
-  level: 1,        // level-wise sorting
-  title: 1         // optional secondary sorting (A → Z)
+  level: 1,        
+  title: 1         
 })      .skip(skip)
       .limit(limit);
 
-    // Calculate total pages
     const totalPages = Math.ceil(totalCategories / limit);
 
-    // Add productCount for each category
     const updatedCategories = await Promise.all(
       categories.map(async (cat) => {
         const productCount = await listingModel.countDocuments({
-          tags: cat.catNo, // count products containing catNo in tags
+          tags: cat.catNo, 
         });
 
         return {
