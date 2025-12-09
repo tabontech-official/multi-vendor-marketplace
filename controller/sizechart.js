@@ -95,3 +95,51 @@ export const updateSizeChart = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const getAllSizeChartsForAdmin = async (req, res) => {
+  try {
+    // Check role (optional)
+    // If you want only admin to access:
+    // if (req.role !== "Master Admin" && req.role !== "Dev Admin") {
+    //   return res.status(403).json({ message: "Unauthorized" });
+    // }
+
+    const sizeCharts = await SizeChartModel.find()
+      .populate({
+        path: "userId",
+        select: "firstName lastName userName email", // Only required fields
+      })
+      .lean();
+
+    if (!sizeCharts.length) {
+      return res.status(404).json({ success: false, message: "No size charts found" });
+    }
+
+    // Format response
+    const formatted = sizeCharts.map((chart) => ({
+      _id: chart._id,
+      name: chart.name,
+      image: chart.image,
+      userId: chart.userId?._id || null,
+      userName:
+        chart.userId
+          ? `${chart.userId.firstName || ""} ${chart.userId.lastName || ""}`.trim() ||
+            chart.userId.userName
+          : "Unknown",
+      email: chart.userId?.email || "N/A",
+      createdAt: chart.createdAt,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: formatted.length,
+      data: formatted,
+    });
+  } catch (error) {
+    console.error("❌ Size Chart Fetch Error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: "Server error while fetching size charts",
+    });
+  }
+};

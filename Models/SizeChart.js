@@ -7,13 +7,13 @@ const sizeChartSchema = new mongoose.Schema(
       required: true,
     },
     image: {
-      type: String, // image URL or filename
+      type: String, 
       required: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: "User",
+      ref: "users",
     },
   },
   { timestamps: true }
