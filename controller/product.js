@@ -48,6 +48,15 @@ export const shopifyRequest = async (
   return response.json();
 };
 
+function cleanSellerName(name) {
+  if (!name) return '';
+
+  return name
+    .replace(/\s+/g, '_') // convert spaces → underscore
+    .replace(/_+/g, '_') // remove double underscores
+    .replace(/^_+|_+$/g, ''); // remove underscore from start/end
+}
+
 const generateVariantCombinations = (options, index = 0, current = {}) => {
   if (index === options.length) return [current];
   const key = options[index].name;
@@ -77,7 +86,8 @@ export const addUsedEquipments = async (req, res) => {
       });
 
       if (brandAsset?.sellerName) {
-        sellerTag = `col_${brandAsset.sellerName.replace(/\s+/g, '_')}`;
+        const cleanedName = cleanSellerName(brandAsset.sellerName);
+        sellerTag = cleanedName ? `col_${cleanedName}` : '';
       }
     }
 
@@ -3347,6 +3357,19 @@ function extractCategoryCode(categoryString) {
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
   const userId = req.userId;
+  const user = await authModel.findById(userId);
+
+  let sellerTag = '';
+
+  if (user?.shopifyCollectionId) {
+    const brandAsset = await brandAssetModel.findOne({
+      shopifyCollectionId: user.shopifyCollectionId,
+    });
+
+    if (brandAsset?.sellerName) {
+      sellerTag = `col_${cleanSellerName(brandAsset.sellerName)}`;
+    }
+  }
 
   console.log('➡️ API HIT: addCsvfileForProductFromBody');
   console.log('📁 Uploaded File:', file?.originalname);
@@ -3382,7 +3405,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     const cleanUrl = (url) => (url ? url.split('?')[0].trim() : null);
 
-   
     function mapHeaders(row) {
       console.log('🔄 Mapping Row Headers...');
       const mapped = {};
@@ -3542,6 +3564,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
           // always add user tag
           tags.push(`user_${userId}`);
+          if (sellerTag) tags.push(sellerTag);
 
           console.log('🏷 Final Shopify Tags:', tags);
 
@@ -3652,7 +3675,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             product = createRes.product;
           }
 
-
           const productId = product.id;
 
           if (mainRow['Size Chart'] && mainRow['Size Chart'].trim() !== '') {
@@ -3675,7 +3697,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
               shopifyAccessToken
             );
           }
-
 
           console.log('🧾 Processing Custom Field Labels & Values...');
 
@@ -3750,7 +3771,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             }
           }
 
-
           console.log('🔗 Linking Variant Images...');
 
           const productDetails = await shopifyRequest(
@@ -3788,17 +3808,16 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             }
           }
 
-
           console.log('💾 Saving to local database...');
-const metafieldArray = [];
-for (let i = 1; i <= 4; i++) {
-  const label = mainRow[`Custom Field Label ${i}`]?.trim() || "";
-  const value = mainRow[`Custom Field Value ${i}`]?.trim() || "";
+          const metafieldArray = [];
+          for (let i = 1; i <= 4; i++) {
+            const label = mainRow[`Custom Field Label ${i}`]?.trim() || '';
+            const value = mainRow[`Custom Field Value ${i}`]?.trim() || '';
 
-  if (label || value) {
-    metafieldArray.push({ label, value });
-  }
-}
+            if (label || value) {
+              metafieldArray.push({ label, value });
+            }
+          }
           await listingModel.findOneAndUpdate(
             { shopifyId: productId },
             {
@@ -3815,7 +3834,7 @@ for (let i = 1; i <= 4; i++) {
               approvalStatus: 'approved',
               variants: shopifyVariants,
               options: product.options,
-                  metafields: metafieldArray,
+              metafields: metafieldArray,
 
               userId,
             },
@@ -3845,7 +3864,6 @@ for (let i = 1; i <= 4; i++) {
       });
     };
 
-    
     if (isExcel) {
       console.log('📥 Reading EXCEL File...');
       const workbook = XLSX.read(file.buffer, { type: 'buffer' });
