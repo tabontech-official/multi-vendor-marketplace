@@ -28,27 +28,24 @@ const createToken = (payLoad) => {
 
 // export const signUp = async (req, res) => {
 //   try {
-//     // const { error } = registerSchema.validate(req.body);
-//     // if (error) {
-//     //   return res.status(400).json({ error: error.details[0].message });
-//     // }
+//     const { email, sellerName } = req.body;
 
-//     const baseUsername = req.body.email
+//     const baseUsername = email
 //       .split('@')[0]
 //       .toLowerCase()
 //       .replace(/[.-\s]/g, '');
 //     let username = baseUsername;
 //     let counter = 1;
 
-//     const userExist = await authModel.findOne({ email: req.body.email });
+//     const userExist = await authModel.findOne({ email });
 //     if (userExist) {
 //       return res
 //         .status(400)
 //         .json({ error: 'User already exists with this email' });
 //     }
 
-//     const usernameExists = async (username) => {
-//       return await authModel.findOne({ userName: username });
+//     const usernameExists = async (uname) => {
+//       return await authModel.findOne({ userName: uname });
 //     };
 
 //     while (await usernameExists(username)) {
@@ -60,7 +57,7 @@ const createToken = (payLoad) => {
 //       customer: {
 //         first_name: req.body.firstName,
 //         last_name: req.body.lastName,
-//         email: req.body.email,
+//         email,
 //         password: req.body.password,
 //         password_confirmation: req.body.password,
 //         tags: `Trade User, trade_${username}`,
@@ -112,13 +109,11 @@ const createToken = (payLoad) => {
 //         .json({ error: 'Shopify configuration not found.' });
 //     }
 
-//     const apiKey = shopifyConfiguration.shopifyApiKey;
-//     const apiPassword = shopifyConfiguration.shopifyAccessToken;
-//     const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
-
-//     const base64Credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString(
-//       'base64'
-//     );
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfiguration;
+//     const base64Credentials = Buffer.from(
+//       `${shopifyApiKey}:${shopifyAccessToken}`
+//     ).toString('base64');
 //     const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
 
 //     const response = await fetch(shopifyUrl, {
@@ -132,7 +127,7 @@ const createToken = (payLoad) => {
 
 //     if (!response.ok) {
 //       const errorData = await response.json();
-//       console.error('Error saving user to Shopify:', errorData);
+//       console.error('Shopify customer creation error:', errorData);
 //       return res
 //         .status(500)
 //         .json({ error: 'Failed to register user with Shopify' });
@@ -145,116 +140,111 @@ const createToken = (payLoad) => {
 //       firstName: req.body.firstName,
 //       lastName: req.body.lastName,
 //       userName: username,
-//       email: req.body.email,
+//       email,
 //       password: req.body.password,
-//       shopifyId: shopifyId,
+//       shopifyId,
 //       tags: `Trade User, trade_${username}`,
 //       phoneNumber: req.body.phoneNumber,
 //       city: req.body.city,
 //       state: req.body.state,
 //       zip: req.body.zip,
 //       country: req.body.country,
+//       sellerName,
 //     });
+
 //     const savedUser = await newUser.save();
+
+//     let createdCollectionId = null;
+//     try {
+//       const collectionPayload = {
+//         custom_collection: {
+//           title: sellerName,
+//           body_html: `Brand collection for seller: ${sellerName}`,
+//         },
+//       };
+
+//       const collectionResponse = await axios.post(
+//         `${shopifyStoreUrl}/admin/api/2023-10/custom_collections.json`,
+//         collectionPayload,
+//         {
+//           headers: {
+//             'X-Shopify-Access-Token': shopifyAccessToken,
+//             'Content-Type': 'application/json',
+//           },
+//         }
+//       );
+
+//       createdCollectionId = collectionResponse.data.custom_collection.id;
+
+//       await authModel.findByIdAndUpdate(savedUser._id, {
+//         shopifyCollectionId: createdCollectionId,
+//       });
+
+//       await brandAssetModel.create({
+//         userId: savedUser._id,
+//         sellerName: sellerName,
+//         shopifyCollectionId: createdCollectionId,
+//         description: '',
+//         images: '',
+//       });
+//     } catch (err) {
+//       console.error(
+//         'Shopify collection creation error:',
+//         err?.response?.data || err.message
+//       );
+//     }
+
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: 'aydimarketplace@gmail.com',
+//     pass: 'ijeg fypl llry kftw',
+//   },
+// });
+
+// transporter.sendMail({
+//   from: `${req.body.firstName} <${email}>`,
+//   to: 'aydimarketplace@gmail.com',
+//   subject: 'New User Signup',
+//   html: `
+//     <h2>New User Registered</h2>
+//     <p><strong>Seller Name:</strong> ${sellerName}</p>
+//     <p><strong>Email:</strong> ${email}</p>
+//   `,
+// });
+
 //     const token = createToken({ _id: savedUser._id });
 
-//     const transporter = nodemailer.createTransport({
-//       service: 'gmail',
-//       auth: {
-//         user: 'aydimarketplace@gmail.com',
-//         pass: 'ijeg fypl llry kftw',
-//       },
-//     });
-
-//     const mailOptions = {
-//       from: `${req.body.firstName} <${req.body.email}>`,
-//       to: 'aydimarketplace@gmail.com',
-//       subject: 'New User Signup',
-//       html: `
-//         <h2>New User Registered</h2>
-//         <p><strong>Name:</strong> ${req.body.firstName} ${req.body.lastName}</p>
-//         <p><strong>Email:</strong> ${req.body.email}</p>
-
-//       `,
-//     };
-
-//     transporter.sendMail(mailOptions, (err, info) => {
-//       if (err) {
-//         console.error('Signup mail failed:', err);
-//       } else {
-//         console.log('Signup mail sent:', info.response);
-//       }
-//     });
 //     res.status(201).send({
 //       message: 'Successfully registered',
 //       token,
-//       data: savedUser,
+//       data: {
+//         ...savedUser.toObject(),
+//         shopifyCollectionId: createdCollectionId,
+//       },
 //     });
 //   } catch (error) {
-//     console.error('Error in signUp function:', error);
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
-
-// export const checkShopifyAdminTag = async (email) => {
-//   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-//   if (!shopifyConfiguration) {
-//     throw new Error('Shopify configuration not found.');
-//   }
-
-//   const shopifyApiKey = shopifyConfiguration.shopifyApiKey;
-//   const shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
-//   const shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
-//   try {
-//     const credentials = `${shopifyApiKey}:${shopifyAccessToken}`;
-//     const base64Credentials = Buffer.from(credentials).toString('base64');
-
-//     const response = await fetch(
-//       `${shopifyStoreUrl}/admin/api/2023-10/customers.json?email=${email}`,
-//       {
-//         method: 'GET',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           Authorization: `Basic ${base64Credentials}`,
-//         },
-//       }
-//     );
-
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-
-//     const data = await response.json();
-//     const customers = data.customers;
-
-//     if (customers.length > 0) {
-//       const tags = customers[0].tags.split(',').map((tag) => tag.trim());
-
-//       if (tags.includes('DevAdmin')) return 'Dev Admin';
-//       if (tags.includes('MasterAdmin')) return 'Master Admin';
-//       if (tags.includes('Client')) return 'Client';
-//       if (tags.includes('Staff')) return 'Staff';
-//       if (tags.includes('approved')) return 'Client';
-//     }
-
-//     return 'User';
-//   } catch (error) {
-//     console.error('Error fetching Shopify customer:', error);
-//     throw new Error('Error checking Shopify customer');
+//     console.error('Signup error:', error);
+//     res.status(500).json({ error: error.message });
 //   }
 // };
 
 export const signUp = async (req, res) => {
   try {
-    const { email, sellerName } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phoneNumber,
+      city,
+      state,
+      zip,
+      country,
+      sellerName,
+    } = req.body;
 
-    const baseUsername = email
-      .split('@')[0]
-      .toLowerCase()
-      .replace(/[.-\s]/g, '');
-    let username = baseUsername;
-    let counter = 1;
-
+    /* -------------------- EMAIL DUPLICATE CHECK -------------------- */
     const userExist = await authModel.findOne({ email });
     if (userExist) {
       return res
@@ -262,22 +252,37 @@ export const signUp = async (req, res) => {
         .json({ error: 'User already exists with this email' });
     }
 
-    const usernameExists = async (uname) => {
-      return await authModel.findOne({ userName: uname });
-    };
+    /* -------------------- UNIQUE USERNAME -------------------- */
+    const baseUsername = email
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[.\-\s]/g, '');
 
-    while (await usernameExists(username)) {
+    let username = baseUsername;
+    let counter = 1;
+
+    while (await authModel.findOne({ userName: username })) {
       username = `${baseUsername}${counter}`;
       counter++;
     }
 
-    const shopifyPayload = {
+    /* -------------------- SHOPIFY CONFIG -------------------- */
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(404).json({ error: 'Shopify configuration not found' });
+    }
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfig;
+
+    /* -------------------- CREATE SHOPIFY CUSTOMER -------------------- */
+    const shopifyCustomerPayload = {
       customer: {
-        first_name: req.body.firstName,
-        last_name: req.body.lastName,
+        first_name: firstName,
+        last_name: lastName,
         email,
-        password: req.body.password,
-        password_confirmation: req.body.password,
+        password,
+        password_confirmation: password,
         tags: `Trade User, trade_${username}`,
         metafields: [
           {
@@ -289,161 +294,215 @@ export const signUp = async (req, res) => {
           {
             namespace: 'custom',
             key: 'phoneNumber',
-            value: req.body.phoneNumber,
+            value: phoneNumber,
             type: 'single_line_text_field',
           },
           {
             namespace: 'custom',
             key: 'city',
-            value: req.body.city,
+            value: city,
             type: 'single_line_text_field',
           },
           {
             namespace: 'custom',
             key: 'state',
-            value: req.body.state,
+            value: state,
             type: 'single_line_text_field',
           },
           {
             namespace: 'custom',
             key: 'zip',
-            value: req.body.zip,
+            value: zip,
             type: 'single_line_text_field',
           },
           {
             namespace: 'custom',
             key: 'country',
-            value: req.body.country,
+            value: country,
             type: 'single_line_text_field',
           },
         ],
       },
     };
 
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) {
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+    const customerResponse = await fetch(
+      `${shopifyStoreUrl}/admin/api/2024-01/customers.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': shopifyAccessToken,
+        },
+        body: JSON.stringify(shopifyCustomerPayload),
+      }
+    );
+
+    if (!customerResponse.ok) {
+      const err = await customerResponse.json();
+      return res.status(500).json({ error: err });
     }
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
-    const base64Credentials = Buffer.from(
-      `${shopifyApiKey}:${shopifyAccessToken}`
-    ).toString('base64');
-    const shopifyUrl = `${shopifyStoreUrl}/admin/api/2024-01/customers.json`;
+    const customerData = await customerResponse.json();
+    const shopifyCustomerId = customerData.customer.id;
 
-    const response = await fetch(shopifyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${base64Credentials}`,
-      },
-      body: JSON.stringify(shopifyPayload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Shopify customer creation error:', errorData);
-      return res
-        .status(500)
-        .json({ error: 'Failed to register user with Shopify' });
-    }
-
-    const shopifyResponse = await response.json();
-    const shopifyId = shopifyResponse.customer.id;
-
-    const newUser = new authModel({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
+    /* -------------------- SAVE USER IN DB -------------------- */
+    const newUser = await authModel.create({
+      firstName,
+      lastName,
       userName: username,
       email,
-      password: req.body.password,
-      shopifyId,
-      tags: `Trade User, trade_${username}`,
-      phoneNumber: req.body.phoneNumber,
-      city: req.body.city,
-      state: req.body.state,
-      zip: req.body.zip,
-      country: req.body.country,
+      password,
+      phoneNumber,
+      city,
+      state,
+      zip,
+      country,
       sellerName,
+      shopifyId: shopifyCustomerId,
     });
 
-    const savedUser = await newUser.save();
+    const userId = newUser._id.toString();
+    const userTag = `user_${userId}`;
 
-    let createdCollectionId = null;
-    try {
-      const collectionPayload = {
-        custom_collection: {
-          title: sellerName,
-          body_html: `Brand collection for seller: ${sellerName}`,
+    /* -------------------- UPDATE CUSTOMER TAG WITH USER ID -------------------- */
+    await axios.put(
+      `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyCustomerId}.json`,
+      {
+        customer: {
+          id: shopifyCustomerId,
+          tags: `Trade User, trade_${username}, ${userTag}`,
         },
-      };
+      },
+      {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+        },
+      }
+    );
 
-      const collectionResponse = await axios.post(
-        `${shopifyStoreUrl}/admin/api/2023-10/custom_collections.json`,
-        collectionPayload,
-        {
-          headers: {
-            'X-Shopify-Access-Token': shopifyAccessToken,
-            'Content-Type': 'application/json',
+    /* -------------------- CREATE SMART COLLECTION -------------------- */
+    const smartCollectionPayload = {
+      smart_collection: {
+        title: sellerName,
+        body_html: `Brand collection for seller: ${sellerName}`,
+        template_suffix: 'user-profile',
+        rules: [
+          {
+            column: 'tag',
+            relation: 'equals',
+            condition: userTag,
           },
-        }
-      );
+        ],
+        published: true,
+      },
+    };
 
-      createdCollectionId = collectionResponse.data.custom_collection.id;
+    const collectionResponse = await axios.post(
+      `${shopifyStoreUrl}/admin/api/2023-10/smart_collections.json`,
+      smartCollectionPayload,
+      {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-      await authModel.findByIdAndUpdate(savedUser._id, {
-        shopifyCollectionId: createdCollectionId,
-      });
+    const collectionId = collectionResponse.data.smart_collection.id;
+    
+    const collectionMetafields = [
+      { key: 'userId', value: userId },
+      { key: 'username', value: username },
+      { key: 'phoneNumber', value: phoneNumber },
+      { key: 'city', value: city },
+      { key: 'state', value: state },
+      { key: 'zip', value: zip },
+      { key: 'country', value: country },
+    ];
 
-      await brandAssetModel.create({
-        userId: savedUser._id,
-        sellerName: sellerName,
-        shopifyCollectionId: createdCollectionId,
-        description: '',
-        images: '',
-      });
-    } catch (err) {
-      console.error(
-        'Shopify collection creation error:',
-        err?.response?.data || err.message
-      );
+    /* -------------------- COLLECTION METAFIELDS WITH DEBUG -------------------- */
+    console.log('📦 Creating metafields for collection:', collectionId);
+
+    for (const field of collectionMetafields) {
+      try {
+        console.log(`➡️ Creating metafield: ${field.key}`, field.value);
+
+        const metafieldResponse = await axios.post(
+          `${shopifyStoreUrl}/admin/api/2023-10/smart_collections/${collectionId}/metafields.json`,
+          {
+            metafield: {
+              namespace: 'custom',
+              key: field.key,
+              value: String(field.value), // IMPORTANT
+              type: 'single_line_text_field',
+            },
+          },
+          {
+            headers: {
+              'X-Shopify-Access-Token': shopifyAccessToken,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log(
+          `✅ Metafield created: ${field.key}`,
+          metafieldResponse.data.metafield
+        );
+      } catch (err) {
+        console.error(
+          `❌ Metafield failed: ${field.key}`,
+          err?.response?.data || err.message
+        );
+      }
     }
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'aydimarketplace@gmail.com',
-        pass: 'ijeg fypl llry kftw',
-      },
+    /* -------------------- UPDATE USER WITH COLLECTION ID -------------------- */
+    await authModel.findByIdAndUpdate(userId, {
+      shopifyCollectionId: collectionId,
     });
 
-    transporter.sendMail({
-      from: `${req.body.firstName} <${email}>`,
-      to: 'aydimarketplace@gmail.com',
-      subject: 'New User Signup',
-      html: `
-        <h2>New User Registered</h2>
-        <p><strong>Seller Name:</strong> ${sellerName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-      `,
+    /* -------------------- BRAND ASSET -------------------- */
+    await brandAssetModel.create({
+      userId,
+      sellerName,
+      shopifyCollectionId: collectionId,
+      description: '',
+      images: '',
     });
 
-    const token = createToken({ _id: savedUser._id });
+    //   const transporter = nodemailer.createTransport({
+    //   service: 'gmail',
+    //   auth: {
+    //     user: 'aydimarketplace@gmail.com',
+    //     pass: 'ijeg fypl llry kftw',
+    //   },
+    // });
 
-    res.status(201).send({
+    // transporter.sendMail({
+    //   from: `${req.body.firstName} <${email}>`,
+    //   to: 'aydimarketplace@gmail.com',
+    //   subject: 'New User Signup',
+    //   html: `
+    //     <h2>New User Registered</h2>
+    //     <p><strong>Seller Name:</strong> ${sellerName}</p>
+    //     <p><strong>Email:</strong> ${email}</p>
+    //   `,
+    // });
+
+    const token = createToken({ _id: userId });
+
+    return res.status(201).json({
       message: 'Successfully registered',
       token,
       data: {
-        ...savedUser.toObject(),
-        shopifyCollectionId: createdCollectionId,
+        ...newUser.toObject(),
+        shopifyCollectionId: collectionId,
       },
     });
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -476,7 +535,7 @@ export const checkShopifyAdminTag = async (email) => {
     'Approval',
     'Manage Shipping',
     'OnBoardUser',
-    "Manage Size Charts"
+    'Manage Size Charts',
   ];
 
   try {
@@ -773,8 +832,6 @@ export const updateUser = async (req, res) => {
   }
 };
 
-
-
 export const getUserWithModules = async (req, res) => {
   const { id } = req.params;
 
@@ -801,8 +858,6 @@ export const getUserWithModules = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-
 
 export const CreateUserTagsModule = async (req, res) => {
   try {
@@ -857,8 +912,6 @@ export const CreateUserTagsModule = async (req, res) => {
         .status(400)
         .json({ error: 'User already exists with this email' });
     }
-
-   
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfiguration || {};
@@ -923,7 +976,7 @@ export const CreateUserTagsModule = async (req, res) => {
 
     await newUser.save();
 
- const token = createToken(email,newUser._id);
+    const token = createToken(email, newUser._id);
     const resetLink = `https://multi-vendor-marketplaces.vercel.app/New?token=${token}`;
 
     await transporter.sendMail({
@@ -1169,7 +1222,7 @@ export const forgotPassword = async (req, res) => {
       html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
     });
 
-    res.status(200).json({ message: 'Reset link sent to your email',token });
+    res.status(200).json({ message: 'Reset link sent to your email', token });
   } catch (error) {
     console.error('Error sending reset email:', error);
     res.status(500).json({ message: 'Error sending reset email', error });
@@ -1527,7 +1580,6 @@ export const getAllMerchants = async (req, res) => {
   }
 };
 
-
 export const getAllOnboardUsersData = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1796,7 +1848,6 @@ export const signInForBulkUploader = async (req, res) => {
   }
 };
 
-
 export const addMerchantAccDetails = async (req, res) => {
   try {
     const { userId, method, paypalDetails, bankDetails } = req.body;
@@ -1804,61 +1855,61 @@ export const addMerchantAccDetails = async (req, res) => {
     if (!userId || !method) {
       return res
         .status(400)
-        .json({ message: "userId and payout method are required." });
+        .json({ message: 'userId and payout method are required.' });
     }
 
     // ✅ Find user if exists
     let user = await authModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: 'User not found.' });
     }
 
     // ✅ Update PayPal
-    if (method === "paypal") {
+    if (method === 'paypal') {
       if (!paypalDetails?.paypalAccount) {
-        return res.status(400).json({ message: "PayPal account is required." });
+        return res.status(400).json({ message: 'PayPal account is required.' });
       }
 
-      user.paypalAccount = paypalDetails.paypalAccount || "";
-      user.paypalAccountNo = paypalDetails.paypalAccountNo || "";
-      user.paypalReferenceNo = paypalDetails.paypalReferenceNo || "";
+      user.paypalAccount = paypalDetails.paypalAccount || '';
+      user.paypalAccountNo = paypalDetails.paypalAccountNo || '';
+      user.paypalReferenceNo = paypalDetails.paypalReferenceNo || '';
 
       // clear bank if switching
       user.bankDetails = {};
     }
 
     // ✅ Update Bank
-    else if (method === "bank") {
+    else if (method === 'bank') {
       if (!bankDetails?.accountNumber || !bankDetails?.accountHolderName) {
         return res.status(400).json({
-          message: "Bank account number & holder name are required.",
+          message: 'Bank account number & holder name are required.',
         });
       }
 
       user.bankDetails = {
-        accountHolderName: bankDetails.accountHolderName || "",
-        accountNumber: bankDetails.accountNumber || "",
-        bankName: bankDetails.bankName || "",
-        branchName: bankDetails.branchName || "",
-        ifscCode: bankDetails.ifscCode || "",
-        swiftCode: bankDetails.swiftCode || "",
-        iban: bankDetails.iban || "",
-        country: bankDetails.country || "",
+        accountHolderName: bankDetails.accountHolderName || '',
+        accountNumber: bankDetails.accountNumber || '',
+        bankName: bankDetails.bankName || '',
+        branchName: bankDetails.branchName || '',
+        ifscCode: bankDetails.ifscCode || '',
+        swiftCode: bankDetails.swiftCode || '',
+        iban: bankDetails.iban || '',
+        country: bankDetails.country || '',
       };
 
       // clear paypal if switching
-      user.paypalAccount = "";
-      user.paypalAccountNo = "";
-      user.paypalReferenceNo = "";
+      user.paypalAccount = '';
+      user.paypalAccountNo = '';
+      user.paypalReferenceNo = '';
     } else {
-      return res.status(400).json({ message: "Invalid payout method." });
+      return res.status(400).json({ message: 'Invalid payout method.' });
     }
 
     // ✅ Save user
     await user.save();
 
     res.status(200).json({
-      message: "Payout details saved successfully.",
+      message: 'Payout details saved successfully.',
       data: {
         method,
         paypalAccount: user.paypalAccount,
@@ -1868,36 +1919,35 @@ export const addMerchantAccDetails = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Update payout error:", error);
+    console.error('Update payout error:', error);
     res
       .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+      .json({ message: 'Internal Server Error', error: error.message });
   }
 };
-
 
 export const getMerchantAccDetails = async (req, res) => {
   try {
     const { userId } = req.params;
 
     if (!userId) {
-      return res.status(400).json({ message: "UserId is required." });
+      return res.status(400).json({ message: 'UserId is required.' });
     }
 
     const user = await authModel.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: 'User not found.' });
     }
 
     res.status(200).json({
-      message: "User details fetched successfully.",
+      message: 'User details fetched successfully.',
       data: user,
     });
   } catch (error) {
-    console.error("Fetch user error:", error);
+    console.error('Fetch user error:', error);
     res.status(500).json({
-      message: "Internal Server Error",
+      message: 'Internal Server Error',
       error: error.message,
     });
   }

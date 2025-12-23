@@ -190,6 +190,7 @@ export const addUsedEquipments = async (req, res) => {
     //     isParent: index === 0,
     //   };
     // });
+    
     const shopifyVariants = variantCombinations.map((variant, index) => {
       const variantPrice = variantPrices?.[index] || price;
       const variantCompareAtPrice = formatCompareAtPrice(
