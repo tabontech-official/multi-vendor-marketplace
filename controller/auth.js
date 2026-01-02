@@ -229,6 +229,8 @@ const createToken = (payLoad) => {
 //   }
 // };
 
+
+
 export const signUp = async (req, res) => {
   try {
     const {
@@ -506,6 +508,8 @@ export const signUp = async (req, res) => {
   }
 };
 
+
+
 export const checkShopifyAdminTag = async (email) => {
   const shopifyConfiguration = await shopifyConfigurationModel.findOne();
   if (!shopifyConfiguration) {
@@ -594,6 +598,8 @@ export const checkShopifyAdminTag = async (email) => {
   }
 };
 
+
+
 // export const signIn = async (req, res) => {
 //   try {
 //     const { error } = loginSchema.validate(req.body);
@@ -625,6 +631,8 @@ export const checkShopifyAdminTag = async (email) => {
 //     res.status(500).json({ message: 'Server error' });
 //   }
 // };
+
+
 
 export const signIn = async (req, res) => {
   try {
@@ -676,6 +684,8 @@ export const signIn = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
 
 const hashPassword = async (password) => {
   if (password) {
