@@ -854,6 +854,9 @@ export const getUserWithModules = async (req, res) => {
         $project: {
           _id: 0,
           modules: 1,
+          firstName:1,
+          lastName:1,
+          userName:1,
         },
       },
     ]);
