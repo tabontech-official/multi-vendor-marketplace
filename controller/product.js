@@ -913,6 +913,22 @@ export const getProduct = async (req, res) => {
         $limit: limit,
       },
       {
+        $addFields: {
+          images: {
+            $filter: {
+              input: '$images',
+              as: 'img',
+              cond: {
+                $regexMatch: {
+                  input: '$$img.alt',
+                  regex: /^image-/,
+                },
+              },
+            },
+          },
+        },
+      },
+      {
         $project: {
           _id: 1,
           id: 1,
