@@ -10,9 +10,11 @@ const payoutConfigSchema = new mongoose.Schema({
   firstPayoutDate: Date,
   secondPayoutDate: Date,
   weeklyDay: String,
-  Comission: {
-    type: Number,
-  },
+  commission: {
+  type: Number,
+  default: 0, // percentage
+},
+
 });
 
 export const PayoutConfig = mongoose.model(

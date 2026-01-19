@@ -1310,6 +1310,127 @@ export const addPaypalAccountNo = async (req, res) => {
   }
 };
 
+// export const addPayouts = async (req, res) => {
+//   const {
+//     payoutFrequency,
+//     graceTime = 0,
+//     firstDate,
+//     secondDate,
+//     weeklyDay,
+//   } = req.body;
+
+//   if (!payoutFrequency) {
+//     return res.status(400).json({ message: 'Payout frequency is required.' });
+//   }
+
+//   try {
+//     let config = await PayoutConfig.findOne();
+//     if (!config) config = new PayoutConfig();
+
+//     config.graceTime = graceTime;
+//     config.payoutFrequency = payoutFrequency;
+
+//     const now = dayjs().add(graceTime, 'day');
+//     const currentMonth = now.month(); // 0-indexed
+//     const currentYear = now.year();
+
+//     switch (payoutFrequency) {
+//       case 'daily':
+//         config.firstPayoutDate = now.startOf('day').toDate();
+//         config.secondPayoutDate = null;
+//         config.weeklyDay = null;
+//         break;
+
+//       case 'weekly':
+//         if (!weeklyDay) {
+//           return res.status(400).json({ message: 'Weekly day is required.' });
+//         }
+
+//         const weekdays = {
+//           Sunday: 0,
+//           Monday: 1,
+//           Tuesday: 2,
+//           Wednesday: 3,
+//           Thursday: 4,
+//           Friday: 5,
+//           Saturday: 6,
+//         };
+
+//         const targetDay = weekdays[weeklyDay];
+//         if (targetDay === undefined) {
+//           return res.status(400).json({ message: 'Invalid weekly day.' });
+//         }
+
+//         let nextWeekly = now;
+//         while (nextWeekly.day() !== targetDay) {
+//           nextWeekly = nextWeekly.add(1, 'day');
+//         }
+
+//         config.firstPayoutDate = nextWeekly.toDate();
+//         config.secondPayoutDate = null;
+//         config.weeklyDay = weeklyDay;
+//         break;
+
+//       case 'once':
+//         if (typeof firstDate !== 'number' || firstDate < 1) {
+//           return res
+//             .status(400)
+//             .json({ message: 'First payout day is required.' });
+//         }
+
+//         config.firstPayoutDate = dayjs()
+//           .set('date', Math.min(firstDate, 28))
+//           .set('month', currentMonth)
+//           .set('year', currentYear)
+//           .toDate();
+
+//         config.secondPayoutDate = null;
+//         config.weeklyDay = null;
+//         break;
+
+//       case 'twice':
+//         if (
+//           typeof firstDate !== 'number' ||
+//           typeof secondDate !== 'number' ||
+//           firstDate < 1 ||
+//           secondDate < 1
+//         ) {
+//           return res
+//             .status(400)
+//             .json({ message: 'Both payout days required.' });
+//         }
+
+//         config.firstPayoutDate = dayjs()
+//           .set('date', Math.min(firstDate, 28))
+//           .set('month', currentMonth)
+//           .set('year', currentYear)
+//           .toDate();
+
+//         config.secondPayoutDate = dayjs()
+//           .set('date', Math.min(secondDate, 28))
+//           .set('month', currentMonth)
+//           .set('year', currentYear)
+//           .toDate();
+
+//         config.weeklyDay = null;
+//         break;
+
+//       default:
+//         return res
+//           .status(400)
+//           .json({ message: 'Invalid payout frequency selected.' });
+//     }
+
+//     await config.save();
+
+//     return res.json({ message: 'Payout config saved successfully.' });
+//   } catch (error) {
+//     console.error('❌ Error saving payout config:', error);
+//     return res.status(500).json({ message: 'Failed to save payout config.' });
+//   }
+// };
+
+
 export const addPayouts = async (req, res) => {
   const {
     payoutFrequency,
@@ -1317,10 +1438,17 @@ export const addPayouts = async (req, res) => {
     firstDate,
     secondDate,
     weeklyDay,
+    commission = 0,
   } = req.body;
 
   if (!payoutFrequency) {
     return res.status(400).json({ message: 'Payout frequency is required.' });
+  }
+
+  if (commission < 0 || commission > 100) {
+    return res
+      .status(400)
+      .json({ message: 'Commission must be between 0 and 100.' });
   }
 
   try {
@@ -1329,21 +1457,25 @@ export const addPayouts = async (req, res) => {
 
     config.graceTime = graceTime;
     config.payoutFrequency = payoutFrequency;
+    config.commission = commission;
 
-    const now = dayjs().add(graceTime, 'day');
-    const currentMonth = now.month(); // 0-indexed
-    const currentYear = now.year();
+    const baseDate = dayjs().add(graceTime, 'day');
+    const currentMonth = baseDate.month();
+    const currentYear = baseDate.year();
 
     switch (payoutFrequency) {
-      case 'daily':
-        config.firstPayoutDate = now.startOf('day').toDate();
+      case 'daily': {
+        config.firstPayoutDate = baseDate.startOf('day').toDate();
         config.secondPayoutDate = null;
         config.weeklyDay = null;
         break;
+      }
 
-      case 'weekly':
+      case 'weekly': {
         if (!weeklyDay) {
-          return res.status(400).json({ message: 'Weekly day is required.' });
+          return res
+            .status(400)
+            .json({ message: 'Weekly day is required.' });
         }
 
         const weekdays = {
@@ -1361,7 +1493,7 @@ export const addPayouts = async (req, res) => {
           return res.status(400).json({ message: 'Invalid weekly day.' });
         }
 
-        let nextWeekly = now;
+        let nextWeekly = baseDate;
         while (nextWeekly.day() !== targetDay) {
           nextWeekly = nextWeekly.add(1, 'day');
         }
@@ -1370,25 +1502,32 @@ export const addPayouts = async (req, res) => {
         config.secondPayoutDate = null;
         config.weeklyDay = weeklyDay;
         break;
+      }
 
-      case 'once':
+      case 'once': {
         if (typeof firstDate !== 'number' || firstDate < 1) {
           return res
             .status(400)
             .json({ message: 'First payout day is required.' });
         }
 
-        config.firstPayoutDate = dayjs()
+        let payoutDate = dayjs()
           .set('date', Math.min(firstDate, 28))
           .set('month', currentMonth)
-          .set('year', currentYear)
-          .toDate();
+          .set('year', currentYear);
 
+        // 🔥 ensure future date
+        if (payoutDate.isBefore(baseDate)) {
+          payoutDate = payoutDate.add(1, 'month');
+        }
+
+        config.firstPayoutDate = payoutDate.toDate();
         config.secondPayoutDate = null;
         config.weeklyDay = null;
         break;
+      }
 
-      case 'twice':
+      case 'twice': {
         if (
           typeof firstDate !== 'number' ||
           typeof secondDate !== 'number' ||
@@ -1397,23 +1536,27 @@ export const addPayouts = async (req, res) => {
         ) {
           return res
             .status(400)
-            .json({ message: 'Both payout days required.' });
+            .json({ message: 'Both payout days are required.' });
         }
 
-        config.firstPayoutDate = dayjs()
+        let first = dayjs()
           .set('date', Math.min(firstDate, 28))
           .set('month', currentMonth)
-          .set('year', currentYear)
-          .toDate();
+          .set('year', currentYear);
 
-        config.secondPayoutDate = dayjs()
+        let second = dayjs()
           .set('date', Math.min(secondDate, 28))
           .set('month', currentMonth)
-          .set('year', currentYear)
-          .toDate();
+          .set('year', currentYear);
 
+        if (first.isBefore(baseDate)) first = first.add(1, 'month');
+        if (second.isBefore(baseDate)) second = second.add(1, 'month');
+
+        config.firstPayoutDate = first.toDate();
+        config.secondPayoutDate = second.toDate();
         config.weeklyDay = null;
         break;
+      }
 
       default:
         return res
@@ -1423,7 +1566,10 @@ export const addPayouts = async (req, res) => {
 
     await config.save();
 
-    return res.json({ message: 'Payout config saved successfully.' });
+    return res.json({
+      message: 'Payout config saved successfully.',
+      config,
+    });
   } catch (error) {
     console.error('❌ Error saving payout config:', error);
     return res.status(500).json({ message: 'Failed to save payout config.' });
@@ -1431,18 +1577,38 @@ export const addPayouts = async (req, res) => {
 };
 
 export const getPayoutDate = async (req, res) => {
-  const config = await PayoutConfig.findOne();
-  if (!config)
-    return res.status(404).json({ message: 'No payout dates found' });
+  try {
+    const config = await PayoutConfig.findOne();
 
-  res.json({
-    firstDate: config.firstPayoutDate,
-    secondDate: config.secondPayoutDate,
-    payoutFrequency: config.payoutFrequency,
-    graceTime: config.graceTime,
-    weeklyDay: config.weeklyDay,
-  });
+    if (!config) {
+      return res.status(404).json({
+        message: 'No payout configuration found',
+      });
+    }
+
+    return res.json({
+      payoutFrequency: config.payoutFrequency,
+      graceTime: config.graceTime ?? 0,
+      weeklyDay: config.weeklyDay ?? null,
+
+      firstDate: config.firstPayoutDate
+        ? config.firstPayoutDate.toISOString()
+        : null,
+
+      secondDate: config.secondPayoutDate
+        ? config.secondPayoutDate.toISOString()
+        : null,
+
+      commission: config.commission ?? 0, // ✅ IMPORTANT
+    });
+  } catch (error) {
+    console.error('❌ Error fetching payout config:', error);
+    return res.status(500).json({
+      message: 'Failed to fetch payout configuration',
+    });
+  }
 };
+
 
 function getNextPayoutDate(startDate, config) {
   const frequency = config.payoutFrequency || 'twice';
