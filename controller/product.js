@@ -1726,9 +1726,30 @@ export const getAllProductData = async (req, res) => {
           preserveNullAndEmptyArrays: true,
         },
       },
-      { $sort: { created_at: -1 } },
-      { $skip: (page - 1) * limit },
-      { $limit: limit },
+       {
+        $sort: { created_at: -1 },
+      },
+           { $skip: (page - 1) * limit },
+
+      {
+        $limit: limit,
+      },
+      {
+        $addFields: {
+          images: {
+            $filter: {
+              input: '$images',
+              as: 'img',
+              cond: {
+                $regexMatch: {
+                  input: '$$img.alt',
+                  regex: /^image-/,
+                },
+              },
+            },
+          },
+        },
+      },
       {
         $project: {
           _id: 1,
