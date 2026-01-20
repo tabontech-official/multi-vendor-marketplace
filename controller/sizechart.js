@@ -129,3 +129,14 @@ export const getAllSizeChartsForAdmin = async (req, res) => {
     });
   }
 };
+
+
+export const getAllSizeChart = async (req, res) => {
+  try {
+    const charts = await SizeChartModel.find().sort({ createdAt: -1 });
+
+    res.status(200).json({ data: charts });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};

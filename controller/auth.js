@@ -1471,33 +1471,122 @@ export const saveShopifyCredentials = async (req, res) => {
   }
 };
 
+// export const createShopifyCollection = async (req, res) => {
+//   try {
+//     const { description, userId } = req.body;
+
+//     if (!userId) {
+//       return res.status(400).json({ error: 'userId is required.' });
+//     }
+
+//     const brandAsset = await brandAssetModel.findOne({ userId });
+
+//     if (!brandAsset || !brandAsset.shopifyCollectionId) {
+//       return res
+//         .status(404)
+//         .json({ error: 'No collection found for this user.' });
+//     }
+
+//     const collectionId = brandAsset.shopifyCollectionId;
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration) {
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+//     }
+
+//     const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
+//     const SHOPIFY_STORE_URL = shopifyConfiguration.shopifyStoreUrl;
+
+//     const images = req.files?.images
+//       ? Array.isArray(req.files.images)
+//         ? req.files.images
+//         : [req.files.images]
+//       : [];
+
+//     const firstImageUrl = images.length > 0 ? images[0].path : null;
+
+//     const updatePayload = {
+//       custom_collection: {
+//         id: collectionId,
+//         body_html: description,
+//       },
+//     };
+
+//     if (firstImageUrl) {
+//       updatePayload.custom_collection.image = {
+//         src: firstImageUrl,
+//       };
+//     }
+
+//     const updateCollection = await axios.put(
+//       `${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections/${collectionId}.json`,
+//       updatePayload,
+//       {
+//         headers: {
+//           'X-Shopify-Access-Token': ACCESS_TOKEN,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     );
+
+//     await brandAssetModel.findOneAndUpdate(
+//       { userId, shopifyCollectionId: collectionId },
+//       {
+//         description,
+//         ...(firstImageUrl && { images: firstImageUrl }),
+//         updatedAt: new Date(),
+//       },
+//       { new: true }
+//     );
+
+//     return res.status(200).json({
+//       message: 'Collection updated successfully',
+//       collection: updateCollection.data.custom_collection,
+//     });
+//   } catch (error) {
+//     if (error.response) {
+//       console.error('Shopify API Error:', error.response.status);
+//       console.error('Data:', JSON.stringify(error.response.data, null, 2));
+//     } else {
+//       console.error('General Error:', error.message);
+//     }
+
+//     res.status(500).json({
+//       message: 'Failed to update collection details',
+//       error: error.message,
+//     });
+//   }
+// };
+
 export const createShopifyCollection = async (req, res) => {
+
   try {
-    const { description, userId } = req.body;
+    let { userId, title, description } = req.body;
+    console.log('➡️ Request Body:', req.body);
 
     if (!userId) {
-      return res.status(400).json({ error: 'userId is required.' });
+      return res.status(400).json({ error: 'userId is required' });
     }
 
-    const brandAsset = await brandAssetModel.findOne({ userId });
-
-    if (!brandAsset || !brandAsset.shopifyCollectionId) {
-      return res
-        .status(404)
-        .json({ error: 'No collection found for this user.' });
+    const user = await authModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    const collectionId = brandAsset.shopifyCollectionId;
+    let brandAsset = await brandAssetModel.findOne({ userId });
 
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) {
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+    if (!title) {
+      title = brandAsset?.sellerName || user.sellerName;
     }
 
-    const ACCESS_TOKEN = shopifyConfiguration.shopifyAccessToken;
-    const SHOPIFY_STORE_URL = shopifyConfiguration.shopifyStoreUrl;
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(404).json({ error: 'Shopify config not found' });
+    }
+
+    const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
 
     const images = req.files?.images
       ? Array.isArray(req.files.images)
@@ -1505,60 +1594,246 @@ export const createShopifyCollection = async (req, res) => {
         : [req.files.images]
       : [];
 
-    const firstImageUrl = images.length > 0 ? images[0].path : null;
+    const imageUrl = images.length > 0 ? images[0].path : null;
 
-    const updatePayload = {
-      custom_collection: {
-        id: collectionId,
-        body_html: description,
-      },
-    };
+    let collectionId = brandAsset?.shopifyCollectionId || null;
+    let collectionExists = false;
+    let oldHandle = null;
 
-    if (firstImageUrl) {
-      updatePayload.custom_collection.image = {
-        src: firstImageUrl,
-      };
+    if (collectionId) {
+      try {
+        const existingRes = await axios.get(
+          `${shopifyStoreUrl}/admin/api/2023-10/smart_collections/${collectionId}.json`,
+          {
+            headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
+          }
+        );
+
+        collectionExists = true;
+        oldHandle = existingRes.data.smart_collection.handle;
+      } catch {
+        collectionExists = false;
+      }
     }
 
-    const updateCollection = await axios.put(
-      `${SHOPIFY_STORE_URL}/admin/api/2023-10/custom_collections/${collectionId}.json`,
-      updatePayload,
-      {
-        headers: {
-          'X-Shopify-Access-Token': ACCESS_TOKEN,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const newHandle = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
 
-    await brandAssetModel.findOneAndUpdate(
-      { userId, shopifyCollectionId: collectionId },
-      {
+    if (!collectionExists) {
+      console.log('🆕 Creating NEW smart collection');
+
+      const userTag = `user_${userId}`;
+
+      const createPayload = {
+        smart_collection: {
+          title,
+          handle: newHandle,
+          body_html: description || '',
+          template_suffix: 'user-profile',
+          published: true,
+          rules: [
+            {
+              column: 'tag',
+              relation: 'equals',
+              condition: userTag,
+            },
+          ],
+        },
+      };
+
+      if (imageUrl) {
+        createPayload.smart_collection.image = { src: imageUrl };
+      }
+
+      const createRes = await axios.post(
+        `${shopifyStoreUrl}/admin/api/2023-10/smart_collections.json`,
+        createPayload,
+        {
+          headers: {
+            'X-Shopify-Access-Token': shopifyAccessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      collectionId = createRes.data.smart_collection.id;
+
+      const metafields = [
+        { key: 'userId', value: userId },
+        { key: 'username', value: title }, 
+        { key: 'phoneNumber', value: user.phoneNumber },
+        { key: 'city', value: user.city },
+        { key: 'state', value: user.state },
+        { key: 'zip', value: user.zip },
+        { key: 'country', value: user.country },
+      ];
+
+      for (const field of metafields) {
+        if (!field.value) continue;
+
+        await axios.post(
+          `${shopifyStoreUrl}/admin/api/2023-10/smart_collections/${collectionId}/metafields.json`,
+          {
+            metafield: {
+              namespace: 'custom',
+              key: field.key,
+              value: String(field.value),
+              type: 'single_line_text_field',
+            },
+          },
+          {
+            headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
+          }
+        );
+
+      }
+    } else {
+
+      const updatePayload = {
+        smart_collection: {
+          id: collectionId,
+          title,
+          handle: newHandle,
+          body_html: description || '',
+        },
+      };
+
+      if (imageUrl) {
+        updatePayload.smart_collection.image = { src: imageUrl };
+      }
+
+      await axios.put(
+        `${shopifyStoreUrl}/admin/api/2023-10/smart_collections/${collectionId}.json`,
+        updatePayload,
+        {
+          headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
+        }
+      );
+
+
+      const metaRes = await axios.get(
+        `${shopifyStoreUrl}/admin/api/2023-10/metafields.json`,
+        {
+          headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
+          params: {
+            owner_id: collectionId,
+            owner_resource: 'smart_collection',
+          },
+        }
+      );
+
+      const existingMetas = metaRes.data.metafields || [];
+
+      const syncMetafields = [
+        { key: 'username', value: title },
+        { key: 'phoneNumber', value: user.phoneNumber },
+        { key: 'city', value: user.city },
+        { key: 'state', value: user.state },
+        { key: 'zip', value: user.zip },
+        { key: 'country', value: user.country },
+      ];
+
+      for (const field of syncMetafields) {
+        if (!field.value) continue;
+
+        const found = existingMetas.find(
+          (m) => m.namespace === 'custom' && m.key === field.key
+        );
+
+        if (found) {
+          await axios.put(
+            `${shopifyStoreUrl}/admin/api/2023-10/metafields/${found.id}.json`,
+            {
+              metafield: {
+                id: found.id,
+                value: String(field.value),
+                type: 'single_line_text_field',
+              },
+            },
+            {
+              headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
+            }
+          );
+        } else {
+          await axios.post(
+            `${shopifyStoreUrl}/admin/api/2023-10/smart_collections/${collectionId}/metafields.json`,
+            {
+              metafield: {
+                namespace: 'custom',
+                key: field.key,
+                value: String(field.value),
+                type: 'single_line_text_field',
+              },
+            },
+            {
+              headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
+            }
+          );
+          console.log(`➕ Metafield created: ${field.key}`);
+        }
+      }
+
+      if (oldHandle && oldHandle !== newHandle) {
+
+        await axios.post(
+          `${shopifyStoreUrl}/admin/api/2023-10/redirects.json`,
+          {
+            redirect: {
+              path: `/collections/${oldHandle}`,
+              target: `/collections/${newHandle}`,
+            },
+          },
+          {
+            headers: {
+              'X-Shopify-Access-Token': shopifyAccessToken,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+      }
+    }
+
+    if (!brandAsset) {
+      brandAsset = await brandAssetModel.create({
+        userId,
+        sellerName: title,
+        shopifyCollectionId: collectionId,
         description,
-        ...(firstImageUrl && { images: firstImageUrl }),
-        updatedAt: new Date(),
-      },
-      { new: true }
-    );
+        images: imageUrl || '',
+      });
+    } else {
+      await brandAssetModel.findOneAndUpdate(
+        { userId },
+        {
+          sellerName: title,
+          description,
+          ...(imageUrl && { images: imageUrl }),
+        }
+      );
+    }
+
+    user.shopifyCollectionId = collectionId;
+    user.sellerName = title;
+    await user.save();
+
 
     return res.status(200).json({
-      message: 'Collection updated successfully',
-      collection: updateCollection.data.custom_collection,
+      message: 'Collection synced successfully',
+      shopifyCollectionId: collectionId,
+      handle: newHandle,
     });
   } catch (error) {
-    if (error.response) {
-      console.error('Shopify API Error:', error.response.status);
-      console.error('Data:', JSON.stringify(error.response.data, null, 2));
-    } else {
-      console.error('General Error:', error.message);
-    }
-
-    res.status(500).json({
-      message: 'Failed to update collection details',
-      error: error.message,
-    });
+    console.error('🔥 UPSERT ERROR:', error?.response?.data || error.message);
+    return res.status(500).json({ error: 'Collection sync failed' });
   }
 };
+
+
+
+
 
 export const getLatestBrandAsset = async (req, res) => {
   try {
