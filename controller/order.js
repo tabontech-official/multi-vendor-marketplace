@@ -1599,7 +1599,7 @@ export const getPayoutDate = async (req, res) => {
         ? config.secondPayoutDate.toISOString()
         : null,
 
-      commission: config.commission ?? 0, // ✅ IMPORTANT
+      commission: config.commission ?? 0, 
     });
   } catch (error) {
     console.error('❌ Error fetching payout config:', error);

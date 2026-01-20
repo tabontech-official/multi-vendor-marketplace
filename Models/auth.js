@@ -83,7 +83,7 @@ const authSchema = new mongoose.Schema(
     },
     gstRegistered: String,
     sellerGst: String,
-    dispatchzip: Number,
+    dispatchzip: String,
     dispatchCountry: String,
     dispatchCity: String,
     dispatchAddress: String,
