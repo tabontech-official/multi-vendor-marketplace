@@ -79,7 +79,7 @@ export const productSubscriptionExpiration = () => {
         });
 
         if (!product) {
-          console.warn(`No listing found for SKU: ${promo.productSku}`);
+          // console.warn(`No listing found for SKU: ${promo.productSku}`);
           continue;
         }
 
@@ -88,14 +88,14 @@ export const productSubscriptionExpiration = () => {
         );
 
         if (!variant) {
-          console.warn(` Variant not found in listing for SKU: ${promo.productSku}`);
+          // console.warn(` Variant not found in listing for SKU: ${promo.productSku}`);
           continue;
         }
 
         const oldPrice = product.oldPrice;
 
         if (!oldPrice) {
-          console.warn(` No compare_at_price found for SKU: ${promo.productSku}`);
+          // console.warn(` No compare_at_price found for SKU: ${promo.productSku}`);
           continue;
         }
 
@@ -118,15 +118,15 @@ export const productSubscriptionExpiration = () => {
             shopifyApiKey,
             shopifyAccessToken
           );
-          console.log(`Shopify updated: SKU ${variant.sku}, price reverted to ${oldPrice}`);
+          // console.log(`Shopify updated: SKU ${variant.sku}, price reverted to ${oldPrice}`);
         } catch (shopifyErr) {
-          console.error(` Shopify update failed for SKU ${variant.sku}:`, shopifyErr.message);
+          // console.error(` Shopify update failed for SKU ${variant.sku}:`, shopifyErr.message);
         }
       }
 
-      console.log(` ${promoUpdateResult.modifiedCount} promotions marked inactive.`);
+      // console.log(` ${promoUpdateResult.modifiedCount} promotions marked inactive.`);
     } catch (error) {
-      console.error(' Cron job error:', error.message || error);
+      // console.error(' Cron job error:', error.message || error);
     }
   });
 };

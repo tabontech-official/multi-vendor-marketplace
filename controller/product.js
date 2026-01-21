@@ -2279,177 +2279,420 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
   }
 };
 
+// export const updateImages = async (req, res) => {
+//   const { id } = req.params;
+//   const imageUrls = req.body.images || [];
+//   const variantImages = req.body.variantImages || [];
+//   console.log('🟦 ====== updateImages API called ======');
+
+//   try {
+//     const product = await listingModel.findOne({ id });
+//     if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+//     console.log('Product found:', product.title);
+//     const oldVariantImages = product.variantImages || [];
+//     const oldMediaImages = product.images || [];
+
+//     const shopifyConfig = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfig)
+//       return res.status(404).json({ error: 'Shopify config not found.' });
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfig;
+
+//     const uploadedMediaImages = [];
+//     for (let i = 0; i < imageUrls.length; i++) {
+//       const url = imageUrls[i];
+//       if (!url) continue;
+
+//       const alreadyExists = oldMediaImages.some((img) => img.src === url);
+//       if (alreadyExists) continue;
+
+//       const altHandle = `image-${i + 1}`; // ✅ simple safe alt for general media
+
+//       const payload = {
+//         image: { src: url, alt: altHandle, position: i + 1 },
+//       };
+
+//       try {
+//         const uploadRes = await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+//           'POST',
+//           payload,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+
+//         if (uploadRes?.image)
+//           uploadedMediaImages.push({ ...uploadRes.image, src: url });
+//       } catch (err) {
+//         console.log('Media upload failed:', err.message);
+//       }
+//     }
+
+//     // 🔹 Upload variant-specific images
+//     const uploadedVariantImages = [];
+//     for (const variant of variantImages) {
+//       const { key, url, alt } = variant;
+//       if (!url) continue;
+
+//       const alreadyExists = oldVariantImages.some((img) => img.src === url);
+//       if (alreadyExists) continue;
+
+//       // ✅ Always use clean alt from frontend (handle-based)
+//       const cleanAlt =
+//         alt ||
+//         key
+//           ?.replace(/\s*\/\s*/g, '-')
+//           .trim()
+//           .toLowerCase() ||
+//         'variant-image';
+
+//       const payload = { image: { src: url, alt: cleanAlt } };
+
+//       try {
+//         const uploadRes = await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+//           'POST',
+//           payload,
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+
+//         if (uploadRes?.image) {
+//           uploadedVariantImages.push({
+//             ...uploadRes.image,
+//             src: url,
+//             variantKey: key,
+//             alt: cleanAlt, // ✅ ensure MongoDB stores proper alt too
+//           });
+//         }
+//       } catch (err) {
+//         console.log(`Variant [${key}] upload failed:`, err.message);
+//       }
+//     }
+
+//     // 🔹 Sync variant <-> image IDs
+//     const shopifyProduct = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
+//       'GET',
+//       null,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const shopifyVariants = shopifyProduct?.product?.variants || [];
+//     const updatedVariants = [];
+
+//     for (const variant of shopifyVariants) {
+//       const match = uploadedVariantImages.find(
+//         (img) => img.variantKey?.toLowerCase() === variant.title?.toLowerCase()
+//       );
+
+//       if (match) {
+//         await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+//           'PUT',
+//           { variant: { id: variant.id, image_id: match.id } },
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+//         updatedVariants.push({ ...variant, image_id: match.id });
+//       } else {
+//         const stillExists = variantImages.some(
+//           (v) =>
+//             v.key?.toLowerCase() === variant.title?.toLowerCase() && !!v.url
+//         );
+//         if (!stillExists) {
+//           await shopifyRequest(
+//             `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+//             'PUT',
+//             { variant: { id: variant.id, image_id: null } },
+//             shopifyApiKey,
+//             shopifyAccessToken
+//           );
+//           updatedVariants.push({ ...variant, image_id: null });
+//           console.log(`🧹 Cleared image for variant ${variant.title}`);
+//         } else {
+//           const old = product.variants.find((v) => v.id === variant.id);
+//           updatedVariants.push(old || variant);
+//         }
+//       }
+//     }
+
+//     // 🔹 Merge MongoDB image arrays cleanly
+//     const newVariantUrls = variantImages.map((v) => v.url);
+//     const syncedVariantImages = oldVariantImages.filter((oldImg) =>
+//       newVariantUrls.includes(oldImg.src)
+//     );
+
+//     const finalVariantImages = [
+//       ...syncedVariantImages,
+//       ...uploadedVariantImages.map(({ variantKey, ...rest }) => rest),
+//     ];
+
+//     const finalImages = imageUrls.map((url, i) => {
+//       const existing = oldMediaImages.find((img) => img.src === url);
+//       return (
+//         existing || {
+//           src: url,
+//           alt: `image-${i + 1}`,
+//           position: i + 1,
+//           created_at: new Date(),
+//         }
+//       );
+//     });
+
+//     console.log(
+//       '✅ Final Media:',
+//       finalImages.map((x) => ({ src: x.src, alt: x.alt }))
+//     );
+//     console.log(
+//       ' Final Variants:',
+//       finalVariantImages.map((x) => ({ src: x.src, alt: x.alt }))
+//     );
+
+//     const updatedProduct = await listingModel.findOneAndUpdate(
+//       { id },
+//       {
+//         images: finalImages,
+//         variantImages: finalVariantImages,
+//         variants: updatedVariants,
+//       },
+//       { new: true }
+//     );
+
+//     console.log('MongoDB updated successfully.');
+//     res.status(200).json({
+//       message:
+//         'Media and Variant images synced successfully with proper alt handles.',
+//       product: updatedProduct,
+//     });
+//   } catch (err) {
+//     console.error(' updateImages error:', err.message);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+
 export const updateImages = async (req, res) => {
   const { id } = req.params;
   const imageUrls = req.body.images || [];
   const variantImages = req.body.variantImages || [];
-  console.log('🟦 ====== updateImages API called ======');
+
+  console.log("\n🟦 ====== updateImages API called ======");
+  console.log("📦 Product ID:", id);
+  console.log("🖼️ Media URLs from frontend:", imageUrls);
+  console.log("🎨 Variant Images from frontend:", variantImages);
 
   try {
     const product = await listingModel.findOne({ id });
-    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    if (!product) return res.status(404).json({ error: "Product not found." });
 
-    console.log('Product found:', product.title);
+    console.log("\n✅ Product found in MongoDB:", product.title);
+
     const oldVariantImages = product.variantImages || [];
     const oldMediaImages = product.images || [];
 
+    console.log("📂 Old Mongo Media Images:", oldMediaImages.map(i => i.src));
+    console.log("🎯 Old Mongo Variant Images:", oldVariantImages.map(i => i.src));
+
     const shopifyConfig = await shopifyConfigurationModel.findOne();
     if (!shopifyConfig)
-      return res.status(404).json({ error: 'Shopify config not found.' });
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfig;
+      return res.status(404).json({ error: "Shopify config not found." });
 
-    const uploadedMediaImages = [];
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+    const normUrl = (u) => String(u || "").trim();
+
+    const mediaSet = new Set(imageUrls.map(normUrl).filter(Boolean));
+    console.log("🧠 MediaSet:", [...mediaSet]);
+
+    // =======================
+    // 🔹 UPLOAD MEDIA IMAGES
+    // =======================
+    console.log("\n🚀 Uploading MEDIA images to Shopify...");
+
     for (let i = 0; i < imageUrls.length; i++) {
-      const url = imageUrls[i];
+      const url = normUrl(imageUrls[i]);
       if (!url) continue;
 
-      const alreadyExists = oldMediaImages.some((img) => img.src === url);
-      if (alreadyExists) continue;
+      const alreadyExists = oldMediaImages.some(
+        (img) => normUrl(img.src) === url
+      );
 
-      const altHandle = `image-${i + 1}`; // ✅ simple safe alt for general media
+      if (alreadyExists) {
+        console.log("⏭️ Skipped media (already exists):", url);
+        continue;
+      }
+
+      console.log("⬆️ Uploading media:", url);
 
       const payload = {
-        image: { src: url, alt: altHandle, position: i + 1 },
+        image: { src: url, alt: `image-${i + 1}`, position: i + 1 },
       };
 
-      try {
-        const uploadRes = await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-          'POST',
-          payload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
+      const uploadRes = await shopifyRequest(
+        `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+        "POST",
+        payload,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
 
-        if (uploadRes?.image)
-          uploadedMediaImages.push({ ...uploadRes.image, src: url });
-      } catch (err) {
-        console.log('Media upload failed:', err.message);
-      }
+      console.log("✅ Shopify media upload response:", uploadRes?.image);
     }
 
-    // 🔹 Upload variant-specific images
-    const uploadedVariantImages = [];
-    for (const variant of variantImages) {
-      const { key, url, alt } = variant;
-      if (!url) continue;
+    // =======================
+    // 🔹 FETCH SHOPIFY PRODUCT
+    // =======================
+    console.log("\n🔄 Fetching product from Shopify...");
 
-      const alreadyExists = oldVariantImages.some((img) => img.src === url);
-      if (alreadyExists) continue;
-
-      // ✅ Always use clean alt from frontend (handle-based)
-      const cleanAlt =
-        alt ||
-        key
-          ?.replace(/\s*\/\s*/g, '-')
-          .trim()
-          .toLowerCase() ||
-        'variant-image';
-
-      const payload = { image: { src: url, alt: cleanAlt } };
-
-      try {
-        const uploadRes = await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-          'POST',
-          payload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-
-        if (uploadRes?.image) {
-          uploadedVariantImages.push({
-            ...uploadRes.image,
-            src: url,
-            variantKey: key,
-            alt: cleanAlt, // ✅ ensure MongoDB stores proper alt too
-          });
-        }
-      } catch (err) {
-        console.log(`Variant [${key}] upload failed:`, err.message);
-      }
-    }
-
-    // 🔹 Sync variant <-> image IDs
     const shopifyProduct = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
-      'GET',
+      "GET",
       null,
       shopifyApiKey,
       shopifyAccessToken
     );
 
+    const shopifyImages = shopifyProduct?.product?.images || [];
     const shopifyVariants = shopifyProduct?.product?.variants || [];
+
+    console.log(
+      "🖼️ Shopify Images:",
+      shopifyImages.map((i) => ({
+        id: i.id,
+        src: i.src,
+        alt: i.alt,
+      }))
+    );
+
+    console.log(
+      "🧩 Shopify Variants:",
+      shopifyVariants.map((v) => ({
+        id: v.id,
+        title: v.title,
+        image_id: v.image_id,
+      }))
+    );
+
+   // ✅ Helper: filename extractor
+const getFileName = (url = "") => {
+  try {
+    return url.split("/").pop().split("?")[0];
+  } catch {
+    return "";
+  }
+};
+
+// ✅ Map Shopify images by filename (NOT full URL)
+const shopifyImageByFileName = new Map();
+
+shopifyImages.forEach((img) => {
+  const fileName = getFileName(img.src);
+  if (fileName) {
+    shopifyImageByFileName.set(fileName, img);
+  }
+});
+
+
+    // =======================
+    // 🔹 ASSIGN VARIANT IMAGES
+    // =======================
+    console.log("\n🎯 Assigning images to Shopify variants...");
+
     const updatedVariants = [];
 
     for (const variant of shopifyVariants) {
-      const match = uploadedVariantImages.find(
-        (img) => img.variantKey?.toLowerCase() === variant.title?.toLowerCase()
-      );
+      console.log("\n🔍 Processing variant:", variant.title);
 
-      if (match) {
-        await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-          'PUT',
-          { variant: { id: variant.id, image_id: match.id } },
-          shopifyApiKey,
-          shopifyAccessToken
+      const payloadVariant = variantImages.find((v) => {
+        if (!v.key || !variant.title) return false;
+
+        const cleanKey = v.key.toLowerCase().trim();
+        const cleanTitle = variant.title.toLowerCase().trim();
+
+        const match = cleanTitle.startsWith(cleanKey);
+
+        console.log(
+          `   🔎 Match check: "${cleanKey}" vs "${cleanTitle}" →`,
+          match
         );
-        updatedVariants.push({ ...variant, image_id: match.id });
-      } else {
-        const stillExists = variantImages.some(
-          (v) =>
-            v.key?.toLowerCase() === variant.title?.toLowerCase() && !!v.url
-        );
-        if (!stillExists) {
+
+        return match;
+      });
+
+      if (payloadVariant) {
+        console.log("🎯 Payload variant found:", payloadVariant);
+
+        const targetUrl = normUrl(payloadVariant.url);
+const fileName = getFileName(targetUrl);
+const targetImage = shopifyImageByFileName.get(fileName);
+
+console.log(
+  "🔗 Matching by filename:",
+  fileName,
+  "→",
+  targetImage?.id || "NOT FOUND"
+);
+        if (!targetImage) {
+          console.log("❌ No Shopify image found for URL:", targetUrl);
+        } else {
+          console.log(
+            "✅ Found Shopify image:",
+            targetImage.id,
+            targetImage.src
+          );
+
           await shopifyRequest(
             `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-            'PUT',
-            { variant: { id: variant.id, image_id: null } },
+            "PUT",
+            { variant: { id: variant.id, image_id: targetImage.id } },
             shopifyApiKey,
             shopifyAccessToken
           );
-          updatedVariants.push({ ...variant, image_id: null });
-          console.log(`🧹 Cleared image for variant ${variant.title}`);
-        } else {
-          const old = product.variants.find((v) => v.id === variant.id);
-          updatedVariants.push(old || variant);
+
+          console.log(
+            `🧷 Assigned image_id ${targetImage.id} → variant ${variant.title}`
+          );
+
+          updatedVariants.push({ ...variant, image_id: targetImage.id });
+          continue;
         }
       }
+
+      console.log("🧹 Clearing image for variant:", variant.title);
+
+      await shopifyRequest(
+        `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+        "PUT",
+        { variant: { id: variant.id, image_id: null } },
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+
+      updatedVariants.push({ ...variant, image_id: null });
     }
 
-    // 🔹 Merge MongoDB image arrays cleanly
-    const newVariantUrls = variantImages.map((v) => v.url);
-    const syncedVariantImages = oldVariantImages.filter((oldImg) =>
-      newVariantUrls.includes(oldImg.src)
-    );
+    // =======================
+    // 🔹 SAVE TO MONGODB
+    // =======================
+    console.log("\n💾 Saving updated product to MongoDB...");
 
-    const finalVariantImages = [
-      ...syncedVariantImages,
-      ...uploadedVariantImages.map(({ variantKey, ...rest }) => rest),
-    ];
+    const finalImages = imageUrls.map((url, i) => ({
+      src: normUrl(url),
+      alt: `image-${i + 1}`,
+      position: i + 1,
+      created_at: new Date(),
+    }));
 
-    const finalImages = imageUrls.map((url, i) => {
-      const existing = oldMediaImages.find((img) => img.src === url);
-      return (
-        existing || {
-          src: url,
-          alt: `image-${i + 1}`,
-          position: i + 1,
-          created_at: new Date(),
-        }
-      );
-    });
+    const finalVariantImages = variantImages.map((v) => ({
+      src: normUrl(v.url),
+      alt: v.alt || v.key,
+    }));
 
-    console.log(
-      '✅ Final Media:',
-      finalImages.map((x) => ({ src: x.src, alt: x.alt }))
-    );
-    console.log(
-      ' Final Variants:',
-      finalVariantImages.map((x) => ({ src: x.src, alt: x.alt }))
-    );
+    console.log("✅ Final Media (Mongo):", finalImages);
+    console.log("✅ Final Variant Images (Mongo):", finalVariantImages);
 
     const updatedProduct = await listingModel.findOneAndUpdate(
       { id },
@@ -2461,17 +2704,20 @@ export const updateImages = async (req, res) => {
       { new: true }
     );
 
-    console.log('MongoDB updated successfully.');
+    console.log("🎉 MongoDB update complete.");
+
     res.status(200).json({
-      message:
-        'Media and Variant images synced successfully with proper alt handles.',
+      message: "Debug sync complete. Check server logs for full trace.",
       product: updatedProduct,
     });
   } catch (err) {
-    console.error(' updateImages error:', err.message);
+    console.error("\n❌ updateImages ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
 
 export const updateVariantImages = async (req, res) => {
   const { id } = req.params;
