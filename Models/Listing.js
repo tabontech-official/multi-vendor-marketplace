@@ -52,6 +52,7 @@ const listingSchema = new mongoose.Schema(
         alt: String,
         position: Number,
         product_id: String,
+        cloudinary_src: String,
         created_at: Date,
         updated_at: Date,
         width: Number,
@@ -152,8 +153,8 @@ const listingSchema = new mongoose.Schema(
     ],
     custom: {
       size_chart: { type: String, default: null },
-      size_chart_id:{
-        type:mongoose.Schema.Types.ObjectId
+      size_chart_id: {
+        type: mongoose.Schema.Types.ObjectId,
       },
     },
   },
