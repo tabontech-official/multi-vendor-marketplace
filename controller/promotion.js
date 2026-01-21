@@ -380,7 +380,6 @@ export const endPromotions = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 🔹 1. Delete promotion
     const deletedPromotion = await PromoModel.findByIdAndDelete(id);
     if (!deletedPromotion) {
       return res.status(404).json({ message: 'Promotion not found.' });
@@ -394,7 +393,6 @@ export const endPromotions = async (req, res) => {
       });
     }
 
-    // 🔹 2. Shopify config
     const shopifyConfig = await shopifyConfigurationModel.findOne();
     if (!shopifyConfig) {
       return res
@@ -408,7 +406,6 @@ export const endPromotions = async (req, res) => {
       shopifyStoreUrl: SHOP,
     } = shopifyConfig;
 
-    // 🔹 3. Find product by variantId (NOT SKU)
     const product = await listingModel.findOne({
       'variants.id': variantId,
     });
@@ -419,7 +416,6 @@ export const endPromotions = async (req, res) => {
       });
     }
 
-    // 🔹 4. Find exact variant
     const variant = product.variants.find(
       (v) => String(v.id) === String(variantId)
     );
@@ -430,14 +426,12 @@ export const endPromotions = async (req, res) => {
       });
     }
 
-    // 🔹 5. Restore price locally
     variant.price = String(oldPrice);
     variant.VariantStatus = 'inactive';
     product.promotionStatus = 'inactive';
 
     await product.save();
 
-    // 🔹 6. Restore price on Shopify
     const shopifyURL = `${SHOP}/admin/api/2024-01/variants/${variantId}.json`;
 
     await shopifyRequest(

@@ -2502,7 +2502,7 @@ export const updateImages = async (req, res) => {
       const alreadyExists = oldMediaImages.some((img) => img.src === url);
       if (alreadyExists) continue;
 
-      const altHandle = `image-${i + 1}`; // ✅ simple safe alt for general media
+      const altHandle = `image-${i + 1}`; 
 
       const payload = {
         image: { src: url, alt: altHandle, position: i + 1 },
@@ -2524,7 +2524,6 @@ export const updateImages = async (req, res) => {
       }
     }
 
-    // 🔹 Upload variant-specific images
     const uploadedVariantImages = [];
     for (const variant of variantImages) {
 const { key, url, optionName, optionValue } = variant;
@@ -2533,7 +2532,6 @@ const { key, url, optionName, optionValue } = variant;
       const alreadyExists = oldVariantImages.some((img) => img.src === url);
       if (alreadyExists) continue;
 
-      // ✅ Always use clean alt from frontend (handle-based)
      const cleanAlt = `t4option${optionName}_${optionValue}`
   .replace(/\s+/g, '')
   .toLowerCase();
@@ -2555,7 +2553,7 @@ const { key, url, optionName, optionValue } = variant;
             ...uploadRes.image,
             src: url,
             variantKey: key,
-            alt: cleanAlt, // ✅ ensure MongoDB stores proper alt too
+            alt: cleanAlt, 
           });
         }
       } catch (err) {
@@ -2563,7 +2561,6 @@ const { key, url, optionName, optionValue } = variant;
       }
     }
 
-    // 🔹 Sync variant <-> image IDs
     const shopifyProduct = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
       'GET',
@@ -2611,7 +2608,6 @@ const { key, url, optionName, optionValue } = variant;
       }
     }
 
-    // 🔹 Merge MongoDB image arrays cleanly
     const newVariantUrls = variantImages.map((v) => v.url);
     const syncedVariantImages = oldVariantImages.filter((oldImg) =>
       newVariantUrls.includes(oldImg.src)
@@ -2664,14 +2660,6 @@ const { key, url, optionName, optionValue } = variant;
     res.status(500).json({ error: err.message });
   }
 };
-
-
-
-
-
-
-
-
 
 
 export const updateVariantImages = async (req, res) => {
