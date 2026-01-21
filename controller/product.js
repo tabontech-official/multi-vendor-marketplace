@@ -912,22 +912,22 @@ export const getProduct = async (req, res) => {
       {
         $limit: limit,
       },
-      {
-        $addFields: {
-          images: {
-            $filter: {
-              input: '$images',
-              as: 'img',
-              cond: {
-                $regexMatch: {
-                  input: '$$img.alt',
-                  regex: /^image-/,
-                },
-              },
-            },
-          },
-        },
-      },
+      // {
+      //   $addFields: {
+      //     images: {
+      //       $filter: {
+      //         input: '$images',
+      //         as: 'img',
+      //         cond: {
+      //           $regexMatch: {
+      //             input: '$$img.alt',
+      //             regex: /^image-/,
+      //           },
+      //         },
+      //       },
+      //     },
+      //   },
+      // },
       {
         $project: {
           _id: 1,
@@ -2472,6 +2472,9 @@ export const updateImages = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
 
 
 
