@@ -666,6 +666,8 @@ export const duplicateProduct = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const { productId } = req.params;
+    const { title: customTitle } = req.body;
+
     console.log('🔹 Product ID to duplicate:', productId);
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
@@ -687,6 +689,11 @@ export const duplicateProduct = async (req, res) => {
     );
 
     const shopifyProduct = shopifyProductRes?.product;
+    const duplicateTitle =
+  customTitle && customTitle.trim().length > 0
+    ? customTitle.trim()
+    : `${shopifyProduct.title} Copy`;
+
     if (!shopifyProduct)
       return res.status(404).json({ error: 'Product not found on Shopify.' });
 
@@ -696,7 +703,7 @@ export const duplicateProduct = async (req, res) => {
 
     const clonePayload = {
       product: {
-        title: `Copy of ${shopifyProduct.title}`,
+title: duplicateTitle,
         body_html: shopifyProduct.body_html,
         vendor: shopifyProduct.vendor,
         product_type: shopifyProduct.product_type,
@@ -840,7 +847,7 @@ export const duplicateProduct = async (req, res) => {
     const duplicateProduct = new listingModel({
       id: newProductId,
       shopifyId: newProductId,
-      title: `Copy of ${originalProductFromDb.title}`,
+title: duplicateTitle,
       body_html: originalProductFromDb.body_html,
       vendor: originalProductFromDb.vendor,
       product_type: originalProductFromDb.product_type,
