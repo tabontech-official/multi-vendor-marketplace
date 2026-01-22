@@ -122,6 +122,9 @@ export const addUsedEquipments = async (req, res) => {
       shippingProfileData = null,
       size_chart_image,
       size_chart_id,
+      seoTitle = '',
+  seoDescription = '',
+  seoHandle = '',
     } = req.body;
     let productStatus =
       status === 'publish' || status === 'active' ? 'active' : 'draft';
@@ -248,6 +251,15 @@ export const addUsedEquipments = async (req, res) => {
         status: productStatus,
         options: shopifyOptions,
         variants: shopifyVariants,
+         handle: seoHandle
+      ? seoHandle
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+      : undefined,
+
+    metafields_global_title_tag: seoTitle || title,
+    metafields_global_description_tag: seoDescription || '',
         // tags: [...(keyWord ? keyWord.split(',') : []),]
         tags: [
           ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
@@ -552,7 +564,13 @@ export const addUsedEquipments = async (req, res) => {
         size_chart: size_chart_image || null,
         size_chart_id: size_chart_id || null,
       },
-
+ seo: {
+    title: seoTitle || title,
+    description: seoDescription || '',
+    handle:
+      seoHandle ||
+      productResponse.product.handle,
+  },
       inventory: {
         track_quantity: !!track_quantity || false,
         quantity:
@@ -941,6 +959,7 @@ export const getProduct = async (req, res) => {
           variants: 1,
           options: 1,
           images: 1,
+          seo:1,
           inventory: 1,
           variantImages: 1,
           shipping: 1,
@@ -1039,6 +1058,9 @@ export const updateProductData = async (req, res) => {
       weight_unit,
       status,
       productType,
+       seoTitle = '',
+  seoDescription = '',
+  seoHandle = '',
       vendor,
       keyWord,
       options,
@@ -1055,7 +1077,7 @@ export const updateProductData = async (req, res) => {
     } = req.body;
 
     const variantQtyArray = variantQuantites || variantQuantities || [];
-    const productStatus = status === 'publish' ? 'active' : 'draft';
+    // const productStatus = status === 'publish' ? 'active' : 'draft';
 
     const parsedOptions =
       typeof options === 'string' ? JSON.parse(options) : options || [];
@@ -1071,7 +1093,17 @@ export const updateProductData = async (req, res) => {
     const product = await listingModel.findById(id);
     const shopifyProductId = product.id;
     const productUrl = `${shopifyStoreUrl}/admin/api/2024-01/products/${shopifyProductId}.json`;
+    const productStatus =
+  status === 'publish'
+    ? 'active'
+    : status === 'draft'
+      ? 'draft'
+      : product.status; 
 
+    const finalCategories =
+      Array.isArray(categories) && categories.length > 0
+        ? categories
+        : product.categories || [];
     const existingProduct = await shopifyRequest(
       productUrl,
       'GET',
@@ -1150,10 +1182,25 @@ export const updateProductData = async (req, res) => {
         status: productStatus,
         options: shopifyOptions,
         variants: shopifyVariants,
+        handle: seoHandle
+      ? seoHandle
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+      : undefined,
+
+    metafields_global_title_tag: seoTitle || title,
+    metafields_global_description_tag: seoDescription || '',
+        // tags: [
+        //   `user_${userId}`,
+        //   `vendor_${vendor}`,
+        //   ...(keyWord ? keyWord.split(',') : []),
+        // ],
         tags: [
           `user_${userId}`,
           `vendor_${vendor}`,
           ...(keyWord ? keyWord.split(',') : []),
+          ...(finalCategories || []),
         ],
       },
     };
@@ -1348,13 +1395,22 @@ export const updateProductData = async (req, res) => {
       options: shopifyOptions || product.options,
       userId: userId || product.userId,
       status: productStatus || product.status,
+       seo: {
+    title: seoTitle || product?.seo?.title || title,
+    description:
+      seoDescription || product?.seo?.description || '',
+    handle:
+      seoHandle || product?.seo?.handle || product.handle,
+  },  
       custom: {
         size_chart: size_chart_image || product?.custom?.size_chart || null,
         size_chart_id: size_chart_id || product?.custom?.size_chart_id || null,
       },
-      categories: Array.isArray(categories)
-        ? categories
-        : product.categories || [],
+      // categories: Array.isArray(categories)
+      //   ? categories
+      //   : product.categories || [],
+      categories: finalCategories,
+
       metafields: Array.isArray(metafields)
         ? metafields.filter((m) => m.label?.trim() && m.value?.trim())
         : product.metafields || [],
@@ -1773,6 +1829,7 @@ export const getAllProductData = async (req, res) => {
           approvalStatus: 1,
           custom: 1,
           metafields: 1,
+          seo:1,
           username: {
             $concat: [
               { $ifNull: ['$user.firstName', ''] },
@@ -2473,7 +2530,6 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //   }
 // };
 
-
 export const updateImages = async (req, res) => {
   const { id } = req.params;
   const imageUrls = req.body.images || [];
@@ -2502,7 +2558,7 @@ export const updateImages = async (req, res) => {
       const alreadyExists = oldMediaImages.some((img) => img.src === url);
       if (alreadyExists) continue;
 
-      const altHandle = `image-${i + 1}`; 
+      const altHandle = `image-${i + 1}`;
 
       const payload = {
         image: { src: url, alt: altHandle, position: i + 1 },
@@ -2526,16 +2582,15 @@ export const updateImages = async (req, res) => {
 
     const uploadedVariantImages = [];
     for (const variant of variantImages) {
-const { key, url, optionName, optionValue } = variant;
+      const { key, url, optionName, optionValue } = variant;
       if (!url) continue;
 
       const alreadyExists = oldVariantImages.some((img) => img.src === url);
       if (alreadyExists) continue;
 
-     const cleanAlt = `t4option${optionName}_${optionValue}`
-  .replace(/\s+/g, '')
-  .toLowerCase();
-
+      const cleanAlt = `t4option${optionName}_${optionValue}`
+        .replace(/\s+/g, '')
+        .toLowerCase();
 
       const payload = { image: { src: url, alt: cleanAlt } };
 
@@ -2553,7 +2608,7 @@ const { key, url, optionName, optionValue } = variant;
             ...uploadRes.image,
             src: url,
             variantKey: key,
-            alt: cleanAlt, 
+            alt: cleanAlt,
           });
         }
       } catch (err) {
@@ -2660,7 +2715,6 @@ const { key, url, optionName, optionValue } = variant;
     res.status(500).json({ error: err.message });
   }
 };
-
 
 export const updateVariantImages = async (req, res) => {
   const { id } = req.params;

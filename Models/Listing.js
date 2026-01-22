@@ -46,6 +46,12 @@ const listingSchema = new mongoose.Schema(
         },
       },
     ],
+    seo: {
+  title: String,
+  description: String,
+  handle: String,
+},
+
     variantImages: [
       {
         id: String,
