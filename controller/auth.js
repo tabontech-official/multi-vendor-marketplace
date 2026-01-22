@@ -330,7 +330,7 @@ export const checkShopifyAdminTag = async (email) => {
     'All Promotions',
     'Reports',
     'Catalog Performance',
-    'eCommerce Consultation',
+    'Consultation',
     'Finance',
     'Manage Categories',
     'Documentation',
