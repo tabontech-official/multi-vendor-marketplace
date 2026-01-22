@@ -779,45 +779,45 @@ export const duplicateProduct = async (req, res) => {
     }
 
     // 🔹 Images (use existing DB media + variant images)
-    const imagesFromDb = originalProductFromDb.images || [];
-    const variantImagesFromDb = originalProductFromDb.variantImages || [];
-    const uploadedImages = [];
+    // const imagesFromDb = originalProductFromDb.images || [];
+    // const variantImagesFromDb = originalProductFromDb.variantImages || [];
+    // const uploadedImages = [];
 
-    for (const img of imagesFromDb) {
-      try {
-        const payload = { image: { src: img.src, alt: img.alt || 'image' } };
-        const uploadRes = await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}/images.json`,
-          'POST',
-          payload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-        if (uploadRes?.image) uploadedImages.push(uploadRes.image);
-      } catch (err) {
-        console.log('Image upload failed:', err.message);
-      }
-    }
+    // for (const img of imagesFromDb) {
+    //   try {
+    //     const payload = { image: { src: img.src, alt: img.alt || 'image' } };
+    //     const uploadRes = await shopifyRequest(
+    //       `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}/images.json`,
+    //       'POST',
+    //       payload,
+    //       shopifyApiKey,
+    //       shopifyAccessToken
+    //     );
+    //     if (uploadRes?.image) uploadedImages.push(uploadRes.image);
+    //   } catch (err) {
+    //     console.log('Image upload failed:', err.message);
+    //   }
+    // }
 
-    // 🔹 Variant Images (multiple per variant supported)
-    const uploadedVariantImages = [];
-    for (const vImg of variantImagesFromDb) {
-      try {
-        const payload = {
-          image: { src: vImg.src, alt: vImg.alt || 'variant' },
-        };
-        const uploadRes = await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}/images.json`,
-          'POST',
-          payload,
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-        if (uploadRes?.image) uploadedVariantImages.push(uploadRes.image);
-      } catch (err) {
-        console.log('Variant image upload failed:', err.message);
-      }
-    }
+    // // 🔹 Variant Images (multiple per variant supported)
+    // const uploadedVariantImages = [];
+    // for (const vImg of variantImagesFromDb) {
+    //   try {
+    //     const payload = {
+    //       image: { src: vImg.src, alt: vImg.alt || 'variant' },
+    //     };
+    //     const uploadRes = await shopifyRequest(
+    //       `${shopifyStoreUrl}/admin/api/2024-01/products/${newProductId}/images.json`,
+    //       'POST',
+    //       payload,
+    //       shopifyApiKey,
+    //       shopifyAccessToken
+    //     );
+    //     if (uploadRes?.image) uploadedVariantImages.push(uploadRes.image);
+    //   } catch (err) {
+    //     console.log('Variant image upload failed:', err.message);
+    //   }
+    // }
 
     // 🔹 Build inventory + shipping info
     const firstVariant = productResponse.product.variants[0];
@@ -846,8 +846,11 @@ export const duplicateProduct = async (req, res) => {
       product_type: originalProductFromDb.product_type,
       options: originalProductFromDb.options,
       variants: productResponse.product.variants,
-      images: uploadedImages,
-      variantImages: uploadedVariantImages,
+      // images: uploadedImages,
+      // variantImages: uploadedVariantImages,
+      images: productResponse.product.images || [],
+variantImages: originalProductFromDb.variantImages || [],
+
       categories: originalProductFromDb.categories,
       metafields: metafields,
       approvalStatus: 'approved',
