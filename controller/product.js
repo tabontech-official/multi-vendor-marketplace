@@ -1834,6 +1834,7 @@ export const getAllProductData = async (req, res) => {
           shipping: 1,
           status: 1,
           userId: 1,
+          categories: 1,
           oldPrice: 1,
           shopifyId: 1,
           approvalStatus: 1,
