@@ -51,6 +51,45 @@ const listingSchema = new mongoose.Schema(
   description: String,
   handle: String,
 },
+bulkUpload: {
+ isBulk: {
+    type: Boolean,
+    default: false,
+  },
+  bulkUploadId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'listings',
+    default: null,
+  },
+
+  summary: {
+    totalProducts: { type: Number, default: 0 },
+    successCount: { type: Number, default: 0 },
+    failedCount: { type: Number, default: 0 },
+  },
+  successLogs: [
+    {
+      handle: String,
+      productId: String,
+      title: String,
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+
+  failedLogs: [
+    {
+      handle: String,
+      error: String,
+      failedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+},
 
     variantImages: [
       {
