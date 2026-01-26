@@ -1216,6 +1216,8 @@ export const productUpdate = async (req, res) => {
 
 export const updateProductData = async (req, res) => {
   const { id } = req.params;
+const product = await listingModel.findById(id);
+const productOwnerId = product.userId;
 
   try {
     if (!id) {
@@ -1379,7 +1381,7 @@ export const updateProductData = async (req, res) => {
         //   ...(keyWord ? keyWord.split(',') : []),
         // ],
         tags: [
-          `user_${userId}`,
+  `user_${productOwnerId}`, // ✅ FIXED
           `vendor_${vendor}`,
           ...(keyWord ? keyWord.split(',') : []),
           ...(finalCategories || []),
@@ -1575,7 +1577,7 @@ export const updateProductData = async (req, res) => {
       tags: updateResponse?.product?.tags || product.tags,
       variants: updateResponse?.product?.variants || product.variants,
       options: shopifyOptions || product.options,
-      userId: userId || product.userId,
+  userId: productOwnerId,
       status: productStatus || product.status,
        seo: {
     title: seoTitle || product?.seo?.title || title,
@@ -2738,8 +2740,8 @@ export const updateImages = async (req, res) => {
       const url = imageUrls[i];
       if (!url) continue;
 
-      const alreadyExists = oldMediaImages.some((img) => img.src === url);
-      if (alreadyExists) continue;
+      // const alreadyExists = oldMediaImages.some((img) => img.src === url);
+      // if (alreadyExists) continue;
 
       const altHandle = `image-${i + 1}`;
 
