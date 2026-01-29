@@ -20,6 +20,7 @@ import approvalRouter from './Routes/approval.js';
 import variantOptionRouter from './Routes/VariantOption.js';
 import shippingRouter from './Routes/shippingProfile.js';
 import SizeChartRouter from './Routes/sizeChartRoute.js';
+import notificationSettingsRouter from './Routes/notificationSettings.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -31,7 +32,7 @@ productSubscriptionExpiration();
 
 financeScheduler.start();
 // financeCron()
-app.use(bodyParser.json()); // To handle JSON request bodies
+app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));
 app.use(helmet());
@@ -45,6 +46,8 @@ app.use(cors());
 app.use('/uploads', express.static('uploads'));
 app.use(express.json({limit:"5000000mb"}));
 app.use('/auth', authRouter);
+app.use('/notificationSettings', notificationSettingsRouter);
+
 app.use('/product', productRouter);
 app.use('/order', orderRouter);
 app.use('/promo', promoRouter);

@@ -605,13 +605,12 @@ export const getShippingProfiles = async (req, res) => {
   try {
     const profiles = await shippingProfileModel.find().sort({ ratePrice: 1 });
 
-    // 🧠 Remove duplicates by profileName (or profileId)
     const uniqueProfiles = profiles.filter(
       (p, index, self) =>
         index ===
         self.findIndex(
           (x) =>
-            x.profileId === p.profileId || // unique by Shopify profile
+            x.profileId === p.profileId ||
             x.profileName?.toLowerCase() === p.profileName?.toLowerCase()
         )
     );

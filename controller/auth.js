@@ -14,6 +14,7 @@ import crypto from 'crypto';
 import { orderRquestModel } from '../Models/OrderRequest.js';
 import { orderModel } from '../Models/order.js';
 import { authBulkUploaderModel } from '../Models/authForBulkUploder.js';
+import { notificationModel } from '../Models/NotificationSettings.js';
 
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () =>
@@ -25,6 +26,62 @@ const createToken = (payLoad) => {
   });
   return token;
 };
+const staffRegistrationEmail = ({ sellerName, email }) => `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;background:#f4f6f8;font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:40px">
+        <table width="600" style="background:#fff;border-radius:8px">
+          <tr>
+            <td style="background:#18181b;color:#fff;padding:20px">
+              <h2>AYDI Marketplace</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px">
+              <h3>New User Registration</h3>
+              <p><b>Seller Name:</b> ${sellerName}</p>
+              <p><b>Email:</b> ${email}</p>
+              <p>Please log in to approve this account.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+const userRegistrationEmail = () => `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;background:#f4f6f8;font-family:Arial;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:40px">
+        <table width="600" style="background:#fff;border-radius:8px">
+          <tr>
+            <td style="background:#18181b;color:#fff;padding:20px">
+              <h2>AYDI Marketplace</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px">
+              <h3>Registration Received</h3>
+              <p>Your account is under review.</p>
+              <p>Approval will be completed within <b>24 hours</b>.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
 
 export const signUp = async (req, res) => {
   try {
@@ -41,7 +98,6 @@ export const signUp = async (req, res) => {
       sellerName,
     } = req.body;
 
-    /* -------------------- EMAIL DUPLICATE CHECK -------------------- */
     const userExist = await authModel.findOne({ email });
     if (userExist) {
       return res
@@ -54,7 +110,6 @@ export const signUp = async (req, res) => {
         error: 'Seller name already exists',
       });
     }
-    /* -------------------- UNIQUE USERNAME -------------------- */
     const baseUsername = email
       .split('@')[0]
       .toLowerCase()
@@ -68,7 +123,6 @@ export const signUp = async (req, res) => {
       counter++;
     }
 
-    /* -------------------- SHOPIFY CONFIG -------------------- */
     const shopifyConfig = await shopifyConfigurationModel.findOne();
     if (!shopifyConfig) {
       return res.status(404).json({ error: 'Shopify configuration not found' });
@@ -77,7 +131,6 @@ export const signUp = async (req, res) => {
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfig;
 
-    /* -------------------- CREATE SHOPIFY CUSTOMER -------------------- */
     const shopifyCustomerPayload = {
       customer: {
         first_name: firstName,
@@ -147,7 +200,6 @@ export const signUp = async (req, res) => {
     const customerData = await customerResponse.json();
     const shopifyCustomerId = customerData.customer.id;
 
-    /* -------------------- SAVE USER IN DB -------------------- */
     const newUser = await authModel.create({
       firstName,
       lastName,
@@ -166,7 +218,6 @@ export const signUp = async (req, res) => {
     const userId = newUser._id.toString();
     const userTag = `user_${userId}`;
 
-    /* -------------------- UPDATE CUSTOMER TAG WITH USER ID -------------------- */
     await axios.put(
       `${shopifyStoreUrl}/admin/api/2024-01/customers/${shopifyCustomerId}.json`,
       {
@@ -182,7 +233,6 @@ export const signUp = async (req, res) => {
       }
     );
 
-    /* -------------------- CREATE SMART COLLECTION -------------------- */
     const smartCollectionPayload = {
       smart_collection: {
         title: sellerName,
@@ -222,7 +272,6 @@ export const signUp = async (req, res) => {
       { key: 'country', value: country },
     ];
 
-    /* -------------------- COLLECTION METAFIELDS WITH DEBUG -------------------- */
     console.log('📦 Creating metafields for collection:', collectionId);
 
     for (const field of collectionMetafields) {
@@ -235,7 +284,7 @@ export const signUp = async (req, res) => {
             metafield: {
               namespace: 'custom',
               key: field.key,
-              value: String(field.value), // IMPORTANT
+              value: String(field.value),
               type: 'single_line_text_field',
             },
           },
@@ -248,12 +297,12 @@ export const signUp = async (req, res) => {
         );
 
         console.log(
-          `✅ Metafield created: ${field.key}`,
+          `Metafield created: ${field.key}`,
           metafieldResponse.data.metafield
         );
       } catch (err) {
         console.error(
-          `❌ Metafield failed: ${field.key}`,
+          ` Metafield failed: ${field.key}`,
           err?.response?.data || err.message
         );
       }
@@ -273,24 +322,27 @@ export const signUp = async (req, res) => {
       images: '',
     });
 
-    //   const transporter = nodemailer.createTransport({
-    //   service: 'gmail',
-    //   auth: {
-    //     user: 'aydimarketplace@gmail.com',
-    //     pass: 'ijeg fypl llry kftw',
-    //   },
-    // });
+   const notificationSettings = await notificationModel.findOne();
 
-    // transporter.sendMail({
-    //   from: `${req.body.firstName} <${email}>`,
-    //   to: 'aydimarketplace@gmail.com',
-    //   subject: 'New User Signup',
-    //   html: `
-    //     <h2>New User Registered</h2>
-    //     <p><strong>Seller Name:</strong> ${sellerName}</p>
-    //     <p><strong>Email:</strong> ${email}</p>
-    //   `,
-    // });
+  if (notificationSettings?.approvals?.userRegistrationApproval) {
+    const staffEmails = notificationSettings.recipientEmails || [];
+
+    if (staffEmails.length > 0) {
+      transporter.sendMail({
+        from: `"AYDI Marketplace" <${process.env.NOTIFICATION_EMAIL}>`,
+        to: staffEmails.join(','),
+        subject: "New User Registration – Approval Required",
+        html: staffRegistrationEmail({ sellerName, email }),
+      });
+    }
+
+    transporter.sendMail({
+      from: `"AYDI Marketplace" <${process.env.NOTIFICATION_EMAIL}>`,
+      to: email,
+      subject: "Your Account Is Under Review",
+      html: userRegistrationEmail(),
+    });
+  }
 
     const token = createToken({ _id: userId });
 
@@ -334,7 +386,7 @@ export const checkShopifyAdminTag = async (email) => {
     'Finance',
     'Manage Categories',
     'Documentation',
-    'Approval',
+    // 'Approval',
     'Manage Shipping',
     'OnBoardUser',
     'Manage Size Charts',
@@ -1308,8 +1360,8 @@ export const createPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    // const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = newPassword;
     await user.save();
 
     if (user.shopifyId && updateShopifyPassword) {
