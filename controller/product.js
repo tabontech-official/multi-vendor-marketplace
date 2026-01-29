@@ -282,6 +282,54 @@ export const addUsedEquipments = async (req, res) => {
       throw new Error('Shopify product creation failed.');
 
     productId = productResponse.product.id;
+const isDefaultVariantOnly =
+  parsedOptions.length === 1 &&
+  parsedOptions[0]?.name === 'Title' &&
+  parsedOptions[0]?.values?.length === 1 &&
+  parsedOptions[0]?.values[0] === 'Default';
+
+if (
+  isDefaultVariantOnly &&
+  track_quantity &&
+  quantity > 0 &&
+  productResponse?.product?.variants?.length
+) {
+  try {
+    const inventoryItemId =
+      productResponse.product.variants[0].inventory_item_id;
+
+    const inventoryLevelsRes = await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
+      'GET',
+      null,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const manualLevel =
+      inventoryLevelsRes?.inventory_levels?.find(
+        (lvl) => lvl.location_id && lvl.available !== null
+      );
+
+    if (!manualLevel?.location_id) {
+    } else {
+      await shopifyRequest(
+        `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
+        'POST',
+        {
+          location_id: manualLevel.location_id,
+          inventory_item_id: inventoryItemId,
+          available: parseInt(quantity),
+        },
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+
+    }
+  } catch (invErr) {
+   
+  }
+}
 
     // if (shippingProfileData?.profileId && productResponse?.product?.variants?.length > 0) {
     //   try {
