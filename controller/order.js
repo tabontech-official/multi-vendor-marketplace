@@ -15,37 +15,36 @@ import fs from 'fs';
 dayjs.extend(customParseFormat);
 dayjs.extend(minMax);
 
-
 export const addComission = async (req, res) => {
   try {
     const { comission } = req.body;
 
     if (comission === undefined || comission === null) {
-      return res.status(400).json({ message: "Commission is required" });
+      return res.status(400).json({ message: 'Commission is required' });
     }
 
     if (isNaN(comission) || comission < 0 || comission > 100) {
       return res
         .status(400)
-        .json({ message: "Commission must be between 0 and 100" });
+        .json({ message: 'Commission must be between 0 and 100' });
     }
 
     const payoutConfig = await PayoutConfig.findOne();
     if (!payoutConfig) {
       return res
         .status(404)
-        .json({ message: "No payout configuration found to update" });
+        .json({ message: 'No payout configuration found to update' });
     }
 
     payoutConfig.Comission = comission;
     await payoutConfig.save();
 
     return res.status(200).json({
-      message: "Commission updated successfully",
+      message: 'Commission updated successfully',
       data: payoutConfig,
     });
   } catch (error) {
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -93,7 +92,6 @@ async function checkProductExists(productId) {
   }
 }
 
-
 // export const createOrder = async (req, res) => {
 //   try {
 //     const orderData = req.body;
@@ -127,7 +125,7 @@ async function checkProductExists(productId) {
 //           $set: {
 //             customer: orderData.customer,
 //             lineItems: orderData.line_items,
-//             ProductSnapshot: product, 
+//             ProductSnapshot: product,
 //             createdAt: orderData.created_at,
 //             shopifyOrderNo,
 //           },
@@ -150,7 +148,7 @@ async function checkProductExists(productId) {
 //         orderId,
 //         customer: orderData.customer,
 //         lineItems: orderData.line_items,
-//         ProductSnapshot: product, 
+//         ProductSnapshot: product,
 //         createdAt: orderData.created_at,
 //         serialNumber,
 //         shopifyOrderNo,
@@ -179,8 +177,6 @@ async function checkProductExists(productId) {
 //     res.status(500).send('Error saving order');
 //   }
 // };
-
-
 
 export const createOrder = async (req, res) => {
   try {
@@ -290,10 +286,6 @@ export const createOrder = async (req, res) => {
     res.status(500).send('Error saving order');
   }
 };
-
-
-
-
 
 export const getFinanceSummary = async (req, res) => {
   try {
@@ -470,9 +462,6 @@ export const getFinanceSummaryForUser = async (req, res) => {
   }
 };
 
-
-
-
 // export const getOrderById = async (req, res) => {
 //   try {
 //     const userId = req.userId?.toString();
@@ -610,128 +599,72 @@ export const getFinanceSummaryForUser = async (req, res) => {
 //   }
 // };
 
-
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.userId?.toString();
 
-    if (!userId) {
-      return res.status(400).send({ message: "User ID is required" });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).send({ message: "Invalid user ID" });
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).send({ message: 'Invalid user ID' });
     }
 
     const allOrders = await orderModel.find({});
-
     const ordersGrouped = new Map();
 
     for (const order of allOrders) {
-
-      const snapshot = order.ProductSnapshot;
-
-      const belongsToUser =
-        snapshot?.userId?.toString() === userId;
-
-
-      if (!belongsToUser) {
-        continue;
-      }
-
-      let snapshotFallback = null;
-      if (snapshot?.images?.length > 0) {
-        snapshotFallback = {
-          id: snapshot.images[0].id,
-          src: snapshot.images[0].src,
-          alt: snapshot.images[0].alt || "Snapshot image",
-          position: snapshot.images[0].position,
-          width: snapshot.images[0].width,
-          height: snapshot.images[0].height,
-        };
-
-        console.log("📸 SNAPSHOT FALLBACK Image:", snapshotFallback);
-      }
-
       const filteredLineItems = [];
 
       for (const item of order.lineItems || []) {
-       
-
         const variantId = item.variant_id?.toString();
-     
+        if (!variantId) continue;
 
+        // 🔍 Find product by variant
+        const product = await listingModel
+          .findOne({ 'variants.id': variantId })
+          .lean();
+
+        // 🚫 Product hi nahi mila
+        if (!product) continue;
+
+        // 🚫 Product merchant ka nahi
+        if (product.userId?.toString() !== userId) continue;
+
+        // ✅ IMAGE RESOLUTION
         let imageData = null;
 
-        let product = null;
+        const matchedVariant = product.variants.find(
+          (v) => v.id.toString() === variantId
+        );
 
-        if (variantId) {
-
-          product = await listingModel.findOne({
-            "variants.id": variantId,
-          }).lean();
-
-          if (product) {
-            console.log("📦 PRODUCT FOUND:", product.title);
-
-            const matchedVariant = product.variants.find(
-              (v) => v.id.toString() === variantId
-            );
-
-            console.log("🎯 Matched Variant:", matchedVariant);
-
-         
-            if (
-              matchedVariant?.image_id &&
-              Array.isArray(product.variantImages)
-            ) {
-              console.log("🖼 Variant has image_id, searching in variantImages…");
-
-              const variantImg = product.variantImages.find(
-                (img) =>
-                  img.id.toString() === matchedVariant.image_id.toString()
-              );
-
-              if (variantImg) {
-                imageData = {
-                  id: variantImg.id,
-                  src: variantImg.src,
-                  alt: variantImg.alt || "Variant image",
-                  position: variantImg.position,
-                  width: variantImg.width,
-                  height: variantImg.height,
-                };
-
-                console.log("📸 USING VARIANT IMAGE:", imageData);
-              }
-            }
-
-      
-            if (!imageData && product.images?.length > 0) {
-              console.log("🖼 Using PRODUCT IMAGE fallback");
-
-              const fallback = product.images[0];
-
-              imageData = {
-                id: fallback.id,
-                src: fallback.src,
-                alt: fallback.alt || "Product image",
-                position: fallback.position,
-                width: fallback.width,
-                height: fallback.height,
-              };
-
-              console.log("📸 USING PRODUCT IMAGE:", imageData);
-            }
+        if (matchedVariant?.image_id && product.variantImages?.length) {
+          const img = product.variantImages.find(
+            (i) => i.id.toString() === matchedVariant.image_id.toString()
+          );
+          if (img) {
+            imageData = {
+              id: img.id,
+              src: img.src,
+              alt: img.alt || '',
+              position: img.position,
+              width: img.width,
+              height: img.height,
+            };
           }
         }
 
- 
-        if (!imageData && snapshotFallback) {
-          console.log("🖼 Using SNAPSHOT fallback");
-          imageData = snapshotFallback;
+        if (!imageData && product.images?.length) {
+          const img = product.images[0];
+          imageData = {
+            id: img.id,
+            src: img.src,
+            alt: img.alt || '',
+            position: img.position,
+            width: img.width,
+            height: img.height,
+          };
         }
 
+        // 🚫 image bhi nahi mili
+        if (!imageData) continue;
 
         filteredLineItems.push({
           ...item,
@@ -739,47 +672,40 @@ export const getOrderById = async (req, res) => {
         });
       }
 
-      console.log("📦 Filtered line items count:", filteredLineItems.length);
-
+      // 🚫 Is order mein merchant ka koi item hi nahi
       if (!filteredLineItems.length) continue;
 
       const orderData = order.toObject();
       orderData.lineItems = filteredLineItems;
 
       if (ordersGrouped.has(order.orderId)) {
-        console.log("🔄 Merging Order Items");
-
         const existing = ordersGrouped.get(order.orderId);
         existing.lineItems.push(...filteredLineItems);
 
+        // 🔁 dedupe by variant
         existing.lineItems = Array.from(
           new Map(existing.lineItems.map((li) => [li.variant_id, li])).values()
         );
       } else {
-        console.log("🆕 Adding new order");
         ordersGrouped.set(order.orderId, orderData);
       }
     }
 
     const finalOrders = Array.from(ordersGrouped.values());
 
-
-    if (finalOrders.length > 0) {
-      return res.status(200).send({
-        message: "Orders found",
-        data: finalOrders,
-      });
+    if (!finalOrders.length) {
+      return res.status(404).send({ message: 'No orders found' });
     }
 
-    return res.status(404).send({
-      message: "No orders found",
+    return res.status(200).send({
+      message: 'Orders found',
+      data: finalOrders,
     });
   } catch (error) {
-    res.status(500).send({ message: "Internal Server Error" });
+    console.error('❌ getOrderById error:', error);
+    return res.status(500).send({ message: 'Internal Server Error' });
   }
 };
-
-
 
 
 export const deleteUser = async (req, res) => {
@@ -986,17 +912,120 @@ export const fulfillOrder = async (req, res) => {
   }
 };
 
-export const getOrderDatafromShopify = async (req, res) => {
-  const orderId = req.params.id;
-  const userId = req.params.userId;
+// export const getOrderDatafromShopify = async (req, res) => {
+//   const orderId = req.params.id;
+//   const userId = req.params.userId;
 
-  if (!userId) {
+//   if (!userId) {
+//     return res.status(400).json({ error: 'User ID is required.' });
+//   }
+
+//   try {
+//     const shopifyConfig = await shopifyConfigurationModel.findOne();
+
+//     if (!shopifyConfig) {
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+//     }
+
+//     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+//     const response = await axios.get(
+//       `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}.json`,
+//       {
+//         headers: {
+//           'X-Shopify-Access-Token': shopifyAccessToken,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     );
+
+//     const order = response.data.order;
+
+//     const filteredLineItems = [];
+//     const variantOwnershipMap = new Map();
+
+//     for (const item of order.line_items || []) {
+//       const variantId = item.variant_id?.toString();
+//       if (!variantId) continue;
+
+//       const product = await listingModel.findOne({ 'variants.id': variantId });
+
+//       if (product && product.userId?.toString() === userId) {
+//         const matchedVariant = product.variants.find((v) => v.id === variantId);
+
+//         if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
+//           const image = product.variantImages.find(
+//             (img) => img.id === matchedVariant.image_id
+//           );
+
+//           if (image) {
+//             item.image = {
+//               id: image.id,
+//               src: image.src,
+//               alt: image.alt,
+//               position: image.position,
+//               width: image.width,
+//               height: image.height,
+//             };
+//           }
+//         }
+
+//         filteredLineItems.push(item);
+//         variantOwnershipMap.set(variantId, true);
+//       }
+//     }
+
+//     const filteredFulfillments = (order.fulfillments || [])
+//       .map((f) => {
+//         const ownedItems = (f.line_items || []).filter((item) =>
+//           variantOwnershipMap.has(item.variant_id?.toString())
+//         );
+//         return ownedItems.length > 0 ? { ...f, line_items: ownedItems } : null;
+//       })
+//       .filter((f) => f !== null);
+
+//     if (filteredLineItems.length === 0 && filteredFulfillments.length === 0) {
+//       return res.status(404).json({
+//         message: 'No matching items or fulfillments found for this user.',
+//       });
+//     }
+
+//     const filteredOrder = {
+//       ...order,
+//       line_items: filteredLineItems,
+//       fulfillments: filteredFulfillments,
+//     };
+
+//     res.json({
+//       message: 'Filtered Shopify order for user',
+//       data: filteredOrder,
+//     });
+//   } catch (error) {
+//     console.error(
+//       'Error fetching filtered order:',
+//       error.response?.data || error.message
+//     );
+//     res.status(500).json({
+//       message: 'Failed to fetch filtered order',
+//       error: error.response?.data || error.message,
+//     });
+//   }
+// };
+
+export const getOrderDatafromShopify = async (req, res) => {
+  const { id: orderId, userId: merchantId } = req.params;
+
+  if (!merchantId) {
     return res.status(400).json({ error: 'User ID is required.' });
   }
 
   try {
+    /* ===============================
+       FETCH SHOPIFY CONFIG
+    =============================== */
     const shopifyConfig = await shopifyConfigurationModel.findOne();
-
     if (!shopifyConfig) {
       return res
         .status(404)
@@ -1005,6 +1034,9 @@ export const getOrderDatafromShopify = async (req, res) => {
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
 
+    /* ===============================
+       FETCH SHOPIFY ORDER
+    =============================== */
     const response = await axios.get(
       `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}.json`,
       {
@@ -1015,80 +1047,104 @@ export const getOrderDatafromShopify = async (req, res) => {
       }
     );
 
-    const order = response.data.order;
-
-    const filteredLineItems = [];
-    const variantOwnershipMap = new Map();
-
-    for (const item of order.line_items || []) {
-      const variantId = item.variant_id?.toString();
-      if (!variantId) continue;
-
-      const product = await listingModel.findOne({ 'variants.id': variantId });
-
-      if (product && product.userId?.toString() === userId) {
-        const matchedVariant = product.variants.find((v) => v.id === variantId);
-
-        if (matchedVariant?.image_id && Array.isArray(product.variantImages)) {
-          const image = product.variantImages.find(
-            (img) => img.id === matchedVariant.image_id
-          );
-
-          if (image) {
-            item.image = {
-              id: image.id,
-              src: image.src,
-              alt: image.alt,
-              position: image.position,
-              width: image.width,
-              height: image.height,
-            };
-          }
-        }
-
-        filteredLineItems.push(item);
-        variantOwnershipMap.set(variantId, true);
-      }
+    const shopifyOrder = response.data?.order;
+    if (!shopifyOrder) {
+      return res.status(404).json({ message: 'Order not found on Shopify' });
     }
 
-    const filteredFulfillments = (order.fulfillments || [])
-      .map((f) => {
-        const ownedItems = (f.line_items || []).filter((item) =>
-          variantOwnershipMap.has(item.variant_id?.toString())
-        );
-        return ownedItems.length > 0 ? { ...f, line_items: ownedItems } : null;
-      })
-      .filter((f) => f !== null);
+    /* ===============================
+       FETCH DB ORDER
+    =============================== */
+    const dbOrder = await orderModel.findOne({ orderId }).lean();
+    if (!dbOrder) {
+      return res.status(404).json({ message: 'Order not found in database' });
+    }
 
-    if (filteredLineItems.length === 0 && filteredFulfillments.length === 0) {
+    /* ===============================
+       FILTER MERCHANT PRODUCTS
+    =============================== */
+    const merchantProducts = (dbOrder.ProductSnapshot || []).filter(
+      (item) => String(item.merchantId) === String(merchantId)
+    );
+
+    if (!merchantProducts.length) {
       return res.status(404).json({
-        message: 'No matching items or fulfillments found for this user.',
+        message: 'No products found for this merchant in this order',
       });
     }
 
-    const filteredOrder = {
-      ...order,
-      line_items: filteredLineItems,
-      fulfillments: filteredFulfillments,
+    /* ===============================
+       MAP LINE ITEMS (CRITICAL LOGIC)
+    =============================== */
+    const dbLineItems = dbOrder.lineItems || [];
+
+    const enrichedProducts = merchantProducts.map((item) => {
+      const matchedLineItem = dbLineItems.find(
+        (li) => String(li.variant_id) === String(item.variantId)
+      );
+
+      const totalQty = matchedLineItem?.quantity ?? item.quantity;
+      const fulfilledQty = matchedLineItem?.fulfilled_quantity ?? 0;
+
+      // ✅ REAL remaining qty (Shopify-safe)
+      const remainingQty = Math.max(totalQty - fulfilledQty, 0);
+
+      return {
+        productId: item.productId,
+        variantId: item.variantId,
+
+        // ✅ THIS IS WHAT SHOPIFY NEEDS
+        lineItemId: matchedLineItem?.id || null,
+
+        quantity: totalQty,
+        fulfilled_quantity: fulfilledQty,
+        fulfillable_quantity: remainingQty,
+
+        fulfillment_status: matchedLineItem?.fulfillment_status ?? null,
+
+        product: item.product,
+        variant: item.variant,
+      };
+    });
+
+    /* ===============================
+       FINAL RESPONSE (NO STRUCTURE CHANGE)
+    =============================== */
+    const responseOrder = {
+      orderId: shopifyOrder.id,
+      shopifyOrderNo: shopifyOrder.order_number,
+      financial_status: shopifyOrder.financial_status,
+      fulfillment_status: shopifyOrder.fulfillment_status,
+      currency: shopifyOrder.currency,
+      total_price: shopifyOrder.total_price,
+      created_at: shopifyOrder.created_at,
+
+      customer: shopifyOrder.customer,
+      customers: dbOrder.customer,
+      shipping_address: shopifyOrder.shipping_address,
+      billing_address: shopifyOrder.billing_address,
+
+      products: enrichedProducts,
+      fulfillments: shopifyOrder.fulfillments || [],
+
+      serialNumber: dbOrder.serialNumber,
+      payoutStatus: dbOrder.payoutStatus,
+      dbCreatedAt: dbOrder.createdAt,
     };
 
-    res.json({
-      message: 'Filtered Shopify order for user',
-      data: filteredOrder,
+    return res.status(200).json({
+      message: 'Order fetched with correct lineItemId & quantities',
+      data: responseOrder,
     });
   } catch (error) {
-    console.error(
-      'Error fetching filtered order:',
-      error.response?.data || error.message
-    );
-    res.status(500).json({
-      message: 'Failed to fetch filtered order',
+    console.error('❌ Error:', error.response?.data || error.message);
+
+    return res.status(500).json({
+      message: 'Failed to fetch order data',
       error: error.response?.data || error.message,
     });
   }
 };
-
-
 
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
@@ -1100,9 +1156,9 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
     for (const order of allOrders) {
       console.log(
-        "\n Processing Order:",
+        '\n Processing Order:',
         order.shopifyOrderNo,
-        "Order ID:",
+        'Order ID:',
         order.orderId
       );
       const merchantGroups = new Map();
@@ -1120,7 +1176,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
             imageData = {
               id: img.id,
               src: img.src,
-              alt: img.alt || "Product image",
+              alt: img.alt || 'Product image',
               position: img.position,
               width: img.width,
               height: img.height,
@@ -1130,7 +1186,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
         if (variantId) {
           const product = await listingModel
-            .findOne({ "variants.id": variantId })
+            .findOne({ 'variants.id': variantId })
             .lean();
 
           if (product) {
@@ -1168,7 +1224,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
               imageData = {
                 id: defaultImage.id || null,
                 src: defaultImage.src,
-                alt: defaultImage.alt || "",
+                alt: defaultImage.alt || '',
                 position: defaultImage.position || 1,
                 width: defaultImage.width || null,
                 height: defaultImage.height || null,
@@ -1179,7 +1235,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
         if (!merchantId) {
           console.log(
-            "⚠️ Skipped item because merchantId could not be determined"
+            '⚠️ Skipped item because merchantId could not be determined'
           );
           continue;
         }
@@ -1190,11 +1246,11 @@ export const getAllOrdersForAdmin = async (req, res) => {
           orderId: order.orderId,
           customer: [
             {
-              first_name: order.customer?.first_name || "",
-              last_name: order.customer?.last_name || "",
-              email: order.customer?.email || "",
-              phone: order.customer?.phone || "",
-              created_at: order.customer?.created_at || "",
+              first_name: order.customer?.first_name || '',
+              last_name: order.customer?.last_name || '',
+              email: order.customer?.email || '',
+              phone: order.customer?.phone || '',
+              created_at: order.customer?.created_at || '',
               default_address: order.customer?.default_address || {},
             },
           ],
@@ -1208,7 +1264,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
         if (!merchantDetailsMap.has(merchantId)) {
           const merchant = await authModel
             .findById(merchantId)
-            .select("-password");
+            .select('-password');
           if (merchant) {
             merchantDetailsMap.set(merchantId, {
               _id: merchant._id,
@@ -1268,17 +1324,17 @@ export const getAllOrdersForAdmin = async (req, res) => {
     if (finalOrders.length > 0) {
       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
       return res.status(200).send({
-        message: "Orders grouped per order (not merged by merchant)",
+        message: 'Orders grouped per order (not merged by merchant)',
         data: finalOrders,
       });
     } else {
       return res
         .status(404)
-        .send({ message: "No orders found across merchants" });
+        .send({ message: 'No orders found across merchants' });
     }
   } catch (error) {
-    console.error("❌ Error in getAllOrdersForAdmin:", error);
-    return res.status(500).send({ message: "Internal Server Error" });
+    console.error('❌ Error in getAllOrdersForAdmin:', error);
+    return res.status(500).send({ message: 'Internal Server Error' });
   }
 };
 
@@ -1463,7 +1519,6 @@ export const addPaypalAccountNo = async (req, res) => {
 //   }
 // };
 
-
 export const addPayouts = async (req, res) => {
   const {
     payoutFrequency,
@@ -1506,9 +1561,7 @@ export const addPayouts = async (req, res) => {
 
       case 'weekly': {
         if (!weeklyDay) {
-          return res
-            .status(400)
-            .json({ message: 'Weekly day is required.' });
+          return res.status(400).json({ message: 'Weekly day is required.' });
         }
 
         const weekdays = {
@@ -1632,7 +1685,7 @@ export const getPayoutDate = async (req, res) => {
         ? config.secondPayoutDate.toISOString()
         : null,
 
-      commission: config.commission ?? 0, 
+      commission: config.commission ?? 0,
     });
   } catch (error) {
     console.error('❌ Error fetching payout config:', error);
@@ -1641,7 +1694,6 @@ export const getPayoutDate = async (req, res) => {
     });
   }
 };
-
 
 function getNextPayoutDate(startDate, config) {
   const frequency = config.payoutFrequency || 'twice';

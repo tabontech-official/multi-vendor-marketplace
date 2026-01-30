@@ -10,16 +10,16 @@ const orderSchema = new mongoose.Schema(
     serialNumber: Number,
     shopifyOrderNo: Number,
     // ProductSnapshot: Object,
-ProductSnapshot: [
-  {
-    productId: String,
-    variantId: String,
-    quantity: Number,
-    merchantId: mongoose.Schema.Types.ObjectId,
-    product: Object,
-    variant: Object,
-  }
-],
+    ProductSnapshot: [
+      {
+        productId: String,
+        variantId: String,
+        quantity: Number,
+        merchantId: mongoose.Schema.Types.ObjectId,
+        product: Object,
+        variant: Object,
+      },
+    ],
     merchantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
