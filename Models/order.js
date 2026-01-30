@@ -9,7 +9,17 @@ const orderSchema = new mongoose.Schema(
     expiresAt: Date,
     serialNumber: Number,
     shopifyOrderNo: Number,
-    ProductSnapshot: Object,
+    // ProductSnapshot: Object,
+ProductSnapshot: [
+  {
+    productId: String,
+    variantId: String,
+    quantity: Number,
+    merchantId: mongoose.Schema.Types.ObjectId,
+    product: Object,
+    variant: Object,
+  }
+],
     merchantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

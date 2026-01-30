@@ -184,122 +184,102 @@ async function checkProductExists(productId) {
 
 export const createOrder = async (req, res) => {
   try {
-    const orderData = req.body;
+    console.log('📥 Incoming Order Webhook');
 
+    const orderData = req.body;
     const orderId = String(orderData.id);
     const shopifyOrderNo = orderData.order_number;
     const lineItems = orderData.line_items || [];
+
+    console.log('🛒 Line Items:', lineItems.length);
 
     if (!lineItems.length) {
       return res.status(400).send('No line items found');
     }
 
     /* ===============================
-       CREATE PRODUCT SNAPSHOTS
+       CREATE PRODUCT + VARIANT SNAPSHOTS
     =============================== */
 
     const productSnapshots = [];
 
     for (const item of lineItems) {
-      if (!item.product_id) continue;
+      console.log(
+        `➡️ Product: ${item.product_id} | Variant: ${item.variant_id}`
+      );
+
+      if (!item.product_id || !item.variant_id) continue;
 
       const product = await listingModel
-        .findOne({ id: item.product_id })
+        .findOne({ id: String(item.product_id) })
         .lean();
 
       if (!product) {
-        return res
-          .status(404)
-          .send(`Product not found: ${item.product_id}`);
+        console.log('❌ Product not found:', item.product_id);
+        continue;
+      }
+
+      const variant = product.variants?.find(
+        (v) => String(v.id) === String(item.variant_id)
+      );
+
+      if (!variant) {
+        console.log('⚠️ Variant not found:', item.variant_id);
+        continue;
       }
 
       productSnapshots.push({
-        productId: item.product_id,
+        productId: String(item.product_id),
+        variantId: String(item.variant_id),
         quantity: item.quantity || 0,
-        merchantId: product.merchantId || null,
-        snapshot: product, // full product snapshot
+        merchantId: product.userId || null,
+        product, // FULL PRODUCT SNAPSHOT
+        variant, // EXACT VARIANT SNAPSHOT
       });
+
+      console.log(
+        `✅ Snapshot Saved | Product: ${product.title} | Variant: ${variant.title}`
+      );
     }
 
-    /* ===============================
-       TOTAL QUANTITY
-    =============================== */
-
-    const quantity = lineItems.reduce(
-      (sum, item) => sum + (item.quantity || 0),
-      0
-    );
+    console.log('📦 Total Snapshots:', productSnapshots.length);
 
     /* ===============================
-       ORDER CREATE / UPDATE
+       SERIAL NUMBER
     =============================== */
 
-    let existingOrder = await orderModel.findOne({ orderId });
-    let serialNumber;
+    const lastOrder = await orderModel
+      .findOne({ serialNumber: { $ne: null } })
+      .sort({ serialNumber: -1 })
+      .lean();
 
-    if (existingOrder) {
-      serialNumber = existingOrder.serialNumber;
+    const serialNumber =
+      typeof lastOrder?.serialNumber === 'number'
+        ? lastOrder.serialNumber + 1
+        : 101;
 
-      await orderModel.updateOne(
-        { orderId },
-        {
-          $set: {
-            customer: orderData.customer,
-            lineItems,
-            ProductSnapshots: productSnapshots,
-            createdAt: orderData.created_at,
-            shopifyOrderNo,
-          },
-        }
-      );
-    } else {
-      const lastOrder = await orderModel
-        .findOne({ serialNumber: { $ne: null } })
-        .sort({ serialNumber: -1 })
-        .lean();
+    /* ===============================
+       SAVE ORDER
+    =============================== */
 
-      const lastSerial =
-        typeof lastOrder?.serialNumber === 'number'
-          ? lastOrder.serialNumber
-          : 100;
-
-      serialNumber = lastSerial + 1;
-
-      await orderModel.create({
+    await orderModel.findOneAndUpdate(
+      { orderId },
+      {
         orderId,
         customer: orderData.customer,
         lineItems,
-        ProductSnapshots: productSnapshots,
+        ProductSnapshot: productSnapshots,
         createdAt: orderData.created_at,
-        serialNumber,
         shopifyOrderNo,
-      });
-    }
+        serialNumber,
+      },
+      { upsert: true, new: true }
+    );
 
-    /* ===============================
-       USER SUBSCRIPTION UPDATE
-    =============================== */
-
-    const user = await authModel.findOne({
-      email: orderData.customer?.email,
-    });
-
-    if (user) {
-      if (user.subscription) {
-        user.subscription.quantity =
-          (user.subscription.quantity || 0) + quantity;
-      } else {
-        user.subscription = { quantity };
-      }
-      await user.save();
-    }
-
-    /* ===============================
-       RESPONSE
-    =============================== */
+    console.log('🎉 Order Saved:', orderId);
 
     res.status(200).json({
-      message: 'Order saved successfully with multiple product snapshots',
+      message: 'Order saved with full product & variant snapshots',
       orderId,
       shopifyOrderNo,
       serialNumber,
@@ -310,6 +290,8 @@ export const createOrder = async (req, res) => {
     res.status(500).send('Error saving order');
   }
 };
+
+
 
 
 
