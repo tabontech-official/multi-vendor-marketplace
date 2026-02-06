@@ -91,20 +91,21 @@ bulkUpload: {
   ],
 },
 
-    variantImages: [
+  variantImages: [
+  {
+    variantId: { type: String, required: true },
+    images: [
       {
-        id: String,
+        src: String,
+        imageId: String,
         alt: String,
         position: Number,
-        product_id: String,
-        cloudinary_src: String,
         created_at: Date,
-        updated_at: Date,
-        width: Number,
-        height: Number,
-        src: String,
-      },
-    ],
+      }
+    ]
+  }
+],
+
     images: [
       {
         id: String,
