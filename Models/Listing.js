@@ -91,7 +91,7 @@ bulkUpload: {
   ],
 },
 
-  variantImages: [
+   variantImages: [
   {
     variantId: { type: String, required: true },
     images: [
@@ -101,9 +101,9 @@ bulkUpload: {
         alt: String,
         position: Number,
         created_at: Date,
-      }
-    ]
-  }
+      },
+    ],
+  },
 ],
 
     images: [
