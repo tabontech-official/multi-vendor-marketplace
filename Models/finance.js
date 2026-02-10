@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const payoutConfigSchema = new mongoose.Schema({
-  graceTime: Number, // in days
+  graceTime: Number,
   payoutFrequency: {
     type: String,
     enum: ['daily', 'weekly', 'once', 'twice'],
@@ -11,10 +11,9 @@ const payoutConfigSchema = new mongoose.Schema({
   secondPayoutDate: Date,
   weeklyDay: String,
   commission: {
-  type: Number,
-  default: 0, // percentage
-},
-
+    type: Number,
+    default: 0,
+  },
 });
 
 export const PayoutConfig = mongoose.model(
