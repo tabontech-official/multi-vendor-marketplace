@@ -11,6 +11,8 @@ import { orderRquestModel } from '../Models/OrderRequest.js';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import { Parser } from 'json2csv';
 import path from 'path';
+import nodemailer from 'nodemailer';
+
 import fs from 'fs';
 dayjs.extend(customParseFormat);
 dayjs.extend(minMax);
@@ -3583,6 +3585,51 @@ export const getRequestById = async (req, res) => {
   }
 };
 
+// export const addReferenceToOrders = async (req, res) => {
+//   try {
+//     const { UserIds, referenceNo } = req.body;
+
+//     if (!Array.isArray(UserIds) || UserIds.length === 0 || !referenceNo) {
+//       return res.status(400).json({
+//         message: 'UserIds (array) and referenceNo are required.',
+//       });
+//     }
+
+//     const result = await authModel.updateMany(
+//       { _id: { $in: UserIds } },
+//       { $set: { referenceNo } }
+//     );
+
+//     if (result.modifiedCount === 0) {
+//       return res.status(404).json({
+//         message: 'No users found or reference not updated.',
+//       });
+//     }
+
+//     res.status(200).json({
+//       message: 'Reference number added to all specified users.',
+//       modifiedCount: result.modifiedCount,
+//     });
+//   } catch (err) {
+//     console.error('Error updating user references:', err);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
+
+
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'aydimarketplace@gmail.com',
+    pass: 'ijeg fypl llry kftw', // app password
+  },
+  secure: true,
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
 export const addReferenceToOrders = async (req, res) => {
   try {
     const { UserIds, referenceNo } = req.body;
@@ -3593,6 +3640,7 @@ export const addReferenceToOrders = async (req, res) => {
       });
     }
 
+    // ✅ Update reference number
     const result = await authModel.updateMany(
       { _id: { $in: UserIds } },
       { $set: { referenceNo } }
@@ -3604,8 +3652,46 @@ export const addReferenceToOrders = async (req, res) => {
       });
     }
 
+    // ✅ Fetch updated users for email
+    const users = await authModel.find(
+      { _id: { $in: UserIds } },
+      'email firstName lastName'
+    );
+
+    // ✅ Send email to each user
+    for (const user of users) {
+      if (!user.email) continue;
+
+      const mailOptions = {
+        from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
+        to: user.email,
+        subject: 'Your payout has been processed',
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6">
+            <h2>Hello ${user.firstName || 'Merchant'},</h2>
+            <p>
+              Your payout has been <strong>processed successfully</strong>.
+            </p>
+            <p>
+              <strong>Reference Number:</strong> ${referenceNo}
+            </p>
+            <p>
+              If you have any questions, feel free to contact support.
+            </p>
+            <br/>
+            <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
+          </div>
+        `,
+      };
+
+      // fire & forget (no await block)
+      transporter.sendMail(mailOptions).catch((err) => {
+        console.error(`Email failed for ${user.email}`, err);
+      });
+    }
+
     res.status(200).json({
-      message: 'Reference number added to all specified users.',
+      message: 'Reference number added and payout email sent.',
       modifiedCount: result.modifiedCount,
     });
   } catch (err) {
@@ -3614,91 +3700,6 @@ export const addReferenceToOrders = async (req, res) => {
   }
 };
 
-// export const exportOrders = async (req, res) => {
-//   try {
-//     const orders = await orderModel.find({}).lean();
-
-//     if (!orders.length) {
-//       return res.status(404).json({ message: 'No orders found' });
-//     }
-
-//     const rows = [];
-
-//     for (const order of orders) {
-//       const base = {
-//         OrderID: order.orderId || '',
-//         ShopifyOrderNo: order.shopifyOrderNo || '',
-//         SerialNumber: order.serialNumber || '',
-//         PayoutAmount: order.payoutAmount || '',
-//         PayoutStatus: order.payoutStatus || '',
-//         EligiblePayoutDate: order.eligibleDate
-//           ? new Date(order.eligibleDate).toLocaleDateString()
-//           : '',
-//         ScheduledPayoutDate: order.scheduledPayoutDate
-//           ? new Date(order.scheduledPayoutDate).toLocaleDateString()
-//           : '',
-//         OrderCreatedAt: order.createdAt
-//           ? new Date(order.createdAt).toLocaleString()
-//           : '',
-//         OrderUpdatedAt: order.updatedAt
-//           ? new Date(order.updatedAt).toLocaleString()
-//           : '',
-//         CustomerEmail: order.customer?.email || '',
-//         CustomerName: `${order.customer?.first_name || ''} ${order.customer?.last_name || ''}`,
-//         CustomerPhone: order.customer?.phone || '',
-//         CustomerCreated: order.customer?.created_at || '',
-//       };
-
-//       if (Array.isArray(order.lineItems)) {
-//         for (const item of order.lineItems) {
-//           rows.push({
-//             ...base,
-//             LineItemID: item.id || '',
-//             ProductName: item.name || '',
-//             SKU: item.sku || '',
-//             Vendor: item.vendor || '',
-//             Quantity: item.quantity || '',
-//             Price: item.price || '',
-//             FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
-//             VariantTitle: item.variant_title || '',
-//             ProductID: item.product_id || '',
-//             VariantID: item.variant_id || '',
-//           });
-//         }
-//       } else {
-//         rows.push(base);
-//       }
-//     }
-
-//     const fields = Object.keys(rows[0]);
-//     const parser = new Parser({ fields });
-//     const csv = parser.parse(rows);
-
-//     const filename = `orders-export-${Date.now()}.csv`;
-//     const isVercel = process.env.VERCEL === '1';
-//     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
-
-//     if (!isVercel && !fs.existsSync(exportDir)) {
-//       fs.mkdirSync(exportDir, { recursive: true });
-//     }
-
-//     const filePath = path.join(exportDir, filename);
-//     fs.writeFileSync(filePath, csv);
-
-//     res.download(filePath, filename, (err) => {
-//       if (err) {
-//         console.error('Download error:', err);
-//         res.status(500).send('Error downloading file');
-//       }
-//       fs.unlinkSync(filePath); // Clean up file after sending
-//     });
-//   } catch (error) {
-//     console.error('Export Orders Error:', error);
-//     res
-//       .status(500)
-//       .json({ message: 'Server error during export.', error: error.message });
-//   }
-// };
 
 export const exportOrders = async (req, res) => {
   try {
