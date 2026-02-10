@@ -42,6 +42,9 @@ const authSchema = new mongoose.Schema(
     state: {
       type: String,
     },
+    comissionRate:{
+      type:Number
+    },
 
     avatar: { type: [String], default: [] },
     token: String,

@@ -1432,6 +1432,7 @@ export const getAllUsersData = async (req, res) => {
           country: 1,
           city: 1,
           shopifyId: 1,
+          comissionRate:1,
         },
       },
     ]);
