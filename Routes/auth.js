@@ -26,12 +26,16 @@ import {
   signUpForBulkUploader,
   addMerchantAccDetails,
   getMerchantAccDetails,
+  updateMerchantCommission,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import { cpUploads } from '../middleware/upload.js';
 
 const authRouter = express.Router();
+
+
+authRouter.put("/updateMerchantCommission", updateMerchantCommission);
 
 authRouter.post('/signIn', signIn);
 authRouter.post('/signInForBulkUploader', signInForBulkUploader);

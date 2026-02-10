@@ -1433,6 +1433,7 @@ export const getAllUsersData = async (req, res) => {
           city: 1,
           shopifyId: 1,
           comissionRate:1,
+          _id:1,
         },
       },
     ]);
@@ -1885,7 +1886,55 @@ export const createShopifyCollection = async (req, res) => {
 };
 
 
+export const updateMerchantCommission = async (req, res) => {
+  try {
+    const { merchantId, commission } = req.body;
 
+    if (!merchantId || commission === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "merchantId and commission are required",
+      });
+    }
+
+    const commissionNumber = Number(commission);
+
+    if (commissionNumber < 0 || commissionNumber > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Commission must be between 0 and 100",
+      });
+    }
+
+    const merchant = await authModel.findByIdAndUpdate(
+      merchantId,
+      { comissionRate: commissionNumber }, // ✅ schema field
+      { new: true }
+    );
+
+    if (!merchant) {
+      return res.status(404).json({
+        success: false,
+        message: "Merchant not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Commission updated successfully",
+      data: {
+        merchantId: merchant._id,
+        comissionRate: merchant.comissionRate,
+      },
+    });
+  } catch (error) {
+    console.error("Update merchant commission error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 
 export const getLatestBrandAsset = async (req, res) => {
