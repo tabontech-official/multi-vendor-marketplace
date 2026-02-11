@@ -27,16 +27,22 @@ import {
   addMerchantAccDetails,
   getMerchantAccDetails,
   updateMerchantCommission,
+  bulkUpdateMerchantCommission,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
 import { cpUploads } from '../middleware/upload.js';
+import { Csvuplaods } from '../middleware/multer.js';
 
 const authRouter = express.Router();
 
 
 authRouter.put("/updateMerchantCommission", updateMerchantCommission);
-
+authRouter.post(
+  "/bulk-update-commission",
+  Csvuplaods,
+  bulkUpdateMerchantCommission
+);
 authRouter.post('/signIn', signIn);
 authRouter.post('/signInForBulkUploader', signInForBulkUploader);
 authRouter.post('/signUpForBulkUploader', signUpForBulkUploader);

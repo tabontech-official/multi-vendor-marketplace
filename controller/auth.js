@@ -11,6 +11,9 @@ import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { brandAssetModel } from '../Models/brandAsset.js';
 import { apiCredentialModel } from '../Models/apicredential.js';
 import crypto from 'crypto';
+import csv from "csv-parser";
+import stream from "stream";
+
 import { orderRquestModel } from '../Models/OrderRequest.js';
 import { orderModel } from '../Models/order.js';
 import { authBulkUploaderModel } from '../Models/authForBulkUploder.js';
@@ -1936,6 +1939,104 @@ export const updateMerchantCommission = async (req, res) => {
   }
 };
 
+export const bulkUpdateMerchantCommission = async (req, res) => {
+  try {
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "CSV file is required",
+      });
+    }
+
+
+    const results = [];
+    const bufferStream = new stream.PassThrough();
+    bufferStream.end(req.file.buffer);
+
+    bufferStream
+      .pipe(
+        csv({
+          mapHeaders: ({ header }) => header.trim(),
+        })
+      )
+      .on("data", (data) => {
+        results.push(data);
+      })
+      .on("end", async () => {
+
+        try {
+          const bulkOperations = [];
+          const invalidRows = [];
+          const notFoundEmails = [];
+
+          for (const row of results) {
+            let email =
+              row.Email ||
+              row.email;
+
+            const commissionNumber = Number(row.commission);
+
+            if (email) {
+              email = email.toString().trim().toLowerCase();
+            }
+
+
+            if (
+              !email ||
+              isNaN(commissionNumber) ||
+              commissionNumber < 0 ||
+              commissionNumber > 100
+            ) {
+              invalidRows.push(row);
+              continue;
+            }
+
+            bulkOperations.push({
+              updateOne: {
+                filter: { email: email },
+                update: { comissionRate: commissionNumber },
+              },
+            });
+          }
+
+
+          if (!bulkOperations.length) {
+            return res.status(400).json({
+              success: false,
+              message: "No valid records found in CSV",
+              invalidRows,
+            });
+          }
+
+          const result = await authModel.bulkWrite(bulkOperations);
+
+
+          return res.status(200).json({
+            success: true,
+            message: "Bulk commission update completed (Email Based)",
+            totalRecords: results.length,
+            matchedCount: result.matchedCount,
+            modifiedCount: result.modifiedCount,
+            invalidRowsCount: invalidRows.length,
+          });
+
+        } catch (err) {
+          return res.status(500).json({
+            success: false,
+            message: "Error processing CSV",
+          });
+        }
+      });
+
+  } catch (error) {
+    console.error("❌ Bulk commission upload error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 export const getLatestBrandAsset = async (req, res) => {
   try {
