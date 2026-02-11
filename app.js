@@ -21,6 +21,7 @@ import variantOptionRouter from './Routes/VariantOption.js';
 import shippingRouter from './Routes/shippingProfile.js';
 import SizeChartRouter from './Routes/sizeChartRoute.js';
 import notificationSettingsRouter from './Routes/notificationSettings.js';
+import { financeCron } from './controller/financeCron.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -31,7 +32,8 @@ productSubscriptionExpiration();
 // deleteOrphanedProducts();
 
 financeScheduler.start();
-// financeCron()
+financeCron()
+
 app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));

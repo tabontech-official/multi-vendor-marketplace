@@ -14,6 +14,7 @@ import path from 'path';
 import nodemailer from 'nodemailer';
 
 import fs from 'fs';
+import { notificationModel } from '../Models/NotificationSettings.js';
 dayjs.extend(customParseFormat);
 dayjs.extend(minMax);
 
@@ -708,7 +709,6 @@ export const getOrderById = async (req, res) => {
     return res.status(500).send({ message: 'Internal Server Error' });
   }
 };
-
 
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {
@@ -1927,40 +1927,39 @@ function getNextPayoutDate(startDate, config) {
 //   }
 // };
 
-
 export const getPayout = async (req, res) => {
   try {
     const config = await PayoutConfig.findOne({});
     if (!config) {
-      return res.status(400).json({ error: "Payout config not found." });
+      return res.status(400).json({ error: 'Payout config not found.' });
     }
 
     const orders = await orderModel.find({});
     const updates = [];
     let totalPayoutAmount = 0;
-    const currentDate = dayjs().startOf("day");
+    const currentDate = dayjs().startOf('day');
 
     for (const order of orders) {
       let createdAt = dayjs(order.createdAt);
 
-      if (dayjs(order.scheduledPayoutDate).isSame(currentDate, "day")) {
+      if (dayjs(order.scheduledPayoutDate).isSame(currentDate, 'day')) {
         const lineItems = order.lineItems || [];
         const isAnyItemUnfulfilled = lineItems.some(
           (item) => item.fulfillment_status === null
         );
 
         if (isAnyItemUnfulfilled) {
-          createdAt = createdAt.add(1, "day");
+          createdAt = createdAt.add(1, 'day');
           order.createdAt = createdAt.toDate();
 
-          const eligibleDate = createdAt.add(config.graceTime || 7, "day");
+          const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
           const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
           order.scheduledPayoutDate = payoutDate.toDate();
         }
       }
 
       if (!order.scheduledPayoutDate || !order.eligibleDate) {
-        const eligibleDate = createdAt.add(config.graceTime || 7, "day");
+        const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
         const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 
         if (!order.eligibleDate) order.eligibleDate = eligibleDate.toDate();
@@ -1978,23 +1977,23 @@ export const getPayout = async (req, res) => {
 
         payoutAmount += itemTotal;
 
-        let merchantName = "Unknown";
-        let merchantEmail = "Unknown";
+        let merchantName = 'Unknown';
+        let merchantEmail = 'Unknown';
         let merchantId = null;
         let commissionRate = 0;
 
         const variantId = item.variantId || item.variant_id;
         if (variantId) {
           const listing = await listingModel.findOne({
-            "variants.id": String(variantId),
+            'variants.id': String(variantId),
           });
 
           if (listing?.userId) {
             const merchant = await authModel.findById(listing.userId);
             if (merchant) {
               merchantName =
-                `${merchant.firstName || ""} ${merchant.lastName || ""}`.trim();
-              merchantEmail = merchant.email || "N/A";
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantEmail = merchant.email || 'N/A';
               merchantId = merchant._id;
               commissionRate = Number(merchant.comissionRate || 0);
             }
@@ -2019,7 +2018,7 @@ export const getPayout = async (req, res) => {
       updates.push({
         orderId: order._id,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || "pending",
+        payoutStatus: order.payoutStatus || 'N/A',
         createdAt: order.createdAt,
         lineItems: enrichedLineItems,
       });
@@ -2031,13 +2030,21 @@ export const getPayout = async (req, res) => {
 
     updates.forEach((order) => {
       const key = `${dayjs(order.scheduledPayoutDate).format(
-        "YYYY-MM-DD"
+        'YYYY-MM-DD'
       )}__${order.payoutStatus}`;
 
       if (!grouped[key]) {
+        let normalizedStatus = 'Pending';
+
+        if (order.payoutStatus?.toLowerCase() === 'deposited') {
+          normalizedStatus = 'Deposited';
+        } else if (order.payoutStatus?.toLowerCase() === 'due') {
+          normalizedStatus = 'Due';
+        }
+
         grouped[key] = {
-          payoutDate: dayjs(order.scheduledPayoutDate).format("MMM D, YYYY"),
-          status: order.payoutStatus === "Deposited" ? "Deposited" : "Pending",
+          payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+          status: normalizedStatus,
           createdAts: [],
           orders: {},
           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
@@ -2072,7 +2079,7 @@ export const getPayout = async (req, res) => {
 
         merchant.grossAmount += line.itemTotal;
 
-        if (line.fulfillment_status === "fulfilled") {
+        if (line.fulfillment_status === 'fulfilled') {
           merchant.fulfilledCount += 1;
         } else if (line.fulfillment_status === null) {
           merchant.unfulfilledCount += 1;
@@ -2089,8 +2096,7 @@ export const getPayout = async (req, res) => {
         merchant.commissionAmount =
           (merchant.grossAmount * merchant.commissionRate) / 100;
 
-        merchant.netAmount =
-          merchant.grossAmount - merchant.commissionAmount;
+        merchant.netAmount = merchant.grossAmount - merchant.commissionAmount;
       });
     });
 
@@ -2104,15 +2110,15 @@ export const getPayout = async (req, res) => {
         return {
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format(
-            "MMM D"
-          )} – ${maxDate.format("MMM D, YYYY")}`,
+            'MMM D'
+          )} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
           orders: Object.values(group.orders),
           sortKey: group.sortKey,
         };
       })
       .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "Pending" ? -1 : 1;
+        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
         return b.sortKey - a.sortKey;
       });
 
@@ -2121,7 +2127,7 @@ export const getPayout = async (req, res) => {
     const startIndex = (page - 1) * limit;
 
     res.json({
-      message: "Payouts calculated",
+      message: 'Payouts calculated',
       totalPayouts: allPayouts.length,
       page,
       limit,
@@ -2129,10 +2135,9 @@ export const getPayout = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error while calculating payouts" });
+    res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
 
 // export const getPayoutByUserId = async (req, res) => {
 //   try {
@@ -2319,7 +2324,7 @@ export const getPayoutByUserId = async (req, res) => {
 
     const config = await PayoutConfig.findOne({});
     if (!config) {
-      return res.status(400).json({ error: "Payout config not found." });
+      return res.status(400).json({ error: 'Payout config not found.' });
     }
 
     const orders = await orderModel.find({});
@@ -2329,7 +2334,7 @@ export const getPayoutByUserId = async (req, res) => {
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-      const eligibleDate = createdAt.add(config.graceTime || 7, "day");
+      const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
       const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 
       order.eligibleDate = eligibleDate.toDate();
@@ -2353,13 +2358,13 @@ export const getPayoutByUserId = async (req, res) => {
         const status = item.fulfillment_status;
 
         let merchantId = null;
-        let merchantName = "Unknown";
-        let merchantEmail = "Unknown";
+        let merchantName = 'Unknown';
+        let merchantEmail = 'Unknown';
 
         const variantId = item.variantId || item.variant_id;
         if (variantId) {
           const listing = await listingModel.findOne({
-            "variants.id": String(variantId),
+            'variants.id': String(variantId),
           });
 
           if (listing?.userId) {
@@ -2370,19 +2375,17 @@ export const getPayoutByUserId = async (req, res) => {
             const merchant = await authModel.findById(listing.userId);
             if (merchant) {
               merchantName =
-                `${merchant.firstName || ""} ${merchant.lastName || ""}`.trim();
-              merchantEmail = merchant.email || "N/A";
-              merchantCommissionRate = Number(
-                merchant.comissionRate || 0
-              );
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantEmail = merchant.email || 'N/A';
+              merchantCommissionRate = Number(merchant.comissionRate || 0);
             }
           }
         }
 
         // Fulfillment count (ignore cancelled)
-        if (status === "fulfilled") {
+        if (status === 'fulfilled') {
           fulfilledCount++;
-        } else if (status !== "cancelled") {
+        } else if (status !== 'cancelled') {
           unfulfilledCount++;
         }
 
@@ -2392,17 +2395,16 @@ export const getPayoutByUserId = async (req, res) => {
           merchantName,
           merchantEmail,
           commissionRate: merchantCommissionRate,
-          isCancelled: status === "cancelled",
+          isCancelled: status === 'cancelled',
         });
 
-        if (status === "cancelled") {
+        if (status === 'cancelled') {
           refundAmount += total;
         } else {
           payoutAmount += total;
 
           // ✅ COMMISSION CALCULATION (ONLY ADDITION)
-          commissionAmount +=
-            (total * merchantCommissionRate) / 100;
+          commissionAmount += (total * merchantCommissionRate) / 100;
         }
       }
 
@@ -2420,14 +2422,14 @@ export const getPayoutByUserId = async (req, res) => {
       updates.push({
         orderId: order._id,
         shopifyOrderId: order.orderId,
-        shopifyOrderNo: order.shopifyOrderNo || "N/A",
+        shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || "pending",
+        payoutStatus: order.payoutStatus || 'pending',
 
-        payoutAmount: netPayoutAmount,          // ✅ net
+        payoutAmount: netPayoutAmount, // ✅ net
         refundAmount,
-        commissionAmount,                       // ✅ added safely
+        commissionAmount, // ✅ added safely
 
         createdAt: order.createdAt,
         lineItems: enrichedLineItems,
@@ -2444,13 +2446,13 @@ export const getPayoutByUserId = async (req, res) => {
 
     updates.forEach((order) => {
       const key = `${dayjs(order.scheduledPayoutDate).format(
-        "YYYY-MM-DD"
+        'YYYY-MM-DD'
       )}__${order.payoutStatus}`;
 
       if (!grouped[key]) {
         grouped[key] = {
-          payoutDate: dayjs(order.scheduledPayoutDate).format("MMM D, YYYY"),
-          status: order.payoutStatus === "Deposited" ? "Deposited" : "Pending",
+          payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+          status: order.payoutStatus || 'Pending',
           createdAts: [],
           totalAmount: 0,
           totalRefundAmount: 0,
@@ -2471,7 +2473,7 @@ export const getPayoutByUserId = async (req, res) => {
         orderId: order.orderId,
         shopifyOrderId: order.shopifyOrderId,
         shopifyOrderNo: order.shopifyOrderNo,
-        amount: order.payoutAmount,          // ✅ net
+        amount: order.payoutAmount, // ✅ net
         refund: order.refundAmount,
         commissionAmount: order.commissionAmount, // ✅ extra info
         status: order.payoutStatus,
@@ -2489,8 +2491,8 @@ export const getPayoutByUserId = async (req, res) => {
         return {
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format(
-            "MMM D"
-          )} – ${maxDate.format("MMM D, YYYY")}`,
+            'MMM D'
+          )} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
           amount: `$${group.totalAmount.toFixed(2)} AUD`,
           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
@@ -2501,22 +2503,21 @@ export const getPayoutByUserId = async (req, res) => {
         };
       })
       .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "Pending" ? -1 : 1;
+        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
         return b.sortKey - a.sortKey;
       });
 
     res.json({
-      message: "Payouts calculated",
+      message: 'Payouts calculated',
       totalAmount: totalPayoutAmount,
       totalRefundAmount,
       payouts,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error while calculating payouts" });
+    res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
 
 // export const getPayoutOrders = async (req, res) => {
 //   try {
@@ -2533,7 +2534,8 @@ export const getPayoutByUserId = async (req, res) => {
 
 //     const merchant = await authModel.findById(userId);
 //     const referenceNo = merchant?.referenceNo || 'N/A';
-//     const paypalAccount = merchant.paypalAccount || 'N/A';
+//     const paypalAccount = merchant?.paypalAccount || 'N/A';
+//     const commissionRate = Number(merchant?.comissionRate || 0); // ✅
 
 //     const orderQuery = {};
 //     if (status) {
@@ -2553,13 +2555,14 @@ export const getPayoutByUserId = async (req, res) => {
 //       order.scheduledPayoutDate = payoutDateObj.toDate();
 
 //       const lineItems = order.lineItems || [];
-//       let payoutAmount = 0;
+//       let grossAmount = 0;
 //       let refundAmount = 0;
+//       let commissionAmount = 0;
 //       const products = [];
 
 //       for (const item of lineItems) {
 //         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
+//         const qty = Number(item.quantity || item.current_quantity) || 0;
 //         const total = price * qty;
 
 //         const variantId = item.variantId || item.variant_id;
@@ -2571,34 +2574,37 @@ export const getPayoutByUserId = async (req, res) => {
 //           continue;
 //         }
 
+//         const cancelled = item.fulfillment_status === 'cancelled';
+
 //         const productData = {
 //           title: item.title || '',
 //           variantTitle: item.variant_title || '',
 //           price,
 //           quantity: qty,
 //           total,
-//           fulfillment_status: item.fulfillment_status || 'Unfullfilled',
-//           cancelled: item.fulfillment_status === 'cancelled',
+//           fulfillment_status: item.fulfillment_status || 'Unfulfilled',
+//           cancelled,
 //         };
 
-//         if (productData.cancelled) {
+//         if (cancelled) {
 //           refundAmount += total;
 //         } else {
-//           payoutAmount += total;
+//           grossAmount += total;
+//           commissionAmount += (total * commissionRate) / 100; // ✅
 //         }
 
 //         products.push(productData);
 //       }
 
-//       if (products.length === 0) {
-//         continue;
-//       }
+//       if (products.length === 0) continue;
 
-//       order.payoutAmount = payoutAmount;
+//       const netPayoutAmount = grossAmount - commissionAmount;
+
+//       order.payoutAmount = netPayoutAmount; // ✅ net
 //       order.refundAmount = refundAmount;
 //       await order.save();
 
-//       totalPayoutAmount += payoutAmount;
+//       totalPayoutAmount += netPayoutAmount;
 
 //       updates.push({
 //         orderId: order.orderId,
@@ -2606,20 +2612,27 @@ export const getPayoutByUserId = async (req, res) => {
 //         eligibleDate: order.eligibleDate,
 //         scheduledPayoutDate: order.scheduledPayoutDate,
 //         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount,
+
+//         payoutAmount: netPayoutAmount, // ✅ net
 //         refundAmount,
+//         commissionAmount, // ✅ extra info
+
 //         createdAt: order.createdAt,
 //         referenceNo,
 //         paypalAccount,
-
 //         products,
 //       });
 //     }
 
+//     // ================= GROUPING (UNCHANGED) =================
+
 //     const grouped = {};
 
 //     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
+//       const key = `${dayjs(order.scheduledPayoutDate).format(
+//         'YYYY-MM-DD'
+//       )}__${order.payoutStatus}`;
+
 //       if (!grouped[key]) {
 //         grouped[key] = {
 //           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
@@ -2639,13 +2652,13 @@ export const getPayoutByUserId = async (req, res) => {
 //       grouped[key].orders.push({
 //         orderId: order.orderId,
 //         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
+//         amount: order.payoutAmount, // ✅ net
 //         refund: order.refundAmount,
+//         commissionAmount: order.commissionAmount, // ✅ optional
 //         status: order.payoutStatus,
 //         createdAt: order.createdAt,
 //         referenceNo: order.referenceNo || '',
 //         paypalAccount: order.paypalAccount || '',
-
 //         products: order.products || [],
 //       });
 //     });
@@ -2656,7 +2669,9 @@ export const getPayoutByUserId = async (req, res) => {
 //         const maxDate = dayjs.max(group.createdAts);
 //         return {
 //           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
+//           transactionDates: `${minDate.format(
+//             'MMM D'
+//           )} – ${maxDate.format('MMM D, YYYY')}`,
 //           status: group.status,
 //           amount: `$${group.totalAmount.toFixed(2)} AUD`,
 //           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
@@ -2693,37 +2708,37 @@ export const getPayoutOrders = async (req, res) => {
     const { payoutDate, status, userId } = req.query;
 
     if (!userId) {
-      return res.status(400).json({ error: "Missing userId" });
+      return res.status(400).json({ error: 'Missing userId' });
     }
 
     const config = await PayoutConfig.findOne({});
     if (!config) {
-      return res.status(400).json({ error: "Payout config not found." });
+      return res.status(400).json({ error: 'Payout config not found.' });
     }
 
     const merchant = await authModel.findById(userId);
-    const referenceNo = merchant?.referenceNo || "N/A";
-    const paypalAccount = merchant?.paypalAccount || "N/A";
-    const commissionRate = Number(merchant?.comissionRate || 0); // ✅
+    const commissionRate = Number(merchant?.comissionRate || 0);
 
     const orderQuery = {};
     if (status) {
-      orderQuery.payoutStatus = new RegExp(`^${status}$`, "i");
+      orderQuery.payoutStatus = new RegExp(`^${status}$`, 'i');
     }
 
     const orders = await orderModel.find(orderQuery);
+
     const updates = [];
     let totalPayoutAmount = 0;
 
     for (const order of orders) {
       const createdAt = dayjs(order.createdAt);
-      const eligibleDate = createdAt.add(config.graceTime || 7, "day");
+      const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
       const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
 
       order.eligibleDate = eligibleDate.toDate();
       order.scheduledPayoutDate = payoutDateObj.toDate();
 
       const lineItems = order.lineItems || [];
+
       let grossAmount = 0;
       let refundAmount = 0;
       let commissionAmount = 0;
@@ -2735,41 +2750,40 @@ export const getPayoutOrders = async (req, res) => {
         const total = price * qty;
 
         const variantId = item.variantId || item.variant_id;
+
         const listing = await listingModel.findOne({
-          "variants.id": String(variantId),
+          'variants.id': String(variantId),
         });
 
         if (!listing || String(listing.userId) !== String(userId)) {
           continue;
         }
 
-        const cancelled = item.fulfillment_status === "cancelled";
-
-        const productData = {
-          title: item.title || "",
-          variantTitle: item.variant_title || "",
-          price,
-          quantity: qty,
-          total,
-          fulfillment_status: item.fulfillment_status || "Unfulfilled",
-          cancelled,
-        };
+        const cancelled = item.fulfillment_status === 'cancelled';
 
         if (cancelled) {
           refundAmount += total;
         } else {
           grossAmount += total;
-          commissionAmount += (total * commissionRate) / 100; // ✅
+          commissionAmount += (total * commissionRate) / 100;
         }
 
-        products.push(productData);
+        products.push({
+          title: item.title || '',
+          variantTitle: item.variant_title || '',
+          price,
+          quantity: qty,
+          total,
+          fulfillment_status: item.fulfillment_status || 'Unfulfilled',
+          cancelled,
+        });
       }
 
       if (products.length === 0) continue;
 
       const netPayoutAmount = grossAmount - commissionAmount;
 
-      order.payoutAmount = netPayoutAmount; // ✅ net
+      order.payoutAmount = netPayoutAmount;
       order.refundAmount = refundAmount;
       await order.save();
 
@@ -2777,40 +2791,57 @@ export const getPayoutOrders = async (req, res) => {
 
       updates.push({
         orderId: order.orderId,
-        shopifyOrderNo: order.shopifyOrderNo || "N/A",
+        shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || "pending",
+        payoutStatus: order.payoutStatus || 'Pending',
 
-        payoutAmount: netPayoutAmount,     // ✅ net
+        payoutAmount: netPayoutAmount,
         refundAmount,
-        commissionAmount,                  // ✅ extra info
+        commissionAmount,
 
         createdAt: order.createdAt,
-        referenceNo,
-        paypalAccount,
+
+        // ✅ NEW FIELDS ADDED
+        referenceNo: order.referenceNo || '',
+        paymentMethod: order.paymentMethod || '',
+        depositedDate: order.depositedDate || null,
+
         products,
       });
     }
 
-    // ================= GROUPING (UNCHANGED) =================
+    // ================= GROUPING =================
 
     const grouped = {};
 
     updates.forEach((order) => {
       const key = `${dayjs(order.scheduledPayoutDate).format(
-        "YYYY-MM-DD"
+        'YYYY-MM-DD'
       )}__${order.payoutStatus}`;
 
       if (!grouped[key]) {
         grouped[key] = {
-          payoutDate: dayjs(order.scheduledPayoutDate).format("MMM D, YYYY"),
-          status: order.payoutStatus === "Deposited" ? "Deposited" : "Pending",
+          payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+
+          // ✅ SUPPORT Pending / Due / Deposited
+          status:
+            order.payoutStatus === 'Deposited'
+              ? 'Deposited'
+              : order.payoutStatus === 'Due'
+                ? 'Due'
+                : 'Pending',
+
           createdAts: [],
           totalAmount: 0,
           totalRefundAmount: 0,
           orders: [],
           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+
+          // ✅ NEW FIELDS
+          referenceNo: order.referenceNo || '',
+          paymentMethod: order.paymentMethod || '',
+          depositedDate: order.depositedDate || null,
         };
       }
 
@@ -2821,13 +2852,17 @@ export const getPayoutOrders = async (req, res) => {
       grouped[key].orders.push({
         orderId: order.orderId,
         shopifyOrderNo: order.shopifyOrderNo,
-        amount: order.payoutAmount,          // ✅ net
+        amount: order.payoutAmount,
         refund: order.refundAmount,
-        commissionAmount: order.commissionAmount, // ✅ optional
+        commissionAmount: order.commissionAmount,
         status: order.payoutStatus,
         createdAt: order.createdAt,
-        referenceNo: order.referenceNo || "",
-        paypalAccount: order.paypalAccount || "",
+
+        // ✅ PASS TO FRONTEND
+        referenceNo: order.referenceNo || '',
+        paymentMethod: order.paymentMethod || '',
+        depositedDate: order.depositedDate || null,
+
         products: order.products || [],
       });
     });
@@ -2836,20 +2871,31 @@ export const getPayoutOrders = async (req, res) => {
       .map((group) => {
         const minDate = dayjs.min(group.createdAts);
         const maxDate = dayjs.max(group.createdAts);
+
         return {
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format(
-            "MMM D"
-          )} – ${maxDate.format("MMM D, YYYY")}`,
+            'MMM D'
+          )} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
           amount: `$${group.totalAmount.toFixed(2)} AUD`,
           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
           orders: group.orders,
           sortKey: group.sortKey,
+
+          // ✅ FINAL RETURN
+          referenceNo: group.referenceNo,
+          paymentMethod: group.paymentMethod,
+          depositedDate: group.depositedDate,
         };
       })
       .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "Pending" ? -1 : 1;
+        const orderPriority = { Pending: 1, Due: 2, Deposited: 3 };
+
+        if (a.status !== b.status) {
+          return orderPriority[a.status] - orderPriority[b.status];
+        }
+
         return b.sortKey - a.sortKey;
       });
 
@@ -2862,17 +2908,15 @@ export const getPayoutOrders = async (req, res) => {
     }
 
     res.json({
-      message: "Payouts calculated",
+      message: 'Payouts calculated',
       totalAmount: totalPayoutAmount,
       payouts,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error while calculating payouts" });
+    res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
-
 
 // export const getPayoutForAllOrders = async (req, res) => {
 //   try {
@@ -2890,32 +2934,55 @@ export const getPayoutOrders = async (req, res) => {
 //     const allUserIds = new Set();
 //     const grouped = {};
 
+//     // 🔹 FIRST PASS: collect all merchantIds
+//     orders.forEach((order) => {
+//       (order.lineItems || []).forEach((item) => {
+//         if (item.variant_id) {
+//           allUserIds.add(String(item.variant_id));
+//         }
+//       });
+//     });
+
+//     // 🔹 FETCH MERCHANTS WITH COMMISSION
+//     const merchants = await authModel
+//       .find({})
+//       .select('_id comissionRate referenceNo paypalAccount bankDetails');
+
+//     const merchantMap = {};
+//     merchants.forEach((m) => {
+//       merchantMap[m._id.toString()] = {
+//         commissionRate: Number(m.comissionRate || 0),
+//         referenceNo: m.referenceNo || '',
+//         paypalAccount: m.paypalAccount || '',
+//         bankDetails: m.bankDetails || {},
+//       };
+//     });
+
+//     // ================= PROCESS ORDERS =================
 //     for (const order of orders) {
 //       const createdAt = dayjs(order.createdAt);
+
 //       if (!order.scheduledPayoutDate || !order.eligibleDate) {
 //         const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
 //         const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
 
-//         if (!order.eligibleDate) {
-//           order.eligibleDate = eligibleDate.toDate();
-//         }
-//         if (!order.scheduledPayoutDate) {
-//           order.scheduledPayoutDate = payoutDateObj.toDate();
-//         }
+//         order.eligibleDate ??= eligibleDate.toDate();
+//         order.scheduledPayoutDate ??= payoutDateObj.toDate();
 //       }
 
 //       const lineItems = order.lineItems ?? [];
-//       let payoutAmount = 0;
+//       let netPayoutAmount = 0;
 //       let refundAmount = 0;
 //       const products = [];
 
 //       for (const item of lineItems) {
 //         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         const total = price * qty;
+//         const qty = Number(item.quantity || item.current_quantity) || 0;
+//         const gross = price * qty;
 //         const cancelled = item.fulfillment_status === 'cancelled';
 
 //         let userId = null;
+//         let commissionRate = 0;
 
 //         if (item.variant_id) {
 //           const listing = await listingModel
@@ -2923,34 +2990,42 @@ export const getPayoutOrders = async (req, res) => {
 //             .select('userId');
 
 //           userId = listing?.userId?.toString() || null;
-//           if (userId) allUserIds.add(userId);
+
+//           if (userId && merchantMap[userId]) {
+//             commissionRate = merchantMap[userId].commissionRate;
+//           }
 //         }
 
-//         const productData = {
+//         const commissionAmount = cancelled ? 0 : (gross * commissionRate) / 100;
+
+//         const netAmount = cancelled ? 0 : gross - commissionAmount;
+
+//         if (cancelled) {
+//           refundAmount += gross;
+//         } else {
+//           netPayoutAmount += netAmount;
+//         }
+
+//         products.push({
 //           title: item.title || '',
 //           variantTitle: item.variant_title || '',
 //           price,
 //           quantity: qty,
-//           total,
+//           total: gross,
+//           commissionRate,
+//           commissionAmount,
+//           netAmount,
 //           fulfillment_status: item.fulfillment_status || 'Unfulfilled',
 //           cancelled,
 //           userId,
-//         };
-
-//         if (cancelled) {
-//           refundAmount += total;
-//         } else {
-//           payoutAmount += total;
-//         }
-
-//         products.push(productData);
+//         });
 //       }
 
-//       order.payoutAmount = payoutAmount;
+//       order.payoutAmount = netPayoutAmount; // ✅ NET
 //       order.refundAmount = refundAmount;
 //       await order.save();
 
-//       totalPayoutAmount += payoutAmount;
+//       totalPayoutAmount += netPayoutAmount;
 
 //       updates.push({
 //         orderId: order.orderId,
@@ -2958,55 +3033,19 @@ export const getPayoutOrders = async (req, res) => {
 //         eligibleDate: order.eligibleDate,
 //         scheduledPayoutDate: order.scheduledPayoutDate,
 //         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount,
+//         payoutAmount: netPayoutAmount, // ✅ NET
 //         refundAmount,
 //         createdAt: order.createdAt,
 //         products,
 //       });
 //     }
 
-//     const userDataMap = {};
-//     const userList = await authModel
-//       .find({ _id: { $in: Array.from(allUserIds) } })
-//       .select(
-//         '_id referenceNo paypalAccount paypalAccountNo paypalReferenceNo bankDetails'
-//       );
-
-//     userList.forEach((user) => {
-//       userDataMap[user._id.toString()] = {
-//         referenceNo: user.referenceNo || '',
-//         paypalAccount: user.paypalAccount || '',
-//         paypalAccountNo: user.paypalAccountNo || '',
-//         paypalReferenceNo: user.paypalReferenceNo || '',
-//         bankDetails: user.bankDetails || {},
-//       };
-//     });
-
-//     updates.forEach((order) => {
-//       order.products.forEach((product) => {
-//         if (product.userId) {
-//           const userData = userDataMap[product.userId] || {};
-//           product.referenceNo = userData.referenceNo || '';
-//           product.paypalAccount = userData.paypalAccount || '';
-//           product.bankDetails = userData.bankDetails || {};
-//         }
-//       });
-
-//       const userRef = order.products.find(
-//         (p) => p.userId && userDataMap[p.userId]
-//       );
-
-//       if (userRef?.userId) {
-//         order.referenceNo = userDataMap[userRef.userId].referenceNo || '';
-//         order.paypalAccount = userDataMap[userRef.userId].paypalAccount || '';
-//         order.bankDetails = userDataMap[userRef.userId].bankDetails || {};
-//       }
-//     });
-
+//     // ================= GROUPING (UNCHANGED) =================
 //     updates.forEach((order) => {
 //       const key = `${dayjs(order.scheduledPayoutDate).format(
 //         'YYYY-MM-DD'
 //       )}__${order.payoutStatus}`;
+
 //       if (!grouped[key]) {
 //         grouped[key] = {
 //           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
@@ -3026,13 +3065,10 @@ export const getPayoutOrders = async (req, res) => {
 //       grouped[key].orders.push({
 //         orderId: order.orderId,
 //         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount,
+//         amount: order.payoutAmount, // ✅ NET
 //         refund: order.refundAmount,
 //         status: order.payoutStatus,
 //         createdAt: order.createdAt,
-//         referenceNo: order.referenceNo || '',
-//         paypalAccount: order.paypalAccount || '',
-//         bankDetails: order.bankDetails || {},
 //         products: order.products || [],
 //       });
 //     });
@@ -3043,9 +3079,9 @@ export const getPayoutOrders = async (req, res) => {
 //         const maxDate = dayjs.max(group.createdAts);
 //         return {
 //           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format(
-//             'MMM D, YYYY'
-//           )}`,
+//           transactionDates: `${minDate.format(
+//             'MMM D'
+//           )} – ${maxDate.format('MMM D, YYYY')}`,
 //           status: group.status,
 //           amount: `$${group.totalAmount.toFixed(2)} AUD`,
 //           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
@@ -3083,7 +3119,7 @@ export const getPayoutForAllOrders = async (req, res) => {
 
     const config = await PayoutConfig.findOne({});
     if (!config) {
-      return res.status(400).json({ error: "Payout config not found." });
+      return res.status(400).json({ error: 'Payout config not found.' });
     }
 
     const orders = await orderModel.find({});
@@ -3103,16 +3139,16 @@ export const getPayoutForAllOrders = async (req, res) => {
     });
 
     // 🔹 FETCH MERCHANTS WITH COMMISSION
-    const merchants = await authModel.find({}).select(
-      "_id comissionRate referenceNo paypalAccount bankDetails"
-    );
+    const merchants = await authModel
+      .find({})
+      .select('_id comissionRate referenceNo paypalAccount bankDetails');
 
     const merchantMap = {};
     merchants.forEach((m) => {
       merchantMap[m._id.toString()] = {
         commissionRate: Number(m.comissionRate || 0),
-        referenceNo: m.referenceNo || "",
-        paypalAccount: m.paypalAccount || "",
+        referenceNo: m.referenceNo || '',
+        paypalAccount: m.paypalAccount || '',
         bankDetails: m.bankDetails || {},
       };
     });
@@ -3122,7 +3158,7 @@ export const getPayoutForAllOrders = async (req, res) => {
       const createdAt = dayjs(order.createdAt);
 
       if (!order.scheduledPayoutDate || !order.eligibleDate) {
-        const eligibleDate = createdAt.add(config.graceTime ?? 7, "day");
+        const eligibleDate = createdAt.add(config.graceTime ?? 7, 'day');
         const payoutDateObj = getNextPayoutDate(eligibleDate.toDate(), config);
 
         order.eligibleDate ??= eligibleDate.toDate();
@@ -3138,15 +3174,15 @@ export const getPayoutForAllOrders = async (req, res) => {
         const price = Number(item.price) || 0;
         const qty = Number(item.quantity || item.current_quantity) || 0;
         const gross = price * qty;
-        const cancelled = item.fulfillment_status === "cancelled";
+        const cancelled = item.fulfillment_status === 'cancelled';
 
         let userId = null;
         let commissionRate = 0;
 
         if (item.variant_id) {
           const listing = await listingModel
-            .findOne({ "variants.id": String(item.variant_id) })
-            .select("userId");
+            .findOne({ 'variants.id': String(item.variant_id) })
+            .select('userId');
 
           userId = listing?.userId?.toString() || null;
 
@@ -3155,9 +3191,7 @@ export const getPayoutForAllOrders = async (req, res) => {
           }
         }
 
-        const commissionAmount = cancelled
-          ? 0
-          : (gross * commissionRate) / 100;
+        const commissionAmount = cancelled ? 0 : (gross * commissionRate) / 100;
 
         const netAmount = cancelled ? 0 : gross - commissionAmount;
 
@@ -3168,15 +3202,15 @@ export const getPayoutForAllOrders = async (req, res) => {
         }
 
         products.push({
-          title: item.title || "",
-          variantTitle: item.variant_title || "",
+          title: item.title || '',
+          variantTitle: item.variant_title || '',
           price,
           quantity: qty,
           total: gross,
           commissionRate,
           commissionAmount,
           netAmount,
-          fulfillment_status: item.fulfillment_status || "Unfulfilled",
+          fulfillment_status: item.fulfillment_status || 'Unfulfilled',
           cancelled,
           userId,
         });
@@ -3190,32 +3224,38 @@ export const getPayoutForAllOrders = async (req, res) => {
 
       updates.push({
         orderId: order.orderId,
-        shopifyOrderNo: order.shopifyOrderNo || "N/A",
+        shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || "pending",
+        payoutStatus: order.payoutStatus || 'pending',
         payoutAmount: netPayoutAmount, // ✅ NET
         refundAmount,
         createdAt: order.createdAt,
         products,
+        referenceNo: order.referenceNo || '',
+        paymentMethod: order.paymentMethod || '',
+        depositedDate: order.depositedDate || null,
       });
     }
 
     // ================= GROUPING (UNCHANGED) =================
     updates.forEach((order) => {
       const key = `${dayjs(order.scheduledPayoutDate).format(
-        "YYYY-MM-DD"
+        'YYYY-MM-DD'
       )}__${order.payoutStatus}`;
 
       if (!grouped[key]) {
         grouped[key] = {
-          payoutDate: dayjs(order.scheduledPayoutDate).format("MMM D, YYYY"),
-          status: order.payoutStatus === "Deposited" ? "Deposited" : "Pending",
+          payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+          status: order.payoutStatus,
           createdAts: [],
           totalAmount: 0,
           totalRefundAmount: 0,
           orders: [],
           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+          referenceNo: order.referenceNo || '',
+          paymentMethod: order.paymentMethod || '',
+          depositedDate: order.depositedDate || null,
         };
       }
 
@@ -3241,17 +3281,20 @@ export const getPayoutForAllOrders = async (req, res) => {
         return {
           payoutDate: group.payoutDate,
           transactionDates: `${minDate.format(
-            "MMM D"
-          )} – ${maxDate.format("MMM D, YYYY")}`,
+            'MMM D'
+          )} – ${maxDate.format('MMM D, YYYY')}`,
           status: group.status,
           amount: `$${group.totalAmount.toFixed(2)} AUD`,
           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
           orders: group.orders,
           sortKey: group.sortKey,
+          referenceNo: group.referenceNo,
+          paymentMethod: group.paymentMethod,
+          depositedDate: group.depositedDate,
         };
       })
       .sort((a, b) => {
-        if (a.status !== b.status) return a.status === "Pending" ? -1 : 1;
+        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
         return b.sortKey - a.sortKey;
       });
 
@@ -3264,17 +3307,15 @@ export const getPayoutForAllOrders = async (req, res) => {
     }
 
     res.json({
-      message: "Payouts calculated",
+      message: 'Payouts calculated',
       totalAmount: totalPayoutAmount,
       payouts,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error while calculating payouts" });
+    res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
-
-
 export const updateTrackingInShopify = async (req, res) => {
   try {
     const { fulfillmentId, tracking_number, tracking_company } = req.body;
@@ -3616,8 +3657,6 @@ export const getRequestById = async (req, res) => {
 //   }
 // };
 
-
-
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -3630,76 +3669,168 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// export const addReferenceToOrders = async (req, res) => {
+//   try {
+//     const { UserIds, referenceNo } = req.body;
+
+//     if (!Array.isArray(UserIds) || UserIds.length === 0 || !referenceNo) {
+//       return res.status(400).json({
+//         message: 'UserIds (array) and referenceNo are required.',
+//       });
+//     }
+
+//     // ✅ Update reference number
+//     const result = await authModel.updateMany(
+//       { _id: { $in: UserIds } },
+//       { $set: { referenceNo } }
+//     );
+
+//     if (result.modifiedCount === 0) {
+//       return res.status(404).json({
+//         message: 'No users found or reference not updated.',
+//       });
+//     }
+
+//     // ✅ Fetch updated users for email
+//     const users = await authModel.find(
+//       { _id: { $in: UserIds } },
+//       'email firstName lastName'
+//     );
+
+//     // ✅ Send email to each user
+//     for (const user of users) {
+//       if (!user.email) continue;
+
+//       const mailOptions = {
+//         from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
+//         to: user.email,
+//         subject: 'Your payout has been processed',
+//         html: `
+//           <div style="font-family: Arial, sans-serif; line-height: 1.6">
+//             <h2>Hello ${user.firstName || 'Merchant'},</h2>
+//             <p>
+//               Your payout has been <strong>processed successfully</strong>.
+//             </p>
+//             <p>
+//               <strong>Reference Number:</strong> ${referenceNo}
+//             </p>
+//             <p>
+//               If you have any questions, feel free to contact support.
+//             </p>
+//             <br/>
+//             <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
+//           </div>
+//         `,
+//       };
+
+//       // fire & forget (no await block)
+//       transporter.sendMail(mailOptions).catch((err) => {
+//         console.error(`Email failed for ${user.email}`, err);
+//       });
+//     }
+
+//     res.status(200).json({
+//       message: 'Reference number added and payout email sent.',
+//       modifiedCount: result.modifiedCount,
+//     });
+//   } catch (err) {
+//     console.error('Error updating user references:', err);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
+
 export const addReferenceToOrders = async (req, res) => {
   try {
-    const { UserIds, referenceNo } = req.body;
+    const {
+      payoutDate,
+      status,
+      referenceNo,
+      paymentMethod,
+      merchantIds, // 🔥 Important
+    } = req.body;
 
-    if (!Array.isArray(UserIds) || UserIds.length === 0 || !referenceNo) {
+    if (
+      !payoutDate ||
+      !status ||
+      !referenceNo ||
+      !paymentMethod ||
+      !Array.isArray(merchantIds)
+    ) {
       return res.status(400).json({
-        message: 'UserIds (array) and referenceNo are required.',
+        message: 'All fields including merchantIds are required.',
       });
     }
 
-    // ✅ Update reference number
-    const result = await authModel.updateMany(
-      { _id: { $in: UserIds } },
-      { $set: { referenceNo } }
+    const depositDate = new Date();
+
+    // ✅ 1️⃣ Update Orders
+    const result = await orderModel.updateMany(
+      {
+        scheduledPayoutDate: new Date(payoutDate),
+        payoutStatus: status,
+      },
+      {
+        $set: {
+          payoutStatus: 'Deposited',
+          referenceNo,
+          paymentMethod,
+          depositedDate: depositDate,
+        },
+      }
     );
 
     if (result.modifiedCount === 0) {
       return res.status(404).json({
-        message: 'No users found or reference not updated.',
+        message: 'No orders found to update.',
       });
     }
 
-    // ✅ Fetch updated users for email
-    const users = await authModel.find(
-      { _id: { $in: UserIds } },
-      'email firstName lastName'
-    );
+    // ✅ 2️⃣ Check Notification Setting
+    const settings = await notificationModel.findOne({});
 
-    // ✅ Send email to each user
-    for (const user of users) {
-      if (!user.email) continue;
+    if (settings?.approvals?.payoutNotification) {
+      // 🔥 Only send if true
 
-      const mailOptions = {
-        from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
-        to: user.email,
-        subject: 'Your payout has been processed',
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6">
-            <h2>Hello ${user.firstName || 'Merchant'},</h2>
-            <p>
-              Your payout has been <strong>processed successfully</strong>.
-            </p>
-            <p>
-              <strong>Reference Number:</strong> ${referenceNo}
-            </p>
-            <p>
-              If you have any questions, feel free to contact support.
-            </p>
-            <br/>
-            <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
-          </div>
-        `,
-      };
+      const merchants = await authModel.find(
+        { _id: { $in: merchantIds } },
+        'email firstName'
+      );
 
-      // fire & forget (no await block)
-      transporter.sendMail(mailOptions).catch((err) => {
-        console.error(`Email failed for ${user.email}`, err);
-      });
+      for (const merchant of merchants) {
+        if (!merchant.email) continue;
+
+        const mailOptions = {
+          from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
+          to: merchant.email,
+          subject: 'Your payout has been deposited',
+          html: `
+            <div style="font-family: Arial, sans-serif;">
+              <h2>Hello ${merchant.firstName || 'Merchant'},</h2>
+              <p>Your payout has been <strong>successfully deposited</strong>.</p>
+              <p><strong>Reference Number:</strong> ${referenceNo}</p>
+              <p><strong>Payment Method:</strong> ${paymentMethod}</p>
+              <p><strong>Deposited Date:</strong> ${depositDate.toDateString()}</p>
+              <br/>
+              <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
+            </div>
+          `,
+        };
+
+        transporter.sendMail(mailOptions).catch((err) => {
+          console.error(`Email failed for ${merchant.email}`, err);
+        });
+      }
     }
 
     res.status(200).json({
-      message: 'Reference number added and payout email sent.',
+      message: 'Payout marked as Deposited successfully.',
       modifiedCount: result.modifiedCount,
     });
   } catch (err) {
-    console.error('Error updating user references:', err);
+    console.error(err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
 
 export const exportOrders = async (req, res) => {
   try {
@@ -3736,6 +3867,17 @@ export const exportOrders = async (req, res) => {
         CustomerPhone: order.customer?.phone || '',
         CustomerCreated: order.customer?.created_at || '',
       };
+      const today = dayjs();
+      const payoutDay = dayjs(order.scheduledPayoutDate);
+
+      // Agar deposited nahi hai to auto calculate karo
+      if (order.payoutStatus !== 'Deposited') {
+        if (today.isBefore(payoutDay, 'day')) {
+          order.payoutStatus = 'Pending';
+        } else {
+          order.payoutStatus = 'Due';
+        }
+      }
 
       if (Array.isArray(order.lineItems)) {
         for (const item of order.lineItems) {
@@ -4131,7 +4273,7 @@ export const getSalesContribution = async (req, res) => {
           totalSales: 1, // Include totalSales
         },
       },
-      { $sort: { totalSales: -1 } }, // Sort by total sales (descending)
+      { $sort: { totalSales: -1 } }, // S ort by total sales (descending)
     ]);
 
     if (salesData.length === 0) {

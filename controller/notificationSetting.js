@@ -21,6 +21,7 @@ export const saveNotificationSettings = async (req, res) => {
       userRegistrationApproval,
       productListingApproval,
       systemAlerts,
+      payoutNotification,
       recipientEmails,
     } = req.body;
 
@@ -31,6 +32,7 @@ export const saveNotificationSettings = async (req, res) => {
           userRegistrationApproval,
           productListingApproval,
           systemAlerts,
+          payoutNotification,
         },
         recipientEmails,
       },

@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema(
     },
     payoutStatus: {
       type: String,
-      enum: ['pending', 'Deposited'],
+      enum: ['pending', 'Deposited', 'Due'],
       default: 'pending',
     },
     paidAt: Date,
@@ -44,6 +44,9 @@ const orderSchema = new mongoose.Schema(
     referenceNo: {
       type: String,
     },
+    paymentMethod: String,
+
+    depositedDate: Date,
   },
   {
     timestamps: true,

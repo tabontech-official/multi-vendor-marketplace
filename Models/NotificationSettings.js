@@ -1,8 +1,7 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const NotificationSettingsSchema = new mongoose.Schema(
   {
-    
     approvals: {
       userRegistrationApproval: {
         type: Boolean,
@@ -13,26 +12,25 @@ const NotificationSettingsSchema = new mongoose.Schema(
       systemAlerts: {
         type: Boolean,
       },
+      payoutNotification: {
+        type: Boolean,
+      },
     },
 
     recipientEmails: {
       type: [String],
       validate: {
         validator: (emails) =>
-          emails.every((email) =>
-            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-          ),
-        message: "Invalid email format in recipient list",
+          emails.every((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+        message: 'Invalid email format in recipient list',
       },
       default: [],
     },
-
-   
   },
   { timestamps: true }
 );
 
 export const notificationModel = mongoose.model(
-  "NotificationSettings",
+  'NotificationSettings',
   NotificationSettingsSchema
 );

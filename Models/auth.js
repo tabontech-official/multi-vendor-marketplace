@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import { type } from 'os';
 const authSchema = new mongoose.Schema(
   {
     firstName: {
@@ -42,8 +43,14 @@ const authSchema = new mongoose.Schema(
     state: {
       type: String,
     },
-    comissionRate:{
-      type:Number
+    comissionRate: {
+      type: Number,
+    },
+    depositedMethod: {
+      type: String,
+    },
+    depositedDate: {
+      type: Date,
     },
 
     avatar: { type: [String], default: [] },
@@ -92,31 +99,30 @@ const authSchema = new mongoose.Schema(
     dispatchAddress: String,
     shopifyAccessToken: String,
     shopifyApiKey: String,
-    paypalAccount: { type: String, default: '' }, 
-    paypalAccountNo: { type: String, default: '' }, 
+    paypalAccount: { type: String, default: '' },
+    paypalAccountNo: { type: String, default: '' },
     paypalReferenceNo: { type: String, default: '' },
-    referenceNo:{
-      type:String
+    referenceNo: {
+      type: String,
     },
     bankDetails: {
       accountHolderName: { type: String, default: '' },
       accountNumber: { type: String, default: '' },
       bankName: { type: String, default: '' },
       branchName: { type: String, default: '' },
-      ifscCode: { type: String, default: '' }, 
-      swiftCode: { type: String, default: '' }, 
-      iban: { type: String, default: '' }, 
+      ifscCode: { type: String, default: '' },
+      swiftCode: { type: String, default: '' },
+      iban: { type: String, default: '' },
       country: { type: String, default: '' },
     },
-     paypalAccountNo: {
+    paypalAccountNo: {
       type: String,
       default: '',
     },
-    sellerName:{
-      type:String
+    sellerName: {
+      type: String,
     },
     shopifyCollectionId: { type: String, default: null },
-
   },
 
   {
