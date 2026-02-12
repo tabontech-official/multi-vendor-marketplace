@@ -18,6 +18,7 @@ import { orderRquestModel } from '../Models/OrderRequest.js';
 import { orderModel } from '../Models/order.js';
 import { authBulkUploaderModel } from '../Models/authForBulkUploder.js';
 import { notificationModel } from '../Models/NotificationSettings.js';
+import { financeReminderTemplate, sendEmail } from '../middleware/sendEmail.js';
 
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () =>
@@ -360,6 +361,29 @@ export const signUp = async (req, res) => {
   } catch (error) {
     console.error('Signup error:', error);
     return res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const sendFinanceReminder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await authModel.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const subject = "Add Bank Account Details for Payout";
+    const html = financeReminderTemplate(user.firstName);
+
+    await sendEmail(user.email, subject, html);
+
+    res.status(200).json({ message: "Email sent successfully" });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

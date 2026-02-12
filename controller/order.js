@@ -2223,6 +2223,7 @@ export const getPayout = async (req, res) => {
         );
 
         const payoutStatus = snapshot?.payoutStatus;
+        const payoutReferenceId = snapshot?.payoutReferenceId;
 
         enrichedLineItems.push({
           ...item,
@@ -2231,7 +2232,8 @@ export const getPayout = async (req, res) => {
           merchantEmail,
           commissionRate,
           itemTotal,
-          payoutStatus, // ✅ FROM ProductSnapshot
+          payoutStatus,
+          payoutReferenceId, // ✅ FROM ProductSnapshot
         });
       }
 
@@ -2599,6 +2601,7 @@ export const getPayoutByUserId = async (req, res) => {
       if (!merchantSnapshot) continue;
 
       const snapshotStatus = merchantSnapshot.payoutStatus || 'pending';
+const payoutReferenceId = merchantSnapshot.payoutReferenceId; // ✅ ADD THIS
 
       for (const item of lineItems) {
         const price = Number(item.price) || 0;
@@ -2669,7 +2672,7 @@ export const getPayoutByUserId = async (req, res) => {
         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-
+ payoutReferenceId,
         // ✅ SNAPSHOT STATUS
         payoutStatus:
           snapshotStatus === 'Deposited'
@@ -2731,6 +2734,7 @@ export const getPayoutByUserId = async (req, res) => {
         createdAt: order.createdAt,
         fulfillmentSummary: order.fulfillmentSummary,
         lineItems: order.lineItems,
+        payoutReferenceId: order.payoutReferenceId,
       });
     });
 
@@ -3627,6 +3631,7 @@ export const getPayoutForAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Server error while calculating payouts' });
   }
 };
+
 export const updateTrackingInShopify = async (req, res) => {
   try {
     const { fulfillmentId, tracking_number, tracking_company } = req.body;
@@ -3937,37 +3942,6 @@ export const getRequestById = async (req, res) => {
   }
 };
 
-// export const addReferenceToOrders = async (req, res) => {
-//   try {
-//     const { UserIds, referenceNo } = req.body;
-
-//     if (!Array.isArray(UserIds) || UserIds.length === 0 || !referenceNo) {
-//       return res.status(400).json({
-//         message: 'UserIds (array) and referenceNo are required.',
-//       });
-//     }
-
-//     const result = await authModel.updateMany(
-//       { _id: { $in: UserIds } },
-//       { $set: { referenceNo } }
-//     );
-
-//     if (result.modifiedCount === 0) {
-//       return res.status(404).json({
-//         message: 'No users found or reference not updated.',
-//       });
-//     }
-
-//     res.status(200).json({
-//       message: 'Reference number added to all specified users.',
-//       modifiedCount: result.modifiedCount,
-//     });
-//   } catch (err) {
-//     console.error('Error updating user references:', err);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
-
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -3980,90 +3954,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// export const addReferenceToOrders = async (req, res) => {
-//   try {
-//     const { UserIds, referenceNo } = req.body;
-
-//     if (!Array.isArray(UserIds) || UserIds.length === 0 || !referenceNo) {
-//       return res.status(400).json({
-//         message: 'UserIds (array) and referenceNo are required.',
-//       });
-//     }
-
-//     // ✅ Update reference number
-//     const result = await authModel.updateMany(
-//       { _id: { $in: UserIds } },
-//       { $set: { referenceNo } }
-//     );
-
-//     if (result.modifiedCount === 0) {
-//       return res.status(404).json({
-//         message: 'No users found or reference not updated.',
-//       });
-//     }
-
-//     // ✅ Fetch updated users for email
-//     const users = await authModel.find(
-//       { _id: { $in: UserIds } },
-//       'email firstName lastName'
-//     );
-
-//     // ✅ Send email to each user
-//     for (const user of users) {
-//       if (!user.email) continue;
-
-//       const mailOptions = {
-//         from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
-//         to: user.email,
-//         subject: 'Your payout has been processed',
-//         html: `
-//           <div style="font-family: Arial, sans-serif; line-height: 1.6">
-//             <h2>Hello ${user.firstName || 'Merchant'},</h2>
-//             <p>
-//               Your payout has been <strong>processed successfully</strong>.
-//             </p>
-//             <p>
-//               <strong>Reference Number:</strong> ${referenceNo}
-//             </p>
-//             <p>
-//               If you have any questions, feel free to contact support.
-//             </p>
-//             <br/>
-//             <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
-//           </div>
-//         `,
-//       };
-
-//       // fire & forget (no await block)
-//       transporter.sendMail(mailOptions).catch((err) => {
-//         console.error(`Email failed for ${user.email}`, err);
-//       });
-//     }
-
-//     res.status(200).json({
-//       message: 'Reference number added and payout email sent.',
-//       modifiedCount: result.modifiedCount,
-//     });
-//   } catch (err) {
-//     console.error('Error updating user references:', err);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
 
 export const addReferenceToOrders = async (req, res) => {
   try {
     const { payoutDate, referenceNo, paymentMethod, merchantIds } = req.body;
-
-    // if (
-    //   !payoutDate ||
-    //   !referenceNo ||
-    //   !paymentMethod ||
-    //   !Array.isArray(merchantIds)
-    // ) {
-    //   return res.status(400).json({
-    //     message: 'All fields including merchantIds are required.',
-    //   });
-    // }
 
     const depositDate = new Date();
     let modifiedCount = 0;
@@ -4098,40 +3992,36 @@ export const addReferenceToOrders = async (req, res) => {
       });
     }
 
-    // ================= SEND EMAIL =================
+    // ================= SEND EMAIL (ALWAYS SEND NOW) =================
 
-    const settings = await notificationModel.findOne({});
+    const merchants = await authModel.find(
+      { _id: { $in: merchantIds } },
+      'email firstName'
+    );
 
-    if (settings?.approvals?.payoutNotification) {
-      const merchants = await authModel.find(
-        { _id: { $in: merchantIds } },
-        'email firstName'
-      );
+    for (const merchant of merchants) {
+      if (!merchant.email) continue;
 
-      for (const merchant of merchants) {
-        if (!merchant.email) continue;
+      const mailOptions = {
+        from: `"AYDI Marketplace" <${process.env.EMAIL_USER}>`,
+        to: merchant.email,
+        subject: 'Your payout has been deposited',
+        html: `
+          <div style="font-family: Arial, sans-serif;">
+            <h2>Hello ${merchant.firstName || 'Merchant'},</h2>
+            <p>Your payout has been <strong>successfully deposited</strong>.</p>
+            <p><strong>Reference Number:</strong> ${referenceNo}</p>
+            <p><strong>Payment Method:</strong> ${paymentMethod}</p>
+            <p><strong>Deposited Date:</strong> ${depositDate.toDateString()}</p>
+            <br/>
+            <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
+          </div>
+        `,
+      };
 
-        const mailOptions = {
-          from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
-          to: merchant.email,
-          subject: 'Your payout has been deposited',
-          html: `
-            <div style="font-family: Arial, sans-serif;">
-              <h2>Hello ${merchant.firstName || 'Merchant'},</h2>
-              <p>Your payout has been <strong>successfully deposited</strong>.</p>
-              <p><strong>Reference Number:</strong> ${referenceNo}</p>
-              <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-              <p><strong>Deposited Date:</strong> ${depositDate.toDateString()}</p>
-              <br/>
-              <p>Regards,<br/><strong>AYDI Marketplace Team</strong></p>
-            </div>
-          `,
-        };
-
-        transporter.sendMail(mailOptions).catch((err) => {
-          console.error(`Email failed for ${merchant.email}`, err);
-        });
-      }
+      await transporter.sendMail(mailOptions).catch((err) => {
+        console.error(`Email failed for ${merchant.email}`, err);
+      });
     }
 
     res.status(200).json({
@@ -4143,6 +4033,7 @@ export const addReferenceToOrders = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 export const exportOrders = async (req, res) => {
   try {

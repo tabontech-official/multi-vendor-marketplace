@@ -28,6 +28,7 @@ import {
   getMerchantAccDetails,
   updateMerchantCommission,
   bulkUpdateMerchantCommission,
+  sendFinanceReminder,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -36,6 +37,7 @@ import { Csvuplaods } from '../middleware/multer.js';
 
 const authRouter = express.Router();
 
+authRouter.post("/send-finance-reminder/:id", sendFinanceReminder);
 
 authRouter.put("/updateMerchantCommission", updateMerchantCommission);
 authRouter.post(

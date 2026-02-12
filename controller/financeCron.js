@@ -1,118 +1,4 @@
-// import dayjs from 'dayjs';
-// import nodemailer from 'nodemailer';
-// import { authModel } from '../Models/auth.js';
-// import { listingModel } from '../Models/Listing.js';
-// import { orderModel } from '../Models/order.js';
-// import { PayoutConfig } from '../Models/finance.js';
-// import cron from "node-cron"
-// const transporter = nodemailer.createTransport({
-//   service: 'gmail',
-//   auth: {
-//     user: 'aydimarketplace@gmail.com',
-//     pass: 'ijeg fypl llry kftw',
-//   },
-//   secure: true,
-//   tls: {
-//     rejectUnauthorized: false,
-//   },
-// });
 
-// const sendEmail = async ({ to, subject, html }) => {
-//   try {
-//     await transporter.sendMail({
-//       from: '"AYDI Marketplace" <aydimarketplace@gmail.com>',
-//       to,
-//       subject,
-//       html,
-//     });
-//     console.log('📩 Email sent successfully to', to);
-//   } catch (err) {
-//     console.error('❌ Email send failed:', err.message);
-//   }
-// };
-
-// export const financeCron = () => {
-//   cron.schedule('0 * * * *', async () => {
-//     try {
-//       console.log('🔁 Running hourly payout cron...');
-
-//       const config = await PayoutConfig.findOne({});
-//       if (!config) return console.error('❌ Payout config not found');
-
-//       const today = dayjs().startOf('day');
-
-//       const orders = await orderModel.find({
-//         payoutStatus: { $regex: /^pending$/i },//         scheduledPayoutDate: {
-//           $gte: today.toDate(),
-//           $lt: today.add(1, 'day').toDate(),
-//         },
-//       });
-
-//       if (!orders.length) {
-//         console.log('✅ No eligible orders for payout today');
-//         return;
-//       }
-
-//       const userPayments = {};
-//       const userCache = {};
-//       const productCache = {};
-
-//       for (const order of orders) {
-//         for (const item of order.lineItems || []) {
-//           const variantId = item.variant_id;
-//           if (!variantId) continue;
-
-//           if (!productCache[variantId]) {
-//             productCache[variantId] = await listingModel.findOne({
-//               'variants.id': variantId,
-//             });
-//           }
-
-//           const product = productCache[variantId];
-//           if (!product || !product.userId) continue;
-
-//           const userId = product.userId.toString();
-//           const amount = Number(item.price || 0) * Number(item.quantity || 1);
-
-//           if (!userPayments[userId]) {
-//             userPayments[userId] = { amount: 0, paypal: '', email: '' };
-//           }
-
-//           userPayments[userId].amount += amount;
-
-//           if (!userCache[userId]) {
-//             userCache[userId] = await authModel.findById(userId);
-//           }
-
-//           const user = userCache[userId];
-//           if (user) {
-//             userPayments[userId].paypal = user.paypalAccount || 'N/A';
-//             userPayments[userId].email = user.email || 'N/A';
-//           }
-//         }
-
-//         order.payoutStatus = 'Deposited';
-//         await order.save();
-//       }
-
-//       let emailBody = `<h3>💸 Payout Summary for ${today.format('MMM D, YYYY')}</h3><ul>`;
-//       Object.entries(userPayments).forEach(([uid, data]) => {
-//         emailBody += `<li><strong>${data.email}</strong> → <strong>${data.paypal}</strong> — $${data.amount.toFixed(2)}</li>`;
-//       });
-//       emailBody += '</ul>';
-
-//       await sendEmail({
-//         to: 'aydimarketplace@gmail.com',
-//         subject: `Payout Summary - ${today.format('MMM D, YYYY')}`,
-//         html: emailBody,
-//       });
-
-//       console.log('✅ Payout email sent and orders updated.');
-//     } catch (error) {
-//       console.error('🔥 Payout cron failed:', error);
-//     }
-//   });
-// };
 import dayjs from 'dayjs';
 import nodemailer from 'nodemailer';
 import cron from 'node-cron';
@@ -259,13 +145,142 @@ const calculateUserBasedCommission = async (orders) => {
   };
 };
 
+// export const financeCron = () => {
+//   cron.schedule('* * * * *', async () => {
+//     try {
+//       console.log('🔁 Cron Started at:', new Date());
+
+// const today = dayjs().utc().startOf('day');
+// const tomorrow = today.add(1, 'day');
+
+//       // ============================
+//       // 1️⃣ Notification Check
+//       // ============================
+
+//       const notificationSettings = await notificationModel.findOne({});
+//       if (!notificationSettings?.approvals?.payoutNotification) {
+//         console.log('⛔ STOPPED → Payout notification disabled');
+//         return;
+//       }
+
+//       // ============================
+//       // 2️⃣ Admin + Staff Emails
+//       // ============================
+
+//       const admins = await authModel.find({
+//         role: { $in: ['Master Admin', 'Dev Admin'] },
+//       });
+
+//       const adminEmails = admins.map((a) => a.email);
+//       const staffEmails = notificationSettings.recipientEmails || [];
+
+//       const recipients = [...new Set([...adminEmails, ...staffEmails])];
+
+//       if (!recipients.length) {
+//         console.log('⛔ STOPPED → No recipients found');
+//         return;
+//       }
+
+//       console.log('📧 Recipients:', recipients);
+
+//       // ============================
+//       // 3️⃣ TODAY REMINDER
+//       // ============================
+
+//       const todayOrders = await orderModel.find({
+//         payoutStatus: { $regex: /^pending$/i },
+//         scheduledPayoutDate: {
+//           $gte: today.toDate(),
+//           $lt: today.add(1, 'day').toDate(),
+//         },
+//       });
+
+//       console.log('📦 Today Orders:', todayOrders.length);
+
+//       if (todayOrders.length) {
+//         const { gross, totalCommission } =
+//           await calculateUserBasedCommission(todayOrders);
+
+//         const net = gross - totalCommission;
+
+//         const html = payoutEmailTemplate({
+//           title: '📢 Payout Required Today',
+//           message: 'Today scheduled payouts must be processed.',
+//           gross,
+//           commissionRate: 'User Based',
+//           commissionAmount: totalCommission,
+//           net,
+//           totalOrders: todayOrders.length,
+//           type: 'reminder',
+//         });
+
+//         await sendEmail({
+//           to: recipients,
+//           subject: `Payout Required Today - ${today.format('MMM D, YYYY')}`,
+//           html,
+//         });
+
+//         console.log('✅ Reminder Email Sent');
+//       }
+
+//       // ============================
+//       // 4️⃣ ALL OVERDUE (ANY PAST DATE)
+//       // ============================
+
+//       const dueOrders = await orderModel.find({
+//         payoutStatus: { $regex: /^pending$/i },
+//         scheduledPayoutDate: { $lt: today.toDate() },
+//       });
+
+//       console.log('📦 Due Orders:', dueOrders.length);
+
+//       if (dueOrders.length) {
+//         const { gross, totalCommission } =
+//           await calculateUserBasedCommission(dueOrders);
+
+//         const net = gross - totalCommission;
+
+//         await orderModel.updateMany(
+//           { _id: { $in: dueOrders.map((o) => o._id) } },
+//           { payoutStatus: 'Due' }
+//         );
+
+//         console.log('🛑 Orders Marked as Due');
+
+//         const html = payoutEmailTemplate({
+//           title: '⚠️ Payout Due Alert',
+//           message:
+//             'These payouts are overdue and must be processed immediately.',
+//           gross,
+//           commissionRate: 'User Based',
+//           commissionAmount: totalCommission,
+//           net,
+//           totalOrders: dueOrders.length,
+//           type: 'due',
+//         });
+
+//         await sendEmail({
+//           to: recipients,
+//           subject: '⚠️ Overdue Payout Alert',
+//           html,
+//         });
+
+//         console.log('✅ Due Email Sent');
+//       }
+
+//       console.log('🏁 Cron Finished Successfully');
+//     } catch (error) {
+//       console.error('🔥 Finance cron failed:', error);
+//     }
+//   });
+// };
+
 export const financeCron = () => {
   cron.schedule('* * * * *', async () => {
     try {
       console.log('🔁 Cron Started at:', new Date());
 
-const today = dayjs().utc().startOf('day');
-const tomorrow = today.add(1, 'day');
+      const today = dayjs().utc().startOf('day');
 
       // ============================
       // 1️⃣ Notification Check
@@ -297,16 +312,16 @@ const tomorrow = today.add(1, 'day');
 
       console.log('📧 Recipients:', recipients);
 
-      // ============================
-      // 3️⃣ TODAY REMINDER
-      // ============================
+      // =====================================================
+      // 3️⃣ TODAY REMINDER (SNAPSHOT BASED)
+      // =====================================================
 
       const todayOrders = await orderModel.find({
-        payoutStatus: { $regex: /^pending$/i },
         scheduledPayoutDate: {
           $gte: today.toDate(),
           $lt: today.add(1, 'day').toDate(),
         },
+        'ProductSnapshot.payoutStatus': 'pending',
       });
 
       console.log('📦 Today Orders:', todayOrders.length);
@@ -337,13 +352,13 @@ const tomorrow = today.add(1, 'day');
         console.log('✅ Reminder Email Sent');
       }
 
-      // ============================
-      // 4️⃣ ALL OVERDUE (ANY PAST DATE)
-      // ============================
+      // =====================================================
+      // 4️⃣ ALL OVERDUE (SNAPSHOT BASED SAFE VERSION)
+      // =====================================================
 
       const dueOrders = await orderModel.find({
-        payoutStatus: { $regex: /^pending$/i },
         scheduledPayoutDate: { $lt: today.toDate() },
+        'ProductSnapshot.payoutStatus': 'pending',
       });
 
       console.log('📦 Due Orders:', dueOrders.length);
@@ -354,12 +369,22 @@ const tomorrow = today.add(1, 'day');
 
         const net = gross - totalCommission;
 
+        // 🔥 SAFE UPDATE (ONLY pending snapshots become Due)
         await orderModel.updateMany(
-          { _id: { $in: dueOrders.map((o) => o._id) } },
-          { payoutStatus: 'Due' }
+          {
+            _id: { $in: dueOrders.map((o) => o._id) },
+          },
+          {
+            $set: {
+              'ProductSnapshot.$[elem].payoutStatus': 'Due',
+            },
+          },
+          {
+            arrayFilters: [{ 'elem.payoutStatus': 'pending' }],
+          }
         );
 
-        console.log('🛑 Orders Marked as Due');
+        console.log('🛑 Only Pending Snapshots Marked as Due');
 
         const html = payoutEmailTemplate({
           title: '⚠️ Payout Due Alert',
