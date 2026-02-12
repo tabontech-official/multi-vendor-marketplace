@@ -145,152 +145,31 @@ const calculateUserBasedCommission = async (orders) => {
   };
 };
 
-// export const financeCron = () => {
-//   cron.schedule('* * * * *', async () => {
-//     try {
-//       console.log('🔁 Cron Started at:', new Date());
-
-// const today = dayjs().utc().startOf('day');
-// const tomorrow = today.add(1, 'day');
-
-//       // ============================
-//       // 1️⃣ Notification Check
-//       // ============================
-
-//       const notificationSettings = await notificationModel.findOne({});
-//       if (!notificationSettings?.approvals?.payoutNotification) {
-//         console.log('⛔ STOPPED → Payout notification disabled');
-//         return;
-//       }
-
-//       // ============================
-//       // 2️⃣ Admin + Staff Emails
-//       // ============================
-
-//       const admins = await authModel.find({
-//         role: { $in: ['Master Admin', 'Dev Admin'] },
-//       });
-
-//       const adminEmails = admins.map((a) => a.email);
-//       const staffEmails = notificationSettings.recipientEmails || [];
-
-//       const recipients = [...new Set([...adminEmails, ...staffEmails])];
-
-//       if (!recipients.length) {
-//         console.log('⛔ STOPPED → No recipients found');
-//         return;
-//       }
-
-//       console.log('📧 Recipients:', recipients);
-
-//       // ============================
-//       // 3️⃣ TODAY REMINDER
-//       // ============================
-
-//       const todayOrders = await orderModel.find({
-//         payoutStatus: { $regex: /^pending$/i },
-//         scheduledPayoutDate: {
-//           $gte: today.toDate(),
-//           $lt: today.add(1, 'day').toDate(),
-//         },
-//       });
-
-//       console.log('📦 Today Orders:', todayOrders.length);
-
-//       if (todayOrders.length) {
-//         const { gross, totalCommission } =
-//           await calculateUserBasedCommission(todayOrders);
-
-//         const net = gross - totalCommission;
-
-//         const html = payoutEmailTemplate({
-//           title: '📢 Payout Required Today',
-//           message: 'Today scheduled payouts must be processed.',
-//           gross,
-//           commissionRate: 'User Based',
-//           commissionAmount: totalCommission,
-//           net,
-//           totalOrders: todayOrders.length,
-//           type: 'reminder',
-//         });
-
-//         await sendEmail({
-//           to: recipients,
-//           subject: `Payout Required Today - ${today.format('MMM D, YYYY')}`,
-//           html,
-//         });
-
-//         console.log('✅ Reminder Email Sent');
-//       }
-
-//       // ============================
-//       // 4️⃣ ALL OVERDUE (ANY PAST DATE)
-//       // ============================
-
-//       const dueOrders = await orderModel.find({
-//         payoutStatus: { $regex: /^pending$/i },
-//         scheduledPayoutDate: { $lt: today.toDate() },
-//       });
-
-//       console.log('📦 Due Orders:', dueOrders.length);
-
-//       if (dueOrders.length) {
-//         const { gross, totalCommission } =
-//           await calculateUserBasedCommission(dueOrders);
-
-//         const net = gross - totalCommission;
-
-//         await orderModel.updateMany(
-//           { _id: { $in: dueOrders.map((o) => o._id) } },
-//           { payoutStatus: 'Due' }
-//         );
-
-//         console.log('🛑 Orders Marked as Due');
-
-//         const html = payoutEmailTemplate({
-//           title: '⚠️ Payout Due Alert',
-//           message:
-//             'These payouts are overdue and must be processed immediately.',
-//           gross,
-//           commissionRate: 'User Based',
-//           commissionAmount: totalCommission,
-//           net,
-//           totalOrders: dueOrders.length,
-//           type: 'due',
-//         });
-
-//         await sendEmail({
-//           to: recipients,
-//           subject: '⚠️ Overdue Payout Alert',
-//           html,
-//         });
-
-//         console.log('✅ Due Email Sent');
-//       }
-
-//       console.log('🏁 Cron Finished Successfully');
-//     } catch (error) {
-//       console.error('🔥 Finance cron failed:', error);
-//     }
-//   });
-// };
 
 export const financeCron = () => {
-  cron.schedule('* * * * *', async () => {
+  // 👇 RUN EVERY 2 SECONDS
+  cron.schedule('* * * * * *', async () => {
     try {
-      console.log('🔁 Cron Started at:', new Date());
+      console.log('==============================');
+      console.log('🔁 Cron Triggered At:', new Date());
+      console.log('==============================');
 
-      const today = dayjs().utc().startOf('day');
+      const now = new Date();
+      console.log('🕒 Current Time:', now);
 
       // ============================
       // 1️⃣ Notification Check
       // ============================
 
       const notificationSettings = await notificationModel.findOne({});
+      console.log('🔔 Notification Settings:', notificationSettings);
+
       if (!notificationSettings?.approvals?.payoutNotification) {
         console.log('⛔ STOPPED → Payout notification disabled');
         return;
       }
+
+      console.log('✅ Notification Enabled');
 
       // ============================
       // 2️⃣ Admin + Staff Emails
@@ -305,111 +184,101 @@ export const financeCron = () => {
 
       const recipients = [...new Set([...adminEmails, ...staffEmails])];
 
+      console.log('📨 Recipients:', recipients);
+
       if (!recipients.length) {
         console.log('⛔ STOPPED → No recipients found');
         return;
       }
 
-      console.log('📧 Recipients:', recipients);
-
       // =====================================================
-      // 3️⃣ TODAY REMINDER (SNAPSHOT BASED)
-      // =====================================================
-
-      const todayOrders = await orderModel.find({
-        scheduledPayoutDate: {
-          $gte: today.toDate(),
-          $lt: today.add(1, 'day').toDate(),
-        },
-        'ProductSnapshot.payoutStatus': 'pending',
-      });
-
-      console.log('📦 Today Orders:', todayOrders.length);
-
-      if (todayOrders.length) {
-        const { gross, totalCommission } =
-          await calculateUserBasedCommission(todayOrders);
-
-        const net = gross - totalCommission;
-
-        const html = payoutEmailTemplate({
-          title: '📢 Payout Required Today',
-          message: 'Today scheduled payouts must be processed.',
-          gross,
-          commissionRate: 'User Based',
-          commissionAmount: totalCommission,
-          net,
-          totalOrders: todayOrders.length,
-          type: 'reminder',
-        });
-
-        await sendEmail({
-          to: recipients,
-          subject: `Payout Required Today - ${today.format('MMM D, YYYY')}`,
-          html,
-        });
-
-        console.log('✅ Reminder Email Sent');
-      }
-
-      // =====================================================
-      // 4️⃣ ALL OVERDUE (SNAPSHOT BASED SAFE VERSION)
+      // 3️⃣ OVERDUE LOGIC (SIMPLE & CORRECT)
       // =====================================================
 
       const dueOrders = await orderModel.find({
-        scheduledPayoutDate: { $lt: today.toDate() },
+        scheduledPayoutDate: { $lte: now }, // 👈 SIMPLE FIX
         'ProductSnapshot.payoutStatus': 'pending',
       });
 
-      console.log('📦 Due Orders:', dueOrders.length);
+      console.log('📦 Due Orders Found:', dueOrders.length);
+      console.log(
+        '📦 Due Order Dates:',
+        dueOrders.map(o => ({
+          id: o._id,
+          payoutDate: o.scheduledPayoutDate
+        }))
+      );
 
-      if (dueOrders.length) {
-        const { gross, totalCommission } =
-          await calculateUserBasedCommission(dueOrders);
-
-        const net = gross - totalCommission;
-
-        // 🔥 SAFE UPDATE (ONLY pending snapshots become Due)
-        await orderModel.updateMany(
-          {
-            _id: { $in: dueOrders.map((o) => o._id) },
-          },
-          {
-            $set: {
-              'ProductSnapshot.$[elem].payoutStatus': 'Due',
-            },
-          },
-          {
-            arrayFilters: [{ 'elem.payoutStatus': 'pending' }],
-          }
-        );
-
-        console.log('🛑 Only Pending Snapshots Marked as Due');
-
-        const html = payoutEmailTemplate({
-          title: '⚠️ Payout Due Alert',
-          message:
-            'These payouts are overdue and must be processed immediately.',
-          gross,
-          commissionRate: 'User Based',
-          commissionAmount: totalCommission,
-          net,
-          totalOrders: dueOrders.length,
-          type: 'due',
-        });
-
-        await sendEmail({
-          to: recipients,
-          subject: '⚠️ Overdue Payout Alert',
-          html,
-        });
-
-        console.log('✅ Due Email Sent');
+      if (!dueOrders.length) {
+        console.log('ℹ️ No Overdue Orders Found');
+        return;
       }
 
-      console.log('🏁 Cron Finished Successfully');
+      // ===============================
+      // Calculate Amounts
+      // ===============================
+
+      const { gross, totalCommission } =
+        await calculateUserBasedCommission(dueOrders);
+
+      const net = gross - totalCommission;
+
+      console.log('💰 Gross:', gross);
+      console.log('💰 Commission:', totalCommission);
+      console.log('💰 Net:', net);
+
+      // ===============================
+      // Update Snapshots to Due
+      // ===============================
+
+      await orderModel.updateMany(
+        {
+          _id: { $in: dueOrders.map(o => o._id) },
+        },
+        {
+          $set: {
+            'ProductSnapshot.$[elem].payoutStatus': 'Due',
+          },
+        },
+        {
+          arrayFilters: [{ 'elem.payoutStatus': 'pending' }],
+        }
+      );
+
+      console.log('✅ Pending Snapshots Updated To Due');
+
+      // ===============================
+      // Send Email
+      // ===============================
+
+      const html = payoutEmailTemplate({
+        title: '⚠️ Payout Due Alert',
+        message:
+          'These payouts are overdue and must be processed immediately.',
+        gross,
+        commissionRate: 'User Based',
+        commissionAmount: totalCommission,
+        net,
+        totalOrders: dueOrders.length,
+        type: 'due',
+      });
+
+      console.log('📤 Sending Due Email...');
+
+      await sendEmail({
+        to: recipients,
+        subject: '⚠️ Overdue Payout Alert',
+        html,
+      });
+
+      console.log('✅ Due Email Sent Successfully');
+      console.log('🏁 Cron Cycle Complete');
+      console.log('==============================');
+
     } catch (error) {
       console.error('🔥 Finance cron failed:', error);
     }
   });
 };
+
+
