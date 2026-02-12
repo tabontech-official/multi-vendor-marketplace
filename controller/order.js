@@ -12,12 +12,18 @@ import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import { Parser } from 'json2csv';
 import path from 'path';
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 
 import fs from 'fs';
 import { notificationModel } from '../Models/NotificationSettings.js';
 dayjs.extend(customParseFormat);
 dayjs.extend(minMax);
 
+const generatePayoutReference = () => {
+  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const timestamp = Date.now();
+  return `PYT-${timestamp}-${random}`;
+};
 export const addComission = async (req, res) => {
   try {
     const { comission } = req.body;
@@ -234,6 +240,7 @@ export const createOrder = async (req, res) => {
         merchantId: product.userId || null,
         product, // FULL PRODUCT SNAPSHOT
         variant, // EXACT VARIANT SNAPSHOT
+        payoutReferenceId: generatePayoutReference(),
       });
 
       console.log(
@@ -1775,50 +1782,51 @@ function getNextPayoutDate(startDate, config) {
 //         const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
 //         const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
 
-//         if (!order.eligibleDate) {
-//           order.eligibleDate = eligibleDate.toDate();
-//         }
-
-//         if (!order.scheduledPayoutDate) {
+//         if (!order.eligibleDate) order.eligibleDate = eligibleDate.toDate();
+//         if (!order.scheduledPayoutDate)
 //           order.scheduledPayoutDate = payoutDate.toDate();
-//         }
 //       }
 
-//       const lineItems = order.lineItems || [];
-//       let payoutAmount = 0;
 //       const enrichedLineItems = [];
+//       let payoutAmount = 0;
 
-//       for (const item of lineItems) {
+//       for (const item of order.lineItems || []) {
 //         const price = Number(item.price) || 0;
-//         const qty = Number(item.quantity) || 0;
-//         const total = price * qty;
-//         payoutAmount += total;
+//         const qty = Number(item.quantity || item.current_quantity) || 0;
+//         const itemTotal = price * qty;
+
+//         payoutAmount += itemTotal;
 
 //         let merchantName = 'Unknown';
 //         let merchantEmail = 'Unknown';
 //         let merchantId = null;
+//         let commissionRate = 0;
 
 //         const variantId = item.variantId || item.variant_id;
 //         if (variantId) {
 //           const listing = await listingModel.findOne({
 //             'variants.id': String(variantId),
 //           });
-//           if (listing && listing.userId) {
+
+//           if (listing?.userId) {
 //             const merchant = await authModel.findById(listing.userId);
 //             if (merchant) {
 //               merchantName =
 //                 `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
 //               merchantEmail = merchant.email || 'N/A';
 //               merchantId = merchant._id;
+//               commissionRate = Number(merchant.comissionRate || 0);
 //             }
 //           }
 //         }
 
 //         enrichedLineItems.push({
 //           ...item,
+//           merchantId,
 //           merchantName,
 //           merchantEmail,
-//           merchantId,
+//           commissionRate,
+//           itemTotal,
 //         });
 //       }
 
@@ -1829,63 +1837,90 @@ function getNextPayoutDate(startDate, config) {
 
 //       updates.push({
 //         orderId: order._id,
-//         shopifyOrderId: order.orderId,
-//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
-//         eligibleDate: order.eligibleDate,
 //         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
-//         payoutAmount,
+//         payoutStatus: order.payoutStatus || 'N/A',
 //         createdAt: order.createdAt,
 //         lineItems: enrichedLineItems,
 //       });
 //     }
 
+//     // ================= GROUPING =================
+
 //     const grouped = {};
 
 //     updates.forEach((order) => {
-//       const key = `${dayjs(order.scheduledPayoutDate).format('YYYY-MM-DD')}__${order.payoutStatus}`;
+//       const key = `${dayjs(order.scheduledPayoutDate).format(
+//         'YYYY-MM-DD'
+//       )}__${order.payoutStatus}`;
 
 //       if (!grouped[key]) {
+//         let normalizedStatus = 'Pending';
+
+//         if (order.payoutStatus?.toLowerCase() === 'deposited') {
+//           normalizedStatus = 'Deposited';
+//         } else if (order.payoutStatus?.toLowerCase() === 'due') {
+//           normalizedStatus = 'Due';
+//         }
+
 //         grouped[key] = {
 //           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
+//           status: normalizedStatus,
 //           createdAts: [],
-//           totalAmount: 0,
 //           orders: {},
 //           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
 //         };
 //       }
 
 //       grouped[key].createdAts.push(dayjs(order.createdAt));
-//       grouped[key].totalAmount += order.payoutAmount || 0;
 
 //       order.lineItems.forEach((line) => {
+//         if (!line.merchantId) return;
+
 //         const merchantKey = `${line.merchantId}-${order.scheduledPayoutDate}`;
 
 //         if (!grouped[key].orders[merchantKey]) {
 //           grouped[key].orders[merchantKey] = {
 //             merchantId: line.merchantId,
-//             merchantName: line.merchantName || 'Unknown',
-//             merchantEmail: line.merchantEmail || 'Unknown',
+//             merchantName: line.merchantName,
+//             merchantEmail: line.merchantEmail,
+
+//             commissionRate: line.commissionRate,
+//             grossAmount: 0,
+//             commissionAmount: 0,
+//             netAmount: 0,
+
 //             fulfilledCount: 0,
 //             unfulfilledCount: 0,
-//             totalAmount: 0,
 //             lineItems: [],
 //           };
 //         }
 
-//         grouped[key].orders[merchantKey].totalAmount +=
-//           parseFloat(line.price) * line.current_quantity;
+//         const merchant = grouped[key].orders[merchantKey];
+
+//         merchant.grossAmount += line.itemTotal;
 
 //         if (line.fulfillment_status === 'fulfilled') {
-//           grouped[key].orders[merchantKey].fulfilledCount += 1;
+//           merchant.fulfilledCount += 1;
 //         } else if (line.fulfillment_status === null) {
-//           grouped[key].orders[merchantKey].unfulfilledCount += 1;
+//           merchant.unfulfilledCount += 1;
 //         }
 
-//         grouped[key].orders[merchantKey].lineItems.push(line);
+//         merchant.lineItems.push(line);
 //       });
 //     });
+
+//     // ================= COMMISSION CALC =================
+
+//     Object.values(grouped).forEach((group) => {
+//       Object.values(group.orders).forEach((merchant) => {
+//         merchant.commissionAmount =
+//           (merchant.grossAmount * merchant.commissionRate) / 100;
+
+//         merchant.netAmount = merchant.grossAmount - merchant.commissionAmount;
+//       });
+//     });
+
+//     // ================= FINAL RESPONSE =================
 
 //     const allPayouts = Object.values(grouped)
 //       .map((group) => {
@@ -1894,9 +1929,10 @@ function getNextPayoutDate(startDate, config) {
 
 //         return {
 //           payoutDate: group.payoutDate,
-//           transactionDates: `${minDate.format('MMM D')} – ${maxDate.format('MMM D, YYYY')}`,
+//           transactionDates: `${minDate.format(
+//             'MMM D'
+//           )} – ${maxDate.format('MMM D, YYYY')}`,
 //           status: group.status,
-//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
 //           orders: Object.values(group.orders),
 //           sortKey: group.sortKey,
 //         };
@@ -1906,238 +1942,22 @@ function getNextPayoutDate(startDate, config) {
 //         return b.sortKey - a.sortKey;
 //       });
 
-//     // Pagination logic
 //     const page = parseInt(req.query.page) || 1;
 //     const limit = parseInt(req.query.limit) || 10;
 //     const startIndex = (page - 1) * limit;
-//     const endIndex = startIndex + limit;
-//     const paginatedPayouts = allPayouts.slice(startIndex, endIndex);
 
 //     res.json({
 //       message: 'Payouts calculated',
-//       totalAmount: totalPayoutAmount,
 //       totalPayouts: allPayouts.length,
 //       page,
 //       limit,
-//       payouts: paginatedPayouts,
+//       payouts: allPayouts.slice(startIndex, startIndex + limit),
 //     });
 //   } catch (err) {
 //     console.error(err);
 //     res.status(500).json({ error: 'Server error while calculating payouts' });
 //   }
 // };
-
-export const getPayout = async (req, res) => {
-  try {
-    const config = await PayoutConfig.findOne({});
-    if (!config) {
-      return res.status(400).json({ error: 'Payout config not found.' });
-    }
-
-    const orders = await orderModel.find({});
-    const updates = [];
-    let totalPayoutAmount = 0;
-    const currentDate = dayjs().startOf('day');
-
-    for (const order of orders) {
-      let createdAt = dayjs(order.createdAt);
-
-      if (dayjs(order.scheduledPayoutDate).isSame(currentDate, 'day')) {
-        const lineItems = order.lineItems || [];
-        const isAnyItemUnfulfilled = lineItems.some(
-          (item) => item.fulfillment_status === null
-        );
-
-        if (isAnyItemUnfulfilled) {
-          createdAt = createdAt.add(1, 'day');
-          order.createdAt = createdAt.toDate();
-
-          const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-          const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
-          order.scheduledPayoutDate = payoutDate.toDate();
-        }
-      }
-
-      if (!order.scheduledPayoutDate || !order.eligibleDate) {
-        const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
-        const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
-
-        if (!order.eligibleDate) order.eligibleDate = eligibleDate.toDate();
-        if (!order.scheduledPayoutDate)
-          order.scheduledPayoutDate = payoutDate.toDate();
-      }
-
-      const enrichedLineItems = [];
-      let payoutAmount = 0;
-
-      for (const item of order.lineItems || []) {
-        const price = Number(item.price) || 0;
-        const qty = Number(item.quantity || item.current_quantity) || 0;
-        const itemTotal = price * qty;
-
-        payoutAmount += itemTotal;
-
-        let merchantName = 'Unknown';
-        let merchantEmail = 'Unknown';
-        let merchantId = null;
-        let commissionRate = 0;
-
-        const variantId = item.variantId || item.variant_id;
-        if (variantId) {
-          const listing = await listingModel.findOne({
-            'variants.id': String(variantId),
-          });
-
-          if (listing?.userId) {
-            const merchant = await authModel.findById(listing.userId);
-            if (merchant) {
-              merchantName =
-                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
-              merchantEmail = merchant.email || 'N/A';
-              merchantId = merchant._id;
-              commissionRate = Number(merchant.comissionRate || 0);
-            }
-          }
-        }
-
-        enrichedLineItems.push({
-          ...item,
-          merchantId,
-          merchantName,
-          merchantEmail,
-          commissionRate,
-          itemTotal,
-        });
-      }
-
-      order.payoutAmount = payoutAmount;
-      await order.save();
-
-      totalPayoutAmount += payoutAmount;
-
-      updates.push({
-        orderId: order._id,
-        scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || 'N/A',
-        createdAt: order.createdAt,
-        lineItems: enrichedLineItems,
-      });
-    }
-
-    // ================= GROUPING =================
-
-    const grouped = {};
-
-    updates.forEach((order) => {
-      const key = `${dayjs(order.scheduledPayoutDate).format(
-        'YYYY-MM-DD'
-      )}__${order.payoutStatus}`;
-
-      if (!grouped[key]) {
-        let normalizedStatus = 'Pending';
-
-        if (order.payoutStatus?.toLowerCase() === 'deposited') {
-          normalizedStatus = 'Deposited';
-        } else if (order.payoutStatus?.toLowerCase() === 'due') {
-          normalizedStatus = 'Due';
-        }
-
-        grouped[key] = {
-          payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-          status: normalizedStatus,
-          createdAts: [],
-          orders: {},
-          sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
-        };
-      }
-
-      grouped[key].createdAts.push(dayjs(order.createdAt));
-
-      order.lineItems.forEach((line) => {
-        if (!line.merchantId) return;
-
-        const merchantKey = `${line.merchantId}-${order.scheduledPayoutDate}`;
-
-        if (!grouped[key].orders[merchantKey]) {
-          grouped[key].orders[merchantKey] = {
-            merchantId: line.merchantId,
-            merchantName: line.merchantName,
-            merchantEmail: line.merchantEmail,
-
-            commissionRate: line.commissionRate,
-            grossAmount: 0,
-            commissionAmount: 0,
-            netAmount: 0,
-
-            fulfilledCount: 0,
-            unfulfilledCount: 0,
-            lineItems: [],
-          };
-        }
-
-        const merchant = grouped[key].orders[merchantKey];
-
-        merchant.grossAmount += line.itemTotal;
-
-        if (line.fulfillment_status === 'fulfilled') {
-          merchant.fulfilledCount += 1;
-        } else if (line.fulfillment_status === null) {
-          merchant.unfulfilledCount += 1;
-        }
-
-        merchant.lineItems.push(line);
-      });
-    });
-
-    // ================= COMMISSION CALC =================
-
-    Object.values(grouped).forEach((group) => {
-      Object.values(group.orders).forEach((merchant) => {
-        merchant.commissionAmount =
-          (merchant.grossAmount * merchant.commissionRate) / 100;
-
-        merchant.netAmount = merchant.grossAmount - merchant.commissionAmount;
-      });
-    });
-
-    // ================= FINAL RESPONSE =================
-
-    const allPayouts = Object.values(grouped)
-      .map((group) => {
-        const minDate = dayjs.min(group.createdAts);
-        const maxDate = dayjs.max(group.createdAts);
-
-        return {
-          payoutDate: group.payoutDate,
-          transactionDates: `${minDate.format(
-            'MMM D'
-          )} – ${maxDate.format('MMM D, YYYY')}`,
-          status: group.status,
-          orders: Object.values(group.orders),
-          sortKey: group.sortKey,
-        };
-      })
-      .sort((a, b) => {
-        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
-        return b.sortKey - a.sortKey;
-      });
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const startIndex = (page - 1) * limit;
-
-    res.json({
-      message: 'Payouts calculated',
-      totalPayouts: allPayouts.length,
-      page,
-      limit,
-      payouts: allPayouts.slice(startIndex, startIndex + limit),
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error while calculating payouts' });
-  }
-};
 
 // export const getPayoutByUserId = async (req, res) => {
 //   try {
@@ -2318,6 +2138,424 @@ export const getPayout = async (req, res) => {
 //   }
 // };
 
+export const getPayout = async (req, res) => {
+  try {
+    const config = await PayoutConfig.findOne({});
+    if (!config) {
+      return res.status(400).json({ error: 'Payout config not found.' });
+    }
+
+    const orders = await orderModel.find({});
+    const updates = [];
+    const currentDate = dayjs().startOf('day');
+
+    for (const order of orders) {
+      let createdAt = dayjs(order.createdAt);
+
+      // ================= RESCHEDULE IF UNFULFILLED =================
+      if (
+        order.scheduledPayoutDate &&
+        dayjs(order.scheduledPayoutDate).isSame(currentDate, 'day')
+      ) {
+        const isAnyItemUnfulfilled = (order.lineItems || []).some(
+          (item) => item.fulfillment_status === null
+        );
+
+        if (isAnyItemUnfulfilled) {
+          createdAt = createdAt.add(1, 'day');
+          order.createdAt = createdAt.toDate();
+
+          const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+          const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
+
+          order.scheduledPayoutDate = payoutDate.toDate();
+        }
+      }
+
+      // ================= SET ELIGIBLE / PAYOUT DATE =================
+      if (!order.scheduledPayoutDate || !order.eligibleDate) {
+        const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+        const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
+
+        if (!order.eligibleDate) order.eligibleDate = eligibleDate.toDate();
+
+        if (!order.scheduledPayoutDate)
+          order.scheduledPayoutDate = payoutDate.toDate();
+      }
+
+      const enrichedLineItems = [];
+
+      for (const item of order.lineItems || []) {
+        const price = Number(item.price) || 0;
+        const qty = Number(item.quantity || item.current_quantity) || 0;
+
+        const itemTotal = price * qty;
+
+        let merchantName = 'Unknown';
+        let merchantEmail = 'Unknown';
+        let merchantId = null;
+        let commissionRate = 0;
+
+        const variantId = item.variantId || item.variant_id;
+
+        if (variantId) {
+          const listing = await listingModel.findOne({
+            'variants.id': String(variantId),
+          });
+
+          if (listing?.userId) {
+            const merchant = await authModel.findById(listing.userId);
+            if (merchant) {
+              merchantName =
+                `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+              merchantEmail = merchant.email || 'N/A';
+              merchantId = merchant._id;
+              commissionRate = Number(merchant.comissionRate || 0);
+            }
+          }
+        }
+
+        // ================= 🔥 GET PAYOUT STATUS FROM ProductSnapshot =================
+        const snapshot = order.ProductSnapshot?.find(
+          (p) =>
+            String(p.productId) === String(item.product_id) &&
+            String(p.variantId) === String(item.variant_id)
+        );
+
+        const payoutStatus = snapshot?.payoutStatus;
+
+        enrichedLineItems.push({
+          ...item,
+          merchantId,
+          merchantName,
+          merchantEmail,
+          commissionRate,
+          itemTotal,
+          payoutStatus, // ✅ FROM ProductSnapshot
+        });
+      }
+
+      await order.save();
+
+      updates.push({
+        orderId: order._id,
+        scheduledPayoutDate: order.scheduledPayoutDate,
+        createdAt: order.createdAt,
+        lineItems: enrichedLineItems,
+      });
+    }
+
+    // ================= GROUPING (MERCHANT + STATUS BASED) =================
+
+    const grouped = {};
+
+    updates.forEach((order) => {
+      order.lineItems.forEach((line) => {
+        if (!line.merchantId) return;
+
+        const status = line.payoutStatus || 'pending';
+
+        const key = `${dayjs(order.scheduledPayoutDate).format(
+          'YYYY-MM-DD'
+        )}__${status}`;
+
+        if (!grouped[key]) {
+          grouped[key] = {
+            payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+            status:
+              status.charAt(0).toUpperCase() + status.slice(1).toLowerCase(),
+            createdAts: [],
+            orders: {},
+            sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+          };
+        }
+
+        grouped[key].createdAts.push(dayjs(order.createdAt));
+
+        const merchantKey = `${line.merchantId}-${order.scheduledPayoutDate}`;
+
+        if (!grouped[key].orders[merchantKey]) {
+          grouped[key].orders[merchantKey] = {
+            merchantId: line.merchantId,
+            merchantName: line.merchantName,
+            merchantEmail: line.merchantEmail,
+            commissionRate: line.commissionRate,
+            grossAmount: 0,
+            commissionAmount: 0,
+            netAmount: 0,
+            fulfilledCount: 0,
+            unfulfilledCount: 0,
+            lineItems: [],
+          };
+        }
+
+        const merchant = grouped[key].orders[merchantKey];
+
+        merchant.grossAmount += line.itemTotal;
+
+        if (line.fulfillment_status === 'fulfilled') {
+          merchant.fulfilledCount += 1;
+        } else if (line.fulfillment_status === null) {
+          merchant.unfulfilledCount += 1;
+        }
+
+        merchant.lineItems.push(line);
+      });
+    });
+
+    // ================= COMMISSION CALC =================
+
+    Object.values(grouped).forEach((group) => {
+      Object.values(group.orders).forEach((merchant) => {
+        merchant.commissionAmount =
+          (merchant.grossAmount * merchant.commissionRate) / 100;
+
+        merchant.netAmount = merchant.grossAmount - merchant.commissionAmount;
+      });
+    });
+
+    // ================= FINAL RESPONSE =================
+
+    const allPayouts = Object.values(grouped)
+      .map((group) => {
+        const minDate = dayjs.min(group.createdAts);
+        const maxDate = dayjs.max(group.createdAts);
+
+        return {
+          payoutDate: group.payoutDate,
+          transactionDates: `${minDate.format(
+            'MMM D'
+          )} – ${maxDate.format('MMM D, YYYY')}`,
+          status: group.status,
+          orders: Object.values(group.orders),
+          sortKey: group.sortKey,
+        };
+      })
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+        return b.sortKey - a.sortKey;
+      });
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+
+    res.json({
+      message: 'Payouts calculated',
+      totalPayouts: allPayouts.length,
+      page,
+      limit,
+      payouts: allPayouts.slice(startIndex, startIndex + limit),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Server error while calculating payouts',
+    });
+  }
+};
+
+// export const getPayoutByUserId = async (req, res) => {
+//   try {
+//     const { userId } = req.query;
+
+//     const config = await PayoutConfig.findOne({});
+//     if (!config) {
+//       return res.status(400).json({ error: 'Payout config not found.' });
+//     }
+
+//     const orders = await orderModel.find({});
+//     const updates = [];
+//     let totalPayoutAmount = 0;
+//     let totalRefundAmount = 0;
+
+//     for (const order of orders) {
+//       const createdAt = dayjs(order.createdAt);
+//       const eligibleDate = createdAt.add(config.graceTime || 7, 'day');
+//       const payoutDate = getNextPayoutDate(eligibleDate.toDate(), config);
+
+//       order.eligibleDate = eligibleDate.toDate();
+//       order.scheduledPayoutDate = payoutDate.toDate();
+
+//       const lineItems = order.lineItems || [];
+//       let payoutAmount = 0;
+//       let refundAmount = 0;
+//       let commissionAmount = 0;
+
+//       const enrichedLineItems = [];
+//       let fulfilledCount = 0;
+//       let unfulfilledCount = 0;
+
+//       let merchantCommissionRate = 0;
+
+//       for (const item of lineItems) {
+//         const price = Number(item.price) || 0;
+//         const qty = Number(item.quantity || item.current_quantity) || 0;
+//         const total = price * qty;
+//         const status = item.fulfillment_status;
+
+//         let merchantId = null;
+//         let merchantName = 'Unknown';
+//         let merchantEmail = 'Unknown';
+
+//         const variantId = item.variantId || item.variant_id;
+//         if (variantId) {
+//           const listing = await listingModel.findOne({
+//             'variants.id': String(variantId),
+//           });
+
+//           if (listing?.userId) {
+//             merchantId = String(listing.userId);
+
+//             if (userId && merchantId !== String(userId)) continue;
+
+//             const merchant = await authModel.findById(listing.userId);
+//             if (merchant) {
+//               merchantName =
+//                 `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
+//               merchantEmail = merchant.email || 'N/A';
+//               merchantCommissionRate = Number(merchant.comissionRate || 0);
+//             }
+//           }
+//         }
+
+//         // Fulfillment count (ignore cancelled)
+//         if (status === 'fulfilled') {
+//           fulfilledCount++;
+//         } else if (status !== 'cancelled') {
+//           unfulfilledCount++;
+//         }
+
+//         enrichedLineItems.push({
+//           ...item,
+//           merchantId,
+//           merchantName,
+//           merchantEmail,
+//           commissionRate: merchantCommissionRate,
+//           isCancelled: status === 'cancelled',
+//         });
+
+//         if (status === 'cancelled') {
+//           refundAmount += total;
+//         } else {
+//           payoutAmount += total;
+
+//           // ✅ COMMISSION CALCULATION (ONLY ADDITION)
+//           commissionAmount += (total * merchantCommissionRate) / 100;
+//         }
+//       }
+
+//       if (enrichedLineItems.length === 0) continue;
+
+//       const netPayoutAmount = payoutAmount - commissionAmount;
+
+//       order.payoutAmount = netPayoutAmount; // ✅ net amount stored
+//       order.refundAmount = refundAmount;
+//       await order.save();
+
+//       totalPayoutAmount += netPayoutAmount;
+//       totalRefundAmount += refundAmount;
+
+//       updates.push({
+//         orderId: order._id,
+//         shopifyOrderId: order.orderId,
+//         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
+//         eligibleDate: order.eligibleDate,
+//         scheduledPayoutDate: order.scheduledPayoutDate,
+//         payoutStatus: order.payoutStatus || 'pending',
+
+//         payoutAmount: netPayoutAmount, // ✅ net
+//         refundAmount,
+//         commissionAmount, // ✅ added safely
+
+//         createdAt: order.createdAt,
+//         lineItems: enrichedLineItems,
+//         fulfillmentSummary: {
+//           fulfilled: fulfilledCount,
+//           unfulfilled: unfulfilledCount,
+//         },
+//       });
+//     }
+
+//     // ================= GROUPING (UNCHANGED STRUCTURE) =================
+
+//     const grouped = {};
+
+//     updates.forEach((order) => {
+//       const key = `${dayjs(order.scheduledPayoutDate).format(
+//         'YYYY-MM-DD'
+//       )}__${order.payoutStatus}`;
+
+//       if (!grouped[key]) {
+//         grouped[key] = {
+//           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
+//           status: order.payoutStatus || 'Pending',
+//           createdAts: [],
+//           totalAmount: 0,
+//           totalRefundAmount: 0,
+//           totalFulfilled: 0,
+//           totalUnfulfilled: 0,
+//           orders: [],
+//           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+//         };
+//       }
+
+//       grouped[key].createdAts.push(dayjs(order.createdAt));
+//       grouped[key].totalAmount += order.payoutAmount;
+//       grouped[key].totalRefundAmount += order.refundAmount;
+//       grouped[key].totalFulfilled += order.fulfillmentSummary.fulfilled;
+//       grouped[key].totalUnfulfilled += order.fulfillmentSummary.unfulfilled;
+
+//       grouped[key].orders.push({
+//         orderId: order.orderId,
+//         shopifyOrderId: order.shopifyOrderId,
+//         shopifyOrderNo: order.shopifyOrderNo,
+//         amount: order.payoutAmount, // ✅ net
+//         refund: order.refundAmount,
+//         commissionAmount: order.commissionAmount, // ✅ extra info
+//         status: order.payoutStatus,
+//         createdAt: order.createdAt,
+//         fulfillmentSummary: order.fulfillmentSummary,
+//         lineItems: order.lineItems,
+//       });
+//     });
+
+//     const payouts = Object.values(grouped)
+//       .map((group) => {
+//         const minDate = dayjs.min(group.createdAts);
+//         const maxDate = dayjs.max(group.createdAts);
+
+//         return {
+//           payoutDate: group.payoutDate,
+//           transactionDates: `${minDate.format(
+//             'MMM D'
+//           )} – ${maxDate.format('MMM D, YYYY')}`,
+//           status: group.status,
+//           amount: `$${group.totalAmount.toFixed(2)} AUD`,
+//           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
+//           totalFulfilled: group.totalFulfilled,
+//           totalUnfulfilled: group.totalUnfulfilled,
+//           orders: group.orders,
+//           sortKey: group.sortKey,
+//         };
+//       })
+//       .sort((a, b) => {
+//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+//         return b.sortKey - a.sortKey;
+//       });
+
+//     res.json({
+//       message: 'Payouts calculated',
+//       totalAmount: totalPayoutAmount,
+//       totalRefundAmount,
+//       payouts,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Server error while calculating payouts' });
+//   }
+// };
+
 export const getPayoutByUserId = async (req, res) => {
   try {
     const { userId } = req.query;
@@ -2341,6 +2579,8 @@ export const getPayoutByUserId = async (req, res) => {
       order.scheduledPayoutDate = payoutDate.toDate();
 
       const lineItems = order.lineItems || [];
+      const snapshots = order.ProductSnapshot || [];
+
       let payoutAmount = 0;
       let refundAmount = 0;
       let commissionAmount = 0;
@@ -2350,6 +2590,15 @@ export const getPayoutByUserId = async (req, res) => {
       let unfulfilledCount = 0;
 
       let merchantCommissionRate = 0;
+
+      // 🔥 Get merchant snapshot
+      const merchantSnapshot = snapshots.find(
+        (snap) => String(snap.merchantId) === String(userId)
+      );
+
+      if (!merchantSnapshot) continue;
+
+      const snapshotStatus = merchantSnapshot.payoutStatus || 'pending';
 
       for (const item of lineItems) {
         const price = Number(item.price) || 0;
@@ -2362,6 +2611,7 @@ export const getPayoutByUserId = async (req, res) => {
         let merchantEmail = 'Unknown';
 
         const variantId = item.variantId || item.variant_id;
+
         if (variantId) {
           const listing = await listingModel.findOne({
             'variants.id': String(variantId),
@@ -2370,9 +2620,10 @@ export const getPayoutByUserId = async (req, res) => {
           if (listing?.userId) {
             merchantId = String(listing.userId);
 
-            if (userId && merchantId !== String(userId)) continue;
+            if (merchantId !== String(userId)) continue;
 
             const merchant = await authModel.findById(listing.userId);
+
             if (merchant) {
               merchantName =
                 `${merchant.firstName || ''} ${merchant.lastName || ''}`.trim();
@@ -2382,7 +2633,6 @@ export const getPayoutByUserId = async (req, res) => {
           }
         }
 
-        // Fulfillment count (ignore cancelled)
         if (status === 'fulfilled') {
           fulfilledCount++;
         } else if (status !== 'cancelled') {
@@ -2402,8 +2652,6 @@ export const getPayoutByUserId = async (req, res) => {
           refundAmount += total;
         } else {
           payoutAmount += total;
-
-          // ✅ COMMISSION CALCULATION (ONLY ADDITION)
           commissionAmount += (total * merchantCommissionRate) / 100;
         }
       }
@@ -2411,10 +2659,6 @@ export const getPayoutByUserId = async (req, res) => {
       if (enrichedLineItems.length === 0) continue;
 
       const netPayoutAmount = payoutAmount - commissionAmount;
-
-      order.payoutAmount = netPayoutAmount; // ✅ net amount stored
-      order.refundAmount = refundAmount;
-      await order.save();
 
       totalPayoutAmount += netPayoutAmount;
       totalRefundAmount += refundAmount;
@@ -2425,12 +2669,18 @@ export const getPayoutByUserId = async (req, res) => {
         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || 'pending',
 
-        payoutAmount: netPayoutAmount, // ✅ net
+        // ✅ SNAPSHOT STATUS
+        payoutStatus:
+          snapshotStatus === 'Deposited'
+            ? 'Deposited'
+            : snapshotStatus === 'Due'
+              ? 'Due'
+              : 'Pending',
+
+        payoutAmount: netPayoutAmount,
         refundAmount,
-        commissionAmount, // ✅ added safely
-
+        commissionAmount,
         createdAt: order.createdAt,
         lineItems: enrichedLineItems,
         fulfillmentSummary: {
@@ -2440,7 +2690,7 @@ export const getPayoutByUserId = async (req, res) => {
       });
     }
 
-    // ================= GROUPING (UNCHANGED STRUCTURE) =================
+    // ================= GROUPING =================
 
     const grouped = {};
 
@@ -2452,7 +2702,7 @@ export const getPayoutByUserId = async (req, res) => {
       if (!grouped[key]) {
         grouped[key] = {
           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-          status: order.payoutStatus || 'Pending',
+          status: order.payoutStatus,
           createdAts: [],
           totalAmount: 0,
           totalRefundAmount: 0,
@@ -2464,6 +2714,7 @@ export const getPayoutByUserId = async (req, res) => {
       }
 
       grouped[key].createdAts.push(dayjs(order.createdAt));
+
       grouped[key].totalAmount += order.payoutAmount;
       grouped[key].totalRefundAmount += order.refundAmount;
       grouped[key].totalFulfilled += order.fulfillmentSummary.fulfilled;
@@ -2473,9 +2724,9 @@ export const getPayoutByUserId = async (req, res) => {
         orderId: order.orderId,
         shopifyOrderId: order.shopifyOrderId,
         shopifyOrderNo: order.shopifyOrderNo,
-        amount: order.payoutAmount, // ✅ net
+        amount: order.payoutAmount,
         refund: order.refundAmount,
-        commissionAmount: order.commissionAmount, // ✅ extra info
+        commissionAmount: order.commissionAmount,
         status: order.payoutStatus,
         createdAt: order.createdAt,
         fulfillmentSummary: order.fulfillmentSummary,
@@ -2503,7 +2754,16 @@ export const getPayoutByUserId = async (req, res) => {
         };
       })
       .sort((a, b) => {
-        if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+        const orderPriority = {
+          Pending: 1,
+          Due: 2,
+          Deposited: 3,
+        };
+
+        if (a.status !== b.status) {
+          return orderPriority[a.status] - orderPriority[b.status];
+        }
+
         return b.sortKey - a.sortKey;
       });
 
@@ -2515,7 +2775,9 @@ export const getPayoutByUserId = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error while calculating payouts' });
+    res.status(500).json({
+      error: 'Server error while calculating payouts',
+    });
   }
 };
 
@@ -2533,9 +2795,7 @@ export const getPayoutByUserId = async (req, res) => {
 //     }
 
 //     const merchant = await authModel.findById(userId);
-//     const referenceNo = merchant?.referenceNo || 'N/A';
-//     const paypalAccount = merchant?.paypalAccount || 'N/A';
-//     const commissionRate = Number(merchant?.comissionRate || 0); // ✅
+//     const commissionRate = Number(merchant?.comissionRate || 0);
 
 //     const orderQuery = {};
 //     if (status) {
@@ -2543,6 +2803,7 @@ export const getPayoutByUserId = async (req, res) => {
 //     }
 
 //     const orders = await orderModel.find(orderQuery);
+
 //     const updates = [];
 //     let totalPayoutAmount = 0;
 
@@ -2555,6 +2816,7 @@ export const getPayoutByUserId = async (req, res) => {
 //       order.scheduledPayoutDate = payoutDateObj.toDate();
 
 //       const lineItems = order.lineItems || [];
+
 //       let grossAmount = 0;
 //       let refundAmount = 0;
 //       let commissionAmount = 0;
@@ -2566,6 +2828,7 @@ export const getPayoutByUserId = async (req, res) => {
 //         const total = price * qty;
 
 //         const variantId = item.variantId || item.variant_id;
+
 //         const listing = await listingModel.findOne({
 //           'variants.id': String(variantId),
 //         });
@@ -2576,7 +2839,14 @@ export const getPayoutByUserId = async (req, res) => {
 
 //         const cancelled = item.fulfillment_status === 'cancelled';
 
-//         const productData = {
+//         if (cancelled) {
+//           refundAmount += total;
+//         } else {
+//           grossAmount += total;
+//           commissionAmount += (total * commissionRate) / 100;
+//         }
+
+//         products.push({
 //           title: item.title || '',
 //           variantTitle: item.variant_title || '',
 //           price,
@@ -2584,23 +2854,14 @@ export const getPayoutByUserId = async (req, res) => {
 //           total,
 //           fulfillment_status: item.fulfillment_status || 'Unfulfilled',
 //           cancelled,
-//         };
-
-//         if (cancelled) {
-//           refundAmount += total;
-//         } else {
-//           grossAmount += total;
-//           commissionAmount += (total * commissionRate) / 100; // ✅
-//         }
-
-//         products.push(productData);
+//         });
 //       }
 
 //       if (products.length === 0) continue;
 
 //       const netPayoutAmount = grossAmount - commissionAmount;
 
-//       order.payoutAmount = netPayoutAmount; // ✅ net
+//       order.payoutAmount = netPayoutAmount;
 //       order.refundAmount = refundAmount;
 //       await order.save();
 
@@ -2611,20 +2872,24 @@ export const getPayoutByUserId = async (req, res) => {
 //         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
 //         eligibleDate: order.eligibleDate,
 //         scheduledPayoutDate: order.scheduledPayoutDate,
-//         payoutStatus: order.payoutStatus || 'pending',
+//         payoutStatus: order.payoutStatus || 'Pending',
 
-//         payoutAmount: netPayoutAmount, // ✅ net
+//         payoutAmount: netPayoutAmount,
 //         refundAmount,
-//         commissionAmount, // ✅ extra info
+//         commissionAmount,
 
 //         createdAt: order.createdAt,
-//         referenceNo,
-//         paypalAccount,
+
+//         // ✅ NEW FIELDS ADDED
+//         referenceNo: order.referenceNo || '',
+//         paymentMethod: order.paymentMethod || '',
+//         depositedDate: order.depositedDate || null,
+
 //         products,
 //       });
 //     }
 
-//     // ================= GROUPING (UNCHANGED) =================
+//     // ================= GROUPING =================
 
 //     const grouped = {};
 
@@ -2636,12 +2901,25 @@ export const getPayoutByUserId = async (req, res) => {
 //       if (!grouped[key]) {
 //         grouped[key] = {
 //           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-//           status: order.payoutStatus === 'Deposited' ? 'Deposited' : 'Pending',
+
+//           // ✅ SUPPORT Pending / Due / Deposited
+//           status:
+//             order.payoutStatus === 'Deposited'
+//               ? 'Deposited'
+//               : order.payoutStatus === 'Due'
+//                 ? 'Due'
+//                 : 'Pending',
+
 //           createdAts: [],
 //           totalAmount: 0,
 //           totalRefundAmount: 0,
 //           orders: [],
 //           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
+
+//           // ✅ NEW FIELDS
+//           referenceNo: order.referenceNo || '',
+//           paymentMethod: order.paymentMethod || '',
+//           depositedDate: order.depositedDate || null,
 //         };
 //       }
 
@@ -2652,13 +2930,17 @@ export const getPayoutByUserId = async (req, res) => {
 //       grouped[key].orders.push({
 //         orderId: order.orderId,
 //         shopifyOrderNo: order.shopifyOrderNo,
-//         amount: order.payoutAmount, // ✅ net
+//         amount: order.payoutAmount,
 //         refund: order.refundAmount,
-//         commissionAmount: order.commissionAmount, // ✅ optional
+//         commissionAmount: order.commissionAmount,
 //         status: order.payoutStatus,
 //         createdAt: order.createdAt,
+
+//         // ✅ PASS TO FRONTEND
 //         referenceNo: order.referenceNo || '',
-//         paypalAccount: order.paypalAccount || '',
+//         paymentMethod: order.paymentMethod || '',
+//         depositedDate: order.depositedDate || null,
+
 //         products: order.products || [],
 //       });
 //     });
@@ -2667,6 +2949,7 @@ export const getPayoutByUserId = async (req, res) => {
 //       .map((group) => {
 //         const minDate = dayjs.min(group.createdAts);
 //         const maxDate = dayjs.max(group.createdAts);
+
 //         return {
 //           payoutDate: group.payoutDate,
 //           transactionDates: `${minDate.format(
@@ -2677,10 +2960,20 @@ export const getPayoutByUserId = async (req, res) => {
 //           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
 //           orders: group.orders,
 //           sortKey: group.sortKey,
+
+//           // ✅ FINAL RETURN
+//           referenceNo: group.referenceNo,
+//           paymentMethod: group.paymentMethod,
+//           depositedDate: group.depositedDate,
 //         };
 //       })
 //       .sort((a, b) => {
-//         if (a.status !== b.status) return a.status === 'Pending' ? -1 : 1;
+//         const orderPriority = { Pending: 1, Due: 2, Deposited: 3 };
+
+//         if (a.status !== b.status) {
+//           return orderPriority[a.status] - orderPriority[b.status];
+//         }
+
 //         return b.sortKey - a.sortKey;
 //       });
 
@@ -2717,14 +3010,19 @@ export const getPayoutOrders = async (req, res) => {
     }
 
     const merchant = await authModel.findById(userId);
+    const merchantAccount = merchant
+      ? {
+          paypalAccount: merchant.paypalAccount || '',
+          paypalAccountNo: merchant.paypalAccountNo || '',
+          paypalReferenceNo: merchant.paypalReferenceNo || '',
+          bankDetails: merchant.bankDetails || {},
+        }
+      : null;
+
     const commissionRate = Number(merchant?.comissionRate || 0);
 
-    const orderQuery = {};
-    if (status) {
-      orderQuery.payoutStatus = new RegExp(`^${status}$`, 'i');
-    }
-
-    const orders = await orderModel.find(orderQuery);
+    // ❌ REMOVE payoutStatus query filter
+    const orders = await orderModel.find({});
 
     const updates = [];
     let totalPayoutAmount = 0;
@@ -2744,9 +3042,25 @@ export const getPayoutOrders = async (req, res) => {
       let commissionAmount = 0;
       const products = [];
 
+      // 🔥 GET SNAPSHOT FOR THIS MERCHANT
+      const merchantSnapshots = (order.ProductSnapshot || []).filter(
+        (snap) => String(snap.merchantId) === String(userId)
+      );
+
+      if (merchantSnapshots.length === 0) continue;
+
+      const snapshotStatus = merchantSnapshots[0]?.payoutStatus || 'pending';
+
+      const snapshotReferenceNo = merchantSnapshots[0]?.referenceNo || '';
+
+      const snapshotPaymentMethod = merchantSnapshots[0]?.paymentMethod || '';
+
+      const snapshotDepositedDate = merchantSnapshots[0]?.depositedDate || null;
+
       for (const item of lineItems) {
         const price = Number(item.price) || 0;
         const qty = Number(item.quantity || item.current_quantity) || 0;
+
         const total = price * qty;
 
         const variantId = item.variantId || item.variant_id;
@@ -2783,10 +3097,6 @@ export const getPayoutOrders = async (req, res) => {
 
       const netPayoutAmount = grossAmount - commissionAmount;
 
-      order.payoutAmount = netPayoutAmount;
-      order.refundAmount = refundAmount;
-      await order.save();
-
       totalPayoutAmount += netPayoutAmount;
 
       updates.push({
@@ -2794,18 +3104,24 @@ export const getPayoutOrders = async (req, res) => {
         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
-        payoutStatus: order.payoutStatus || 'Pending',
+
+        // ✅ STATUS FROM SNAPSHOT
+        payoutStatus:
+          snapshotStatus === 'Deposited'
+            ? 'Deposited'
+            : snapshotStatus === 'Due'
+              ? 'Due'
+              : 'Pending',
 
         payoutAmount: netPayoutAmount,
         refundAmount,
         commissionAmount,
-
         createdAt: order.createdAt,
 
-        // ✅ NEW FIELDS ADDED
-        referenceNo: order.referenceNo || '',
-        paymentMethod: order.paymentMethod || '',
-        depositedDate: order.depositedDate || null,
+        // ✅ FROM SNAPSHOT
+        referenceNo: snapshotReferenceNo,
+        paymentMethod: snapshotPaymentMethod,
+        depositedDate: snapshotDepositedDate,
 
         products,
       });
@@ -2823,30 +3139,23 @@ export const getPayoutOrders = async (req, res) => {
       if (!grouped[key]) {
         grouped[key] = {
           payoutDate: dayjs(order.scheduledPayoutDate).format('MMM D, YYYY'),
-
-          // ✅ SUPPORT Pending / Due / Deposited
-          status:
-            order.payoutStatus === 'Deposited'
-              ? 'Deposited'
-              : order.payoutStatus === 'Due'
-                ? 'Due'
-                : 'Pending',
-
+          status: order.payoutStatus,
           createdAts: [],
           totalAmount: 0,
           totalRefundAmount: 0,
           orders: [],
           sortKey: dayjs(order.scheduledPayoutDate).valueOf(),
 
-          // ✅ NEW FIELDS
-          referenceNo: order.referenceNo || '',
-          paymentMethod: order.paymentMethod || '',
-          depositedDate: order.depositedDate || null,
+          referenceNo: order.referenceNo,
+          paymentMethod: order.paymentMethod,
+          depositedDate: order.depositedDate,
         };
       }
 
       grouped[key].createdAts.push(dayjs(order.createdAt));
+
       grouped[key].totalAmount += order.payoutAmount || 0;
+
       grouped[key].totalRefundAmount += order.refundAmount || 0;
 
       grouped[key].orders.push({
@@ -2857,12 +3166,9 @@ export const getPayoutOrders = async (req, res) => {
         commissionAmount: order.commissionAmount,
         status: order.payoutStatus,
         createdAt: order.createdAt,
-
-        // ✅ PASS TO FRONTEND
-        referenceNo: order.referenceNo || '',
-        paymentMethod: order.paymentMethod || '',
-        depositedDate: order.depositedDate || null,
-
+        referenceNo: order.referenceNo,
+        paymentMethod: order.paymentMethod,
+        depositedDate: order.depositedDate,
         products: order.products || [],
       });
     });
@@ -2882,15 +3188,17 @@ export const getPayoutOrders = async (req, res) => {
           totalRefundAmount: `$${group.totalRefundAmount.toFixed(2)} AUD`,
           orders: group.orders,
           sortKey: group.sortKey,
-
-          // ✅ FINAL RETURN
           referenceNo: group.referenceNo,
           paymentMethod: group.paymentMethod,
           depositedDate: group.depositedDate,
         };
       })
       .sort((a, b) => {
-        const orderPriority = { Pending: 1, Due: 2, Deposited: 3 };
+        const orderPriority = {
+          Pending: 1,
+          Due: 2,
+          Deposited: 3,
+        };
 
         if (a.status !== b.status) {
           return orderPriority[a.status] - orderPriority[b.status];
@@ -2911,10 +3219,13 @@ export const getPayoutOrders = async (req, res) => {
       message: 'Payouts calculated',
       totalAmount: totalPayoutAmount,
       payouts,
+      merchantAccount,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error while calculating payouts' });
+    res.status(500).json({
+      error: 'Server error while calculating payouts',
+    });
   }
 };
 
@@ -3741,53 +4052,57 @@ const transporter = nodemailer.createTransport({
 
 export const addReferenceToOrders = async (req, res) => {
   try {
-    const {
-      payoutDate,
-      status,
-      referenceNo,
-      paymentMethod,
-      merchantIds, 
-    } = req.body;
+    const { payoutDate, referenceNo, paymentMethod, merchantIds } = req.body;
 
-    if (
-      !payoutDate ||
-      !status ||
-      !referenceNo ||
-      !paymentMethod ||
-      !Array.isArray(merchantIds)
-    ) {
-      return res.status(400).json({
-        message: 'All fields including merchantIds are required.',
-      });
-    }
+    // if (
+    //   !payoutDate ||
+    //   !referenceNo ||
+    //   !paymentMethod ||
+    //   !Array.isArray(merchantIds)
+    // ) {
+    //   return res.status(400).json({
+    //     message: 'All fields including merchantIds are required.',
+    //   });
+    // }
 
     const depositDate = new Date();
+    let modifiedCount = 0;
 
-    const result = await orderModel.updateMany(
-      {
-        scheduledPayoutDate: new Date(payoutDate),
-        payoutStatus: status,
-      },
-      {
-        $set: {
-          payoutStatus: 'Deposited',
-          referenceNo,
-          paymentMethod,
-          depositedDate: depositDate,
-        },
+    // 🔥 Find only orders of that payout date
+    const orders = await orderModel.find({
+      scheduledPayoutDate: new Date(payoutDate),
+    });
+
+    for (const order of orders) {
+      let isUpdated = false;
+
+      for (const snapshot of order.ProductSnapshot || []) {
+        if (merchantIds.includes(snapshot.merchantId?.toString())) {
+          snapshot.payoutStatus = 'Deposited';
+          snapshot.referenceNo = referenceNo;
+          snapshot.paymentMethod = paymentMethod;
+          snapshot.depositedDate = depositDate;
+          isUpdated = true;
+        }
       }
-    );
 
-    if (result.modifiedCount === 0) {
+      if (isUpdated) {
+        await order.save();
+        modifiedCount++;
+      }
+    }
+
+    if (modifiedCount === 0) {
       return res.status(404).json({
-        message: 'No orders found to update.',
+        message: 'No matching merchant payouts found.',
       });
     }
+
+    // ================= SEND EMAIL =================
 
     const settings = await notificationModel.findOne({});
 
     if (settings?.approvals?.payoutNotification) {
-
       const merchants = await authModel.find(
         { _id: { $in: merchantIds } },
         'email firstName'
@@ -3820,8 +4135,8 @@ export const addReferenceToOrders = async (req, res) => {
     }
 
     res.status(200).json({
-      message: 'Payout marked as Deposited successfully.',
-      modifiedCount: result.modifiedCount,
+      message: 'Selected merchant payouts marked as Deposited.',
+      modifiedCount,
     });
   } catch (err) {
     console.error(err);
@@ -3831,7 +4146,7 @@ export const addReferenceToOrders = async (req, res) => {
 
 export const exportOrders = async (req, res) => {
   try {
-    const { status } = req.query; 
+    const { status } = req.query;
     const orders = await orderModel.find({}).lean();
 
     if (!orders.length) {
@@ -3937,7 +4252,6 @@ export const exportOrders = async (req, res) => {
   }
 };
 
-
 export const exportProductsForUser = async (req, res) => {
   try {
     const userId = req.userId?.toString();
@@ -3991,8 +4305,6 @@ export const exportProductsForUser = async (req, res) => {
           continue;
         }
 
-       
-
         rows.push({
           OrderID: orderId,
           ShopifyOrderNo: shopifyOrderNo,
@@ -4031,7 +4343,6 @@ export const exportProductsForUser = async (req, res) => {
         .status(404)
         .json({ message: 'No products found in orders for this user.' });
     }
-
 
     const fields = Object.keys(rows[0]);
     const parser = new Parser({ fields });
@@ -4132,34 +4443,34 @@ export const getSalesContribution = async (req, res) => {
 
     const salesData = await orderModel.aggregate([
       {
-        $unwind: '$lineItems', 
+        $unwind: '$lineItems',
       },
       {
         $addFields: {
-          price: { $toDouble: '$lineItems.price' }, 
-          quantity: { $toInt: '$lineItems.quantity' }, 
+          price: { $toDouble: '$lineItems.price' },
+          quantity: { $toInt: '$lineItems.quantity' },
         },
       },
       {
         $group: {
-          _id: '$lineItems.product_id', 
+          _id: '$lineItems.product_id',
           totalSales: { $sum: { $multiply: ['$price', '$quantity'] } },
           productName: { $first: '$lineItems.name' },
         },
       },
       {
         $project: {
-          _id: 0, 
-          productId: '$_id', 
-          productName: 1, 
-          totalSales: 1, 
+          _id: 0,
+          productId: '$_id',
+          productName: 1,
+          totalSales: 1,
         },
       },
-      { $sort: { totalSales: -1 } }, 
+      { $sort: { totalSales: -1 } },
     ]);
 
     if (salesData.length === 0) {
-      return res.json([]); 
+      return res.json([]);
     }
 
     const formattedData = salesData.map((item) => ({

@@ -102,9 +102,7 @@ const authSchema = new mongoose.Schema(
     paypalAccount: { type: String, default: '' },
     paypalAccountNo: { type: String, default: '' },
     paypalReferenceNo: { type: String, default: '' },
-    referenceNo: {
-      type: String,
-    },
+  
     bankDetails: {
       accountHolderName: { type: String, default: '' },
       accountNumber: { type: String, default: '' },
@@ -115,10 +113,7 @@ const authSchema = new mongoose.Schema(
       iban: { type: String, default: '' },
       country: { type: String, default: '' },
     },
-    paypalAccountNo: {
-      type: String,
-      default: '',
-    },
+   
     sellerName: {
       type: String,
     },

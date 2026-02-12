@@ -26,6 +26,10 @@ const orderSchema = new mongoose.Schema(
         depositedDate: Date,
         paymentMethod: String,
         referenceNo: String,
+        payoutReferenceId: {
+          type: String,
+          unique: true,
+        },
       },
     ],
     merchantId: {
