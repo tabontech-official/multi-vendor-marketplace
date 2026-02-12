@@ -147,7 +147,6 @@ const calculateUserBasedCommission = async (orders) => {
 
 
 export const financeCron = () => {
-  // 👇 RUN EVERY 2 SECONDS
   cron.schedule('* * * * * *', async () => {
     try {
       console.log('==============================');
