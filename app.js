@@ -32,7 +32,7 @@ productSubscriptionExpiration();
 // deleteOrphanedProducts();
 
 financeScheduler.start();
-financeCron()
+// financeCron()
 
 app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
