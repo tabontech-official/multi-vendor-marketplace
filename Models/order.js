@@ -9,7 +9,6 @@ const orderSchema = new mongoose.Schema(
     expiresAt: Date,
     serialNumber: Number,
     shopifyOrderNo: Number,
-    // ProductSnapshot: Object,
     ProductSnapshot: [
       {
         productId: String,
@@ -18,6 +17,15 @@ const orderSchema = new mongoose.Schema(
         merchantId: mongoose.Schema.Types.ObjectId,
         product: Object,
         variant: Object,
+        payoutStatus: {
+          type: String,
+          enum: ['pending', 'Deposited', 'Due'],
+          default: 'pending',
+        },
+
+        depositedDate: Date,
+        paymentMethod: String,
+        referenceNo: String,
       },
     ],
     merchantId: {

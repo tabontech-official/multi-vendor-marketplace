@@ -3746,7 +3746,7 @@ export const addReferenceToOrders = async (req, res) => {
       status,
       referenceNo,
       paymentMethod,
-      merchantIds, // 🔥 Important
+      merchantIds, 
     } = req.body;
 
     if (
@@ -3763,7 +3763,6 @@ export const addReferenceToOrders = async (req, res) => {
 
     const depositDate = new Date();
 
-    // ✅ 1️⃣ Update Orders
     const result = await orderModel.updateMany(
       {
         scheduledPayoutDate: new Date(payoutDate),
@@ -3785,11 +3784,9 @@ export const addReferenceToOrders = async (req, res) => {
       });
     }
 
-    // ✅ 2️⃣ Check Notification Setting
     const settings = await notificationModel.findOne({});
 
     if (settings?.approvals?.payoutNotification) {
-      // 🔥 Only send if true
 
       const merchants = await authModel.find(
         { _id: { $in: merchantIds } },
@@ -3834,7 +3831,7 @@ export const addReferenceToOrders = async (req, res) => {
 
 export const exportOrders = async (req, res) => {
   try {
-    const { status } = req.query; // e.g. 'fulfilled', 'unfulfilled', 'cancelled'
+    const { status } = req.query; 
     const orders = await orderModel.find({}).lean();
 
     if (!orders.length) {
@@ -3870,7 +3867,6 @@ export const exportOrders = async (req, res) => {
       const today = dayjs();
       const payoutDay = dayjs(order.scheduledPayoutDate);
 
-      // Agar deposited nahi hai to auto calculate karo
       if (order.payoutStatus !== 'Deposited') {
         if (today.isBefore(payoutDay, 'day')) {
           order.payoutStatus = 'Pending';
@@ -3883,7 +3879,6 @@ export const exportOrders = async (req, res) => {
         for (const item of order.lineItems) {
           const itemStatus = item.fulfillment_status || 'unfulfilled';
 
-          // 🔽 FILTER based on status if provided
           if (status && status !== itemStatus) continue;
 
           rows.push({
@@ -3901,7 +3896,6 @@ export const exportOrders = async (req, res) => {
           });
         }
       } else {
-        // Skip if no lineItems and status is applied
         if (!status) rows.push(base);
       }
     }
@@ -3932,7 +3926,7 @@ export const exportOrders = async (req, res) => {
         console.error('Download error:', err);
         res.status(500).send('Error downloading file');
       }
-      fs.unlinkSync(filePath); // Clean up
+      fs.unlinkSync(filePath);
     });
   } catch (error) {
     console.error('Export Orders Error:', error);
@@ -3943,108 +3937,6 @@ export const exportOrders = async (req, res) => {
   }
 };
 
-// export const exportProductsForUser = async (req, res) => {
-//   try {
-//     const userId = req.userId?.toString();
-//     console.log(userId)
-//     if (!userId) {
-//       return res.status(400).json({ message: 'Missing userId' });
-//     }
-
-//     // Replace this with your actual data fetch function for that user
-//     const response = await fetch(
-//       `https://multi-vendor-marketplace.vercel.app/order/order/${userId}`
-//     );
-//     const result = await response.json();
-
-//     if (!Array.isArray(result.data) || result.data.length === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: 'No orders found for this user.' });
-//     }
-
-//     const rows = [];
-
-//     for (const order of result.data) {
-//       const {
-//         orderId,
-//         shopifyOrderNo,
-//         serialNumber,
-//         payoutAmount,
-//         payoutStatus,
-//         createdAt,
-//         updatedAt,
-//         eligibleDate,
-//         scheduledPayoutDate,
-//         customer,
-//         lineItems = [],
-//       } = order;
-
-//       for (const item of lineItems) {
-//         rows.push({
-//           OrderID: orderId,
-//           ShopifyOrderNo: shopifyOrderNo,
-//           SerialNumber: serialNumber,
-//           ProductName: item.name || '',
-//           SKU: item.sku || '',
-//           Vendor: item.vendor || '',
-//           Price: item.price || '',
-//           Quantity: item.quantity || '',
-//           FulfillmentStatus: item.fulfillment_status || 'unfulfilled',
-//           VariantTitle: item.variant_title || '',
-//           ProductID: item.product_id || '',
-//           VariantID: item.variant_id || '',
-//           PayoutAmount: payoutAmount || '',
-//           PayoutStatus: payoutStatus || '',
-//           EligiblePayoutDate: eligibleDate
-//             ? new Date(eligibleDate).toLocaleDateString()
-//             : '',
-//           ScheduledPayoutDate: scheduledPayoutDate
-//             ? new Date(scheduledPayoutDate).toLocaleDateString()
-//             : '',
-//           OrderCreatedAt: createdAt ? new Date(createdAt).toLocaleString() : '',
-//           OrderUpdatedAt: updatedAt ? new Date(updatedAt).toLocaleString() : '',
-//           CustomerEmail: customer?.email || '',
-//           CustomerName: `${customer?.first_name || ''} ${customer?.last_name || ''}`,
-//           CustomerPhone: customer?.phone || '',
-//           CustomerCreated: customer?.created_at || '',
-//           CustomerCity: customer?.default_address?.city || '',
-//           CustomerCountry: customer?.default_address?.country || '',
-//         });
-//       }
-//     }
-
-//     if (rows.length === 0) {
-//       return res.status(404).json({ message: 'No products found in orders.' });
-//     }
-
-//     const fields = Object.keys(rows[0]);
-//     const parser = new Parser({ fields });
-//     const csv = parser.parse(rows);
-
-//     const filename = `export-user-${userId}-${Date.now()}.csv`;
-//     const isVercel = process.env.VERCEL === '1';
-//     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
-
-//     if (!isVercel && !fs.existsSync(exportDir)) {
-//       fs.mkdirSync(exportDir, { recursive: true });
-//     }
-
-//     const filePath = path.join(exportDir, filename);
-//     fs.writeFileSync(filePath, csv);
-
-//     res.download(filePath, filename, (err) => {
-//       if (err) {
-//         console.error('Download error:', err);
-//         res.status(500).send('Download failed');
-//       }
-//       fs.unlinkSync(filePath);
-//     });
-//   } catch (err) {
-//     console.error('Export Error:', err);
-//     res.status(500).json({ message: 'Export failed', error: err.message });
-//   }
-// };
 
 export const exportProductsForUser = async (req, res) => {
   try {
@@ -4099,9 +3991,7 @@ export const exportProductsForUser = async (req, res) => {
           continue;
         }
 
-        console.log(
-          `✅ Adding line item ${item.name} from product ${item.product_id} for user ${userId}`
-        );
+       
 
         rows.push({
           OrderID: orderId,
@@ -4137,35 +4027,29 @@ export const exportProductsForUser = async (req, res) => {
     }
 
     if (rows.length === 0) {
-      console.log('⚠️ No products found in orders for user:', userId);
       return res
         .status(404)
         .json({ message: 'No products found in orders for this user.' });
     }
 
-    console.log('✅ Total rows prepared for CSV:', rows.length);
 
     const fields = Object.keys(rows[0]);
     const parser = new Parser({ fields });
     const csv = parser.parse(rows);
-    console.log('✅ CSV data parsed successfully');
 
     const filename = `export-user-${userId}-${Date.now()}.csv`;
     const isVercel = process.env.VERCEL === '1';
     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
 
     if (!isVercel && !fs.existsSync(exportDir)) {
-      console.log('📂 Creating export directory:', exportDir);
       fs.mkdirSync(exportDir, { recursive: true });
     }
 
     const filePath = path.join(exportDir, filename);
-    console.log('📂 Writing CSV file at:', filePath);
     fs.writeFileSync(filePath, csv);
 
     res.download(filePath, filename, (err) => {
       if (err) {
-        console.error('❌ Download error:', err);
         res.status(500).send('Download failed');
       } else {
         console.log('✅ File download initiated:', filename);
@@ -4174,7 +4058,6 @@ export const exportProductsForUser = async (req, res) => {
       console.log('🗑️ Temp file deleted:', filePath);
     });
   } catch (err) {
-    console.error('❌ Export Error:', err);
     res.status(500).json({ message: 'Export failed', error: err.message });
   }
 };
@@ -4247,46 +4130,43 @@ export const getSalesContribution = async (req, res) => {
   try {
     console.log('Fetching sales data for all products.');
 
-    // Fetch all orders and calculate sales contribution for each product
     const salesData = await orderModel.aggregate([
       {
-        $unwind: '$lineItems', // Unwind the line items to process each product
+        $unwind: '$lineItems', 
       },
       {
         $addFields: {
-          price: { $toDouble: '$lineItems.price' }, // Convert price to double (numeric)
-          quantity: { $toInt: '$lineItems.quantity' }, // Convert quantity to integer
+          price: { $toDouble: '$lineItems.price' }, 
+          quantity: { $toInt: '$lineItems.quantity' }, 
         },
       },
       {
         $group: {
-          _id: '$lineItems.product_id', // Group by product_id
-          totalSales: { $sum: { $multiply: ['$price', '$quantity'] } }, // Calculate total sales for each product
-          productName: { $first: '$lineItems.name' }, // Get the product name
+          _id: '$lineItems.product_id', 
+          totalSales: { $sum: { $multiply: ['$price', '$quantity'] } },
+          productName: { $first: '$lineItems.name' },
         },
       },
       {
         $project: {
-          _id: 0, // Hide _id field
-          productId: '$_id', // Include productId
-          productName: 1, // Include productName
-          totalSales: 1, // Include totalSales
+          _id: 0, 
+          productId: '$_id', 
+          productName: 1, 
+          totalSales: 1, 
         },
       },
-      { $sort: { totalSales: -1 } }, // S ort by total sales (descending)
+      { $sort: { totalSales: -1 } }, 
     ]);
 
     if (salesData.length === 0) {
-      return res.json([]); // If no sales data found, return an empty array
+      return res.json([]); 
     }
 
-    // Format the result to show total sales contribution for each product
     const formattedData = salesData.map((item) => ({
       productName: item.productName,
       totalSales: item.totalSales,
     }));
 
-    // Return the sales contribution data
     res.json(formattedData);
   } catch (error) {
     console.error('Error fetching sales data: ', error);
