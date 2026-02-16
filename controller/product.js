@@ -3260,6 +3260,9 @@ export const updateSingleVariant = async (req, res) => {
     const { productId, variantId } = req.params;
     const variantBody = req.body.variant || {};
 
+    console.log("📌 Params:", { productId, variantId });
+    console.log("📦 Incoming Variant Body:", variantBody);
+
     const {
       price,
       inventory_quantity,
@@ -3273,24 +3276,24 @@ export const updateSingleVariant = async (req, res) => {
       inventory_policy,
     } = variantBody;
 
-    /* ==============================================
+    /* ======================================================
        STEP 1: GET SHOPIFY CONFIG
-    ============================================== */
+    ====================================================== */
 
-    const shopifyConfig = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfig) {
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfiguration) {
       return res.status(404).json({
         success: false,
-        message: "Shopify configuration not found.",
+        error: "Shopify configuration not found.",
       });
     }
 
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfig;
+      shopifyConfiguration;
 
-    /* ==============================================
+    /* ======================================================
        STEP 2: UPDATE VARIANT BASIC DATA
-    ============================================== */
+    ====================================================== */
 
     const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/variants/${variantId}.json`;
 
@@ -3310,7 +3313,9 @@ export const updateSingleVariant = async (req, res) => {
       },
     };
 
-    await shopifyRequest(
+    console.log("🚀 Updating Shopify Variant...");
+
+    const updatedVariantResponse = await shopifyRequest(
       variantUpdateUrl,
       "PUT",
       variantPayload,
@@ -3318,29 +3323,78 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    console.log("✅ Variant basic info updated");
+    const updatedVariant = updatedVariantResponse.variant;
 
-    /* ==============================================
-       STEP 3: UPDATE INVENTORY (IF PROVIDED)
-    ============================================== */
+    if (!updatedVariant) {
+      return res.status(400).json({
+        success: false,
+        error: "Variant update failed on Shopify.",
+      });
+    }
+
+    console.log("✅ Shopify Variant Updated:", updatedVariant.id);
+
+    const inventoryItemId = updatedVariant.inventory_item_id;
+
+    if (!inventoryItemId) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing inventory_item_id from Shopify response.",
+      });
+    }
+
+    /* ======================================================
+       STEP 3: GET INVENTORY LOCATION
+    ====================================================== */
+
+    const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+
+    const inventoryLevelsRes = await shopifyRequest(
+      inventoryLevelsUrl,
+      "GET",
+      null,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const locationId =
+      inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+
+    if (!locationId) {
+      return res.status(400).json({
+        success: false,
+        error: "No inventory location found.",
+      });
+    }
+
+    let latestInventoryQuantity =
+      inventoryLevelsRes?.inventory_levels?.[0]?.available || 0;
+
+    /* ======================================================
+       STEP 4: UPDATE INVENTORY (IF PROVIDED)
+    ====================================================== */
 
     if (inventory_quantity !== undefined) {
-      // 1️⃣ Get inventory item id
-      const variantRes = await shopifyRequest(
-        variantUpdateUrl,
-        "GET",
-        null,
+      console.log("📦 Updating Inventory...");
+
+      const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
+
+      const inventoryPayload = {
+        location_id: locationId,
+        inventory_item_id: inventoryItemId,
+        available: parseInt(inventory_quantity),
+      };
+
+      await shopifyRequest(
+        inventoryUpdateUrl,
+        "POST",
+        inventoryPayload,
         shopifyApiKey,
         shopifyAccessToken
       );
 
-      const inventoryItemId =
-        variantRes?.variant?.inventory_item_id;
-
-      // 2️⃣ Get location
-      const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
-
-      const inventoryLevelsRes = await shopifyRequest(
+      // 🔄 Fetch updated inventory again
+      const updatedInventoryLevels = await shopifyRequest(
         inventoryLevelsUrl,
         "GET",
         null,
@@ -3348,38 +3402,18 @@ export const updateSingleVariant = async (req, res) => {
         shopifyAccessToken
       );
 
-      const locationId =
-        inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+      latestInventoryQuantity =
+        updatedInventoryLevels?.inventory_levels?.[0]?.available || 0;
 
-      if (!locationId) {
-        return res.status(400).json({
-          success: false,
-          message: "No inventory location found.",
-        });
-      }
-
-      // 3️⃣ Update inventory
-      const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
-
-      await shopifyRequest(
-        inventoryUpdateUrl,
-        "POST",
-        {
-          location_id: locationId,
-          inventory_item_id: inventoryItemId,
-          available: parseInt(inventory_quantity),
-        },
-        shopifyApiKey,
-        shopifyAccessToken
+      console.log(
+        "✅ Latest Inventory From Shopify:",
+        latestInventoryQuantity
       );
-
-      console.log("✅ Inventory updated in Shopify");
     }
 
-    /* ==============================================
-       STEP 4: FETCH FULL UPDATED PRODUCT
-       (This guarantees DB = Shopify)
-    ============================================== */
+    /* ======================================================
+       STEP 5: FETCH UPDATED PRODUCT OPTIONS
+    ====================================================== */
 
     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
 
@@ -3391,72 +3425,53 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    const shopifyProduct = productResponse.product;
+    const updatedProduct = productResponse.product;
+    const updatedProductOptions = updatedProduct?.options || [];
 
-    if (!shopifyProduct) {
-      return res.status(400).json({
-        success: false,
-        message: "Failed to fetch updated product from Shopify.",
-      });
-    }
+    /* ======================================================
+       STEP 6: UPDATE DATABASE
+    ====================================================== */
 
-    console.log("✅ Full updated product fetched from Shopify");
-
-    /* ==============================================
-       STEP 5: TRANSFORM VARIANTS FOR DB
-    ============================================== */
-
-    const formattedVariants = shopifyProduct.variants.map((v) => ({
-      id: v.id.toString(),
-      title: v.title,
-      option1: v.option1,
-      option2: v.option2,
-      option3: v.option3,
-      price: v.price,
-      compare_at_price: v.compare_at_price,
-      inventory_management: v.inventory_management,
-      inventory_quantity: v.inventory_quantity,
-      sku: v.sku,
-      barcode: v.barcode,
-      location_id: v.location_id || null,
-      inventory_item_id: v.inventory_item_id,
-      weight: v.weight,
-      weight_unit: v.weight_unit,
-      isParent: false,
-      image_id: v.image_id,
-      VariantStatus: "active",
-    }));
-
-    /* ==============================================
-       STEP 6: UPDATE DATABASE (FULL SYNC)
-    ============================================== */
-
-    await listingModel.updateOne(
-      { id: productId.toString() },
+    const dbUpdate = await listingModel.updateOne(
+      { "variants.id": variantId },
       {
         $set: {
-          title: shopifyProduct.title,
-          body_html: shopifyProduct.body_html,
-          vendor: shopifyProduct.vendor,
-          product_type: shopifyProduct.product_type,
-          handle: shopifyProduct.handle,
-          variants: formattedVariants,
-          options: shopifyProduct.options,
-          updated_at: new Date(),
+          "variants.$": {
+            id: updatedVariant.id,
+            title: updatedVariant.title,
+            price: updatedVariant.price,
+            inventory_quantity: latestInventoryQuantity,
+            sku: updatedVariant.sku,
+            option1: updatedVariant.option1,
+            option2: updatedVariant.option2,
+            option3: updatedVariant.option3,
+            weight: updatedVariant.weight,
+            compare_at_price: updatedVariant.compare_at_price,
+            inventory_management: updatedVariant.inventory_policy,
+            productId: updatedVariant.product_id,
+            barcode: updatedVariant.barcode,
+            updatedAt: updatedVariant.updated_at,
+          },
+          options: updatedProductOptions,
         },
       }
     );
 
-    console.log("✅ MongoDB fully synced with Shopify");
+    console.log("✅ Database Updated:", dbUpdate);
 
     console.log("🟢 ===== UPDATE SINGLE VARIANT END =====");
 
     return res.status(200).json({
       success: true,
-      message: "Variant updated and database fully synced.",
+      message:
+        "Variant and inventory updated successfully in Shopify and database.",
+      data: {
+        variant: updatedVariant,
+        inventory_quantity: latestInventoryQuantity,
+      },
     });
   } catch (error) {
-    console.error("🔴 UPDATE VARIANT ERROR:", error?.response?.data || error);
+    console.error("🔴 ERROR IN UPDATE VARIANT:", error?.response?.data || error);
 
     return res.status(500).json({
       success: false,
@@ -3465,7 +3480,6 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
-
 
 
 
