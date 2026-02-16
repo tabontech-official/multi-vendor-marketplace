@@ -3258,7 +3258,7 @@ export const updateSingleVariant = async (req, res) => {
     console.log("🔵 ===== UPDATE SINGLE VARIANT START =====");
 
     const { productId, variantId } = req.params;
-    console.log("📌 Params:", { productId, variantId });
+    const variantBody = req.body.variant || {};
 
     const {
       price,
@@ -3270,23 +3270,27 @@ export const updateSingleVariant = async (req, res) => {
       weight,
       compare_at_price,
       barcode,
-      inventory_policy: inventoryPolicy,
-    } = req.body.variant || {};
+      inventory_policy,
+    } = variantBody;
 
-    console.log("📦 Incoming Variant Body:", req.body.variant);
+    /* ==============================================
+       STEP 1: GET SHOPIFY CONFIG
+    ============================================== */
 
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) {
-      console.log("❌ Shopify configuration not found");
-      return res.status(404).json({ error: "Shopify configuration not found." });
+    const shopifyConfig = await shopifyConfigurationModel.findOne();
+    if (!shopifyConfig) {
+      return res.status(404).json({
+        success: false,
+        message: "Shopify configuration not found.",
+      });
     }
 
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-      shopifyConfiguration;
+      shopifyConfig;
 
-    /* ===============================
-       STEP 1: UPDATE VARIANT BASIC DATA
-    =============================== */
+    /* ==============================================
+       STEP 2: UPDATE VARIANT BASIC DATA
+    ============================================== */
 
     const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/variants/${variantId}.json`;
 
@@ -3295,21 +3299,18 @@ export const updateSingleVariant = async (req, res) => {
         id: variantId,
         price: price?.toString(),
         compare_at_price: compare_at_price?.toString(),
-        inventory_policy: inventoryPolicy,
-        inventory_management: "shopify",
         sku,
         barcode,
         option1,
         option2,
         option3,
         weight,
+        inventory_policy,
+        inventory_management: "shopify",
       },
     };
 
-    console.log("🚀 Updating Shopify Variant...");
-    console.log("➡️ Variant Payload:", variantPayload);
-
-    const updatedVariant = await shopifyRequest(
+    await shopifyRequest(
       variantUpdateUrl,
       "PUT",
       variantPayload,
@@ -3317,84 +3318,68 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    console.log("✅ Shopify Variant Updated:", updatedVariant?.variant?.id);
+    console.log("✅ Variant basic info updated");
 
-    const inventoryItemId = updatedVariant?.variant?.inventory_item_id;
-
-    console.log("🔑 Inventory Item ID:", inventoryItemId);
-
-    if (!inventoryItemId) {
-      console.log("❌ Missing inventory_item_id from Shopify response");
-      return res
-        .status(400)
-        .json({ error: "Missing inventory_item_id from variant." });
-    }
-
-    /* ===============================
-       STEP 2: GET INVENTORY LOCATION
-    =============================== */
-
-    console.log("🔍 Fetching Inventory Levels...");
-
-    const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
-
-    const inventoryLevelsRes = await shopifyRequest(
-      inventoryLevelsUrl,
-      "GET",
-      null,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-
-    console.log("📦 Inventory Levels Response:", inventoryLevelsRes);
-
-    const locationId =
-      inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
-
-    console.log("📍 Detected Location ID:", locationId);
-
-    if (!locationId) {
-      console.log("❌ No location found for inventory item");
-      return res.status(400).json({
-        error: "Unable to determine location_id for inventory update.",
-      });
-    }
-
-    /* ===============================
-       STEP 3: UPDATE INVENTORY
-    =============================== */
+    /* ==============================================
+       STEP 3: UPDATE INVENTORY (IF PROVIDED)
+    ============================================== */
 
     if (inventory_quantity !== undefined) {
-      console.log("📦 Updating Inventory Quantity:", inventory_quantity);
-
-      const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
-
-      const inventoryPayload = {
-        location_id: locationId,
-        inventory_item_id: inventoryItemId,
-        available: parseInt(inventory_quantity),
-      };
-
-      console.log("➡️ Inventory Payload:", inventoryPayload);
-
-      const inventoryRes = await shopifyRequest(
-        inventoryUpdateUrl,
-        "POST",
-        inventoryPayload,
+      // 1️⃣ Get inventory item id
+      const variantRes = await shopifyRequest(
+        variantUpdateUrl,
+        "GET",
+        null,
         shopifyApiKey,
         shopifyAccessToken
       );
 
-      console.log("✅ Inventory Updated Successfully:", inventoryRes);
-    } else {
-      console.log("⚠️ inventory_quantity not provided, skipping inventory update");
+      const inventoryItemId =
+        variantRes?.variant?.inventory_item_id;
+
+      // 2️⃣ Get location
+      const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
+
+      const inventoryLevelsRes = await shopifyRequest(
+        inventoryLevelsUrl,
+        "GET",
+        null,
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+
+      const locationId =
+        inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+
+      if (!locationId) {
+        return res.status(400).json({
+          success: false,
+          message: "No inventory location found.",
+        });
+      }
+
+      // 3️⃣ Update inventory
+      const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
+
+      await shopifyRequest(
+        inventoryUpdateUrl,
+        "POST",
+        {
+          location_id: locationId,
+          inventory_item_id: inventoryItemId,
+          available: parseInt(inventory_quantity),
+        },
+        shopifyApiKey,
+        shopifyAccessToken
+      );
+
+      console.log("✅ Inventory updated in Shopify");
     }
 
-    /* ===============================
-       STEP 4: FETCH UPDATED PRODUCT
-    =============================== */
-
-    console.log("🔄 Fetching Updated Product...");
+    /* ==============================================
+       STEP 4: FETCH FULL UPDATED PRODUCT
+       (This guarantees DB = Shopify)
+    ============================================== */
 
     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
 
@@ -3406,70 +3391,82 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    const updatedProduct = productResponse.product;
-    const updatedProductOptions = updatedProduct.options || [];
+    const shopifyProduct = productResponse.product;
 
-    console.log("📦 Shopify Product Fetched Successfully");
+    if (!shopifyProduct) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to fetch updated product from Shopify.",
+      });
+    }
 
-    /* ===============================
-       STEP 5: UPDATE DATABASE
-    =============================== */
+    console.log("✅ Full updated product fetched from Shopify");
 
-    console.log("💾 Updating Variant in Database...");
+    /* ==============================================
+       STEP 5: TRANSFORM VARIANTS FOR DB
+    ============================================== */
 
-    const updatedProductInDb = await listingModel.updateOne(
-      { "variants.id": variantId },
+    const formattedVariants = shopifyProduct.variants.map((v) => ({
+      id: v.id.toString(),
+      title: v.title,
+      option1: v.option1,
+      option2: v.option2,
+      option3: v.option3,
+      price: v.price,
+      compare_at_price: v.compare_at_price,
+      inventory_management: v.inventory_management,
+      inventory_quantity: v.inventory_quantity,
+      sku: v.sku,
+      barcode: v.barcode,
+      location_id: v.location_id || null,
+      inventory_item_id: v.inventory_item_id,
+      weight: v.weight,
+      weight_unit: v.weight_unit,
+      isParent: false,
+      image_id: v.image_id,
+      VariantStatus: "active",
+    }));
+
+    /* ==============================================
+       STEP 6: UPDATE DATABASE (FULL SYNC)
+    ============================================== */
+
+    await listingModel.updateOne(
+      { id: productId.toString() },
       {
         $set: {
-          "variants.$": {
-            id: variantId,
-            price: updatedVariant.variant.price,
-            title: updatedVariant.variant.title,
-            inventory_quantity:
-              inventory_quantity !== undefined
-                ? parseInt(inventory_quantity)
-                : 0,
-            sku: updatedVariant.variant.sku,
-            option1: updatedVariant.variant.option1,
-            option2: updatedVariant.variant.option2,
-            option3: updatedVariant.variant.option3,
-            weight: updatedVariant.variant.weight,
-            compare_at_price: updatedVariant.variant.compare_at_price,
-            inventory_management:
-              updatedVariant.variant.inventory_policy,
-            productId: updatedVariant.variant.product_id,
-            barcode: updatedVariant.variant.barcode,
-            updatedAt: updatedVariant.variant.updated_at,
-          },
-          options: updatedProductOptions,
+          title: shopifyProduct.title,
+          body_html: shopifyProduct.body_html,
+          vendor: shopifyProduct.vendor,
+          product_type: shopifyProduct.product_type,
+          handle: shopifyProduct.handle,
+          variants: formattedVariants,
+          options: shopifyProduct.options,
+          updated_at: new Date(),
         },
       }
     );
 
-    console.log("✅ Database Updated:", updatedProductInDb);
+    console.log("✅ MongoDB fully synced with Shopify");
 
     console.log("🟢 ===== UPDATE SINGLE VARIANT END =====");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message:
-        "Variant and inventory updated successfully in Shopify and database.",
-      shopifyResponse: updatedVariant,
-      dbResponse: updatedProductInDb,
+      message: "Variant updated and database fully synced.",
     });
   } catch (error) {
-    console.error("🔴 ERROR IN UPDATE VARIANT:");
-    console.error("Message:", error.message);
-    console.error("Full Error:", error);
-    console.error("Shopify Error Response:", error?.response?.data);
+    console.error("🔴 UPDATE VARIANT ERROR:", error?.response?.data || error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error updating variant.",
       error: error.message,
     });
   }
 };
+
+
 
 
 
