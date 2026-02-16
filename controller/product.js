@@ -3447,10 +3447,6 @@ export const updateSingleVariant = async (req, res) => {
 };
 
 
-
-
-
-
 export const getsingleProduct = async (req, res) => {
   try {
     const { productId } = req.params;
