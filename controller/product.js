@@ -200,10 +200,10 @@ export const addUsedEquipments = async (req, res) => {
         variantCompareAtPrices?.[index] || compare_at_price
       );
 
-      const variantQuantity =
-        track_quantity && !isNaN(parseInt(variantQuantites?.[index]))
-          ? parseInt(variantQuantites?.[index])
-          : 0;
+      // const variantQuantity =
+      //   track_quantity && !isNaN(parseInt(variantQuantites?.[index]))
+      //     ? parseInt(variantQuantites?.[index])
+      //     : 0;
 
       const variantSKU = has_sku
         ? variantSku?.[index] || `${sku}-${index + 1}`
@@ -216,7 +216,7 @@ export const addUsedEquipments = async (req, res) => {
         price: formatPrice(variantPrice),
         compare_at_price: variantCompareAtPrice,
         inventory_management: track_quantity ? 'shopify' : null,
-        inventory_quantity: variantQuantity,
+        // inventory_quantity: variantQuantity,
         sku: variantSKU,
         barcode: has_sku ? `${barcode}-${index + 1}` : null,
         weight: track_shipping ? parseFloat(weight) || 0.0 : 0.0,
@@ -293,62 +293,62 @@ export const addUsedEquipments = async (req, res) => {
    UNIVERSAL INVENTORY SYNC (DEFAULT + MULTI SAFE)
 ========================================================= */
 
-if (track_quantity && productResponse?.product?.variants?.length) {
-  try {
-    console.log("🔄 Starting inventory sync...");
+// if (track_quantity && productResponse?.product?.variants?.length) {
+//   try {
+//     console.log("🔄 Starting inventory sync...");
 
-    for (let i = 0; i < productResponse.product.variants.length; i++) {
-      const variant = productResponse.product.variants[i];
-      const inventoryItemId = variant.inventory_item_id;
+//     for (let i = 0; i < productResponse.product.variants.length; i++) {
+//       const variant = productResponse.product.variants[i];
+//       const inventoryItemId = variant.inventory_item_id;
 
-      if (!inventoryItemId) continue;
+//       if (!inventoryItemId) continue;
 
-      // 🔹 Default variant fallback logic
-      const variantQty =
-        parsedOptions.length === 1 &&
-        parsedOptions[0]?.name === "Title"
-          ? parseInt(quantity) || 0
-          : !isNaN(parseInt(variantQuantites?.[i]))
-          ? parseInt(variantQuantites[i])
-          : 0;
+//       // 🔹 Default variant fallback logic
+//       const variantQty =
+//         parsedOptions.length === 1 &&
+//         parsedOptions[0]?.name === "Title"
+//           ? parseInt(quantity) || 0
+//           : !isNaN(parseInt(variantQuantites?.[i]))
+//           ? parseInt(variantQuantites[i])
+//           : 0;
 
-      console.log(
-        `📦 Variant ${variant.id} → Setting Qty: ${variantQty}`
-      );
+//       console.log(
+//         `📦 Variant ${variant.id} → Setting Qty: ${variantQty}`
+//       );
 
-      // 🔎 Get correct location (VERY IMPORTANT)
-      const inventoryLevelsRes = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
-        "GET",
-        null,
-        shopifyApiKey,
-        shopifyAccessToken
-      );
+//       // 🔎 Get correct location (VERY IMPORTANT)
+//       const inventoryLevelsRes = await shopifyRequest(
+//         `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
+//         "GET",
+//         null,
+//         shopifyApiKey,
+//         shopifyAccessToken
+//       );
 
-      const existingLevel = inventoryLevelsRes?.inventory_levels?.[0];
-      if (!existingLevel?.location_id) continue;
+//       const existingLevel = inventoryLevelsRes?.inventory_levels?.[0];
+//       if (!existingLevel?.location_id) continue;
 
-      await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
-        "POST",
-        {
-          location_id: existingLevel.location_id,
-          inventory_item_id: inventoryItemId,
-          available: variantQty,
-        },
-        shopifyApiKey,
-        shopifyAccessToken
-      );
+//       await shopifyRequest(
+//         `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
+//         "POST",
+//         {
+//           location_id: existingLevel.location_id,
+//           inventory_item_id: inventoryItemId,
+//           available: variantQty,
+//         },
+//         shopifyApiKey,
+//         shopifyAccessToken
+//       );
 
-      // ✅ ALSO update DB variant quantity
-      productResponse.product.variants[i].inventory_quantity = variantQty;
-    }
+//       // ✅ ALSO update DB variant quantity
+//       productResponse.product.variants[i].inventory_quantity = variantQty;
+//     }
 
-    console.log("✅ Inventory synced successfully.");
-  } catch (err) {
-    console.error("❌ Inventory sync error:", err?.response?.data || err.message);
-  }
-}
+//     console.log("✅ Inventory synced successfully.");
+//   } catch (err) {
+//     console.error("❌ Inventory sync error:", err?.response?.data || err.message);
+//   }
+// }
 
 
     if (shippingProfileData && productResponse?.product?.variants?.length > 0) {
@@ -3408,7 +3408,7 @@ export const updateSingleVariant = async (req, res) => {
     console.log("💾 Final Inventory To Save In MongoDB:", finalInventoryToSave);
 
     const dbUpdate = await listingModel.updateOne(
-      { "variants.id": variantId },
+  { "variants.id": variantId.toString() },   // 🔥 force string
       {
         $set: {
           "variants.$.title": updatedVariant.title,
@@ -3428,6 +3428,12 @@ export const updateSingleVariant = async (req, res) => {
         },
       }
     );
+const updatedDoc = await listingModel.findOne(
+  { "variants.id": variantId.toString() },
+  { "variants.$": 1 }
+);
+
+console.log("🧠 Mongo After Update:", updatedDoc);
 
     console.log("✅ MongoDB Update Result:", dbUpdate);
     console.log("🟢 ===== UPDATE SINGLE VARIANT END =====\n");
@@ -3449,6 +3455,7 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
+
 
 
 
