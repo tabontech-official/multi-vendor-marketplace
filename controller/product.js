@@ -3255,10 +3255,15 @@ export const getSingleVariantData = async (req, res) => {
 
 export const updateSingleVariant = async (req, res) => {
   try {
-    console.log("🔵 ===== UPDATE SINGLE VARIANT START =====");
+    console.log("\n🔵 ===== UPDATE SINGLE VARIANT START =====");
 
     const { productId, variantId } = req.params;
     const variantBody = req.body.variant || {};
+
+    console.log("📌 Product ID:", productId);
+    console.log("📌 Variant ID:", variantId);
+    console.log("📦 Full Incoming Body:", req.body);
+    console.log("📦 Variant Body:", variantBody);
 
     const {
       price,
@@ -3273,12 +3278,17 @@ export const updateSingleVariant = async (req, res) => {
       inventory_policy,
     } = variantBody;
 
+    console.log("🟡 Incoming inventory_quantity:", inventory_quantity);
+    console.log("🟡 Type of inventory_quantity:", typeof inventory_quantity);
+
     /* ======================================================
        STEP 1: GET SHOPIFY CONFIG
     ====================================================== */
 
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+
     if (!shopifyConfiguration) {
+      console.log("❌ Shopify configuration not found");
       return res.status(404).json({
         success: false,
         error: "Shopify configuration not found.",
@@ -3287,6 +3297,8 @@ export const updateSingleVariant = async (req, res) => {
 
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfiguration;
+
+    console.log("✅ Shopify Config Loaded");
 
     /* ======================================================
        STEP 2: UPDATE VARIANT ON SHOPIFY
@@ -3313,6 +3325,9 @@ export const updateSingleVariant = async (req, res) => {
       },
     };
 
+    console.log("🚀 Sending Variant Update To Shopify...");
+    console.log("📤 Variant Payload:", variantPayload);
+
     const updatedVariantResponse = await shopifyRequest(
       variantUpdateUrl,
       "PUT",
@@ -3324,19 +3339,27 @@ export const updateSingleVariant = async (req, res) => {
     const updatedVariant = updatedVariantResponse?.variant;
 
     if (!updatedVariant) {
+      console.log("❌ Shopify variant update failed");
       return res.status(400).json({
         success: false,
         error: "Variant update failed on Shopify.",
       });
     }
 
+    console.log("✅ Shopify Variant Updated:", updatedVariant.id);
+
     const inventoryItemId = updatedVariant.inventory_item_id;
+
+    console.log("📦 Inventory Item ID:", inventoryItemId);
 
     /* ======================================================
        STEP 3: UPDATE INVENTORY ON SHOPIFY
     ====================================================== */
 
     if (inventory_quantity !== undefined) {
+      console.log("📦 Updating Inventory On Shopify...");
+      console.log("📤 Quantity Sent To Shopify:", parseInt(inventory_quantity));
+
       const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
 
       const inventoryLevelsRes = await shopifyRequest(
@@ -3349,6 +3372,8 @@ export const updateSingleVariant = async (req, res) => {
 
       const locationId =
         inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+
+      console.log("📍 Location ID:", locationId);
 
       if (locationId) {
         const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
@@ -3364,30 +3389,23 @@ export const updateSingleVariant = async (req, res) => {
           shopifyApiKey,
           shopifyAccessToken
         );
+
+        console.log("✅ Inventory Updated On Shopify");
+      } else {
+        console.log("❌ No Location Found For Inventory");
       }
     }
 
     /* ======================================================
-       STEP 4: FETCH UPDATED PRODUCT OPTIONS
+       STEP 4: UPDATE MONGODB
     ====================================================== */
 
-    const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
+    const finalInventoryToSave =
+      inventory_quantity !== undefined
+        ? parseInt(inventory_quantity)
+        : 0;
 
-    const productResponse = await shopifyRequest(
-      productUrl,
-      "GET",
-      null,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-
-    const updatedProductOptions =
-      productResponse?.product?.options || [];
-
-    /* ======================================================
-       STEP 5: UPDATE MONGODB
-       🔥 SAVE BODY VALUE (NOT SHOPIFY VALUE)
-    ====================================================== */
+    console.log("💾 Final Inventory To Save In MongoDB:", finalInventoryToSave);
 
     const dbUpdate = await listingModel.updateOne(
       { "variants.id": variantId },
@@ -3395,10 +3413,7 @@ export const updateSingleVariant = async (req, res) => {
         $set: {
           "variants.$.title": updatedVariant.title,
           "variants.$.price": updatedVariant.price,
-          "variants.$.inventory_quantity":
-            inventory_quantity !== undefined
-              ? parseInt(inventory_quantity)
-              : 0,
+          "variants.$.inventory_quantity": finalInventoryToSave,
           "variants.$.sku": updatedVariant.sku,
           "variants.$.option1": updatedVariant.option1,
           "variants.$.option2": updatedVariant.option2,
@@ -3410,22 +3425,18 @@ export const updateSingleVariant = async (req, res) => {
             updatedVariant.inventory_policy,
           "variants.$.barcode": updatedVariant.barcode,
           "variants.$.inventory_item_id": inventoryItemId,
-          options: updatedProductOptions,
         },
       }
     );
 
-    console.log("✅ Database Updated:", dbUpdate);
+    console.log("✅ MongoDB Update Result:", dbUpdate);
+    console.log("🟢 ===== UPDATE SINGLE VARIANT END =====\n");
 
     return res.status(200).json({
       success: true,
       message: "Variant updated successfully.",
       data: {
-        variant: updatedVariant,
-        inventory_quantity:
-          inventory_quantity !== undefined
-            ? parseInt(inventory_quantity)
-            : 0,
+        inventory_quantity: finalInventoryToSave,
       },
     });
   } catch (error) {
@@ -3438,6 +3449,7 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
+
 
 
 
