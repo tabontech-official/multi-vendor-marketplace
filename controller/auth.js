@@ -19,6 +19,7 @@ import { orderModel } from '../Models/order.js';
 import { authBulkUploaderModel } from '../Models/authForBulkUploder.js';
 import { notificationModel } from '../Models/NotificationSettings.js';
 import { financeReminderTemplate, sendEmail } from '../middleware/sendEmail.js';
+import { PayoutConfig } from '../Models/finance.js';
 
 const generateApiKey = () => `shpka_${crypto.randomBytes(16).toString('hex')}`;
 const generateApiSecretKey = () =>
@@ -203,6 +204,8 @@ export const signUp = async (req, res) => {
 
     const customerData = await customerResponse.json();
     const shopifyCustomerId = customerData.customer.id;
+    const payoutConfig = await PayoutConfig.findOne().sort({ createdAt: -1 });
+    const commissionRate = payoutConfig?.commission || 0;
 
     const newUser = await authModel.create({
       firstName,
@@ -217,6 +220,7 @@ export const signUp = async (req, res) => {
       country,
       sellerName,
       shopifyId: shopifyCustomerId,
+       comissionRate: commissionRate,
     });
 
     const userId = newUser._id.toString();
