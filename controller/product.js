@@ -3260,9 +3260,6 @@ export const updateSingleVariant = async (req, res) => {
     const { productId, variantId } = req.params;
     const variantBody = req.body.variant || {};
 
-    console.log("📌 Params:", { productId, variantId });
-    console.log("📦 Incoming Variant Body:", variantBody);
-
     const {
       price,
       inventory_quantity,
@@ -3292,7 +3289,7 @@ export const updateSingleVariant = async (req, res) => {
       shopifyConfiguration;
 
     /* ======================================================
-       STEP 2: UPDATE VARIANT BASIC DATA
+       STEP 2: UPDATE VARIANT ON SHOPIFY
     ====================================================== */
 
     const variantUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/variants/${variantId}.json`;
@@ -3300,8 +3297,11 @@ export const updateSingleVariant = async (req, res) => {
     const variantPayload = {
       variant: {
         id: variantId,
-        price: price?.toString(),
-        compare_at_price: compare_at_price?.toString(),
+        price: price !== undefined ? price.toString() : undefined,
+        compare_at_price:
+          compare_at_price !== undefined
+            ? compare_at_price.toString()
+            : undefined,
         sku,
         barcode,
         option1,
@@ -3313,8 +3313,6 @@ export const updateSingleVariant = async (req, res) => {
       },
     };
 
-    console.log("🚀 Updating Shopify Variant...");
-
     const updatedVariantResponse = await shopifyRequest(
       variantUpdateUrl,
       "PUT",
@@ -3323,7 +3321,7 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    const updatedVariant = updatedVariantResponse.variant;
+    const updatedVariant = updatedVariantResponse?.variant;
 
     if (!updatedVariant) {
       return res.status(400).json({
@@ -3332,69 +3330,16 @@ export const updateSingleVariant = async (req, res) => {
       });
     }
 
-    console.log("✅ Shopify Variant Updated:", updatedVariant.id);
-
     const inventoryItemId = updatedVariant.inventory_item_id;
 
-    if (!inventoryItemId) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing inventory_item_id from Shopify response.",
-      });
-    }
-
     /* ======================================================
-       STEP 3: GET INVENTORY LOCATION
-    ====================================================== */
-
-    const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
-
-    const inventoryLevelsRes = await shopifyRequest(
-      inventoryLevelsUrl,
-      "GET",
-      null,
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-
-    const locationId =
-      inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
-
-    if (!locationId) {
-      return res.status(400).json({
-        success: false,
-        error: "No inventory location found.",
-      });
-    }
-
-    let latestInventoryQuantity =
-      inventoryLevelsRes?.inventory_levels?.[0]?.available || 0;
-
-    /* ======================================================
-       STEP 4: UPDATE INVENTORY (IF PROVIDED)
+       STEP 3: UPDATE INVENTORY ON SHOPIFY
     ====================================================== */
 
     if (inventory_quantity !== undefined) {
-      console.log("📦 Updating Inventory...");
+      const inventoryLevelsUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`;
 
-      const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
-
-      const inventoryPayload = {
-        location_id: locationId,
-        inventory_item_id: inventoryItemId,
-        available: parseInt(inventory_quantity),
-      };
-
-      await shopifyRequest(
-        inventoryUpdateUrl,
-        "POST",
-        inventoryPayload,
-        shopifyApiKey,
-        shopifyAccessToken
-      );
-
-      // 🔄 Fetch updated inventory again
-      const updatedInventoryLevels = await shopifyRequest(
+      const inventoryLevelsRes = await shopifyRequest(
         inventoryLevelsUrl,
         "GET",
         null,
@@ -3402,17 +3347,28 @@ export const updateSingleVariant = async (req, res) => {
         shopifyAccessToken
       );
 
-      latestInventoryQuantity =
-        updatedInventoryLevels?.inventory_levels?.[0]?.available || 0;
+      const locationId =
+        inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
 
-      console.log(
-        "✅ Latest Inventory From Shopify:",
-        latestInventoryQuantity
-      );
+      if (locationId) {
+        const inventoryUpdateUrl = `${shopifyStoreUrl}/admin/api/2023-01/inventory_levels/set.json`;
+
+        await shopifyRequest(
+          inventoryUpdateUrl,
+          "POST",
+          {
+            location_id: locationId,
+            inventory_item_id: inventoryItemId,
+            available: parseInt(inventory_quantity),
+          },
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+      }
     }
 
     /* ======================================================
-       STEP 5: FETCH UPDATED PRODUCT OPTIONS
+       STEP 4: FETCH UPDATED PRODUCT OPTIONS
     ====================================================== */
 
     const productUrl = `${shopifyStoreUrl}/admin/api/2023-01/products/${productId}.json`;
@@ -3425,33 +3381,35 @@ export const updateSingleVariant = async (req, res) => {
       shopifyAccessToken
     );
 
-    const updatedProduct = productResponse.product;
-    const updatedProductOptions = updatedProduct?.options || [];
+    const updatedProductOptions =
+      productResponse?.product?.options || [];
 
     /* ======================================================
-       STEP 6: UPDATE DATABASE
+       STEP 5: UPDATE MONGODB
+       🔥 SAVE BODY VALUE (NOT SHOPIFY VALUE)
     ====================================================== */
 
     const dbUpdate = await listingModel.updateOne(
       { "variants.id": variantId },
       {
         $set: {
-          "variants.$": {
-            id: updatedVariant.id,
-            title: updatedVariant.title,
-            price: updatedVariant.price,
-            inventory_quantity: latestInventoryQuantity,
-            sku: updatedVariant.sku,
-            option1: updatedVariant.option1,
-            option2: updatedVariant.option2,
-            option3: updatedVariant.option3,
-            weight: updatedVariant.weight,
-            compare_at_price: updatedVariant.compare_at_price,
-            inventory_management: updatedVariant.inventory_policy,
-            productId: updatedVariant.product_id,
-            barcode: updatedVariant.barcode,
-            updatedAt: updatedVariant.updated_at,
-          },
+          "variants.$.title": updatedVariant.title,
+          "variants.$.price": updatedVariant.price,
+          "variants.$.inventory_quantity":
+            inventory_quantity !== undefined
+              ? parseInt(inventory_quantity)
+              : 0,
+          "variants.$.sku": updatedVariant.sku,
+          "variants.$.option1": updatedVariant.option1,
+          "variants.$.option2": updatedVariant.option2,
+          "variants.$.option3": updatedVariant.option3,
+          "variants.$.weight": updatedVariant.weight,
+          "variants.$.compare_at_price":
+            updatedVariant.compare_at_price,
+          "variants.$.inventory_management":
+            updatedVariant.inventory_policy,
+          "variants.$.barcode": updatedVariant.barcode,
+          "variants.$.inventory_item_id": inventoryItemId,
           options: updatedProductOptions,
         },
       }
@@ -3459,19 +3417,19 @@ export const updateSingleVariant = async (req, res) => {
 
     console.log("✅ Database Updated:", dbUpdate);
 
-    console.log("🟢 ===== UPDATE SINGLE VARIANT END =====");
-
     return res.status(200).json({
       success: true,
-      message:
-        "Variant and inventory updated successfully in Shopify and database.",
+      message: "Variant updated successfully.",
       data: {
         variant: updatedVariant,
-        inventory_quantity: latestInventoryQuantity,
+        inventory_quantity:
+          inventory_quantity !== undefined
+            ? parseInt(inventory_quantity)
+            : 0,
       },
     });
   } catch (error) {
-    console.error("🔴 ERROR IN UPDATE VARIANT:", error?.response?.data || error);
+    console.error("🔴 ERROR:", error?.response?.data || error);
 
     return res.status(500).json({
       success: false,
@@ -3480,6 +3438,8 @@ export const updateSingleVariant = async (req, res) => {
     });
   }
 };
+
+
 
 
 
