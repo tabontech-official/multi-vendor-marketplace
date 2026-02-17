@@ -43,6 +43,7 @@ import {
   duplicateProduct,
   getAllVariantsForAdmin,
   getTrackingCountForAdmin,
+  syncProductVariants,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -52,6 +53,7 @@ import { verifyToken } from '../middleware/verifyToken.js';
 const productRouter = express.Router();
 productRouter.post('/createProduct', verifyToken, cpUpload, addUsedEquipments);
 productRouter.post('/duplicateProduct/:productId', verifyToken,  duplicateProduct);
+productRouter.get("/sync-product/:productId", syncProductVariants);
 
 productRouter.post('/webhooks/delete', productDelete);
 productRouter.post('/holiday', verifyToken, updateAllProductsStatus);

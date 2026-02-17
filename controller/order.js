@@ -475,139 +475,111 @@ export const getFinanceSummaryForUser = async (req, res) => {
 // export const getOrderById = async (req, res) => {
 //   try {
 //     const userId = req.userId?.toString();
-//     if (!userId) {
-//       return res.status(400).send({ message: "User ID is required" });
-//     }
 
-//     if (!mongoose.Types.ObjectId.isValid(userId)) {
-//       return res.status(400).send({ message: "Invalid user ID" });
+//     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//       return res.status(400).send({ message: 'Invalid user ID' });
 //     }
 
 //     const allOrders = await orderModel.find({});
-//     console.log("📦 Total Orders Found:", allOrders.length);
-
-//     const ordersGroupedByOrderId = new Map();
+//     const ordersGrouped = new Map();
 
 //     for (const order of allOrders) {
 //       const filteredLineItems = [];
 
-//       // ✅ check order.ProductSnapshot to see if this order belongs to current user
-//       const snapshot = order.ProductSnapshot;
-//       const belongsToUser =
-//         snapshot?.userId?.toString?.() === userId ||
-//         (snapshot?.userId && snapshot.userId.toString() === userId);
-
-//       let defaultImage = null;
-//       if (belongsToUser && snapshot?.images?.length > 0) {
-//         const img = snapshot.images[0];
-//         defaultImage = {
-//           id: img.id,
-//           src: img.src,
-//           alt: img.alt || "Product image",
-//           position: img.position,
-//           width: img.width,
-//           height: img.height,
-//         };
-//       }
-
 //       for (const item of order.lineItems || []) {
-//         let imageData = defaultImage;
 //         const variantId = item.variant_id?.toString();
+//         if (!variantId) continue;
 
-//         // 🔄 if product still exists, try to refresh the image
-//         if (variantId) {
-//           const product = await listingModel
-//             .findOne({ "variants.id": variantId })
-//             .lean();
-//           if (product && product.userId?.toString() === userId) {
-//             const matchedVariant = product.variants.find(
-//               (v) => v.id === variantId
-//             );
+//         // 🔍 Find product by variant
+//         const product = await listingModel
+//           .findOne({ 'variants.id': variantId })
+//           .lean();
 
-//             // variant-specific image
-//             if (
-//               matchedVariant?.image_id &&
-//               Array.isArray(product.variantImages)
-//             ) {
-//               const image = product.variantImages.find(
-//                 (img) => img.id === matchedVariant.image_id
-//               );
-//               if (image) {
-//                 imageData = {
-//                   id: image.id,
-//                   src: image.src,
-//                   alt: image.alt,
-//                   position: image.position,
-//                   width: image.width,
-//                   height: image.height,
-//                 };
-//               }
-//             }
+//         // 🚫 Product hi nahi mila
+//         if (!product) continue;
 
-//             // fallback to first product image
-//             if (
-//               !imageData &&
-//               Array.isArray(product.images) &&
-//               product.images.length > 0
-//             ) {
-//               const fallback = product.images[0];
-//               imageData = {
-//                 id: fallback.id,
-//                 src: fallback.src,
-//                 alt: fallback.alt || "Product image",
-//                 position: fallback.position,
-//                 width: fallback.width,
-//                 height: fallback.height,
-//               };
-//             }
+//         // 🚫 Product merchant ka nahi
+//         if (product.userId?.toString() !== userId) continue;
+
+//         // ✅ IMAGE RESOLUTION
+//         let imageData = null;
+
+//         const matchedVariant = product.variants.find(
+//           (v) => v.id.toString() === variantId
+//         );
+
+//         if (matchedVariant?.image_id && product.variantImages?.length) {
+//           const img = product.variantImages.find(
+//             (i) => i.id.toString() === matchedVariant.image_id.toString()
+//           );
+//           if (img) {
+//             imageData = {
+//               id: img.id,
+//               src: img.src,
+//               alt: img.alt || '',
+//               position: img.position,
+//               width: img.width,
+//               height: img.height,
+//             };
 //           }
 //         }
 
-//         // ✅ include only if this order belongs to the user
-//         if (belongsToUser) {
-//           const enrichedItem = { ...item };
-//           if (imageData) enrichedItem.image = imageData;
-//           filteredLineItems.push(enrichedItem);
+//         if (!imageData && product.images?.length) {
+//           const img = product.images[0];
+//           imageData = {
+//             id: img.id,
+//             src: img.src,
+//             alt: img.alt || '',
+//             position: img.position,
+//             width: img.width,
+//             height: img.height,
+//           };
 //         }
+
+//         // 🚫 image bhi nahi mili
+//         if (!imageData) continue;
+
+//         filteredLineItems.push({
+//           ...item,
+//           image: imageData,
+//         });
 //       }
 
-//       if (filteredLineItems.length > 0) {
-//         const orderForUser = order.toObject();
-//         orderForUser.lineItems = filteredLineItems;
+//       // 🚫 Is order mein merchant ka koi item hi nahi
+//       if (!filteredLineItems.length) continue;
 
-//         if (ordersGroupedByOrderId.has(order.orderId)) {
-//           const existingOrder = ordersGroupedByOrderId.get(order.orderId);
-//           existingOrder.lineItems.push(...filteredLineItems);
+//       const orderData = order.toObject();
+//       orderData.lineItems = filteredLineItems;
 
-//           // remove duplicates by variant_id
-//           existingOrder.lineItems = Array.from(
-//             new Map(
-//               existingOrder.lineItems.map((item) => [item.variant_id, item])
-//             )
-//           ).map(([_, item]) => item);
-//         } else {
-//           ordersGroupedByOrderId.set(order.orderId, orderForUser);
-//         }
+//       if (ordersGrouped.has(order.orderId)) {
+//         const existing = ordersGrouped.get(order.orderId);
+//         existing.lineItems.push(...filteredLineItems);
+
+//         // 🔁 dedupe by variant
+//         existing.lineItems = Array.from(
+//           new Map(existing.lineItems.map((li) => [li.variant_id, li])).values()
+//         );
+//       } else {
+//         ordersGrouped.set(order.orderId, orderData);
 //       }
 //     }
 
-//     const matchedOrders = Array.from(ordersGroupedByOrderId.values());
+//     const finalOrders = Array.from(ordersGrouped.values());
 
-//     if (matchedOrders.length > 0) {
-//       return res.status(200).send({
-//         message: "Orders found for user",
-//         data: matchedOrders,
-//       });
-//     } else {
-//       return res.status(404).send({
-//         message: "No orders found for this user's products",
-//       });
+//     if (!finalOrders.length) {
+//       return res.status(404).send({ message: 'No orders found' });
 //     }
+
+//     return res.status(200).send({
+//       message: 'Orders found',
+//       data: finalOrders,
+//     });
 //   } catch (error) {
-//     console.error("❌ Error fetching user orders:", error);
-//     res.status(500).send({ message: "Internal Server Error" });
+//     console.error('❌ getOrderById error:', error);
+//     return res.status(500).send({ message: 'Internal Server Error' });
 //   }
 // };
+
 
 export const getOrderById = async (req, res) => {
   try {
@@ -641,14 +613,24 @@ export const getOrderById = async (req, res) => {
         // ✅ IMAGE RESOLUTION
         let imageData = null;
 
-        const matchedVariant = product.variants.find(
-          (v) => v.id.toString() === variantId
-        );
+        // const matchedVariant = product.variants.find(
+        //   (v) => v.id.toString() === variantId
+        // );
+const matchedVariant = product.variants?.find(
+  (v) => v?.id && v.id.toString() === variantId
+);
 
         if (matchedVariant?.image_id && product.variantImages?.length) {
-          const img = product.variantImages.find(
-            (i) => i.id.toString() === matchedVariant.image_id.toString()
-          );
+          // const img = product.variantImages.find(
+          //   (i) => i.id.toString() === matchedVariant.image_id.toString()
+          // );
+          const img = product.variantImages?.find(
+  (i) =>
+    i?.id &&
+    matchedVariant?.image_id &&
+    i.id.toString() === matchedVariant.image_id.toString()
+);
+
           if (img) {
             imageData = {
               id: img.id,
