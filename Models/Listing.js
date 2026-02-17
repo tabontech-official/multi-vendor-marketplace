@@ -162,6 +162,7 @@ bulkUpload: {
         profileName: { type: String },
         rateName: { type: String },
         ratePrice: { type: Number },
+         shortId:{type:String}
       },
     },
 

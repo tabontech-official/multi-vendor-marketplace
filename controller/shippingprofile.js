@@ -3,7 +3,10 @@ import { shopifyRequest } from './product.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { userShippingProfileModel } from '../Models/userShippingProfileModel.js';
 import { listingModel } from '../Models/Listing.js';
-
+import crypto from 'crypto';
+const generateShortId = () => {
+  return crypto.randomBytes(4).toString('hex').slice(0, 7);
+};
 export const createBulkShippingProfiles = async (req, res) => {
   try {
     console.log('🚀 [START] Bulk creation of 99 Shopify Shipping Profiles...');
@@ -174,120 +177,6 @@ export const createBulkShippingProfiles = async (req, res) => {
   }
 };
 
-// export const createShopifyProfile = async (req, res) => {
-//   try {
-//     console.log("🚀 [START] Creating Shopify Shipping Profile 'p1'");
-
-//     // 1️⃣ Load Shopify credentials
-//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-//     if (!shopifyConfiguration)
-//       return res
-//         .status(404)
-//         .json({ error: 'Shopify configuration not found.' });
-
-//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
-//       shopifyConfiguration;
-
-//     // 👉 replace with your valid location IDs
-//     const locationIds = [
-//       'gid://shopify/Location/79719268608',
-//       'gid://shopify/Location/79949168896',
-//     ];
-
-//     // 2️⃣ GraphQL mutation (exactly like Shopify's Admin payload)
-//     const createProfileMutation = {
-//       query:
-//         'mutation CreateDeliveryProfile($profile: DeliveryProfileInput!) { deliveryProfileCreate(profile: $profile) { profile { id name } userErrors { field message } } }',
-//       variables: {
-//         profile: {
-//           name: 'p1',
-//           locationGroupsToCreate: [
-//             {
-//               locationsToAdd: [
-//                 'gid://shopify/Location/79719268608',
-//                 'gid://shopify/Location/79949168896',
-//               ],
-//               zonesToCreate: [
-//                 {
-//                   name: 'Oceania',
-//                   countries: [
-//                     {
-//                       code: 'AU',
-//                       restOfWorld: false,
-//                       provinces: [
-//                         { code: 'ACT' },
-//                         { code: 'NSW' },
-//                         { code: 'NT' },
-//                         { code: 'QLD' },
-//                         { code: 'SA' },
-//                         { code: 'TAS' },
-//                         { code: 'VIC' },
-//                         { code: 'WA' },
-//                       ],
-//                     },
-//                   ],
-//                   methodDefinitionsToCreate: [
-//                     {
-//                       name: 'Express',
-//                       active: true,
-//                       rateDefinition: {
-//                         price: { amount: '1', currencyCode: 'AUD' },
-//                       },
-//                       weightConditionsToCreate: [],
-//                       priceConditionsToCreate: [],
-//                     },
-//                   ],
-//                 },
-//               ],
-//             },
-//           ],
-//         },
-//       },
-//     };
-
-//     console.log('📤 Sending create profile request to Shopify...');
-
-//     const response = await shopifyRequest(
-//       `${shopifyStoreUrl}/admin/api/2024-07/graphql.json`,
-//       'POST',
-//       createProfileMutation,
-//       shopifyApiKey,
-//       shopifyAccessToken
-//     );
-
-//     console.log('🧾 Shopify Response:', JSON.stringify(response, null, 2));
-
-//     const result = response?.data?.deliveryProfileCreate;
-//     const errors = result?.userErrors || [];
-
-//     if (errors.length > 0) {
-//       console.error('❌ Shopify returned userErrors:', errors);
-//       return res.status(400).json({ success: false, errors });
-//     }
-
-//     const profile = result?.profile;
-//     console.log(`✅ Created profile "${profile?.name}" (ID: ${profile?.id})`);
-
-//     // // 3️⃣ Save to MongoDB
-//     // await shippingProfileModel.create({
-//     //   profileId: profile?.id,
-//     //   profileName: profile?.name,
-//     //   rateName: "Express",
-//     //   ratePrice: 1,
-//     //   shopifyResponse: response,
-//     //   status: "created",
-//     // });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: 'Shopify delivery profile created successfully.',
-//       profile,
-//     });
-//   } catch (error) {
-//     console.error('🚨 [FATAL] Error creating Shopify shipping profile:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 export const createShopifyProfile = async (req, res) => {
   try {
@@ -295,29 +184,64 @@ export const createShopifyProfile = async (req, res) => {
 
     const { profileName, rateName, ratePrice } = req.body;
 
-    if (!profileName || !rateName || !ratePrice) {
+    /* =========================================================
+       1️⃣ VALIDATION
+    ========================================================= */
+
+    if (!profileName || !rateName || ratePrice === undefined) {
       return res.status(400).json({
         success: false,
         message: 'profileName, rateName, and ratePrice are required.',
       });
     }
 
-    // 1️⃣ Load Shopify credentials
+    const parsedPrice = parseFloat(ratePrice);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid ratePrice value.',
+      });
+    }
+
+    /* =========================================================
+       2️⃣ LOAD SHOPIFY CONFIG
+    ========================================================= */
+
     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration)
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+    if (!shopifyConfiguration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Shopify configuration not found.',
+      });
+    }
 
     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
       shopifyConfiguration;
+
+    /* =========================================================
+       3️⃣ GENERATE UNIQUE 7 CHAR ID
+    ========================================================= */
+
+    let shortId;
+    let exists = true;
+
+    while (exists) {
+      shortId = generateShortId();
+      const existing = await shippingProfileModel.findOne({ shortId });
+      if (!existing) exists = false;
+    }
+
+    console.log(`🆔 Generated Short ID: ${shortId}`);
+
+    /* =========================================================
+       4️⃣ GRAPHQL MUTATION
+    ========================================================= */
 
     const locationIds = [
       'gid://shopify/Location/79719268608',
       'gid://shopify/Location/79949168896',
     ];
 
-    // 2️⃣ Create GraphQL Mutation with dynamic values
     const createProfileMutation = {
       query: `
         mutation CreateDeliveryProfile($profile: DeliveryProfileInput!) {
@@ -329,7 +253,7 @@ export const createShopifyProfile = async (req, res) => {
       `,
       variables: {
         profile: {
-          name: profileName, // dynamic name
+          name: profileName,
           locationGroupsToCreate: [
             {
               locationsToAdd: locationIds,
@@ -354,13 +278,13 @@ export const createShopifyProfile = async (req, res) => {
                   ],
                   methodDefinitionsToCreate: [
                     {
-                      name: rateName, // dynamic rate name
+                      name: rateName,
                       active: true,
                       rateDefinition: {
                         price: {
-                          amount: ratePrice.toString(),
+                          amount: parsedPrice.toFixed(2),
                           currencyCode: 'AUD',
-                        }, // dynamic price
+                        },
                       },
                     },
                   ],
@@ -373,10 +297,13 @@ export const createShopifyProfile = async (req, res) => {
     };
 
     console.log(
-      `📤 Sending create profile request to Shopify for: ${profileName} (${rateName})`
+      `📤 Creating profile: ${profileName} | Rate: ${rateName} | Price: ${parsedPrice}`
     );
 
-    // 3️⃣ Send request to Shopify Admin API
+    /* =========================================================
+       5️⃣ SEND TO SHOPIFY
+    ========================================================= */
+
     const response = await shopifyRequest(
       `${shopifyStoreUrl}/admin/api/2024-07/graphql.json`,
       'POST',
@@ -385,37 +312,68 @@ export const createShopifyProfile = async (req, res) => {
       shopifyAccessToken
     );
 
-    console.log('🧾 Shopify Response:', JSON.stringify(response, null, 2));
-
     const result = response?.data?.deliveryProfileCreate;
     const errors = result?.userErrors || [];
 
     if (errors.length > 0) {
-      console.error('❌ Shopify returned userErrors:', errors);
-      return res.status(400).json({ success: false, errors });
+      console.error('❌ Shopify Errors:', errors);
+      return res.status(400).json({
+        success: false,
+        errors,
+      });
     }
 
     const profile = result?.profile;
-    console.log(`✅ Created profile "${profile?.name}" (ID: ${profile?.id})`);
 
-    // 4️⃣ Save to MongoDB
-    await shippingProfileModel.create({
-      profileId: profile?.id,
+    if (!profile?.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Profile creation failed on Shopify.',
+      });
+    }
+
+    console.log(`✅ Shopify Profile Created: ${profile.name}`);
+
+    /* =========================================================
+       6️⃣ SAVE TO MONGO
+    ========================================================= */
+
+    const savedProfile = await shippingProfileModel.create({
+      shortId, // 🔥 7 CHAR UNIQUE ID
+      profileId: profile.id,
       profileName,
       rateName,
-      ratePrice,
+      ratePrice: parsedPrice.toFixed(2),
       shopifyResponse: response,
       status: 'created',
+      createdAt: new Date(),
     });
+
+    console.log('💾 Profile Saved To Mongo');
+
+    /* =========================================================
+       7️⃣ RESPONSE
+    ========================================================= */
 
     return res.status(200).json({
       success: true,
       message: 'Shopify delivery profile created successfully.',
-      profile,
+      profile: {
+        shortId,
+        shopifyProfileId: profile.id,
+        profileName,
+        rateName,
+        ratePrice: parsedPrice.toFixed(2),
+      },
     });
   } catch (error) {
-    console.error('🚨 [FATAL] Error creating Shopify shipping profile:', error);
-    res.status(500).json({ error: error.message });
+    console.error('🚨 ERROR:', error?.response?.data || error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Error creating Shopify profile',
+      error: error.message,
+    });
   }
 };
 

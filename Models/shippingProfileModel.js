@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const shippingProfileSchema = new mongoose.Schema(
   {
@@ -25,8 +25,8 @@ const shippingProfileSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["created", "failed"],
-      default: "created",
+      enum: ['created', 'failed'],
+      default: 'created',
     },
     errorMessage: {
       type: String,
@@ -36,11 +36,16 @@ const shippingProfileSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    shortId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
   },
-  { collection: "shipping_profiles" }
+  { collection: 'shipping_profiles' }
 );
 
 export const shippingProfileModel = mongoose.model(
-  "shippingProfile",
+  'shippingProfile',
   shippingProfileSchema
 );

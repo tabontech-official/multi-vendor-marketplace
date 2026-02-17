@@ -580,7 +580,6 @@ export const getFinanceSummaryForUser = async (req, res) => {
 //   }
 // };
 
-
 export const getOrderById = async (req, res) => {
   try {
     const userId = req.userId?.toString();
@@ -616,20 +615,20 @@ export const getOrderById = async (req, res) => {
         // const matchedVariant = product.variants.find(
         //   (v) => v.id.toString() === variantId
         // );
-const matchedVariant = product.variants?.find(
-  (v) => v?.id && v.id.toString() === variantId
-);
+        const matchedVariant = product.variants?.find(
+          (v) => v?.id && v.id.toString() === variantId
+        );
 
         if (matchedVariant?.image_id && product.variantImages?.length) {
           // const img = product.variantImages.find(
           //   (i) => i.id.toString() === matchedVariant.image_id.toString()
           // );
           const img = product.variantImages?.find(
-  (i) =>
-    i?.id &&
-    matchedVariant?.image_id &&
-    i.id.toString() === matchedVariant.image_id.toString()
-);
+            (i) =>
+              i?.id &&
+              matchedVariant?.image_id &&
+              i.id.toString() === matchedVariant.image_id.toString()
+          );
 
           if (img) {
             imageData = {
@@ -2583,7 +2582,7 @@ export const getPayoutByUserId = async (req, res) => {
       if (!merchantSnapshot) continue;
 
       const snapshotStatus = merchantSnapshot.payoutStatus || 'pending';
-const payoutReferenceId = merchantSnapshot.payoutReferenceId; // ✅ ADD THIS
+      const payoutReferenceId = merchantSnapshot.payoutReferenceId; // ✅ ADD THIS
 
       for (const item of lineItems) {
         const price = Number(item.price) || 0;
@@ -2654,7 +2653,7 @@ const payoutReferenceId = merchantSnapshot.payoutReferenceId; // ✅ ADD THIS
         shopifyOrderNo: order.shopifyOrderNo || 'N/A',
         eligibleDate: order.eligibleDate,
         scheduledPayoutDate: order.scheduledPayoutDate,
- payoutReferenceId,
+        payoutReferenceId,
         // ✅ SNAPSHOT STATUS
         payoutStatus:
           snapshotStatus === 'Deposited'
@@ -3936,7 +3935,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
 export const addReferenceToOrders = async (req, res) => {
   try {
     const { payoutDate, referenceNo, paymentMethod, merchantIds } = req.body;
@@ -4015,7 +4013,6 @@ export const addReferenceToOrders = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
 
 export const exportOrders = async (req, res) => {
   try {
