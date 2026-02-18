@@ -4797,26 +4797,42 @@ export const exportProducts = async (req, res) => {
     if (!userId || !type)
       return res.status(400).json({ message: 'Missing parameters' });
 
-    let query = {};
+    let products = [];
+
+    /* =========================
+       FETCH PRODUCTS BASED ON TYPE
+    ========================== */
 
     if (type === 'selected') {
       if (!productIds)
         return res.status(400).json({ message: 'No product IDs provided' });
 
-      query._id = { $in: productIds.split(',') };
+      const idsArray = productIds.split(',');
+      products = await listingModel.find({
+        _id: { $in: idsArray },
+        userId,
+      });
+
+    } else if (type === 'current') {
+
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      products = await listingModel
+        .find({ userId })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+    } else if (type === 'all') {
+
+      products = await listingModel.find({ userId });
+
     } else {
-      query.userId = userId;
+      return res.status(400).json({ message: 'Invalid export type' });
     }
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const products =
-      type === 'current'
-        ? await listingModel.find(query).skip(skip).limit(parseInt(limit))
-        : await listingModel.find(query);
 
     if (!products.length)
       return res.status(404).json({ message: 'No products found' });
+
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Products Export');
