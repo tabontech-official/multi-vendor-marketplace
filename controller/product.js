@@ -2563,7 +2563,6 @@ export const updateImages = async (req, res) => {
   }
 };
 
-
 // export const updateImages = async (req, res) => {
 //   try {
 //     const { id } = req.params;
@@ -2828,9 +2827,6 @@ export const updateImages = async (req, res) => {
 //     });
 //   }
 // };
-
-
-
 
 export const updateVariantImages = async (req, res) => {
   const { id } = req.params;
@@ -4351,12 +4347,18 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             });
           });
         }
-        const featuredImageUrl = firstRow['Featured Image']
-          ? firstRow['Featured Image'].trim()
-          : null;
-        const featuredImageObject = uploadedImages.find(
-          (img) => img.src === featuredImageUrl
-        );
+        const featuredImageUrls = [
+          ...new Set(
+            productRows
+              .map((row) => row['Featured Image']?.trim())
+              .filter(Boolean)
+          ),
+        ];
+        console.log('🎯 Featured Only URLs:', featuredImageUrls);
+
+        // const featuredImageObject = uploadedImages.find(
+        //   (img) => img.src === featuredImageUrl
+        // );
 
         console.log('✅ Shopify Images Synced Correctly');
 
@@ -4426,16 +4428,35 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             VariantStatus: 'inactive',
           })),
           approvalStatus: 'approved',
-          images: featuredImageObject
-            ? [
-                {
-                  src: featuredImageObject.src,
-                  alt: featuredImageObject.alt,
-                  position: 1,
-                  created_at: new Date(),
-                },
-              ]
-            : [],
+          // images: featuredImageObject
+          //   ? [
+          //       {
+          //         src: featuredImageObject.src,
+          //         alt: featuredImageObject.alt,
+          //         position: 1,
+          //         created_at: new Date(),
+          //       },
+          //     ]
+          //   : [],
+          images: uploadedImages
+            .filter((img) => {
+              const fileName = img.src.split('/').pop().split('?')[0];
+
+              return featuredImageUrls.some(
+                (url) => url.split('/').pop().split('?')[0] === fileName
+              );
+            })
+            .map((img, index) => ({
+              id: img.id?.toString(),
+              product_id: fullProduct.id?.toString(),
+              position: index + 1,
+              created_at: new Date(),
+              updated_at: new Date(),
+              alt: img.alt || null,
+              width: img.width || null,
+              height: img.height || null,
+              src: img.src,
+            })),
 
           variantImages: Object.entries(variantImageMap).map(
             ([variantId, images]) => ({
@@ -5442,24 +5463,23 @@ export const getAllVariants = async (req, res) => {
         .toLowerCase();
 
     products = products.map((variant) => {
-  let variantImagesData = [];
+      let variantImagesData = [];
 
-  if (variant.variantImages?.length > 0) {
-    const matchedVariant = variant.variantImages.find(
-      (vImg) => String(vImg.variantId) === String(variant.id)
-    );
+      if (variant.variantImages?.length > 0) {
+        const matchedVariant = variant.variantImages.find(
+          (vImg) => String(vImg.variantId) === String(variant.id)
+        );
 
-    if (matchedVariant?.images?.length > 0) {
-      variantImagesData = matchedVariant.images;
-    }
-  }
+        if (matchedVariant?.images?.length > 0) {
+          variantImagesData = matchedVariant.images;
+        }
+      }
 
-  return {
-    ...variant,
-    images: variantImagesData, // har variant ke sath uski images
-  };
-});
-
+      return {
+        ...variant,
+        images: variantImagesData, // har variant ke sath uski images
+      };
+    });
 
     res.status(200).json({
       variants: products,
@@ -5529,25 +5549,24 @@ export const getAllVariantsForAdmin = async (req, res) => {
       return res.status(404).json({ message: 'No variants found.' });
     }
 
-  products = products.map((variant) => {
-  let variantImagesData = [];
+    products = products.map((variant) => {
+      let variantImagesData = [];
 
-  if (variant.variantImages?.length > 0) {
-    const matchedVariant = variant.variantImages.find(
-      (vImg) => String(vImg.variantId) === String(variant.id)
-    );
+      if (variant.variantImages?.length > 0) {
+        const matchedVariant = variant.variantImages.find(
+          (vImg) => String(vImg.variantId) === String(variant.id)
+        );
 
-    if (matchedVariant?.images?.length > 0) {
-      variantImagesData = matchedVariant.images;
-    }
-  }
+        if (matchedVariant?.images?.length > 0) {
+          variantImagesData = matchedVariant.images;
+        }
+      }
 
-  return {
-    ...variant,
-    images: variantImagesData, // har variant ke sath uski images
-  };
-});
-
+      return {
+        ...variant,
+        images: variantImagesData, // har variant ke sath uski images
+      };
+    });
 
     res.status(200).json({
       variants: products,
@@ -5747,6 +5766,297 @@ export const getTrackingCountForUser = async (req, res) => {
   }
 };
 
+// export const addCsvfileForBulkUploader = async (req, res) => {
+//   const file = req.file;
+//   const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = req.body;
+
+//   if (!file || !file.buffer) {
+//     return res.status(400).json({ error: 'No file uploaded.' });
+//   }
+
+//   if (!shopifyApiKey || !shopifyAccessToken || !shopifyStoreUrl) {
+//     return res.status(400).json({ error: 'Missing Shopify credentials.' });
+//   }
+
+//   try {
+//     const allRows = [];
+//     const stream = Readable.from(file.buffer);
+//     const cleanUrl = (url) => url?.split('?')[0];
+
+//     stream
+//       .pipe(csv())
+//       .on('data', (row) => allRows.push(row))
+//       .on('end', async () => {
+//         const groupedProducts = {};
+//         allRows.forEach((row) => {
+//           const handle = row['Handle']?.trim();
+//           if (handle) {
+//             if (!groupedProducts[handle]) groupedProducts[handle] = [];
+//             groupedProducts[handle].push(row);
+//           }
+//         });
+
+//         const results = [];
+
+//         for (const handle in groupedProducts) {
+//           const rows = groupedProducts[handle];
+//           const mainRow = rows[0];
+
+//           const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
+//             .map((opt) => mainRow[opt])
+//             .filter(Boolean);
+//           const optionValues = [[], [], []];
+
+//           const variants = rows.map((row) => {
+//             if (row['Option1 Value'])
+//               optionValues[0].push(row['Option1 Value']);
+//             if (row['Option2 Value'])
+//               optionValues[1].push(row['Option2 Value']);
+//             if (row['Option3 Value'])
+//               optionValues[2].push(row['Option3 Value']);
+
+//             return {
+//               sku: row['Variant SKU'] || '',
+//               price: row['Variant Price'] || '0.00',
+//               compare_at_price: row['Variant Compare At Price'] || null,
+//               inventory_management:
+//                 row['Variant Inventory Tracker'] === 'shopify'
+//                   ? 'shopify'
+//                   : null,
+//               inventory_quantity: parseInt(row['Variant Inventory Qty']) || 0,
+//               fulfillment_service: 'manual',
+//               requires_shipping: row['Variant Requires Shipping'] === 'TRUE',
+//               taxable: row['Variant Taxable'] === 'TRUE',
+//               barcode: row['Variant Barcode'] || '',
+//               weight: parseFloat(row['Variant Grams']) || 0,
+//               weight_unit: ['g', 'kg', 'oz', 'lb'].includes(
+//                 row['Variant Weight Unit']
+//               )
+//                 ? row['Variant Weight Unit']
+//                 : 'g',
+//               option1: row['Option1 Value'] || null,
+//               option2: row['Option2 Value'] || null,
+//               option3: row['Option3 Value'] || null,
+//               variant_image: cleanUrl(row['Variant Image']) || null,
+//             };
+//           });
+
+//           const uniqueOptions = options
+//             .map((name, idx) => ({
+//               name,
+//               values: [...new Set(optionValues[idx])],
+//             }))
+//             .filter((opt) => opt.name);
+
+//           const images = [
+//             ...new Set(
+//               rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
+//             ),
+//           ].map((src, index) => ({
+//             src,
+//             position: index + 1,
+//             alt:
+//               rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
+//                 'Image Alt Text'
+//               ] || null,
+//           }));
+
+//           const payload = {
+//             product: {
+//               title: mainRow['Title'],
+//               handle: handle, // ✅ Correct place
+//               body_html: mainRow['Body (HTML)'] || '',
+//               vendor: mainRow['Vendor'] || '',
+//               product_type: mainRow['Type'] || '',
+//               status: mainRow['Published'] === 'TRUE' ? 'active' : 'draft',
+//               tags: mainRow['Tags']?.split(',').map((tag) => tag.trim()) || [],
+//               options: uniqueOptions,
+//               images,
+//               variants: variants.map((v) => ({
+//                 sku: v.sku,
+//                 price: v.price,
+//                 compare_at_price: v.compare_at_price,
+//                 inventory_management: v.inventory_management,
+//                 inventory_quantity: v.inventory_quantity,
+//                 fulfillment_service: v.fulfillment_service,
+//                 requires_shipping: v.requires_shipping,
+//                 taxable: v.taxable,
+//                 barcode: v.barcode,
+//                 weight: v.weight,
+//                 weight_unit: v.weight_unit,
+//                 option1: v.option1,
+//                 option2: v.option2,
+//                 option3: v.option3,
+//               })),
+//             },
+//           };
+
+//           await delay(2000);
+
+//           try {
+//             const response = await shopifyRequest(
+//               `${shopifyStoreUrl}/admin/api/2024-01/products.json`,
+//               'POST',
+//               payload,
+//               shopifyApiKey,
+//               shopifyAccessToken
+//             );
+
+//             const productId = response.product?.id;
+//             const uploadedVariantImages = [];
+
+//             await Promise.all(
+//               variants.map(async (variant) => {
+//                 try {
+//                   // collect all image URLs for this variant (e.g., Variant Image 1, 2, 3)
+//                   const variantImageUrls = Object.keys(mainRow)
+//                     .filter((key) =>
+//                       key.toLowerCase().startsWith('variant image')
+//                     )
+//                     .map((key) => cleanUrl(variant[key] || mainRow[key]))
+//                     .filter(Boolean);
+
+//                   if (variant.variant_image) {
+//                     variantImageUrls.push(cleanUrl(variant.variant_image));
+//                   }
+
+//                   // remove duplicates
+//                   const uniqueVariantImages = [...new Set(variantImageUrls)];
+
+//                   if (uniqueVariantImages.length === 0) return;
+
+//                   // Create alt text from SKU + variant options
+//                   const optionValues = Object.keys(variant)
+//                     .filter(
+//                       (key) =>
+//                         key.toLowerCase().startsWith('option') && variant[key]
+//                     )
+//                     .map((key) => variant[key]);
+
+//                   const variantAltBase = [variant.sku, ...optionValues]
+//                     .filter(Boolean)
+//                     .join(' - ');
+
+//                   // Upload all variant images
+//                   for (let i = 0; i < uniqueVariantImages.length; i++) {
+//                     const imgUrl = uniqueVariantImages[i];
+//                     const imageUploadPayload = {
+//                       image: {
+//                         src: imgUrl,
+//                         alt:
+//                           uniqueVariantImages.length > 1
+//                             ? `${variantAltBase} (Image ${i + 1})`
+//                             : variantAltBase,
+//                       },
+//                     };
+
+//                     const uploadResponse = await shopifyRequest(
+//                       `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
+//                       'POST',
+//                       imageUploadPayload,
+//                       shopifyApiKey,
+//                       shopifyAccessToken
+//                     );
+
+//                     if (uploadResponse?.image) {
+//                       const img = uploadResponse.image;
+//                       uploadedVariantImages.push({
+//                         id: img.id?.toString() || '',
+//                         alt: img.alt || '',
+//                         position: img.position || 0,
+//                         product_id: img.product_id?.toString() || '',
+//                         created_at: img.created_at || '',
+//                         updated_at: img.updated_at || '',
+//                         width: img.width || 0,
+//                         height: img.height || 0,
+//                         src: img.src || '',
+//                         variantSku: variant.sku || '',
+//                       });
+//                     }
+//                   }
+//                 } catch (uploadError) {
+//                   console.error(
+//                     `Image upload error for SKU ${variant.sku}: ${uploadError.message}`
+//                   );
+//                 }
+//               })
+//             );
+
+//             const productDetails = await shopifyRequest(
+//               `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
+//               'GET',
+//               null,
+//               shopifyApiKey,
+//               shopifyAccessToken
+//             );
+//             const shopifyVariants = productDetails?.product?.variants || [];
+
+//             await Promise.all(
+//               shopifyVariants.map(async (variant, i) => {
+//                 if (uploadedVariantImages[i]) {
+//                   await shopifyRequest(
+//                     `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+//                     'PUT',
+//                     {
+//                       variant: {
+//                         id: variant.id,
+//                         image_id: uploadedVariantImages[i].image_id,
+//                       },
+//                     },
+//                     shopifyApiKey,
+//                     shopifyAccessToken
+//                   );
+//                 }
+//               })
+//             );
+
+//             if (
+//               mainRow.metafield_namespace &&
+//               mainRow.metafield_key &&
+//               mainRow.metafield_value &&
+//               mainRow.metafield_type
+//             ) {
+//               const metafieldPayload = {
+//                 metafield: {
+//                   namespace: mainRow.metafield_namespace,
+//                   key: mainRow.metafield_key,
+//                   value: mainRow.metafield_value,
+//                   type: mainRow.metafield_type,
+//                 },
+//               };
+
+//               await shopifyRequest(
+//                 `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
+//                 'POST',
+//                 metafieldPayload,
+//                 shopifyApiKey,
+//                 shopifyAccessToken
+//               );
+//             }
+
+//             results.push({
+//               success: true,
+//               productId,
+//               title: response.product?.title,
+//             });
+//           } catch (err) {
+//             console.error(`🚨 Failed for handle ${handle}`, err.message);
+//             results.push({ success: false, handle, error: err.message });
+//           }
+//         }
+
+//         return res
+//           .status(200)
+//           .json({ message: '✅ Upload completed', results });
+//       });
+//   } catch (error) {
+//     console.error('🔥 API Error:', error.message);
+//     return res
+//       .status(500)
+//       .json({ error: 'Internal server error', message: error.message });
+//   }
+// };
+
 export const addCsvfileForBulkUploader = async (req, res) => {
   const file = req.file;
   const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = req.body;
@@ -5769,6 +6079,7 @@ export const addCsvfileForBulkUploader = async (req, res) => {
       .on('data', (row) => allRows.push(row))
       .on('end', async () => {
         const groupedProducts = {};
+
         allRows.forEach((row) => {
           const handle = row['Handle']?.trim();
           if (handle) {
@@ -5786,6 +6097,7 @@ export const addCsvfileForBulkUploader = async (req, res) => {
           const options = ['Option1 Name', 'Option2 Name', 'Option3 Name']
             .map((opt) => mainRow[opt])
             .filter(Boolean);
+
           const optionValues = [[], [], []];
 
           const variants = rows.map((row) => {
@@ -5829,23 +6141,40 @@ export const addCsvfileForBulkUploader = async (req, res) => {
             }))
             .filter((opt) => opt.name);
 
-          const images = [
-            ...new Set(
-              rows.map((r) => cleanUrl(r['Image Src'])).filter(Boolean)
-            ),
-          ].map((src, index) => ({
+          // =========================
+          // ✅ FIXED IMAGE COLLECTION
+          // =========================
+          const allImageUrls = [];
+
+          // Always push Featured Image from first row
+          if (mainRow['Featured Image']) {
+            allImageUrls.push(cleanUrl(mainRow['Featured Image']));
+          }
+
+          // Then push all Image Src
+          rows.forEach((r) => {
+            if (r['Image Src']) {
+              allImageUrls.push(cleanUrl(r['Image Src']));
+            }
+          });
+
+          const uniqueImageUrls = [...new Set(allImageUrls.filter(Boolean))];
+
+          const images = uniqueImageUrls.map((src, index) => ({
             src,
             position: index + 1,
             alt:
-              rows.find((r) => cleanUrl(r['Image Src']) === src)?.[
-                'Image Alt Text'
-              ] || null,
+              rows.find(
+                (r) =>
+                  cleanUrl(r['Image Src']) === src ||
+                  cleanUrl(r['Featured Image']) === src
+              )?.['Image Alt Text'] || null,
           }));
 
           const payload = {
             product: {
               title: mainRow['Title'],
-              handle: handle, // ✅ Correct place
+              handle: handle,
               body_html: mainRow['Body (HTML)'] || '',
               vendor: mainRow['Vendor'] || '',
               product_type: mainRow['Type'] || '',
@@ -5884,136 +6213,41 @@ export const addCsvfileForBulkUploader = async (req, res) => {
             );
 
             const productId = response.product?.id;
-            const uploadedVariantImages = [];
 
-            await Promise.all(
-              variants.map(async (variant) => {
-                try {
-                  // collect all image URLs for this variant (e.g., Variant Image 1, 2, 3)
-                  const variantImageUrls = Object.keys(mainRow)
-                    .filter((key) =>
-                      key.toLowerCase().startsWith('variant image')
-                    )
-                    .map((key) => cleanUrl(variant[key] || mainRow[key]))
-                    .filter(Boolean);
+            // =========================
+            // ✅ MONGO SAVE (Schema Safe)
+            // =========================
+            const mongoProduct = new listingModel({
+              id: productId?.toString(), // REQUIRED FIELD
+              title: mainRow['Title'],
+              body_html: mainRow['Body (HTML)'] || '',
+              vendor: mainRow['Vendor'] || '',
+              product_type: mainRow['Type'] || '',
+              handle: handle,
+              shopifyId: productId?.toString(),
+              status: mainRow['Published'] === 'TRUE' ? 'active' : 'draft',
+              tags: mainRow['Tags']?.split(',').map((tag) => tag.trim()) || [],
+              options: uniqueOptions,
 
-                  if (variant.variant_image) {
-                    variantImageUrls.push(cleanUrl(variant.variant_image));
-                  }
+              images: uniqueImageUrls.map((url, index) => ({
+                id: null,
+                product_id: productId?.toString(),
+                position: index + 1,
+                created_at: new Date(),
+                updated_at: new Date(),
+                alt:
+                  rows.find(
+                    (r) =>
+                      cleanUrl(r['Image Src']) === url ||
+                      cleanUrl(r['Featured Image']) === url
+                  )?.['Image Alt Text'] || null,
+                width: null,
+                height: null,
+                src: url,
+              })),
+            });
 
-                  // remove duplicates
-                  const uniqueVariantImages = [...new Set(variantImageUrls)];
-
-                  if (uniqueVariantImages.length === 0) return;
-
-                  // Create alt text from SKU + variant options
-                  const optionValues = Object.keys(variant)
-                    .filter(
-                      (key) =>
-                        key.toLowerCase().startsWith('option') && variant[key]
-                    )
-                    .map((key) => variant[key]);
-
-                  const variantAltBase = [variant.sku, ...optionValues]
-                    .filter(Boolean)
-                    .join(' - ');
-
-                  // Upload all variant images
-                  for (let i = 0; i < uniqueVariantImages.length; i++) {
-                    const imgUrl = uniqueVariantImages[i];
-                    const imageUploadPayload = {
-                      image: {
-                        src: imgUrl,
-                        alt:
-                          uniqueVariantImages.length > 1
-                            ? `${variantAltBase} (Image ${i + 1})`
-                            : variantAltBase,
-                      },
-                    };
-
-                    const uploadResponse = await shopifyRequest(
-                      `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/images.json`,
-                      'POST',
-                      imageUploadPayload,
-                      shopifyApiKey,
-                      shopifyAccessToken
-                    );
-
-                    if (uploadResponse?.image) {
-                      const img = uploadResponse.image;
-                      uploadedVariantImages.push({
-                        id: img.id?.toString() || '',
-                        alt: img.alt || '',
-                        position: img.position || 0,
-                        product_id: img.product_id?.toString() || '',
-                        created_at: img.created_at || '',
-                        updated_at: img.updated_at || '',
-                        width: img.width || 0,
-                        height: img.height || 0,
-                        src: img.src || '',
-                        variantSku: variant.sku || '',
-                      });
-                    }
-                  }
-                } catch (uploadError) {
-                  console.error(
-                    `Image upload error for SKU ${variant.sku}: ${uploadError.message}`
-                  );
-                }
-              })
-            );
-
-            const productDetails = await shopifyRequest(
-              `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}.json`,
-              'GET',
-              null,
-              shopifyApiKey,
-              shopifyAccessToken
-            );
-            const shopifyVariants = productDetails?.product?.variants || [];
-
-            await Promise.all(
-              shopifyVariants.map(async (variant, i) => {
-                if (uploadedVariantImages[i]) {
-                  await shopifyRequest(
-                    `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
-                    'PUT',
-                    {
-                      variant: {
-                        id: variant.id,
-                        image_id: uploadedVariantImages[i].image_id,
-                      },
-                    },
-                    shopifyApiKey,
-                    shopifyAccessToken
-                  );
-                }
-              })
-            );
-
-            if (
-              mainRow.metafield_namespace &&
-              mainRow.metafield_key &&
-              mainRow.metafield_value &&
-              mainRow.metafield_type
-            ) {
-              const metafieldPayload = {
-                metafield: {
-                  namespace: mainRow.metafield_namespace,
-                  key: mainRow.metafield_key,
-                  value: mainRow.metafield_value,
-                  type: mainRow.metafield_type,
-                },
-              };
-
-              await shopifyRequest(
-                `${shopifyStoreUrl}/admin/api/2024-01/products/${productId}/metafields.json`,
-                'POST',
-                metafieldPayload,
-                shopifyApiKey,
-                shopifyAccessToken
-              );
-            }
+            await mongoProduct.save();
 
             results.push({
               success: true,
@@ -6026,15 +6260,17 @@ export const addCsvfileForBulkUploader = async (req, res) => {
           }
         }
 
-        return res
-          .status(200)
-          .json({ message: '✅ Upload completed', results });
+        return res.status(200).json({
+          message: '✅ Upload completed',
+          results,
+        });
       });
   } catch (error) {
     console.error('🔥 API Error:', error.message);
-    return res
-      .status(500)
-      .json({ error: 'Internal server error', message: error.message });
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
   }
 };
 

@@ -1,4 +1,3 @@
-
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -18,16 +17,14 @@ const Connect = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(
-      process.env.DB_URL ,
-      {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        serverSelectionTimeoutMS: 10000,
-      }
-    );
+    const conn = await mongoose.connect(process.env.DB_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000,
+    });
 
-    global._mongooseConnection.isConnected = conn.connections[0].readyState === 1;
+    global._mongooseConnection.isConnected =
+      conn.connections[0].readyState === 1;
 
     console.log(cyan('✅ MongoDB connected to:'), conn.connection.host);
 
@@ -41,7 +38,6 @@ const Connect = async () => {
       console.log(red('🛑 MongoDB disconnected due to app termination'));
       process.exit(0);
     });
-
   } catch (err) {
     console.error(yellow('❌ MongoDB connection error:'), err);
     throw err;
