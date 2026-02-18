@@ -1123,18 +1123,18 @@ export const updateProductData = async (req, res) => {
       '🔹 [Prepared Shopify Variants]:',
       JSON.stringify(shopifyVariants, null, 2)
     );
-const selectedCategories = Array.isArray(finalCategories)
-  ? finalCategories
-  : [finalCategories];
+    const selectedCategories = Array.isArray(finalCategories)
+      ? finalCategories
+      : [finalCategories];
 
-const categoryTagNos = await getAllParentCategoryNos(selectedCategories);
+    const categoryTagNos = await getAllParentCategoryNos(selectedCategories);
 
-const finalTags = [
-  ...(keyWord ? keyWord.split(',').map(t => t.trim()) : []),
-  ...categoryTagNos,
-  `user_${productOwnerId}`,
-  `vendor_${vendor}`,
-];
+    const finalTags = [
+      ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
+      ...categoryTagNos,
+      `user_${productOwnerId}`,
+      `vendor_${vendor}`,
+    ];
 
     const updatePayload = {
       product: {
@@ -1159,7 +1159,7 @@ const finalTags = [
         //   `vendor_${vendor}`,
         //   ...(keyWord ? keyWord.split(',') : []),
         // ],
-       tags: finalTags,
+        tags: finalTags,
       },
     };
 
@@ -3873,12 +3873,59 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //   }
 // };
 
-function extractCategoryCode(categoryString) {
-  if (!categoryString) return null;
+const getCategoryHierarchyFlexible = async (categoryValues = []) => {
+  console.log('\n🔎 CATEGORY HIERARCHY LOOKUP START');
+  console.log('📥 Incoming Category Values:', categoryValues);
 
-  const match = categoryString.match(/cat_\d+/i);
-  return match ? match[0] : null;
-}
+  const allCatNos = new Set();
+  const allCategoryTitles = new Set();
+
+  for (const value of categoryValues) {
+    let category = null;
+
+    if (/^cat_/i.test(value)) {
+      category = await categoryModel.findOne({ catNo: value });
+    } else {
+      category = await categoryModel.findOne({ title: value });
+    }
+
+    if (!category) continue;
+
+    let current = category;
+    let pathParts = [];
+
+    while (current) {
+      allCatNos.add(current.catNo);
+      pathParts.unshift(current.title); // build full path
+
+      if (!current.parentCatNo) break;
+
+      current = await categoryModel.findOne({
+        catNo: current.parentCatNo,
+      });
+    }
+
+    // 🔥 Save full path version
+    const fullPath = pathParts.join(' > ');
+    allCategoryTitles.add(fullPath);
+
+    // 🔥 Also ensure parent root alone saved
+    if (pathParts.length > 1) {
+      allCategoryTitles.add(pathParts[0]);
+    }
+  }
+
+  const result = {
+    catNos: Array.from(allCatNos),
+    titles: Array.from(allCategoryTitles),
+  };
+
+  console.log('🎯 Final Category Result:', result);
+  console.log('🔎 CATEGORY HIERARCHY LOOKUP END\n');
+
+  return result;
+};
+
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
   const userId = req.userId;
@@ -3986,17 +4033,45 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
         /* ================= CATEGORIES ================= */
 
+        // const categoriesRaw = firstRow['Categories'];
+        // const categoryArray = categoriesRaw
+        //   ? categoriesRaw.split(',').map((c) => c.trim())
+        //   : [];
+
+        // const tagsArray = [
+        //   ...categoryArray,
+        //   `user_${userId}`,
+        //   `vendor_${firstRow['Vendor']}`,
+        // ];
+        /* ================= CATEGORIES ================= */
+
+        console.log('\n📂 PROCESSING CSV CATEGORIES');
+
         const categoriesRaw = firstRow['Categories'];
-        const categoryArray = categoriesRaw
+
+        const categoryNames = categoriesRaw
           ? categoriesRaw.split(',').map((c) => c.trim())
           : [];
 
+        console.log('📥 CSV Category Names:', categoryNames);
+
+        // 🔥 Get catNo hierarchy
+        const categoryResult =
+          await getCategoryHierarchyFlexible(categoryNames);
+
+        const categoryTagNos = categoryResult.catNos;
+        const categoryTitles = categoryResult.titles;
         const tagsArray = [
-          ...categoryArray,
+          ...categoryTagNos,
           `user_${userId}`,
           `vendor_${firstRow['Vendor']}`,
         ];
 
+        console.log('🏷 Final Shopify Tags:', tagsArray);
+
+        console.log('\n💾 SAVING TO MONGO');
+        console.log('📦 Categories (Names):', categoryNames);
+        console.log('🏷 Tags (CatNos + user + vendor):', tagsArray);
         /* ================= CREATE PRODUCT ================= */
 
         const createRes = await shopifyRequest(
@@ -4259,6 +4334,13 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             });
           });
         }
+        const featuredImageUrl = firstRow['Featured Image']
+          ? firstRow['Featured Image'].trim()
+          : null;
+        const featuredImageObject = uploadedImages.find(
+          (img) => img.src === featuredImageUrl
+        );
+
         console.log('✅ Shopify Images Synced Correctly');
 
         /* ===== 1️⃣ Collect Media Images ===== */
@@ -4300,7 +4382,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             ? fullProduct.tags.split(',').map((t) => t.trim())
             : [],
 
-          categories: categoryArray,
+          categories: categoryTitles,
 
           options: fullProduct.options.map((opt) => ({
             name: opt.name,
@@ -4327,12 +4409,16 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             VariantStatus: 'inactive',
           })),
           approvalStatus: 'approved',
-          images: uploadedImages.map((img, index) => ({
-            src: img.src,
-            alt: img.alt,
-            position: index + 1,
-            created_at: new Date(),
-          })),
+          images: featuredImageObject
+            ? [
+                {
+                  src: featuredImageObject.src,
+                  alt: featuredImageObject.alt,
+                  position: 1,
+                  created_at: new Date(),
+                },
+              ]
+            : [],
 
           variantImages: Object.entries(variantImageMap).map(
             ([variantId, images]) => ({
@@ -4794,10 +4880,22 @@ export const exportProducts = async (req, res) => {
           vendor: p.vendor || '',
           type: p.product_type || '',
           // categories: p.categories?.join(', ') || '',
-          categories:
-            (p.tags || [])
-              .filter((tag) => tag.toLowerCase().startsWith('cat_'))
-              .join(', ') || '',
+          categories: (() => {
+            let tagArray = [];
+
+            if (Array.isArray(p.tags)) {
+              // flatten if single string inside array
+              tagArray = p.tags.flatMap((tag) =>
+                typeof tag === 'string'
+                  ? tag.split(',').map((t) => t.trim())
+                  : []
+              );
+            } else if (typeof p.tags === 'string') {
+              tagArray = p.tags.split(',').map((t) => t.trim());
+            }
+
+            return tagArray.filter((tag) => /^cat_/i.test(tag)).join(', ');
+          })(),
 
           status: p.status || '',
           approval: p.approvalStatus || '',
