@@ -2275,26 +2275,42 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
   }
 };
 
+
 // export const updateImages = async (req, res) => {
 //   const { id } = req.params;
 //   const { groupImages } = req.body;
+
+//   console.log('\n🟦 ===== updateImages START =====');
+//   console.log('🆔 Product ID:', id);
+//   console.log('🔘 groupImages:', groupImages);
 
 //   const imageUrls = Array.isArray(req.body.images) ? req.body.images : [];
 //   const variantImages = Array.isArray(req.body.variantImages)
 //     ? req.body.variantImages
 //     : [];
 
-//   console.log("🟦 ===== updateImages START =====");
-//   console.log("🟢 MEDIA IMAGES:", imageUrls);
-//   console.log("🟣 VARIANT IMAGES:", variantImages);
+//   /* =======================
+//      INPUT AUDIT
+//   ======================= */
+//   console.log('\n📥 INPUT AUDIT');
+//   console.log('🟢 Media images count:', imageUrls.length);
+//   imageUrls.forEach((url, i) => console.log(`   [MEDIA ${i + 1}] ${url}`));
+
+//   console.log('🟣 Variant image groups count:', variantImages.length);
+//   variantImages.forEach((v, i) => {
+//     console.log(`   [VARIANT GROUP ${i + 1}]`);
+//     console.log('      URL:', v.url);
+//     console.log('      Variant IDs:', v.variantIds);
+//   });
 
 //   try {
 //     /* =======================
-//        1. LOAD PRODUCT (Mongo)
+//        1. LOAD PRODUCT
 //     ======================= */
 //     const product = await listingModel.findOne({ id });
 //     if (!product) {
-//       return res.status(404).json({ error: "Product not found" });
+//       console.log('❌ Product not found');
+//       return res.status(404).json({ error: 'Product not found' });
 //     }
 
 //     const oldMediaImages = product.images || [];
@@ -2304,21 +2320,18 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //     ======================= */
 //     const shopifyConfig = await shopifyConfigurationModel.findOne();
 //     if (!shopifyConfig) {
-//       return res.status(404).json({ error: "Shopify config not found" });
+//       return res.status(404).json({ error: 'Shopify config not found' });
 //     }
 
-//     const {
-//       shopifyApiKey,
-//       shopifyAccessToken,
-//       shopifyStoreUrl,
-//     } = shopifyConfig;
+//     const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+//       shopifyConfig;
 
 //     /* =======================
 //        3. FETCH SHOPIFY PRODUCT
 //     ======================= */
 //     const shopifyProduct = await shopifyRequest(
 //       `${shopifyStoreUrl}/admin/api/2024-01/products/${id}.json`,
-//       "GET",
+//       'GET',
 //       null,
 //       shopifyApiKey,
 //       shopifyAccessToken
@@ -2328,35 +2341,29 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //     const shopifyVariants = shopifyProduct?.product?.variants || [];
 //     const productOptions = shopifyProduct?.product?.options || [];
 
-//     const shopifyImageMap = {};
-//     shopifyImages.forEach(img => {
-//       shopifyImageMap[img.src] = img;
-//     });
-
 //     /* =======================
-//        4. DELETE REMOVED IMAGES (SAFE)
+//        3.5 CLEAN SLATE
 //     ======================= */
+//     console.log('\n🧨 Deleting ALL Shopify images');
 //     for (const img of shopifyImages) {
-//       const usedInMedia = imageUrls.includes(img.src);
-//       const usedInVariants = img.variant_ids?.length > 0;
-
-//       if (!usedInMedia && !usedInVariants) {
-//         await shopifyRequest(
-//           `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${img.id}.json`,
-//           "DELETE",
-//           null,
-//           shopifyApiKey,
-//           shopifyAccessToken
-//         );
-//         console.log("🗑️ Deleted Shopify image:", img.src);
-//       }
+//       await shopifyRequest(
+//         `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${img.id}.json`,
+//         'DELETE',
+//         null,
+//         shopifyApiKey,
+//         shopifyAccessToken
+//       );
 //     }
 
+//     const shopifyImageMap = {}; // reuse ONLY for groupImages=false
+
 //     /* =======================
-//        5. UPLOAD MEDIA (NON-VARIANT ONLY)
+//        4. MEDIA IMAGES
 //     ======================= */
+//     console.log('\n⬆️ MEDIA IMAGE UPLOAD');
+
 //     const variantUrlSet = new Set(
-//       variantImages.map(v => v.url).filter(Boolean)
+//       variantImages.map((v) => v.url).filter(Boolean)
 //     );
 
 //     const uploadedMediaImages = [];
@@ -2364,16 +2371,11 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //     for (let i = 0; i < imageUrls.length; i++) {
 //       const src = imageUrls[i];
 //       if (!src) continue;
-
-//       // 🚫 variant image → skip media upload
 //       if (variantUrlSet.has(src)) continue;
-
-//       const exists = oldMediaImages.some(img => img.src === src);
-//       if (exists) continue;
 
 //       const upload = await shopifyRequest(
 //         `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-//         "POST",
+//         'POST',
 //         {
 //           image: {
 //             src,
@@ -2385,34 +2387,34 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //         shopifyAccessToken
 //       );
 
-//       if (upload?.image) {
-//         uploadedMediaImages.push({
-//           src,
-//           alt: upload.image.alt,
-//           position: upload.image.position,
-//           created_at: new Date(),
-//         });
+//       uploadedMediaImages.push({
+//         src,
+//         alt: upload.image.alt,
+//         position: upload.image.position,
+//         created_at: new Date(),
+//       });
 
-//         shopifyImageMap[src] = upload.image;
-//       }
+//       shopifyImageMap[src] = upload.image;
 //     }
 
 //     /* =======================
-//        6. VARIANT IMAGES (ONE IMAGE → MANY VARIANTS)
+//        5. VARIANT IMAGES
 //     ======================= */
+//     console.log('\n🧩 VARIANT IMAGE PROCESSING');
+
 //     const GROUP_BY_OPTION_INDEX = 0;
 
 //     const getT4Alt = (variant) => {
 //       const option = productOptions[GROUP_BY_OPTION_INDEX];
-//       if (!option) return "variant-image";
+//       if (!option) return 'variant-image';
 
 //       const value = variant[`option${GROUP_BY_OPTION_INDEX + 1}`];
 //       const index = option.values.findIndex(
-//         v => v.toLowerCase() === value?.toLowerCase()
+//         (v) => v.toLowerCase() === value?.toLowerCase()
 //       );
 
 //       return index === -1
-//         ? "variant-image"
+//         ? 'variant-image'
 //         : `t4option${GROUP_BY_OPTION_INDEX}_${index}`;
 //     };
 
@@ -2421,51 +2423,53 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //     for (const { url, variantIds } of variantImages) {
 //       if (!url || !variantIds?.length) continue;
 
-//       const firstVariant = shopifyVariants.find(v => v.id == variantIds[0]);
-//       const altText = groupImages
-//         ? getT4Alt(firstVariant)
-//         : "variant-image";
+//       for (const variantId of variantIds) {
+//         const variant = shopifyVariants.find((v) => v.id == variantId);
+//         const altText = groupImages ? getT4Alt(variant) : 'variant-image';
 
-//       let imageId;
+//         let imageId;
 
-//       if (shopifyImageMap[url]) {
-//         const existing = shopifyImageMap[url];
+//         if (!groupImages && shopifyImageMap[url]) {
+//           console.log('♻️ Reusing image & attaching variants:', variantIds);
 
-//         await shopifyRequest(
-//           `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${existing.id}.json`,
-//           "PUT",
-//           {
-//             image: {
-//               id: existing.id,
-//               alt: altText,
-//               variant_ids: variantIds,
+//           const existing = shopifyImageMap[url];
+//           imageId = existing.id;
+
+//           await shopifyRequest(
+//             `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${existing.id}.json`,
+//             'PUT',
+//             {
+//               image: {
+//                 id: existing.id,
+//                 alt: 'variant-image',
+//                 variant_ids: variantIds,
+//               },
 //             },
-//           },
-//           shopifyApiKey,
-//           shopifyAccessToken
-//         );
-
-//         imageId = existing.id;
-//       } else {
-//         const upload = await shopifyRequest(
-//           `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-//           "POST",
-//           {
-//             image: {
-//               src: url,
-//               alt: altText,
-//               variant_ids: variantIds,
+//             shopifyApiKey,
+//             shopifyAccessToken
+//           );
+//         } else {
+//           const upload = await shopifyRequest(
+//             `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+//             'POST',
+//             {
+//               image: {
+//                 src: url,
+//                 alt: altText,
+//                 variant_ids: [variantId],
+//               },
 //             },
-//           },
-//           shopifyApiKey,
-//           shopifyAccessToken
-//         );
+//             shopifyApiKey,
+//             shopifyAccessToken
+//           );
 
-//         imageId = upload?.image?.id;
-//         shopifyImageMap[url] = upload?.image;
-//       }
+//           imageId = upload.image.id;
 
-//       variantIds.forEach(variantId => {
+//           if (!groupImages) {
+//             shopifyImageMap[url] = upload.image;
+//           }
+//         }
+
 //         if (!variantImageMap[variantId]) {
 //           variantImageMap[variantId] = [];
 //         }
@@ -2477,16 +2481,20 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 //           position: variantImageMap[variantId].length + 1,
 //           created_at: new Date(),
 //         });
-//       });
+
+//         console.log(
+//           `   🔗 ${variant?.option1} → images: ${variantImageMap[variantId].length}`
+//         );
+//       }
 //     }
 
 //     /* =======================
-//        7. FINAL MONGO SYNC
+//        6. FINAL MONGO SYNC
 //     ======================= */
 //     const finalImages = imageUrls.map((src, index) => {
 //       const existing =
-//         oldMediaImages.find(img => img.src === src) ||
-//         uploadedMediaImages.find(img => img.src === src);
+//         uploadedMediaImages.find((img) => img.src === src) ||
+//         oldMediaImages.find((img) => img.src === src);
 
 //       return {
 //         src,
@@ -2505,25 +2513,23 @@ const updateGalleryUrls = async (cloudinaryUrls, productId) => {
 
 //     const updatedProduct = await listingModel.findOneAndUpdate(
 //       { id },
-//       {
-//         images: finalImages,
-//         variantImages: finalVariantImages,
-//       },
+//       { images: finalImages, variantImages: finalVariantImages },
 //       { new: true }
 //     );
 
-//     console.log("✅ Shopify + Mongo fully synced (CORRECT)");
+//     console.log('\n✅ Shopify + Mongo fully synced');
+//     console.log('🟦 ===== updateImages END =====\n');
 
 //     return res.status(200).json({
-//       message: "Images synced successfully",
+//       message: 'Images synced successfully',
 //       product: updatedProduct,
 //     });
-
 //   } catch (err) {
-//     console.error("❌ updateImages error:", err);
+//     console.error('❌ updateImages ERROR:', err);
 //     return res.status(500).json({ error: err.message });
 //   }
 // };
+
 
 export const updateImages = async (req, res) => {
   const { id } = req.params;
@@ -2676,48 +2682,53 @@ export const updateImages = async (req, res) => {
         const variant = shopifyVariants.find((v) => v.id == variantId);
         const altText = groupImages ? getT4Alt(variant) : 'variant-image';
 
-        let imageId;
+      let imageId;
 
-        if (!groupImages && shopifyImageMap[url]) {
-          console.log('♻️ Reusing image & attaching variants:', variantIds);
+if (shopifyImageMap[url]) {
+  // 🔁 Image already uploaded — reuse it
+  const existing = shopifyImageMap[url];
+  imageId = existing.id;
 
-          const existing = shopifyImageMap[url];
-          imageId = existing.id;
+  console.log('♻️ Reusing image:', url);
 
-          await shopifyRequest(
-            `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${existing.id}.json`,
-            'PUT',
-            {
-              image: {
-                id: existing.id,
-                alt: 'variant-image',
-                variant_ids: variantIds,
-              },
-            },
-            shopifyApiKey,
-            shopifyAccessToken
-          );
-        } else {
-          const upload = await shopifyRequest(
-            `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-            'POST',
-            {
-              image: {
-                src: url,
-                alt: altText,
-                variant_ids: [variantId],
-              },
-            },
-            shopifyApiKey,
-            shopifyAccessToken
-          );
+  await shopifyRequest(
+    `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${existing.id}.json`,
+    'PUT',
+    {
+      image: {
+        id: existing.id,
+        alt: altText,
+        variant_ids: [
+          ...(existing.variant_ids || []),
+          variantId,
+        ],
+      },
+    },
+    shopifyApiKey,
+    shopifyAccessToken
+  );
+} else {
+  // 🆕 First time upload
+  const upload = await shopifyRequest(
+    `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+    'POST',
+    {
+      image: {
+        src: url,
+        alt: altText,
+        variant_ids: [variantId],
+      },
+    },
+    shopifyApiKey,
+    shopifyAccessToken
+  );
 
-          imageId = upload.image.id;
+  imageId = upload.image.id;
 
-          if (!groupImages) {
-            shopifyImageMap[url] = upload.image;
-          }
-        }
+  // 🔐 Save in map so duplicate na ho
+  shopifyImageMap[url] = upload.image;
+}
+
 
         if (!variantImageMap[variantId]) {
           variantImageMap[variantId] = [];
@@ -4703,8 +4714,8 @@ export const exportProducts = async (req, res) => {
       { header: 'SEO Description', key: 'seo_desc', width: 40 },
       { header: 'Track Quantity', key: 'track_qty', width: 15 },
       { header: 'Shipping Profile ID', key: 'shipping_profile', width: 25 },
-      { header: 'Size Chart', key: 'size_chart', width: 40 },
-      { header: 'Size Chart ID', key: 'size_chart_id', width: 25 },
+      // { header: 'Size Chart', key: 'size_chart', width: 40 },
+      // { header: 'Size Chart ID', key: 'size_chart_id', width: 25 },
 
       { header: 'Option1 Name', key: 'opt1_name', width: 20 },
       { header: 'Option1 Value', key: 'opt1_val', width: 20 },
@@ -4797,8 +4808,8 @@ const slug = baseHandle
               ? 'FREE'
               : p.shipping?.profile?.shortId || '',
 
-          size_chart: p.custom?.size_chart || '',
-          size_chart_id: p.custom?.size_chart_id || '',
+          // size_chart: p.custom?.size_chart || '',
+          // size_chart_id: p.custom?.size_chart_id || '',
 
           opt1_name: p.options?.[0]?.name || '',
           opt1_val: variant.option1 || '',
