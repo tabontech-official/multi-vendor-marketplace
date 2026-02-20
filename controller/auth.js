@@ -220,7 +220,7 @@ export const signUp = async (req, res) => {
       country,
       sellerName,
       shopifyId: shopifyCustomerId,
-       comissionRate: commissionRate,
+      comissionRate: commissionRate,
     });
 
     const userId = newUser._id.toString();
