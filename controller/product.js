@@ -2451,75 +2451,81 @@ export const updateImages = async (req, res) => {
         : `t4option${GROUP_BY_OPTION_INDEX}_${index}`;
     };
 
-    const variantImageMap = {};
+  const variantImageMap = {};
+const uploadedVariantUrlMap = {}; // 🔥 important
 
-    for (const { url, variantIds } of variantImages) {
-      if (!url || !variantIds?.length) continue;
+for (const { url, variantIds } of variantImages) {
+  if (!url || !variantIds?.length) continue;
 
-      for (const variantId of variantIds) {
-        const variant = shopifyVariants.find((v) => v.id == variantId);
-        const altText = groupImages ? getT4Alt(variant) : 'variant-image';
+  let imageId;
+let uploadedImageAlt; // ✅ new line add karo
+  // ✅ If already uploaded once, reuse
+  if (uploadedVariantUrlMap[url]) {
+    imageId = uploadedVariantUrlMap[url].id;
+    uploadedImageAlt = uploadedVariantUrlMap[url].alt;
 
-        let imageId;
+    await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${imageId}.json`,
+      'PUT',
+      {
+        image: {
+          id: imageId,
+          variant_ids: variantIds,
+        },
+      },
+      shopifyApiKey,
+      shopifyAccessToken
+    );
 
-        if (!groupImages && shopifyImageMap[url]) {
-          console.log('♻️ Reusing image & attaching variants:', variantIds);
-
-          const existing = shopifyImageMap[url];
-          imageId = existing.id;
-
-          await shopifyRequest(
-            `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images/${existing.id}.json`,
-            'PUT',
-            {
-              image: {
-                id: existing.id,
-                alt: 'variant-image',
-                variant_ids: variantIds,
-              },
-            },
-            shopifyApiKey,
-            shopifyAccessToken
-          );
-        } else {
-          const upload = await shopifyRequest(
-            `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
-            'POST',
-            {
-              image: {
-                src: url,
-                alt: altText,
-                variant_ids: [variantId],
-              },
-            },
-            shopifyApiKey,
-            shopifyAccessToken
-          );
-
-          imageId = upload.image.id;
-
-          if (!groupImages) {
-            shopifyImageMap[url] = upload.image;
-          }
-        }
-
-        if (!variantImageMap[variantId]) {
-          variantImageMap[variantId] = [];
-        }
-
-        variantImageMap[variantId].push({
+    console.log(`♻️ Reused image for variants:`, variantIds);
+  } else {
+    // ✅ Upload only ONCE per unique URL
+    const upload = await shopifyRequest(
+      
+      `${shopifyStoreUrl}/admin/api/2024-01/products/${id}/images.json`,
+      'POST',
+      {
+        image: {
           src: url,
-          imageId,
-          alt: altText,
-          position: variantImageMap[variantId].length + 1,
-          created_at: new Date(),
-        });
+          alt: groupImages
+            ? getT4Alt(
+                shopifyVariants.find((v) => v.id == variantIds[0])
+              )
+            : 'variant-image',
+          variant_ids: variantIds,
+        },
+      },
+      shopifyApiKey,
+      shopifyAccessToken
+    );
 
-        console.log(
-          `   🔗 ${variant?.option1} → images: ${variantImageMap[variantId].length}`
-        );
-      }
+    imageId = upload.image.id;
+    uploadedVariantUrlMap[url] = upload.image;
+uploadedImageAlt = upload.image.alt;
+    console.log(`⬆️ Uploaded once for variants:`, variantIds);
+  }
+
+  // Mongo mapping
+  for (const variantId of variantIds) {
+    if (!variantImageMap[variantId]) {
+      variantImageMap[variantId] = [];
     }
+
+    variantImageMap[variantId].push({
+      src: url,
+      imageId,
+    alt: uploadedImageAlt,
+      position: variantImageMap[variantId].length + 1,
+      created_at: new Date(),
+    });
+
+    const variant = shopifyVariants.find((v) => v.id == variantId);
+
+    console.log(
+      `   🔗 ${variant?.option1} → images: ${variantImageMap[variantId].length}`
+    );
+  }
+}
 
     /* =======================
        6. FINAL MONGO SYNC
