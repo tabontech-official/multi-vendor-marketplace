@@ -276,6 +276,18 @@ export const addUsedEquipments = async (req, res) => {
       ...(keyWord ? keyWord.split(',').map((t) => t.trim()) : []),
       ...categoryTagNos,
     ];
+    const generateHandle = (value) => {
+  return value
+    ?.toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')   // spaces + special chars → -
+    .replace(/^-+|-+$/g, '');     // remove starting/ending -
+};
+
+const finalHandle = seoHandle && seoHandle.trim() !== ''
+  ? generateHandle(seoHandle)
+  : generateHandle(title);
     const shopifyPayload = {
       product: {
         title,
@@ -285,12 +297,13 @@ export const addUsedEquipments = async (req, res) => {
         status: productStatus,
         options: shopifyOptions,
         variants: shopifyVariants,
-        handle: seoHandle
-          ? seoHandle
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/(^-|-$)/g, '')
-          : undefined,
+        // handle: seoHandle
+        //   ? seoHandle
+        //       .toLowerCase()
+        //       .replace(/[^a-z0-9]+/g, '-')
+        //       .replace(/(^-|-$)/g, '')
+        //   : undefined,
+        handle: finalHandle,
 
         metafields_global_title_tag: seoTitle || title,
         metafields_global_description_tag: seoDescription || '',
@@ -564,7 +577,7 @@ export const addUsedEquipments = async (req, res) => {
       seo: {
         title: seoTitle || title,
         description: seoDescription || '',
-        handle: seoHandle || productResponse.product.handle,
+  handle: finalHandle,
       },
       inventory: {
         track_quantity: !!track_quantity || false,
@@ -1026,7 +1039,19 @@ export const updateProductData = async (req, res) => {
       size_chart_image,
       size_chart_id,
     } = req.body;
+const generateHandle = (value) => {
+  return value
+    ?.toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')   // spaces + special chars → -
+    .replace(/^-+|-+$/g, '');      // remove starting/ending hyphen
+};
 
+const finalHandle =
+  seoHandle && seoHandle.trim() !== ''
+    ? generateHandle(seoHandle)
+    : generateHandle(title || product.title);
     const variantQtyArray = variantQuantites || variantQuantities || [];
     // const productStatus = status === 'publish' ? 'active' : 'draft';
 
@@ -1145,12 +1170,12 @@ export const updateProductData = async (req, res) => {
         status: productStatus,
         options: shopifyOptions,
         variants: shopifyVariants,
-        handle: seoHandle
-          ? seoHandle
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/(^-|-$)/g, '')
-          : undefined,
+        // handle: seoHandle
+        //   ? seoHandle
+        //       .toLowerCase()
+        //       .replace(/[^a-z0-9]+/g, '-')
+        //       .replace(/(^-|-$)/g, '')
+        handle: finalHandle,
 
         metafields_global_title_tag: seoTitle || title,
         metafields_global_description_tag: seoDescription || '',
@@ -1348,7 +1373,9 @@ export const updateProductData = async (req, res) => {
       seo: {
         title: seoTitle || product?.seo?.title || title,
         description: seoDescription || product?.seo?.description || '',
-        handle: seoHandle || product?.seo?.handle || product.handle,
+        // handle: seoHandle || product?.seo?.handle || product.handle || finalHandle,
+  handle: finalHandle,
+
       },
       custom: {
         size_chart: size_chart_image || product?.custom?.size_chart || null,
@@ -2263,51 +2290,9 @@ export const getPromotionProduct = async (req, res) => {
   }
 };
 
-const transformCloudinaryToShopifyCdn = (url) => {
-  try {
-    const parts = url.split('/');
-    const imageName = parts[parts.length - 1];
-    return `https://cdn.shopify.com/s/files/1/0730/5553/5360/files/${imageName}`;
-  } catch {
-    return url;
-  }
-};
 
-const updateGalleryUrls = async (cloudinaryUrls, productId) => {
-  try {
-    console.log('Cloudinary URLs to update:', cloudinaryUrls);
-    console.log('Product ID to assign (per image):', productId);
 
-    const shopifyCdnUrl = transformCloudinaryToShopifyCdn(cloudinaryUrls[0]);
 
-    const updateResult = await imageGalleryModel.updateMany(
-      {
-        'images.src': { $in: cloudinaryUrls },
-      },
-      {
-        $set: {
-          'images.$[img].src': shopifyCdnUrl,
-          'images.$[img].productId': productId,
-        },
-      },
-      {
-        arrayFilters: [
-          {
-            'img.src': { $in: cloudinaryUrls },
-          },
-        ],
-        multi: true,
-      }
-    );
-
-    console.log('Image and productId update result:', updateResult);
-  } catch (error) {
-    console.error(
-      ' Failed to update imageGallery images with productId:',
-      error
-    );
-  }
-};
 
 export const updateImages = async (req, res) => {
   const { id } = req.params;
@@ -3966,7 +3951,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       { defval: '' }
     );
 
-    console.log('📄 Rows Found:', rows.length);
 
     /* ================= GROUP BY HANDLE ================= */
 
@@ -3983,7 +3967,16 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     for (const handle in grouped) {
       const productRows = grouped[handle];
       const firstRow = productRows[0];
+const generateHandle = (value) => {
+  return value
+    ?.toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')   // spaces + special chars → -
+    .replace(/^-+|-+$/g, '');      // remove start/end hyphen
+};
 
+const cleanHandle = generateHandle(handle);
       try {
         console.log('🟢 Processing:', handle);
 
@@ -4106,8 +4099,8 @@ export const addCsvfileForProductFromBody = async (req, res) => {
                 String(firstRow['Status']).toLowerCase() === 'active'
                   ? 'active'
                   : 'draft',
-              handle,
-              options,
+handle: cleanHandle,    
+          options,
               variants,
               tags: tagsArray,
             },
@@ -4434,16 +4427,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             VariantStatus: 'inactive',
           })),
           approvalStatus: 'approved',
-          // images: featuredImageObject
-          //   ? [
-          //       {
-          //         src: featuredImageObject.src,
-          //         alt: featuredImageObject.alt,
-          //         position: 1,
-          //         created_at: new Date(),
-          //       },
-          //     ]
-          //   : [],
+      
           images: uploadedImages
             .filter((img) => {
               const fileName = img.src.split('/').pop().split('?')[0];
@@ -4488,7 +4472,11 @@ export const addCsvfileForProductFromBody = async (req, res) => {
             freeShipping: false,
             profile: shippingProfileData || null,
           },
-
+seo: {
+    title: fullProduct.title,
+    description: '',
+    handle: cleanHandle,
+  },
           userId,
           shopifyResponse: fullProductRes,
         };
