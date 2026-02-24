@@ -4113,8 +4113,7 @@ handle: cleanHandle,
 
         console.log('✅ Shopify Product Created:', createdProduct.id);
 
-        /* ================= INVENTORY SYNC ================= */
-        /* ================= SHOPIFY METAFIELDS CREATE ================= */
+
 
         for (const field of metafieldsArray) {
           try {
