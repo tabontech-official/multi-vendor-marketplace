@@ -4842,7 +4842,7 @@ export const exportProducts = async (req, res) => {
       { header: 'Product Type', key: 'type', width: 20 },
       { header: 'Categories', key: 'categories', width: 25 },
       { header: 'Status', key: 'status', width: 15 },
-      { header: 'Approval Status', key: 'approval', width: 20 },
+      // { header: 'Approval Status', key: 'approval', width: 20 },
       { header: 'SEO Title', key: 'seo_title', width: 30 },
       { header: 'SEO Description', key: 'seo_desc', width: 40 },
       { header: 'Track Quantity', key: 'track_qty', width: 15 },
@@ -4945,7 +4945,7 @@ export const exportProducts = async (req, res) => {
           })(),
 
           status: p.status || '',
-          approval: p.approvalStatus || '',
+          // approval: p.approvalStatus || '',
 
           seo_title: p.seo?.title || '',
           seo_desc: p.seo?.description || '',
