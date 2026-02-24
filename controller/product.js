@@ -4427,26 +4427,37 @@ handle: cleanHandle,
           })),
           approvalStatus: 'approved',
       
-          images: uploadedImages
-            .filter((img) => {
-              const fileName = img.src.split('/').pop().split('?')[0];
+          // images: uploadedImages
+          //   .filter((img) => {
+          //     const fileName = img.src.split('/').pop().split('?')[0];
 
-              return featuredImageUrls.some(
-                (url) => url.split('/').pop().split('?')[0] === fileName
-              );
-            })
-            .map((img, index) => ({
-              id: img.id?.toString(),
-              product_id: fullProduct.id?.toString(),
-              position: index + 1,
-              created_at: new Date(),
-              updated_at: new Date(),
-              alt: img.alt || null,
-              width: img.width || null,
-              height: img.height || null,
-              src: img.src,
-            })),
+          //     return featuredImageUrls.some(
+          //       (url) => url.split('/').pop().split('?')[0] === fileName
+          //     );
+          //   })
+          //   .map((img, index) => ({
+          //     id: img.id?.toString(),
+          //     product_id: fullProduct.id?.toString(),
+          //     position: index + 1,
+          //     created_at: new Date(),
+          //     updated_at: new Date(),
+          //     alt: img.alt || null,
+          //     width: img.width || null,
+          //     height: img.height || null,
+          //     src: img.src,
+          //   })),
 
+images: fullProduct.images.map((img) => ({
+  id: img.id?.toString(),
+  product_id: fullProduct.id?.toString(),
+  position: img.position,
+  created_at: new Date(img.created_at),
+  updated_at: new Date(img.updated_at || new Date()),
+  alt: img.alt || null,
+  width: img.width || null,
+  height: img.height || null,
+  src: img.src, // ✅ Shopify CDN URL
+})),
           variantImages: Object.entries(variantImageMap).map(
             ([variantId, images]) => ({
               variantId,
