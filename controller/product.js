@@ -20,7 +20,7 @@ import XLSX from 'xlsx';
 import { brandAssetModel } from '../Models/brandAsset.js';
 import ExcelJS from 'exceljs';
 import { shippingProfileModel } from '../Models/shippingProfileModel.js';
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 import csvImportBatchSchema from '../Models/csvImportBatchSchema.js';
 export const shopifyRequest = async (
   url,
@@ -1390,37 +1390,30 @@ export const updateProductData = async (req, res) => {
       metafields: Array.isArray(metafields)
         ? metafields.filter((m) => m.label?.trim() && m.value?.trim())
         : product.metafields || [],
-         inventory: {
-    track_quantity:
-      typeof track_quantity !== "undefined"
-        ? track_quantity
-        : product.inventory?.track_quantity,
+      inventory: {
+        track_quantity:
+          typeof track_quantity !== 'undefined'
+            ? track_quantity
+            : product.inventory?.track_quantity,
 
-    quantity:
-      typeof quantity !== "undefined"
-        ? parseInt(quantity) || 0
-        : product.inventory?.quantity,
+        quantity:
+          typeof quantity !== 'undefined'
+            ? parseInt(quantity) || 0
+            : product.inventory?.quantity,
 
-    continue_selling:
-      typeof req.body.continue_selling !== "undefined"
-        ? req.body.continue_selling
-        : product.inventory?.continue_selling,
+        continue_selling:
+          typeof req.body.continue_selling !== 'undefined'
+            ? req.body.continue_selling
+            : product.inventory?.continue_selling,
 
-    has_sku:
-      typeof has_sku !== "undefined"
-        ? has_sku
-        : product.inventory?.has_sku,
+        has_sku:
+          typeof has_sku !== 'undefined' ? has_sku : product.inventory?.has_sku,
 
-    sku:
-      typeof sku !== "undefined"
-        ? sku
-        : product.inventory?.sku,
+        sku: typeof sku !== 'undefined' ? sku : product.inventory?.sku,
 
-    barcode:
-      typeof barcode !== "undefined"
-        ? barcode
-        : product.inventory?.barcode,
-  },
+        barcode:
+          typeof barcode !== 'undefined' ? barcode : product.inventory?.barcode,
+      },
 
       shipping: (() => {
         const shippingData = {
@@ -3535,7 +3528,6 @@ export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
   return result;
 };
 
-
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
 //   const userId = req.userId;
@@ -4153,9 +4145,9 @@ export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
 //               ? parseInt(productRows[0]['Inventory Qty']) || 0
 //               : 0,
 //             continue_selling: true,
-//             has_sku: hasSku, 
-//             sku: baseSku, 
-//             barcode: baseBarcode, 
+//             has_sku: hasSku,
+//             sku: baseSku,
+//             barcode: baseBarcode,
 //           },
 //           shipping: {
 //             track_shipping: isPhysical,
@@ -4202,18 +4194,19 @@ export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
 //     return res.status(500).json({ success: false, error: err.message });
 //   }
 // };
-
+const generateBatchId = () => {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+};
 export const addCsvfileForProductFromBody = async (req, res) => {
   const file = req.file;
   const userId = req.userId;
 
   if (!file || !file.buffer) {
-    return res.status(400).json({ error: "No file uploaded." });
+    return res.status(400).json({ error: 'No file uploaded.' });
   }
 
   try {
-    const batchNo = `BATCH-${Date.now()}-${uuidv4()}`;
-
+const batchNo = `BATCH-${generateBatchId()}`;
     const batch = await csvImportBatchSchema.create({
       batchNo,
       userId,
@@ -4221,16 +4214,15 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       mimeType: file.mimetype,
       fileSize: file.size,
       fileBuffer: file.buffer, // 🔥 full file saved
-      status: "pending",
+      status: 'pending',
     });
 
     return res.status(200).json({
       success: true,
-      message: "File uploaded successfully. Processing will start shortly.",
+      message: 'File uploaded successfully. Processing will start shortly.',
       batchNo: batch.batchNo,
       status: batch.status,
     });
-
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -4239,7 +4231,81 @@ export const addCsvfileForProductFromBody = async (req, res) => {
   }
 };
 
+export const getAllBatches = async (req, res) => {
+  try {
+    const batches = await csvImportBatchSchema
+      .find()
+      .sort({ createdAt: -1 })
+      .lean();
 
+    res.status(200).json({
+      success: true,
+      count: batches.length,
+      data: batches,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getSingleBatch = async (req, res) => {
+  try {
+    const batch = await csvImportBatchSchema.findById(req.params.id).lean();
+
+    if (!batch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Batch not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: batch,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getBatchesByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('Received userId:', userId);
+    // Validate first
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid userId',
+      });
+    }
+
+    // Convert string to ObjectId
+    const objectUserId = new mongoose.Types.ObjectId(userId);
+
+    const batches = await csvImportBatchSchema
+      .find({ userId: objectUserId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: batches.length,
+      data: batches,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export const updateProductWebhook = async (req, res) => {
   try {

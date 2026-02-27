@@ -1,10 +1,10 @@
-import nodemailer from "nodemailer";
+import nodemailer from 'nodemailer';
 
 // export const sendEmail = async (to, subject, html) => {
 //   const transporter = nodemailer.createTransport({
 //     service: "gmail",
 //     auth: {
-//       user: process.env.EMAIL_USER, 
+//       user: process.env.EMAIL_USER,
 //       pass: process.env.EMAIL_PASS,
 //     },
 //   });
@@ -20,14 +20,13 @@ import nodemailer from "nodemailer";
 // };
 
 export const sendEmail = async ({ to, subject, html }) => {
-
   if (!to || to.trim() === '') {
     console.log('❌ Email not sent: No recipient');
     return;
   }
 
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,

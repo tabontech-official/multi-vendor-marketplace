@@ -44,6 +44,9 @@ import {
   getAllVariantsForAdmin,
   getTrackingCountForAdmin,
   syncProductVariants,
+  getBatchesByUser,
+  getAllBatches,
+  getSingleBatch,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -116,7 +119,12 @@ productRouter.put(
   verifyToken,
   updateInventoryQuantity
 );
+productRouter.get('/batches/:userId', getBatchesByUser);
+productRouter.get('/batches', getAllBatches);
+productRouter.get("/batch/:id", getSingleBatch);
+
 productRouter.get('/csvEportFile', exportProducts);
+
 productRouter.get('/csvInventoryEportFile', exportInventoryCsv);
 
 productRouter.post(
