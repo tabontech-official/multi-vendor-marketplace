@@ -4206,7 +4206,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
   }
 
   try {
-const batchNo = `BATCH-${generateBatchId()}`;
+    const batchNo = `BATCH-${generateBatchId()}`;
     const batch = await csvImportBatchSchema.create({
       batchNo,
       userId,
