@@ -1,16 +1,41 @@
 import nodemailer from "nodemailer";
 
-export const sendEmail = async (to, subject, html) => {
+// export const sendEmail = async (to, subject, html) => {
+//   const transporter = nodemailer.createTransport({
+//     service: "gmail",
+//     auth: {
+//       user: process.env.EMAIL_USER, 
+//       pass: process.env.EMAIL_PASS,
+//     },
+//   });
+
+//   const mailOptions = {
+//     from: `"Aydi Active" <${process.env.EMAIL_USER}>`,
+//     to,
+//     subject,
+//     html,
+//   };
+
+//   await transporter.sendMail(mailOptions);
+// };
+
+export const sendEmail = async ({ to, subject, html }) => {
+
+  if (!to || to.trim() === '') {
+    console.log('❌ Email not sent: No recipient');
+    return;
+  }
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: process.env.EMAIL_USER, 
+      user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 
   const mailOptions = {
-    from: `"Finance Team" <${process.env.EMAIL_USER}>`,
+    from: `"Aydi Active" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     html,
@@ -18,7 +43,6 @@ export const sendEmail = async (to, subject, html) => {
 
   await transporter.sendMail(mailOptions);
 };
-
 export const financeReminderTemplate = (firstName) => {
   return `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
