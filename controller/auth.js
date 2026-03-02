@@ -419,7 +419,7 @@ export const checkShopifyAdminTag = async (email) => {
     'Manage Shipping',
     // 'OnBoardUser',
     'Manage Size Charts',
-    'Importing Logs',
+    'Status & Logs',
     "Content Management",
   ];
 

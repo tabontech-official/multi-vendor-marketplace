@@ -66,24 +66,31 @@ export const getUserFiles = async (req, res) => {
 
 export const deleteUserFile = async (req, res) => {
   try {
-    const { userId, public_id } = req.body;
+    const { id } = req.body; // MongoDB _id
 
-    if (!userId || !public_id) {
+    if (!id) {
       return res.status(400).json({
         success: false,
-        message: "userId and public_id required",
+        message: "File ID required",
       });
     }
 
-    await cloudinary.v2.uploader.destroy(public_id, {
-      resource_type: "raw",
-    });
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ID format",
+      });
+    }
 
-    // 2️⃣ Remove from MongoDB
-    await ContentUpload.updateOne(
-      { userId },
-      { $pull: { files: { public_id } } }
-    );
+    const deleted = await ContentUpload.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "File not found",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -91,7 +98,7 @@ export const deleteUserFile = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("🔥 Delete error:", error);
+    console.error("Delete error:", error);
     return res.status(500).json({
       success: false,
       message: "Delete failed",
