@@ -945,7 +945,7 @@ export const startCsvImportWorker = () => {
       const batch = await csvImportBatchSchema.findOneAndUpdate(
         {
           status: 'pending',
-          batchNo: { $regex: /^BATCH-/ }, // 👈 Only product batches
+          
         },
         { status: 'processing', lockedAt: new Date() },
         { new: true }
@@ -981,7 +981,8 @@ export const startCsvImportWorker = () => {
           if (!grouped[handle]) grouped[handle] = [];
           grouped[handle].push(row);
         });
-
+const handles = Object.keys(grouped);
+const productChunks = chunkArray(handles, 5);
         // const results = [];
         batch.results = [];
         batch.summary = {

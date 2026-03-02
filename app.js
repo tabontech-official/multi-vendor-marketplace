@@ -30,11 +30,12 @@ const app = express();
 // Setup Swagger documentation
 setupSwagger(app);
 // Initialize MongoDB connection
-startCsvImportWorkerForInventory()
 
 startCsvImportWorker();
 Connect();
 productSubscriptionExpiration();
+startCsvImportWorkerForInventory()
+
 // deleteOrphanedProducts();
 financeScheduler.start();
 // financeCron()
