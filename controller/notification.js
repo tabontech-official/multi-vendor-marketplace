@@ -28,11 +28,20 @@ export const getNotificationByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    const user = await mongoose.model("users").findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const matchStage =
+      user.role === "Dev Admin" || user.role === "Master Admin"
+        ? {} // 🔥 Admin ko sab notifications
+        : { userId: new mongoose.Types.ObjectId(userId) };
+
     const result = await notificationModel.aggregate([
       {
-        $match: {
-          userId: new mongoose.Types.ObjectId(userId),
-        },
+        $match: matchStage,
       },
       {
         $sort: {
@@ -41,31 +50,32 @@ export const getNotificationByUserId = async (req, res) => {
       },
       {
         $lookup: {
-          from: 'users',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'userInfo',
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userInfo",
         },
       },
       {
-        $unwind: '$userInfo',
+        $unwind: "$userInfo",
       },
       {
         $project: {
           userId: 1,
           message: 1,
           createdAt: 1,
-          firstName: '$userInfo.firstName',
-          lastName:"$userInfo.lastName",
-          source:1,
+          source: 1,
+          seen: 1,
+          firstName: "$userInfo.firstName",
+          lastName: "$userInfo.lastName",
         },
       },
     ]);
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    return res.status(500).json({ error: 'Failed to fetch notifications' });
+    console.error("Error fetching notifications:", error);
+    return res.status(500).json({ error: "Failed to fetch notifications" });
   }
 };
 

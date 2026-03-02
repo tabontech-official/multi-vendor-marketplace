@@ -24,6 +24,7 @@ import notificationSettingsRouter from './Routes/notificationSettings.js';
 import { financeCron } from './controller/financeCron.js';
 import { startCsvImportWorker } from './controller/csvImportWorker.js';
 import { startCsvImportWorkerForInventory } from './controller/inventoryCsvWorker.js';
+import contentRoutes from './Routes/contentRoutes.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -53,7 +54,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(express.json({limit:"5000000mb"}));
 app.use('/auth', authRouter);
 app.use('/notificationSettings', notificationSettingsRouter);
-
+app.use("/api/content", contentRoutes);
 app.use('/product', productRouter);
 app.use('/order', orderRouter);
 app.use('/promo', promoRouter);

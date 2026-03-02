@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
-
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from 'cloudinary';
+import multer from 'multer';
 // export const sendEmail = async (to, subject, html) => {
 //   const transporter = nodemailer.createTransport({
 //     service: "gmail",
@@ -72,3 +74,33 @@ export const financeReminderTemplate = (firstName) => {
     </div>
   `;
 };
+
+cloudinary.v2.config({
+  cloud_name: 'dt2fvngtp',
+  api_key: '331996837589612',
+  api_secret: 'xNC1A5jDlmrfAx3TuAvyf-LFmG4',
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary.v2,
+  params: {
+    folder: 'uploads',
+    resource_type: 'auto', // ✅ change this
+  },
+});
+
+// export const upload = multer({ storage })
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 30 * 1024 * 1024,
+  },
+});
+
+export const cpUpload2 = upload.fields([
+  { name: 'images', maxCount: 10 },
+  { name: 'image', maxCount: 10 },
+  { name: 'file', maxCount: 10 },
+  { name: 'variantImages', maxCount: 10 },
+  { name: 'files', maxCount: 10 },
+]);

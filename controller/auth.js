@@ -420,6 +420,7 @@ export const checkShopifyAdminTag = async (email) => {
     // 'OnBoardUser',
     'Manage Size Charts',
     'Importing Logs',
+    "Content Management",
   ];
 
   try {
