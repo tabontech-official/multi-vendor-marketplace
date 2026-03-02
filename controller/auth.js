@@ -11,8 +11,8 @@ import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { brandAssetModel } from '../Models/brandAsset.js';
 import { apiCredentialModel } from '../Models/apicredential.js';
 import crypto from 'crypto';
-import csv from "csv-parser";
-import stream from "stream";
+import csv from 'csv-parser';
+import stream from 'stream';
 
 import { orderRquestModel } from '../Models/OrderRequest.js';
 import { orderModel } from '../Models/order.js';
@@ -330,27 +330,27 @@ export const signUp = async (req, res) => {
       images: '',
     });
 
-   const notificationSettings = await notificationModel.findOne();
+    const notificationSettings = await notificationModel.findOne();
 
-  if (notificationSettings?.approvals?.userRegistrationApproval) {
-    const staffEmails = notificationSettings.recipientEmails || [];
+    if (notificationSettings?.approvals?.userRegistrationApproval) {
+      const staffEmails = notificationSettings.recipientEmails || [];
 
-    if (staffEmails.length > 0) {
+      if (staffEmails.length > 0) {
+        transporter.sendMail({
+          from: `"AYDI Marketplace" <${process.env.NOTIFICATION_EMAIL}>`,
+          to: staffEmails.join(','),
+          subject: 'New User Registration – Approval Required',
+          html: staffRegistrationEmail({ sellerName, email }),
+        });
+      }
+
       transporter.sendMail({
         from: `"AYDI Marketplace" <${process.env.NOTIFICATION_EMAIL}>`,
-        to: staffEmails.join(','),
-        subject: "New User Registration – Approval Required",
-        html: staffRegistrationEmail({ sellerName, email }),
+        to: email,
+        subject: 'Your Account Is Under Review',
+        html: userRegistrationEmail(),
       });
     }
-
-    transporter.sendMail({
-      from: `"AYDI Marketplace" <${process.env.NOTIFICATION_EMAIL}>`,
-      to: email,
-      subject: "Your Account Is Under Review",
-      html: userRegistrationEmail(),
-    });
-  }
 
     const token = createToken({ _id: userId });
 
@@ -368,7 +368,6 @@ export const signUp = async (req, res) => {
   }
 };
 
-
 export const sendFinanceReminder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -376,18 +375,17 @@ export const sendFinanceReminder = async (req, res) => {
     const user = await authModel.findById(id);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    const subject = "Add Bank Account Details for Payout";
+    const subject = 'Add Bank Account Details for Payout';
     const html = financeReminderTemplate(user.firstName);
 
     await sendEmail(user.email, subject, html);
 
-    res.status(200).json({ message: "Email sent successfully" });
-
+    res.status(200).json({ message: 'Email sent successfully' });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -419,9 +417,9 @@ export const checkShopifyAdminTag = async (email) => {
     'Documentation',
     // 'Approval',
     'Manage Shipping',
-    'OnBoardUser',
+    // 'OnBoardUser',
     'Manage Size Charts',
-    "Importing Logs"
+    'Importing Logs',
   ];
 
   try {
@@ -1464,8 +1462,8 @@ export const getAllUsersData = async (req, res) => {
           country: 1,
           city: 1,
           shopifyId: 1,
-          comissionRate:1,
-          _id:1,
+          comissionRate: 1,
+          _id: 1,
         },
       },
     ]);
@@ -1647,7 +1645,6 @@ export const saveShopifyCredentials = async (req, res) => {
 // };
 
 export const createShopifyCollection = async (req, res) => {
-
   try {
     let { userId, title, description } = req.body;
     console.log('➡️ Request Body:', req.body);
@@ -1748,7 +1745,7 @@ export const createShopifyCollection = async (req, res) => {
 
       const metafields = [
         { key: 'userId', value: userId },
-        { key: 'username', value: title }, 
+        { key: 'username', value: title },
         { key: 'phoneNumber', value: user.phoneNumber },
         { key: 'city', value: user.city },
         { key: 'state', value: user.state },
@@ -1773,10 +1770,8 @@ export const createShopifyCollection = async (req, res) => {
             headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
           }
         );
-
       }
     } else {
-
       const updatePayload = {
         smart_collection: {
           id: collectionId,
@@ -1797,7 +1792,6 @@ export const createShopifyCollection = async (req, res) => {
           headers: { 'X-Shopify-Access-Token': shopifyAccessToken },
         }
       );
-
 
       const metaRes = await axios.get(
         `${shopifyStoreUrl}/admin/api/2023-10/metafields.json`,
@@ -1862,7 +1856,6 @@ export const createShopifyCollection = async (req, res) => {
       }
 
       if (oldHandle && oldHandle !== newHandle) {
-
         await axios.post(
           `${shopifyStoreUrl}/admin/api/2023-10/redirects.json`,
           {
@@ -1878,7 +1871,6 @@ export const createShopifyCollection = async (req, res) => {
             },
           }
         );
-
       }
     }
 
@@ -1905,7 +1897,6 @@ export const createShopifyCollection = async (req, res) => {
     user.sellerName = title;
     await user.save();
 
-
     return res.status(200).json({
       message: 'Collection synced successfully',
       shopifyCollectionId: collectionId,
@@ -1917,7 +1908,6 @@ export const createShopifyCollection = async (req, res) => {
   }
 };
 
-
 export const updateMerchantCommission = async (req, res) => {
   try {
     const { merchantId, commission } = req.body;
@@ -1925,7 +1915,7 @@ export const updateMerchantCommission = async (req, res) => {
     if (!merchantId || commission === undefined) {
       return res.status(400).json({
         success: false,
-        message: "merchantId and commission are required",
+        message: 'merchantId and commission are required',
       });
     }
 
@@ -1934,7 +1924,7 @@ export const updateMerchantCommission = async (req, res) => {
     if (commissionNumber < 0 || commissionNumber > 100) {
       return res.status(400).json({
         success: false,
-        message: "Commission must be between 0 and 100",
+        message: 'Commission must be between 0 and 100',
       });
     }
 
@@ -1947,37 +1937,35 @@ export const updateMerchantCommission = async (req, res) => {
     if (!merchant) {
       return res.status(404).json({
         success: false,
-        message: "Merchant not found",
+        message: 'Merchant not found',
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Commission updated successfully",
+      message: 'Commission updated successfully',
       data: {
         merchantId: merchant._id,
         comissionRate: merchant.comissionRate,
       },
     });
   } catch (error) {
-    console.error("Update merchant commission error:", error);
+    console.error('Update merchant commission error:', error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: 'Internal server error',
     });
   }
 };
 
 export const bulkUpdateMerchantCommission = async (req, res) => {
   try {
-
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "CSV file is required",
+        message: 'CSV file is required',
       });
     }
-
 
     const results = [];
     const bufferStream = new stream.PassThrough();
@@ -1989,27 +1977,23 @@ export const bulkUpdateMerchantCommission = async (req, res) => {
           mapHeaders: ({ header }) => header.trim(),
         })
       )
-      .on("data", (data) => {
+      .on('data', (data) => {
         results.push(data);
       })
-      .on("end", async () => {
-
+      .on('end', async () => {
         try {
           const bulkOperations = [];
           const invalidRows = [];
           const notFoundEmails = [];
 
           for (const row of results) {
-            let email =
-              row.Email ||
-              row.email;
+            let email = row.Email || row.email;
 
             const commissionNumber = Number(row.commission);
 
             if (email) {
               email = email.toString().trim().toLowerCase();
             }
-
 
             if (
               !email ||
@@ -2029,40 +2013,36 @@ export const bulkUpdateMerchantCommission = async (req, res) => {
             });
           }
 
-
           if (!bulkOperations.length) {
             return res.status(400).json({
               success: false,
-              message: "No valid records found in CSV",
+              message: 'No valid records found in CSV',
               invalidRows,
             });
           }
 
           const result = await authModel.bulkWrite(bulkOperations);
 
-
           return res.status(200).json({
             success: true,
-            message: "Bulk commission update completed (Email Based)",
+            message: 'Bulk commission update completed (Email Based)',
             totalRecords: results.length,
             matchedCount: result.matchedCount,
             modifiedCount: result.modifiedCount,
             invalidRowsCount: invalidRows.length,
           });
-
         } catch (err) {
           return res.status(500).json({
             success: false,
-            message: "Error processing CSV",
+            message: 'Error processing CSV',
           });
         }
       });
-
   } catch (error) {
-    console.error("❌ Bulk commission upload error:", error);
+    console.error('❌ Bulk commission upload error:', error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: 'Internal server error',
     });
   }
 };
