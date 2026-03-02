@@ -2,6 +2,7 @@ import { ContentUpload } from "../Models/contentModel.js";
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
+import mongoose from "mongoose";
 export const uploadContent = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -66,7 +67,7 @@ export const getUserFiles = async (req, res) => {
 
 export const deleteUserFile = async (req, res) => {
   try {
-    const { id } = req.body; // MongoDB _id
+    const { id } = req.body; 
 
     if (!id) {
       return res.status(400).json({
