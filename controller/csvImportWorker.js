@@ -919,14 +919,73 @@
 // };
 import cron from 'node-cron';
 import * as XLSX from 'xlsx';
-import { getCategoryHierarchyFlexible, shopifyRequest } from './product.js';
+import { shopifyRequest } from './product.js';
 import csvImportBatchSchema from '../Models/csvImportBatchSchema.js';
 import { shopifyConfigurationModel } from '../Models/buyCredit.js';
 import { listingModel } from '../Models/Listing.js';
 import { shippingProfileModel } from '../Models/shippingProfileModel.js';
 import { authModel } from '../Models/auth.js';
 import { sendEmail } from '../middleware/sendEmail.js';
+import { notificationModel } from '../Models/Notifications.js';
+import { categoryModel } from '../Models/category.js';
 
+export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
+  console.log('\n🔎 CATEGORY HIERARCHY LOOKUP START');
+  console.log('📥 Incoming Category Values:', categoryValues);
+
+  const allCatNos = new Set();
+  const allCategoryTitles = new Set();
+  const invalidValues = []; // ✅ track invalid
+
+  for (const value of categoryValues) {
+    let category = null;
+
+    if (/^cat_/i.test(value)) {
+      category = await categoryModel.findOne({ catNo: value });
+    } else {
+      category = await categoryModel.findOne({ title: value });
+    }
+
+    // ❗ If category not found
+    if (!category) {
+      console.log(`❌ Invalid Category: ${value}`);
+      invalidValues.push(value);
+      continue;
+    }
+
+    let current = category;
+    let pathParts = [];
+
+    while (current) {
+      allCatNos.add(current.catNo);
+      pathParts.unshift(current.title);
+
+      if (!current.parentCatNo) break;
+
+      current = await categoryModel.findOne({
+        catNo: current.parentCatNo,
+      });
+    }
+
+    const fullPath = pathParts.join(' > ');
+    allCategoryTitles.add(fullPath);
+
+    if (pathParts.length > 1) {
+      allCategoryTitles.add(pathParts[0]);
+    }
+  }
+
+  const result = {
+    catNos: Array.from(allCatNos),
+    titles: Array.from(allCategoryTitles),
+    invalid: invalidValues, // ✅ return invalid
+  };
+
+  console.log('🎯 Final Category Result:', result);
+  console.log('🔎 CATEGORY HIERARCHY LOOKUP END\n');
+
+  return result;
+};
 const chunkArray = (array, size) => {
   const chunks = [];
   for (let i = 0; i < array.length; i += size) {
@@ -945,7 +1004,6 @@ export const startCsvImportWorker = () => {
       const batch = await csvImportBatchSchema.findOneAndUpdate(
         {
           status: 'pending',
-          
         },
         { status: 'processing', lockedAt: new Date() },
         { new: true }
@@ -981,8 +1039,8 @@ export const startCsvImportWorker = () => {
           if (!grouped[handle]) grouped[handle] = [];
           grouped[handle].push(row);
         });
-const handles = Object.keys(grouped);
-const productChunks = chunkArray(handles, 5);
+        const handles = Object.keys(grouped);
+        const productChunks = chunkArray(handles, 5);
         // const results = [];
         batch.results = [];
         batch.summary = {
@@ -1191,12 +1249,25 @@ const productChunks = chunkArray(handles, 5);
 
               console.log('📥 CSV Category Names:', categoryNames);
 
-              // 🔥 Get catNo hierarchy
+              // // 🔥 Get catNo hierarchy
+              // const categoryResult =
+              //   await getCategoryHierarchyFlexible(categoryNames);
+
+              // const categoryTagNos = categoryResult.catNos;
+              // const categoryTitles = categoryResult.titles;
               const categoryResult =
                 await getCategoryHierarchyFlexible(categoryNames);
 
-              const categoryTagNos = categoryResult.catNos;
-              const categoryTitles = categoryResult.titles;
+              const categoryTagNos = categoryResult?.catNos || [];
+              const categoryTitles = categoryResult?.titles || [];
+              const invalidCategories = categoryResult?.invalid || [];
+
+              if (invalidCategories.length > 0) {
+                console.log(
+                  `⚠️ Warning: Invalid categories for ${cleanHandle}:`,
+                  invalidCategories
+                );
+              }
               const tagsArray = [
                 ...categoryTagNos,
                 `user_${userId}`,
@@ -1737,6 +1808,11 @@ const productChunks = chunkArray(handles, 5);
               batch.results.push({
                 handle: cleanHandle,
                 status: 'success',
+                warnings: invalidCategories,
+                logs: invalidCategories.map((cat) => ({
+                  step: 'category-validation',
+                  message: `Invalid category provided: ${cat}`,
+                })),
                 startedAt: productStartTime,
                 completedAt: new Date(),
               });
@@ -1782,6 +1858,20 @@ const productChunks = chunkArray(handles, 5);
 
         await batch.save();
 
+        try {
+          await notificationModel.create({
+            userId: userId,
+            message: `Batch ${batch.batchNo} import completed. 
+Success: ${batch.summary.success}, 
+Failed: ${batch.summary.failed}`,
+            source: 'csv-import',
+            seen: false,
+          });
+
+          console.log('🔔 Notification Saved');
+        } catch (notifErr) {
+          console.log('❌ Notification Save Error:', notifErr.message);
+        }
         try {
           const user = await authModel.findById(userId);
 
