@@ -53,15 +53,23 @@ export const getUserFiles = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const data = (await ContentUpload.find({ userId })).sort({
+    console.log("👉 Requested userId:", userId);
+
+    const data = await ContentUpload.find({ userId }).sort({
       createdAt: -1,
     });
 
+    console.log("📦 Raw DB Data:", data);
+
     const flattened = data.flatMap((doc) => doc.files);
 
+    console.log("📂 Flattened Files:", flattened);
+
     res.json({ success: true, data: flattened });
+
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching files' });
+    console.error("❌ Error in getUserFiles:", error);
+    res.status(500).json({ message: "Error fetching files" });
   }
 };
 
