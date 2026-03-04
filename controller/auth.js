@@ -421,6 +421,7 @@ export const checkShopifyAdminTag = async (email) => {
     'Manage Size Charts',
     'Status & Logs',
     "Content Management",
+    "Other Configurations",
   ];
 
   try {
