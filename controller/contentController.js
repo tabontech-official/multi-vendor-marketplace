@@ -118,16 +118,67 @@ export const deleteUserFile = async (req, res) => {
 
 export const getAllFiles = async (req, res) => {
   try {
-    const data = await ContentUpload.find().sort({ createdAt: -1 });
 
-    const flattened = data.flatMap((doc) => doc.files);
+    console.log("GET ALL FILES API CALLED");
 
-    res.json({ success: true, data: flattened });
+    const files = await ContentUpload.aggregate([
+
+      // users collection join
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      // files array ko flatten
+      {
+        $unwind: "$files"
+      },
+
+      // name + email add
+      {
+        $addFields: {
+          "files.merchantName": {
+            $concat: ["$user.firstName", " ", "$user.lastName"]
+          },
+          "files.merchantEmail": "$user.email"
+        }
+      },
+
+      // sirf file object return
+      {
+        $replaceRoot: { newRoot: "$files" }
+      },
+
+      { $sort: { createdAt: -1 } }
+
+    ]);
+
+    console.log("TOTAL FILES:", files.length);
+
+    res.json({
+      success: true,
+      data: files
+    });
+
   } catch (error) {
-    console.error('🔥 Fetch all files error:', error);
+
+    console.error("🔥 Fetch all files error:", error);
+
     return res.status(500).json({
       success: false,
-      message: 'Error fetching files',
+      message: "Error fetching files",
     });
+
   }
 };

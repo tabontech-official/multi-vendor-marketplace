@@ -1,10 +1,19 @@
 import express from 'express';
-import { addAdminFile, deleteAdminFile, downloadAdminFile, getAdminFile } from '../controller/adminFile.js';
+import {
+  addAdminFile,
+  deleteAdminFile,
+  downloadAdminFile,
+  downloadFile,
+  getAdminFile,
+  setActiveFile,
+} from '../controller/adminFile.js';
 import { Csvuplaods } from '../middleware/multer.js';
 const adminFilesRouter = express.Router();
 
 adminFilesRouter.post('/upload-downloadable/:type', Csvuplaods, addAdminFile);
 adminFilesRouter.get('/get-downloadable', getAdminFile);
-adminFilesRouter.get("/download/:type", downloadAdminFile);
-adminFilesRouter.delete("/delete/:id", deleteAdminFile);
+adminFilesRouter.get('/download/:type', downloadAdminFile);
+adminFilesRouter.delete('/delete/:id', deleteAdminFile);
+adminFilesRouter.get('/download-file/:id', downloadFile);
+adminFilesRouter.put('/set-active/:id', setActiveFile);
 export default adminFilesRouter;

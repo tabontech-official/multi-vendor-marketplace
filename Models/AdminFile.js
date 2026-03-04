@@ -2,17 +2,22 @@ import mongoose from 'mongoose';
 
 const adminFileSchema = new mongoose.Schema({
   type: {
-    type: String, // products / inventory
+    type: String, 
     required: true,
   },
   category: {
-    type: String, // normal | downloadable_excel
+    type: String, 
     default: 'normal',
   },
   fileName: String,
   fileData: Buffer,
   contentType: String,
   uploadedBy: String,
+  status: {
+    type: String,
+    enum: ["active", "inactive"],
+    default: "inactive",
+  },
   version: {
     type: String,
   },

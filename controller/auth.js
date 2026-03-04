@@ -413,15 +413,15 @@ export const checkShopifyAdminTag = async (email) => {
     'Catalog Performance',
     'Consultation',
     'Finance',
-    'Manage Categories',
+    'Categories',
     'Documentation',
     // 'Approval',
-    'Manage Shipping',
+    'Shipping',
     // 'OnBoardUser',
-    'Manage Size Charts',
+    'Size Charts',
     'Status & Logs',
-    "Content Management",
-    "Other Configurations",
+    'Content & Files',
+    'Configurations',
   ];
 
   try {
