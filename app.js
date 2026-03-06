@@ -22,7 +22,7 @@ import shippingRouter from './Routes/shippingProfile.js';
 import SizeChartRouter from './Routes/sizeChartRoute.js';
 import notificationSettingsRouter from './Routes/notificationSettings.js';
 import { financeCron } from './controller/financeCron.js';
-import { startCsvImportWorker } from './controller/csvImportWorker.js';
+// import { startCsvImportWorker } from './controller/csvImportWorker.js';
 import { startCsvImportWorkerForInventory } from './controller/inventoryCsvWorker.js';
 import contentRoutes from './Routes/contentRoutes.js';
 import adminFilesRouter from './Routes/adminFiles.js';
@@ -32,7 +32,7 @@ const app = express();
 setupSwagger(app);
 // Initialize MongoDB connection
 
-startCsvImportWorker();
+// startCsvImportWorker();
 Connect();
 productSubscriptionExpiration();
 startCsvImportWorkerForInventory()

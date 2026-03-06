@@ -3,6 +3,7 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
 import mongoose from 'mongoose';
+import { runCsvImportWorker } from './csvImportWorker.js';
 export const uploadContent = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -178,6 +179,27 @@ export const getAllFiles = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error fetching files",
+    });
+
+  }
+};
+
+
+export const runWorker = async (req, res) => {
+  try {
+
+    await runCsvImportWorker();
+
+    res.json({
+      success: true,
+      message: "Worker executed successfully"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
 
   }

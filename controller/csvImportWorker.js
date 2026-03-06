@@ -1,4 +1,3 @@
-
 import cron from 'node-cron';
 import * as XLSX from 'xlsx';
 import { shopifyRequest } from './product.js';
@@ -78,10 +77,12 @@ const chunkArray = (array, size) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const startCsvImportWorker = () => {
+// export const startCsvImportWorker = () => {
+export const runCsvImportWorker = async () => {
+
   console.log('✅ CSV Import Worker Running Every 3 Seconds');
 
-  cron.schedule('*/3 * * * * *', async () => {
+  // cron.schedule('*/3 * * * * *', async () => {
     try {
       const batch = await csvImportBatchSchema.findOneAndUpdate(
         {
@@ -90,6 +91,7 @@ export const startCsvImportWorker = () => {
         { status: 'processing', lockedAt: new Date() },
         { new: true }
       );
+    
       if (!batch) return;
 
       const userId = batch.userId;
@@ -1020,5 +1022,6 @@ Failed: ${batch.summary.failed}`,
     } catch (err) {
       console.log('Worker Error:', err.message);
     }
-  });
+  // }
+// );
 };
