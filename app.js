@@ -60,6 +60,8 @@ app.use("/api/content", contentRoutes);
 app.use('/product', productRouter);
 app.use('/admin-file', adminFilesRouter);
 
+
+
 app.use('/order', orderRouter);
 app.use('/promo', promoRouter);
 app.use('/consultation', consultationRouter);
@@ -71,7 +73,10 @@ app.use('/variantOption', variantOptionRouter);
 app.use('/shippingProfile', shippingRouter);
 app.use('/size-chart', SizeChartRouter);
 
-
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use((req, res, next) => {
   res.setTimeout(300000, () => {  // 300000 ms = 5 minutes
     res.status(504).send('Request timed out');
