@@ -866,12 +866,71 @@ export const CreateUserTagsModule = async (req, res) => {
     await newUser.save();
 
     const token = createToken(email, newUser._id);
-    const resetLink = `https://multi-vendor-marketplaces.vercel.app/New?token=${token}`;
+    const resetLink = `http://localhost:3006/New?token=${token}`;
+
+    // await transporter.sendMail({
+    //   to: email,
+    //   subject: 'Password Reset',
+    //   html: `<p>Click <a href="${resetLink}">here</a> to create your password.</p>`,
+    // });
 
     await transporter.sendMail({
       to: email,
-      subject: 'Password Reset',
-      html: `<p>Click <a href="${resetLink}">here</a> to create your password.</p>`,
+      subject: 'Create Your Password',
+      html: `
+  <div style="font-family: Arial, sans-serif; background-color:#f4f6f8; padding:40px 0;">
+    <table align="center" width="600" style="background:#ffffff; border-radius:8px; padding:30px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+      
+      <tr>
+        <td style="text-align:center; padding-bottom:20px;">
+          <h2 style="color:#1f2937; margin:0;">Multi Vendor Marketplace</h2>
+          <p style="color:#6b7280; font-size:14px;">Account Setup</p>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:20px 0;">
+          <p style="font-size:16px; color:#374151;">
+            Hello,
+          </p>
+
+          <p style="font-size:15px; color:#4b5563; line-height:1.6;">
+            You have been invited to access the <strong>Multi Vendor Marketplace</strong>.
+            To activate your account and create your password, please click the button below.
+          </p>
+
+          <div style="text-align:center; margin:30px 0;">
+            <a href="${resetLink}" 
+              style="background:#2563eb; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-size:15px; font-weight:600;">
+              Create Password
+            </a>
+          </div>
+
+          <p style="font-size:14px; color:#6b7280;">
+            If the button above doesn't work, copy and paste this link into your browser:
+          </p>
+
+          <p style="word-break:break-all; font-size:13px; color:#2563eb;">
+            ${resetLink}
+          </p>
+
+          <p style="font-size:14px; color:#6b7280; margin-top:20px;">
+            This link will expire for security reasons. If you did not request this email, please ignore it.
+          </p>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border-top:1px solid #e5e7eb; padding-top:20px; text-align:center;">
+          <p style="font-size:12px; color:#9ca3af;">
+            © ${new Date().getFullYear()} Multi Vendor Marketplace. All rights reserved.
+          </p>
+        </td>
+      </tr>
+
+    </table>
+  </div>
+  `,
     });
 
     res.status(201).json({
@@ -1374,44 +1433,98 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+// export const createPassword = async (req, res) => {
+//   const { token, newPassword } = req.body;
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.SECRET_KEY);
+//     const userId = decoded?.payLoad;
+
+//     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//       return res
+//         .status(400)
+//         .json({ message: 'Invalid or missing user ID in token' });
+//     }
+
+//     const user = await authModel.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     // const hashedPassword = await bcrypt.hash(newPassword, 10);
+//     user.password = newPassword;
+//     await user.save();
+
+//     if (user.shopifyId && updateShopifyPassword) {
+//       await updateShopifyPassword(user.shopifyId, newPassword);
+//     }
+
+//     res.status(200).json({ message: 'Password has been reset successfully' });
+//   } catch (error) {
+//     if (error.name === 'TokenExpiredError') {
+//       return res.status(401).json({
+//         message: 'Token has expired. Please request a new password reset.',
+//       });
+//     }
+
+//     console.error(' Error resetting password:', error);
+//     res.status(500).json({
+//       message: 'Internal server error while resetting password',
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 export const createPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const userId = decoded?.payLoad;
 
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res
-        .status(400)
-        .json({ message: 'Invalid or missing user ID in token' });
+    const email = decoded?.payLoad?.email ||decoded?.payLoad ;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Invalid token payload",
+      });
     }
 
-    const user = await authModel.findById(userId);
+    const user = await authModel.findOne({ email });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
+    // agar bcrypt use karna ho
     // const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // user.password = hashedPassword;
+
     user.password = newPassword;
+
     await user.save();
 
     if (user.shopifyId && updateShopifyPassword) {
       await updateShopifyPassword(user.shopifyId, newPassword);
     }
 
-    res.status(200).json({ message: 'Password has been reset successfully' });
+    res.status(200).json({
+      message: "Password created successfully",
+    });
+
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
+    if (error.name === "TokenExpiredError") {
       return res.status(401).json({
-        message: 'Token has expired. Please request a new password reset.',
+        message: "Token expired. Please request a new link.",
       });
     }
 
-    console.error(' Error resetting password:', error);
+    console.error("Error creating password:", error);
+
     res.status(500).json({
-      message: 'Internal server error while resetting password',
-      error: error.message,
+      message: "Server error while creating password",
     });
   }
 };
