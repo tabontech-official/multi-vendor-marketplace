@@ -866,7 +866,7 @@ export const CreateUserTagsModule = async (req, res) => {
     await newUser.save();
 
     const token = createToken(email, newUser._id);
-    const resetLink = `http://localhost:3006/New?token=${token}`;
+    const resetLink = `https://multi-vendor-marketplaces.vercel.app/New?token=${token}`;
 
     // await transporter.sendMail({
     //   to: email,
