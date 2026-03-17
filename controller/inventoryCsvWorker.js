@@ -3,16 +3,11 @@ import csvImportBatchSchema from '../Models/csvImportBatchSchema.js';
 import { processInventoryBatch } from './inventoryProcessor.js';
 
 export const startCsvImportWorkerForInventory = () => {
-  console.log('\n=================================================');
-  console.log('🚀 INVENTORY CSV WORKER STARTED');
-  console.log('⏱ Running Every 3 Seconds');
-  console.log('=================================================\n');
+
 
   cron.schedule('*/3 * * * * *', async () => {
-    console.log('\n🔄 Worker Tick:', new Date().toISOString());
 
     try {
-      console.log('🔎 Searching for pending batch...');
 
       const batch = await csvImportBatchSchema.findOneAndUpdate(
         {
@@ -23,12 +18,10 @@ export const startCsvImportWorkerForInventory = () => {
         { new: true }
       );
       if (!batch) {
-        console.log('⚪ No pending batch found');
         return;
       }
 
-      console.log('📦 Batch Found:', batch.batchNo);
-      console.log('🔐 Batch Locked & Marked as Processing');
+
 
       if (!batch.batchLogs) batch.batchLogs = [];
 

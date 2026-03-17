@@ -4198,6 +4198,9 @@ export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
 const generateBatchId = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
+
+
+
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
 //   const userId = req.userId;
@@ -4233,16 +4236,68 @@ const generateBatchId = () => {
 // };
 
 
-export const addCsvfileForProductFromBody = async (req, res) => {
-  const file = req.file;
-  const userId = req.userId;
-
-  if (!file || !file.buffer) {
-    return res.status(400).json({ error: 'No file uploaded.' });
-  }
-
+const validateCsvFile = (fileBuffer) => {
   try {
+    const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    if (!rows.length) {
+      return {
+        valid: false,
+        error: "Excel file is empty"
+      };
+    }
+
+    const headers = Object.keys(rows[0]);
+
+    const REQUIRED_COLUMNS = [
+      "Title",
+      "Product URL",
+      "Price",
+      "Vendor"
+    ];
+
+    const missingColumns = REQUIRED_COLUMNS.filter(
+      col => !headers.includes(col)
+    );
+
+    if (missingColumns.length > 0) {
+      return {
+        valid: false,
+        error: `Missing columns: ${missingColumns.join(", ")}`
+      };
+    }
+
+    return { valid: true };
+
+  } catch (err) {
+    return {
+      valid: false,
+      error: "Invalid Excel/CSV format"
+    };
+  }
+};
+
+export const addCsvfileForProductFromBody = async (req, res) => {
+  try {
+    const file = req.file;
+    const userId = req.userId;
+
+    if (!file || !file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      });
+    }
+
+    console.log("📁 File received:", file.originalname);
+
     const batchNo = `BATCH-${generateBatchId()}`;
+
+    /* ================= SAVE BATCH ================= */
 
     const batch = await csvImportBatchSchema.create({
       batchNo,
@@ -4251,22 +4306,36 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       mimeType: file.mimetype,
       fileSize: file.size,
       fileBuffer: file.buffer,
-      status: 'pending',
+      status: "pending",
+      createdAt: new Date(),
     });
 
-    // 🔥 Trigger worker immediately (background)
-    runCsvImportWorker().catch((err) =>
-      console.log('Worker trigger error:', err.message)
-    );
+    console.log("✅ Batch saved:", batch.batchNo);
+
+    /* ================= TRIGGER WORKER ================= */
+
+    setImmediate(async () => {
+      try {
+        console.log("🚀 Triggering CSV Worker...");
+        await runCsvImportWorker();
+        console.log("✅ Worker finished");
+      } catch (err) {
+        console.log("❌ Worker trigger error:", err.message);
+      }
+    });
+
+    /* ================= RESPONSE ================= */
 
     return res.status(200).json({
       success: true,
-      message: 'File uploaded successfully. Processing started.',
+      message: "File uploaded successfully. Processing started.",
       batchNo: batch.batchNo,
       status: batch.status,
     });
 
   } catch (err) {
+    console.log("❌ Upload API Error:", err.message);
+
     return res.status(500).json({
       success: false,
       error: err.message,
@@ -4673,7 +4742,7 @@ export const exportProducts = async (req, res) => {
       { header: 'Product URL', key: 'product_url', width: 40 },
       { header: 'Title', key: 'title', width: 30 },
       { header: 'Description', key: 'body_html', width: 40 },
-      { header: 'Vendor', key: 'vendor', width: 20 },
+      { header: 'Brand Name', key: 'vendor', width: 20 },
       { header: 'Product Type', key: 'type', width: 20 },
       { header: 'Categories', key: 'categories', width: 25 },
       { header: 'Status', key: 'status', width: 15 },
@@ -4695,7 +4764,7 @@ export const exportProducts = async (req, res) => {
       { header: 'SKU', key: 'sku', width: 20 },
       { header: 'Price', key: 'price', width: 15 },
       { header: 'Compare At Price', key: 'compare_price', width: 15 },
-      { header: 'Inventory Qty', key: 'inv_qty', width: 15 },
+      { header: 'Quantity', key: 'inv_qty', width: 15 },
       { header: 'Barcode', key: 'barcode', width: 20 },
       { header: 'Weight', key: 'weight', width: 15 },
       { header: 'Weight Unit', key: 'weight_unit', width: 15 },
