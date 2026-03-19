@@ -10,8 +10,14 @@ const userViewSchema = new mongoose.Schema({
   totalViews: {
     type: Number,
     default: 0,
+  },products: [
+  {
+    productId: String,
+    totalViews: { type: Number, default: 0 },
+    weeklyViews: { type: Number, default: 0 },
+    monthlyViews: { type: Number, default: 0 },
   },
-  productId: String,
+],
   weeklyViews: {
     type: Number,
     default: 0,
