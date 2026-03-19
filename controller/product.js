@@ -23,6 +23,7 @@ import { shippingProfileModel } from '../Models/shippingProfileModel.js';
 import { v4 as uuidv4 } from 'uuid';
 import csvImportBatchSchema from '../Models/csvImportBatchSchema.js';
 import { runCsvImportWorker } from './csvImportWorker.js';
+import { orderModel } from '../Models/order.js';
 export const shopifyRequest = async (
   url,
   method,
@@ -5756,6 +5757,7 @@ export const trackProductView = async (req, res) => {
         monthlyViews: 1,
         lastWeeklyReset: now,
         lastMonthlyReset: now,
+        productId,
       });
     } else {
       const lastWeek = new Date(existing.lastWeeklyReset);
@@ -6617,5 +6619,111 @@ export const approvelProduct = async (req, res) => {
   } catch (error) {
     console.error('Error in publishProduct function:', error);
     return res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
+
+export const getTopProductsAdmin = async (req, res) => {
+  try {
+    const { limit = 4, period = "month" } = req.query;
+
+    let startDate = new Date();
+    let prevStartDate = new Date();
+
+    if (period === "week") {
+      startDate.setDate(startDate.getDate() - 7);
+      prevStartDate.setDate(prevStartDate.getDate() - 14);
+    } else {
+      startDate.setMonth(startDate.getMonth() - 1);
+      prevStartDate.setMonth(prevStartDate.getMonth() - 2);
+    }
+
+    // 🔹 CURRENT PERIOD
+    const current = await orderModel.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      { $unwind: "$ProductSnapshot" },
+
+      {
+        $group: {
+          _id: "$ProductSnapshot.productId",
+          units: { $sum: "$ProductSnapshot.quantity" },
+
+          revenue: {
+            $sum: {
+              $multiply: [
+                "$ProductSnapshot.quantity",
+                {
+                  $toDouble: {
+                    $ifNull: [
+                      "$ProductSnapshot.variant.price",
+                      0,
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+
+          name: { $first: "$ProductSnapshot.product.title" },
+        },
+      },
+    ]);
+
+    // 🔹 PREVIOUS PERIOD
+    const previous = await orderModel.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: prevStartDate, $lt: startDate },
+        },
+      },
+      { $unwind: "$ProductSnapshot" },
+
+      {
+        $group: {
+          _id: "$ProductSnapshot.productId",
+          units: { $sum: "$ProductSnapshot.quantity" },
+        },
+      },
+    ]);
+
+    // 🔹 MAP previous data
+    const prevMap = {};
+    previous.forEach((p) => {
+      prevMap[p._id] = p.units;
+    });
+
+    // 🔹 FINAL FORMAT
+    let result = current.map((item) => {
+      const prevUnits = prevMap[item._id] || 0;
+
+      let trend = 0;
+      if (prevUnits === 0) {
+        trend = item.units > 0 ? 100 : 0;
+      } else {
+        trend = ((item.units - prevUnits) / prevUnits) * 100;
+      }
+
+      return {
+        productId: item._id,
+        productName: item.name,
+        totalUnitsSold: item.units,
+        totalRevenue: item.revenue,
+        trend: trend.toFixed(1),
+      };
+    });
+
+    // 🔹 SORT + LIMIT
+    result = result
+      .sort((a, b) => b.totalUnitsSold - a.totalUnitsSold)
+      .slice(0, Number(limit));
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error" });
   }
 };

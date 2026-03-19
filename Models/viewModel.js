@@ -11,6 +11,7 @@ const userViewSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  productId: String,
   weeklyViews: {
     type: Number,
     default: 0,

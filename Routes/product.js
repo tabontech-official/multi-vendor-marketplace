@@ -47,6 +47,7 @@ import {
   getBatchesByUser,
   getAllBatches,
   getSingleBatch,
+  getTopProductsAdmin,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -140,6 +141,7 @@ productRouter.delete('/deleteAll', deleteAllProducts);
 productRouter.post('/trackingProduct', trackProductView);
 productRouter.get('/trackingViews/:userId', getTrackingCountForUser);
 productRouter.get('/trackingViews/', getTrackingCountForAdmin);
+productRouter.get('/topProducts', getTopProductsAdmin);
 
 productRouter.get('/getProductCountForUser/:userId', fetchProductCountForUser);
 productRouter.post(

@@ -1103,18 +1103,7 @@ const chunkArray = (array, size) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// export const startCsvImportWorker = () => {
 
-const generateHandle = (value) => {
-  return value
-    ?.toString()
-    .trim() // start/end spaces remove
-    .toLowerCase() // lowercase
-    .replace(/\s+/g, '-') // spaces → hyphen
-    .replace(/[^a-z0-9-]/g, '') // special chars remove
-    .replace(/-+/g, '-') // multiple hyphen → single
-    .replace(/^-|-$/g, ''); // start/end hyphen remove
-};
 
 export const runCsvImportWorker = async () => {
   console.log('✅ CSV Import Worker Running Every 3 Seconds');
