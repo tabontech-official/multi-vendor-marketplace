@@ -16,6 +16,7 @@ import crypto from 'crypto';
 
 import fs from 'fs';
 import { notificationModel } from '../Models/NotificationSettings.js';
+import { viewModel } from '../Models/viewModel.js';
 dayjs.extend(customParseFormat);
 dayjs.extend(minMax);
 
@@ -297,73 +298,72 @@ export const createOrder = async (req, res) => {
   }
 };
 
-export const getFinanceSummary = async (req, res) => {
-  try {
-    const allOrders = await orderModel.find();
+// export const getFinanceSummary = async (req, res) => {
+//   try {
+//     const allOrders = await orderModel.find();
 
-    const totalOrdersInDb = allOrders.length;
+//     const totalOrdersInDb = allOrders.length;
 
-    const getOrderIncome = (order) => {
-      return order.lineItems.reduce((total, item) => {
-        const price = parseFloat(item.price || '0');
-        const qty = parseFloat(item.quantity || '1');
-        total += price * qty;
-        return total;
-      }, 0);
-    };
+//     const getOrderIncome = (order) => {
+//       return order.lineItems.reduce((total, item) => {
+//         const price = parseFloat(item.price || '0');
+//         const qty = parseFloat(item.quantity || '1');
+//         total += price * qty;
+//         return total;
+//       }, 0);
+//     };
 
-    let totalIncome = 0;
-    let paidIncome = 0;
-    let unpaidIncome = 0;
-    let fulfilledOrdersCount = 0;
-    let unfulfilledOrdersCount = 0;
+//     let totalIncome = 0;
+//     let paidIncome = 0;
+//     let unpaidIncome = 0;
+//     let fulfilledOrdersCount = 0;
+//     let unfulfilledOrdersCount = 0;
 
-    allOrders.forEach((order) => {
-      const income = getOrderIncome(order);
-      totalIncome += income;
+//     allOrders.forEach((order) => {
+//       const income = getOrderIncome(order);
+//       totalIncome += income;
 
-      const allFulfilled = order.lineItems.every(
-        (item) => item.fulfillment_status === 'fulfilled'
-      );
+//       const allFulfilled = order.lineItems.every(
+//         (item) => item.fulfillment_status === 'fulfilled'
+//       );
 
-      if (allFulfilled) {
-        fulfilledOrdersCount += 1;
-        paidIncome += income;
-      } else {
-        unfulfilledOrdersCount += 1;
-        unpaidIncome += income;
-      }
-    });
+//       if (allFulfilled) {
+//         fulfilledOrdersCount += 1;
+//         paidIncome += income;
+//       } else {
+//         unfulfilledOrdersCount += 1;
+//         unpaidIncome += income;
+//       }
+//     });
 
-    const netProfit = totalIncome;
+//     const netProfit = totalIncome;
 
-    const mrr = allOrders
-      .filter((order) => {
-        const item = order.lineItems[0];
-        return (
-          item.name?.toLowerCase()?.includes('subscription') ||
-          item.title?.toLowerCase()?.includes('subscription') ||
-          item.vendor?.toLowerCase()?.includes('recurring')
-        );
-      })
-      .reduce((sum, order) => sum + getOrderIncome(order), 0);
+//     const mrr = allOrders
+//       .filter((order) => {
+//         const item = order.lineItems[0];
+//         return (
+//           item.name?.toLowerCase()?.includes('subscription') ||
+//           item.title?.toLowerCase()?.includes('subscription') ||
+//           item.vendor?.toLowerCase()?.includes('recurring')
+//         );
+//       })
+//       .reduce((sum, order) => sum + getOrderIncome(order), 0);
 
-    res.status(200).json({
-      totalIncome: totalIncome.toFixed(2),
-      netProfit: netProfit.toFixed(2),
-      mrr: mrr.toFixed(2),
-      totalOrdersInDb,
-      paidIncome: paidIncome.toFixed(2),
-      unpaidIncome: unpaidIncome.toFixed(2),
-      fulfilledOrders: fulfilledOrdersCount,
-      unfulfilledOrders: unfulfilledOrdersCount,
-    });
-  } catch (error) {
-    console.error('Finance summary error:', error);
-    res.status(500).json({ message: 'Error calculating finance summary' });
-  }
-};
-
+//     res.status(200).json({
+//       totalIncome: totalIncome.toFixed(2),
+//       netProfit: netProfit.toFixed(2),
+//       mrr: mrr.toFixed(2),
+//       totalOrdersInDb,
+//       paidIncome: paidIncome.toFixed(2),
+//       unpaidIncome: unpaidIncome.toFixed(2),
+//       fulfilledOrders: fulfilledOrdersCount,
+//       unfulfilledOrders: unfulfilledOrdersCount,
+//     });
+//   } catch (error) {
+//     console.error('Finance summary error:', error);
+//     res.status(500).json({ message: 'Error calculating finance summary' });
+//   }
+// };
 
 // export const getFinanceSummaryForUser = async (req, res) => {
 //   try {
@@ -477,27 +477,209 @@ export const getFinanceSummary = async (req, res) => {
 //   }
 // };
 
-
-export const getFinanceSummaryForUser = async (req, res) => {
+export const getFinanceSummary = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    if (!userId) {
-      return res.status(400).json({ message: "UserId required" });
-    }
+    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
 
-    const allOrders = await orderModel.find();
+    const allOrders = await orderModel.find({
+      createdAt: { $gte: startOfLastMonth },
+    });
 
+    const viewData = await viewModel.find();
+
+    const totalViews = viewData.reduce(
+      (sum, item) => sum + (item.totalViews || 0),
+      0
+    );
+
+    const lastMonthViews = viewData.reduce(
+      (sum, item) => sum + (item.monthlyViews || 0),
+      0
+    );
+    // ===== CURRENT =====
     let totalIncome = 0;
     let netProfit = 0;
-
     let totalOrders = 0;
     let fulfilledOrdersCount = 0;
     let unfulfilledOrdersCount = 0;
     let paidIncome = 0;
     let unpaidIncome = 0;
 
+    // ===== LAST MONTH =====
+    let lastMonthIncome = 0;
+    let lastMonthProfit = 0;
+    let lastMonthOrders = 0;
+
+    const getOrderIncome = (order) => {
+      return order.lineItems.reduce((total, item) => {
+        const price = parseFloat(item.price || '0');
+        const qty = parseFloat(item.quantity || '1');
+        return total + price * qty;
+      }, 0);
+    };
+
     for (const order of allOrders) {
+      const orderDate = new Date(order.createdAt);
+
+      const isCurrent = orderDate >= startOfCurrentMonth;
+      const isLast =
+        orderDate >= startOfLastMonth && orderDate < startOfCurrentMonth;
+
+      const income = getOrderIncome(order);
+
+      const cost = order.lineItems.reduce((total, item) => {
+        const itemCost = parseFloat(item.cost || '0');
+        const qty = parseFloat(item.quantity || '1');
+        return total + itemCost * qty;
+      }, 0);
+
+      // ===== CURRENT =====
+      if (isCurrent) {
+        totalOrders++;
+        totalIncome += income;
+        netProfit += income - cost;
+
+        const allFulfilled = order.lineItems.every(
+          (item) => item.fulfillment_status === 'fulfilled'
+        );
+
+        if (allFulfilled) {
+          fulfilledOrdersCount++;
+          paidIncome += income;
+        } else {
+          unfulfilledOrdersCount++;
+          unpaidIncome += income;
+        }
+      }
+
+      // ===== LAST MONTH =====
+      if (isLast) {
+        lastMonthOrders++;
+        lastMonthIncome += income;
+        lastMonthProfit += income - cost;
+      }
+    }
+
+    // ===== AOV =====
+    const averageOrderValue = totalOrders > 0 ? totalIncome / totalOrders : 0;
+
+    const lastMonthAOV =
+      lastMonthOrders > 0 ? lastMonthIncome / lastMonthOrders : 0;
+
+    // ===== GROWTH =====
+    const calcGrowth = (current, previous) => {
+      if (!previous || previous === 0) return 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    const revenueGrowth = calcGrowth(totalIncome, lastMonthIncome);
+    const profitGrowth = calcGrowth(netProfit, lastMonthProfit);
+    const ordersGrowth = calcGrowth(totalOrders, lastMonthOrders);
+    const aovGrowth = calcGrowth(averageOrderValue, lastMonthAOV);
+    const visitorsGrowth = calcGrowth(totalViews, lastMonthViews);
+
+    // ===== CONVERSION =====
+    const conversionRate =
+      totalViews > 0 ? (totalOrders / totalViews) * 100 : 0;
+
+    const lastMonthConversionRate =
+      lastMonthViews > 0 ? (lastMonthOrders / lastMonthViews) * 100 : 0;
+
+    const conversionGrowth = calcGrowth(
+      conversionRate,
+      lastMonthConversionRate
+    );
+
+    return res.status(200).json({
+      // ===== CURRENT =====
+      totalIncome: totalIncome.toFixed(2),
+      netProfit: netProfit.toFixed(2),
+      totalOrdersInDb: totalOrders,
+      paidIncome: paidIncome.toFixed(2),
+      unpaidIncome: unpaidIncome.toFixed(2),
+      fulfilledOrders: fulfilledOrdersCount,
+      unfulfilledOrders: unfulfilledOrdersCount,
+      averageOrderValue: averageOrderValue.toFixed(2),
+      totalViews,
+
+      // ===== LAST MONTH =====
+      lastMonthIncome: lastMonthIncome.toFixed(2),
+      lastMonthProfit: lastMonthProfit.toFixed(2),
+      lastMonthOrders,
+      lastMonthAOV: lastMonthAOV.toFixed(2),
+      lastMonthViews,
+
+      // ===== GROWTH =====
+      revenueGrowth: revenueGrowth.toFixed(2),
+      profitGrowth: profitGrowth.toFixed(2),
+      ordersGrowth: ordersGrowth.toFixed(2),
+      aovGrowth: aovGrowth.toFixed(2),
+      visitorsGrowth: visitorsGrowth.toFixed(2),
+      conversionGrowth: conversionGrowth.toFixed(2),
+
+      // ===== EXTRA =====
+      conversionRate: conversionRate.toFixed(2),
+    });
+  } catch (error) {
+    console.error('Finance summary error:', error);
+    res.status(500).json({
+      message: 'Error calculating finance summary',
+    });
+  }
+};
+
+export const getFinanceSummaryForUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'UserId required' });
+    }
+
+    // 🔥 Fetch only relevant time range (performance fix)
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
+
+    const allOrders = await orderModel.find({
+      createdAt: { $gte: startOfLastMonth },
+    });
+
+    // 🔥 GET VIEWS
+    const viewData = await viewModel.findOne({ userId });
+
+    const totalViews = viewData?.totalViews || 0;
+    const lastMonthViews = viewData?.monthlyViews || 0; // ⚠️ rolling month
+
+    // ===== CURRENT =====
+    let totalIncome = 0;
+    let netProfit = 0;
+    let totalOrders = 0;
+    let fulfilledOrdersCount = 0;
+    let unfulfilledOrdersCount = 0;
+    let paidIncome = 0;
+    let unpaidIncome = 0;
+
+    // ===== LAST MONTH =====
+    let lastMonthIncome = 0;
+    let lastMonthProfit = 0;
+    let lastMonthOrders = 0;
+
+    for (const order of allOrders) {
+      const orderDate = new Date(order.createdAt);
+
+      const isCurrent = orderDate >= startOfCurrentMonth;
+      const isLast =
+        orderDate >= startOfLastMonth && orderDate < startOfCurrentMonth;
+
       const snapshots = order.ProductSnapshot || [];
 
       let userSnapshots = [];
@@ -507,15 +689,12 @@ export const getFinanceSummaryForUser = async (req, res) => {
       for (const snap of snapshots) {
         if (snap.merchantId?.toString() !== userId) continue;
 
-        // 🔥 match lineItem
         const lineItem = order.lineItems.find(
-          (item) =>
-            item.variant_id?.toString() ===
-            snap.variantId?.toString()
+          (item) => item.variant_id?.toString() === snap.variantId?.toString()
         );
 
-        // ❌ skip cancelled
-        if (lineItem?.fulfillment_status === "cancelled") continue;
+        if (!lineItem) continue;
+        if (lineItem.fulfillment_status === 'cancelled') continue;
 
         userSnapshots.push(snap);
 
@@ -530,94 +709,107 @@ export const getFinanceSummaryForUser = async (req, res) => {
         orderCost += cost * qty;
       }
 
-      // 👉 only count order if valid items exist
-      if (userSnapshots.length > 0) {
-        totalOrders += 1;
+      if (userSnapshots.length === 0) continue;
+
+      // ===== CURRENT =====
+      if (isCurrent) {
+        totalOrders++;
         totalIncome += orderIncome;
         netProfit += orderIncome - orderCost;
 
-        // 🔎 fulfillment check
         const userLineItems = order.lineItems.filter((item) =>
           userSnapshots.some(
-            (snap) =>
-              snap.variantId?.toString() ===
-              item.variant_id?.toString()
+            (snap) => snap.variantId?.toString() === item.variant_id?.toString()
           )
         );
 
         const allFulfilled = userLineItems.every(
-          (item) => item.fulfillment_status === "fulfilled"
+          (item) => item.fulfillment_status === 'fulfilled'
         );
 
         if (allFulfilled) {
-          fulfilledOrdersCount += 1;
+          fulfilledOrdersCount++;
           paidIncome += orderIncome;
         } else {
-          unfulfilledOrdersCount += 1;
+          unfulfilledOrdersCount++;
           unpaidIncome += orderIncome;
         }
       }
-    }
 
-    // ✅ AOV (FIXED)
-    const averageOrderValue =
-      totalOrders > 0 ? totalIncome / totalOrders : 0;
-
-    // 🔥 MRR
-    let mrr = 0;
-
-    for (const order of allOrders) {
-      const snapshots = order.ProductSnapshot || [];
-
-      for (const snap of snapshots) {
-        if (snap.merchantId?.toString() !== userId) continue;
-
-        const lineItem = order.lineItems.find(
-          (item) =>
-            item.variant_id?.toString() ===
-            snap.variantId?.toString()
-        );
-
-        if (lineItem?.fulfillment_status === "cancelled") continue;
-
-        const productName =
-          snap.product?.title?.toLowerCase() || "";
-
-        if (
-          productName.includes("subscription") ||
-          productName.includes("recurring")
-        ) {
-          const price =
-            parseFloat(snap.variant?.price || 0) ||
-            parseFloat(snap.product?.variants?.[0]?.price || 0);
-
-          const qty = parseFloat(snap.quantity || 1);
-
-          mrr += price * qty;
-        }
+      // ===== LAST MONTH =====
+      if (isLast) {
+        lastMonthOrders++;
+        lastMonthIncome += orderIncome;
+        lastMonthProfit += orderIncome - orderCost;
       }
     }
 
+    // ===== AOV =====
+    const averageOrderValue = totalOrders > 0 ? totalIncome / totalOrders : 0;
+
+    const lastMonthAOV =
+      lastMonthOrders > 0 ? lastMonthIncome / lastMonthOrders : 0;
+
+    // ===== GROWTH =====
+    const calcGrowth = (current, previous) => {
+      if (!previous || previous === 0) return 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    const revenueGrowth = calcGrowth(totalIncome, lastMonthIncome);
+    const profitGrowth = calcGrowth(netProfit, lastMonthProfit);
+    const ordersGrowth = calcGrowth(totalOrders, lastMonthOrders);
+    const aovGrowth = calcGrowth(averageOrderValue, lastMonthAOV);
+
+    const visitorsGrowth = calcGrowth(totalViews, lastMonthViews);
+
+    // ===== CONVERSION =====
+    const conversionRate =
+      totalViews > 0 ? (totalOrders / totalViews) * 100 : 0;
+
+    const lastMonthConversionRate =
+      lastMonthViews > 0 ? (lastMonthOrders / lastMonthViews) * 100 : 0;
+
+    const conversionGrowth = calcGrowth(
+      conversionRate,
+      lastMonthConversionRate
+    );
+
     return res.status(200).json({
+      // ===== CURRENT =====
       totalIncome: totalIncome.toFixed(2),
       netProfit: netProfit.toFixed(2),
-      mrr: mrr.toFixed(2),
-
       totalOrdersInDb: totalOrders,
-
       paidIncome: paidIncome.toFixed(2),
       unpaidIncome: unpaidIncome.toFixed(2),
-
       fulfilledOrders: fulfilledOrdersCount,
       unfulfilledOrders: unfulfilledOrdersCount,
-
-
       averageOrderValue: averageOrderValue.toFixed(2),
+
+      totalViews,
+
+      // ===== LAST MONTH =====
+      lastMonthIncome: lastMonthIncome.toFixed(2),
+      lastMonthProfit: lastMonthProfit.toFixed(2),
+      lastMonthOrders,
+      lastMonthAOV: lastMonthAOV.toFixed(2),
+      lastMonthViews,
+
+      // ===== GROWTH =====
+      revenueGrowth: revenueGrowth.toFixed(2),
+      profitGrowth: profitGrowth.toFixed(2),
+      ordersGrowth: ordersGrowth.toFixed(2),
+      aovGrowth: aovGrowth.toFixed(2),
+      visitorsGrowth: visitorsGrowth.toFixed(2),
+      conversionGrowth: conversionGrowth.toFixed(2),
+
+      // ===== EXTRA =====
+      conversionRate: conversionRate.toFixed(2),
     });
   } catch (error) {
-    console.error("Finance summary error for user:", error);
+    console.error('Finance summary error for user:', error);
     res.status(500).json({
-      message: "Error calculating finance summary for user",
+      message: 'Error calculating finance summary for user',
     });
   }
 };

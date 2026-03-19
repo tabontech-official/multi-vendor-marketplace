@@ -24,6 +24,7 @@ import { v4 as uuidv4 } from 'uuid';
 import csvImportBatchSchema from '../Models/csvImportBatchSchema.js';
 import { runCsvImportWorker } from './csvImportWorker.js';
 import { orderModel } from '../Models/order.js';
+import { TopProductStats } from '../Models/TopProductStats.js';
 export const shopifyRequest = async (
   url,
   method,
@@ -6740,5 +6741,198 @@ export const getTopProductsAdmin = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Error' });
+  }
+};
+
+
+export const saveDailyTopProductsJob = async () => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(today);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 1);
+
+    const data = await orderModel.aggregate([
+      { $unwind: "$ProductSnapshot" },
+      { $unwind: "$lineItems" },
+
+      {
+        $match: {
+          createdAt: { $gte: start, $lt: end },
+          $expr: {
+            $and: [
+              {
+                $eq: [
+                  { $toString: "$ProductSnapshot.productId" },
+                  { $toString: "$lineItems.product_id" },
+                ],
+              },
+              {
+                $ne: ["$lineItems.fulfillment_status", "cancelled"],
+              },
+            ],
+          },
+        },
+      },
+
+      {
+        $group: {
+          _id: {
+            productId: "$ProductSnapshot.productId",
+            merchantId: "$ProductSnapshot.merchantId", // 🔥 TAKE FROM HERE
+          },
+          unitsSold: { $sum: "$ProductSnapshot.quantity" },
+          revenue: {
+            $sum: {
+              $multiply: [
+                "$ProductSnapshot.quantity",
+                { $toDouble: "$lineItems.price" },
+              ],
+            },
+          },
+          productName: { $first: "$ProductSnapshot.product.title" },
+        },
+      },
+    ]);
+
+    // ✅ SAVE WITH merchantId
+    const docs = data.map((item) => ({
+      productId: item._id.productId,
+      merchantId: item._id.merchantId, // 🔥 FIXED
+      productName: item.productName,
+      date: today,
+      unitsSold: item.unitsSold,
+      revenue: item.revenue,
+      views: 0,
+    }));
+
+    await TopProductStats.insertMany(docs);
+
+    console.log("Top product stats saved");
+  } catch (err) {
+    console.error("Cron error:", err);
+  }
+};
+
+
+
+export const getTopProductsHistoryByMerchant = async (req, res) => {
+  try {
+    console.log("API HIT: getTopProductsHistoryByMerchant");
+
+    const { limit = 10 } = req.query;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID missing" });
+    }
+
+    const merchantObjectId = new mongoose.Types.ObjectId(userId);
+
+    const pipeline = [
+      {
+        $match: {
+          merchantId: merchantObjectId, // ✅ exact match
+        },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          productName: { $first: "$productName" },
+          units: { $sum: "$unitsSold" },
+          revenue: { $sum: "$revenue" },
+          views: { $sum: "$views" },
+        },
+      },
+      {
+        $addFields: {
+          conversionRate: {
+            $cond: [
+              { $gt: ["$views", 0] },
+              {
+                $round: [
+                  {
+                    $multiply: [
+                      { $divide: ["$units", "$views"] },
+                      100,
+                    ],
+                  },
+                  2,
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $sort: { units: -1 },
+      },
+      {
+        $limit: Number(limit),
+      },
+    ];
+
+    const data = await TopProductStats.aggregate(pipeline);
+
+    return res.json({ success: true, data });
+
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ message: "Error fetching history" });
+  }
+};
+
+export const getTopProductsHistoryAdmin = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const data = await TopProductStats.aggregate([
+      {
+        $match: {},
+      },
+
+      {
+        $group: {
+          _id: "$productId",
+          productName: { $first: "$productName" },
+          units: { $sum: "$unitsSold" },
+          revenue: { $sum: "$revenue" },
+          views: { $sum: "$views" },
+        },
+      },
+
+      {
+        $addFields: {
+          conversionRate: {
+            $cond: [
+              { $gt: ["$views", 0] },
+              {
+                $round: [
+                  {
+                    $multiply: [
+                      { $divide: ["$units", "$views"] },
+                      100,
+                    ],
+                  },
+                  2,
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+
+      { $sort: { units: -1 } },
+      { $limit: Number(limit) },
+    ]);
+
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching admin history" });
   }
 };

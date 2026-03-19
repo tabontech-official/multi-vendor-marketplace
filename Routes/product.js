@@ -49,6 +49,8 @@ import {
   getSingleBatch,
   getTopProductsAdmin,
   getTopProductsByMerchant,
+  getTopProductsHistoryAdmin,
+  getTopProductsHistoryByMerchant,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -144,6 +146,9 @@ productRouter.get('/trackingViews/:userId', getTrackingCountForUser);
 productRouter.get('/trackingViews/', getTrackingCountForAdmin);
 productRouter.get('/topProducts', getTopProductsAdmin);
 productRouter.get('/topProductsForMerchants',verifyToken, getTopProductsByMerchant);
+productRouter.get('/top-products-history-admin', getTopProductsHistoryAdmin);
+productRouter.get('/top-products-history',verifyToken, getTopProductsHistoryByMerchant);
+
 productRouter.get('/getProductCountForUser/:userId', fetchProductCountForUser);
 productRouter.post(
   '/upload-csv-for-bulk-upload',

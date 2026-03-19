@@ -26,17 +26,19 @@ import { financeCron } from './controller/financeCron.js';
 import { startCsvImportWorkerForInventory } from './controller/inventoryCsvWorker.js';
 import contentRoutes from './Routes/contentRoutes.js';
 import adminFilesRouter from './Routes/adminFiles.js';
+import { startTopProductCron } from './controller/topProductCron.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
 setupSwagger(app);
+
 // Initialize MongoDB connection
 
 // startCsvImportWorker();
 Connect();
 productSubscriptionExpiration();
 startCsvImportWorkerForInventory()
-
+startTopProductCron()
 // deleteOrphanedProducts();
 financeScheduler.start();
 // financeCron()
