@@ -1,41 +1,44 @@
+import mongoose from 'mongoose';
 
-import mongoose from "mongoose";
-
-const userViewSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true,
-    index: true,  
-  },
-  totalViews: {
-    type: Number,
-    default: 0,
-  },products: [
+const userViewSchema = new mongoose.Schema(
   {
-    productId: String,
-    totalViews: { type: Number, default: 0 },
-    weeklyViews: { type: Number, default: 0 },
-    monthlyViews: { type: Number, default: 0 },
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    totalViews: {
+      type: Number,
+      default: 0,
+    },
+    products: [
+      {
+        productId: String,
+        totalViews: { type: Number, default: 0 },
+        weeklyViews: { type: Number, default: 0 },
+        monthlyViews: { type: Number, default: 0 },
+      },
+    ],
+    weeklyViews: {
+      type: Number,
+      default: 0,
+    },
+    monthlyViews: {
+      type: Number,
+      default: 0,
+    },
+    lastWeeklyReset: {
+      type: Date,
+      default: Date.now,
+    },
+    lastMonthlyReset: {
+      type: Date,
+      default: Date.now,
+    },
   },
-],
-  weeklyViews: {
-    type: Number,
-    default: 0,
-  },
-  monthlyViews: {
-    type: Number,
-    default: 0,
-  },
-  lastWeeklyReset: {
-    type: Date,
-    default: Date.now,
-  },
-  lastMonthlyReset: {
-    type: Date,
-    default: Date.now,
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true,
-});
+);
 
-export const viewModel = mongoose.model("productTracking", userViewSchema);
+export const viewModel = mongoose.model('productTracking', userViewSchema);

@@ -364,9 +364,15 @@ export const getFinanceSummary = async (req, res) => {
   }
 };
 
+
 // export const getFinanceSummaryForUser = async (req, res) => {
 //   try {
 //     const { userId } = req.params;
+
+//     if (!userId) {
+//       return res.status(400).json({ message: 'UserId required' });
+//     }
+
 //     const allOrders = await orderModel.find();
 
 //     let totalIncome = 0;
@@ -378,42 +384,40 @@ export const getFinanceSummary = async (req, res) => {
 //     let paidIncome = 0;
 //     let unpaidIncome = 0;
 
-//     const getOrderIncome = (order) => {
-//       return order.lineItems.reduce((total, item) => {
-//         const price = parseFloat(item.price || '0');
-//         const qty = parseFloat(item.quantity || '1');
-//         return total + price * qty;
-//       }, 0);
-//     };
-
 //     for (const order of allOrders) {
-//       let userLineItems = [];
+//       const snapshots = order.ProductSnapshot || [];
+
+//       let userSnapshots = [];
 //       let orderIncome = 0;
 //       let orderCost = 0;
 
-//       for (const item of order.lineItems) {
-//         const variantId = item.variant_id;
+//       for (const snap of snapshots) {
+//         if (snap.merchantId?.toString() !== userId) continue;
 
-//         const product = await listingModel.findOne({
-//           'variants.id': variantId,
-//         });
+//         userSnapshots.push(snap);
 
-//         if (product && product.userId.toString() === userId) {
-//           userLineItems.push(item);
+//         const price =
+//           parseFloat(snap.variant?.price || 0) ||
+//           parseFloat(snap.product?.variants?.[0]?.price || 0);
 
-//           const price = parseFloat(item.price || '0');
-//           const qty = parseFloat(item.quantity || '1');
-//           const cost = parseFloat(item.cost || '0');
+//         const qty = parseFloat(snap.quantity || 1);
+//         const cost = parseFloat(snap.variant?.cost || 0);
 
-//           orderIncome += price * qty;
-//           orderCost += cost * qty;
-//         }
+//         orderIncome += price * qty;
+//         orderCost += cost * qty;
 //       }
 
-//       if (userLineItems.length > 0) {
+//       if (userSnapshots.length > 0) {
 //         totalOrders += 1;
 //         totalIncome += orderIncome;
 //         netProfit += orderIncome - orderCost;
+
+//         // 🔎 fulfillment check (lineItems se match karenge)
+//         const userLineItems = order.lineItems.filter((item) =>
+//           userSnapshots.some(
+//             (snap) => snap.variantId?.toString() === item.variant_id?.toString()
+//           )
+//         );
 
 //         const allFulfilled = userLineItems.every(
 //           (item) => item.fulfillment_status === 'fulfilled'
@@ -429,32 +433,33 @@ export const getFinanceSummary = async (req, res) => {
 //       }
 //     }
 
-//     const mrr = allOrders
-//       .filter((order) => {
-//         const item = order.lineItems[0];
-//         return (
-//           item.name?.toLowerCase()?.includes('subscription') ||
-//           item.title?.toLowerCase()?.includes('subscription') ||
-//           item.vendor?.toLowerCase()?.includes('recurring')
-//         );
-//       })
-//       .reduce((sum, order) => {
-//         let userIncome = 0;
-//         for (const item of order.lineItems) {
-//           const product = listingModel.findOne({
-//             'variants.id': item.variant_id,
-//           });
+//     // 🔥 MRR calculation using snapshot
+//     let mrr = 0;
 
-//           if (product && product.userId.toString() === userId) {
-//             const price = parseFloat(item.price || '0');
-//             const qty = parseFloat(item.quantity || '1');
-//             userIncome += price * qty;
-//           }
+//     for (const order of allOrders) {
+//       const snapshots = order.ProductSnapshot || [];
+
+//       for (const snap of snapshots) {
+//         if (snap.merchantId?.toString() !== userId) continue;
+
+//         const productName = snap.product?.title?.toLowerCase() || '';
+
+//         if (
+//           productName.includes('subscription') ||
+//           productName.includes('recurring')
+//         ) {
+//           const price =
+//             parseFloat(snap.variant?.price || 0) ||
+//             parseFloat(snap.product?.variants?.[0]?.price || 0);
+
+//           const qty = parseFloat(snap.quantity || 1);
+
+//           mrr += price * qty;
 //         }
-//         return sum + userIncome;
-//       }, 0);
+//       }
+//     }
 
-//     res.status(200).json({
+//     return res.status(200).json({
 //       totalIncome: totalIncome.toFixed(2),
 //       netProfit: netProfit.toFixed(2),
 //       mrr: mrr.toFixed(2),
@@ -472,12 +477,13 @@ export const getFinanceSummary = async (req, res) => {
 //   }
 // };
 
+
 export const getFinanceSummaryForUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
     if (!userId) {
-      return res.status(400).json({ message: 'UserId required' });
+      return res.status(400).json({ message: "UserId required" });
     }
 
     const allOrders = await orderModel.find();
@@ -501,6 +507,16 @@ export const getFinanceSummaryForUser = async (req, res) => {
       for (const snap of snapshots) {
         if (snap.merchantId?.toString() !== userId) continue;
 
+        // 🔥 match lineItem
+        const lineItem = order.lineItems.find(
+          (item) =>
+            item.variant_id?.toString() ===
+            snap.variantId?.toString()
+        );
+
+        // ❌ skip cancelled
+        if (lineItem?.fulfillment_status === "cancelled") continue;
+
         userSnapshots.push(snap);
 
         const price =
@@ -514,20 +530,23 @@ export const getFinanceSummaryForUser = async (req, res) => {
         orderCost += cost * qty;
       }
 
+      // 👉 only count order if valid items exist
       if (userSnapshots.length > 0) {
         totalOrders += 1;
         totalIncome += orderIncome;
         netProfit += orderIncome - orderCost;
 
-        // 🔎 fulfillment check (lineItems se match karenge)
+        // 🔎 fulfillment check
         const userLineItems = order.lineItems.filter((item) =>
           userSnapshots.some(
-            (snap) => snap.variantId?.toString() === item.variant_id?.toString()
+            (snap) =>
+              snap.variantId?.toString() ===
+              item.variant_id?.toString()
           )
         );
 
         const allFulfilled = userLineItems.every(
-          (item) => item.fulfillment_status === 'fulfilled'
+          (item) => item.fulfillment_status === "fulfilled"
         );
 
         if (allFulfilled) {
@@ -540,7 +559,11 @@ export const getFinanceSummaryForUser = async (req, res) => {
       }
     }
 
-    // 🔥 MRR calculation using snapshot
+    // ✅ AOV (FIXED)
+    const averageOrderValue =
+      totalOrders > 0 ? totalIncome / totalOrders : 0;
+
+    // 🔥 MRR
     let mrr = 0;
 
     for (const order of allOrders) {
@@ -549,11 +572,20 @@ export const getFinanceSummaryForUser = async (req, res) => {
       for (const snap of snapshots) {
         if (snap.merchantId?.toString() !== userId) continue;
 
-        const productName = snap.product?.title?.toLowerCase() || '';
+        const lineItem = order.lineItems.find(
+          (item) =>
+            item.variant_id?.toString() ===
+            snap.variantId?.toString()
+        );
+
+        if (lineItem?.fulfillment_status === "cancelled") continue;
+
+        const productName =
+          snap.product?.title?.toLowerCase() || "";
 
         if (
-          productName.includes('subscription') ||
-          productName.includes('recurring')
+          productName.includes("subscription") ||
+          productName.includes("recurring")
         ) {
           const price =
             parseFloat(snap.variant?.price || 0) ||
@@ -570,137 +602,25 @@ export const getFinanceSummaryForUser = async (req, res) => {
       totalIncome: totalIncome.toFixed(2),
       netProfit: netProfit.toFixed(2),
       mrr: mrr.toFixed(2),
+
       totalOrdersInDb: totalOrders,
+
       paidIncome: paidIncome.toFixed(2),
       unpaidIncome: unpaidIncome.toFixed(2),
+
       fulfilledOrders: fulfilledOrdersCount,
       unfulfilledOrders: unfulfilledOrdersCount,
+
+
+      averageOrderValue: averageOrderValue.toFixed(2),
     });
   } catch (error) {
-    console.error('Finance summary error for user:', error);
-    res
-      .status(500)
-      .json({ message: 'Error calculating finance summary for user' });
+    console.error("Finance summary error for user:", error);
+    res.status(500).json({
+      message: "Error calculating finance summary for user",
+    });
   }
 };
-
-// export const getOrderById = async (req, res) => {
-//   try {
-//     const userId = req.userId?.toString();
-
-//     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-//       return res.status(400).send({ message: 'Invalid user ID' });
-//     }
-
-//     const allOrders = await orderModel.find({});
-//     const ordersGrouped = new Map();
-
-//     for (const order of allOrders) {
-//       const filteredLineItems = [];
-
-//       for (const item of order.lineItems || []) {
-//         const variantId = item.variant_id?.toString();
-//         if (!variantId) continue;
-
-//         // 🔍 Find product by variant
-//         const product = await listingModel
-//           .findOne({ 'variants.id': variantId })
-//           .lean();
-
-//         // 🚫 Product hi nahi mila
-//         if (!product) continue;
-
-//         // 🚫 Product merchant ka nahi
-//         if (product.userId?.toString() !== userId) continue;
-
-//         // ✅ IMAGE RESOLUTION
-//         let imageData = null;
-
-//         // const matchedVariant = product.variants.find(
-//         //   (v) => v.id.toString() === variantId
-//         // );
-//         const matchedVariant = product.variants?.find(
-//           (v) => v?.id && v.id.toString() === variantId
-//         );
-
-//         if (matchedVariant?.image_id && product.variantImages?.length) {
-//           // const img = product.variantImages.find(
-//           //   (i) => i.id.toString() === matchedVariant.image_id.toString()
-//           // );
-//           const img = product.variantImages?.find(
-//             (i) =>
-//               i?.id &&
-//               matchedVariant?.image_id &&
-//               i.id.toString() === matchedVariant.image_id.toString()
-//           );
-
-//           if (img) {
-//             imageData = {
-//               id: img.id,
-//               src: img.src,
-//               alt: img.alt || '',
-//               position: img.position,
-//               width: img.width,
-//               height: img.height,
-//             };
-//           }
-//         }
-
-//         if (!imageData && product.images?.length) {
-//           const img = product.images[0];
-//           imageData = {
-//             id: img.id,
-//             src: img.src,
-//             alt: img.alt || '',
-//             position: img.position,
-//             width: img.width,
-//             height: img.height,
-//           };
-//         }
-
-//         // 🚫 image bhi nahi mili
-//         if (!imageData) continue;
-
-//         filteredLineItems.push({
-//           ...item,
-//           image: imageData,
-//         });
-//       }
-
-//       // 🚫 Is order mein merchant ka koi item hi nahi
-//       if (!filteredLineItems.length) continue;
-
-//       const orderData = order.toObject();
-//       orderData.lineItems = filteredLineItems;
-
-//       if (ordersGrouped.has(order.orderId)) {
-//         const existing = ordersGrouped.get(order.orderId);
-//         existing.lineItems.push(...filteredLineItems);
-
-//         // 🔁 dedupe by variant
-//         existing.lineItems = Array.from(
-//           new Map(existing.lineItems.map((li) => [li.variant_id, li])).values()
-//         );
-//       } else {
-//         ordersGrouped.set(order.orderId, orderData);
-//       }
-//     }
-
-//     const finalOrders = Array.from(ordersGrouped.values());
-
-//     if (!finalOrders.length) {
-//       return res.status(404).send({ message: 'No orders found' });
-//     }
-
-//     return res.status(200).send({
-//       message: 'Orders found',
-//       data: finalOrders,
-//     });
-//   } catch (error) {
-//     console.error('❌ getOrderById error:', error);
-//     return res.status(500).send({ message: 'Internal Server Error' });
-//   }
-// };
 
 export const getOrderById = async (req, res) => {
   try {

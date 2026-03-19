@@ -350,9 +350,6 @@ export const addUsedEquipments = async (req, res) => {
       parsedOptions[0]?.values?.length === 1 &&
       parsedOptions[0]?.values[0] === 'Default';
 
-    /* =========================================================
-   UNIVERSAL INVENTORY SYNC (DEFAULT + MULTI SAFE)
-========================================================= */
 
     if (track_quantity && productResponse?.product?.variants?.length) {
       try {
@@ -4200,8 +4197,6 @@ const generateBatchId = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
 
-
-
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   const file = req.file;
 //   const userId = req.userId;
@@ -4236,48 +4231,41 @@ const generateBatchId = () => {
 //   }
 // };
 
-
 const validateCsvFile = (fileBuffer) => {
   try {
-    const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
     if (!rows.length) {
       return {
         valid: false,
-        error: "Excel file is empty"
+        error: 'Excel file is empty',
       };
     }
 
     const headers = Object.keys(rows[0]);
 
-    const REQUIRED_COLUMNS = [
-      "Title",
-      "Product URL",
-      "Price",
-      "Vendor"
-    ];
+    const REQUIRED_COLUMNS = ['Title', 'Product URL', 'Price', 'Vendor'];
 
     const missingColumns = REQUIRED_COLUMNS.filter(
-      col => !headers.includes(col)
+      (col) => !headers.includes(col)
     );
 
     if (missingColumns.length > 0) {
       return {
         valid: false,
-        error: `Missing columns: ${missingColumns.join(", ")}`
+        error: `Missing columns: ${missingColumns.join(', ')}`,
       };
     }
 
     return { valid: true };
-
   } catch (err) {
     return {
       valid: false,
-      error: "Invalid Excel/CSV format"
+      error: 'Invalid Excel/CSV format',
     };
   }
 };
@@ -4290,11 +4278,11 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     if (!file || !file.buffer) {
       return res.status(400).json({
         success: false,
-        message: "No file uploaded",
+        message: 'No file uploaded',
       });
     }
 
-    console.log("📁 File received:", file.originalname);
+    console.log('📁 File received:', file.originalname);
 
     const batchNo = `BATCH-${generateBatchId()}`;
 
@@ -4307,21 +4295,21 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       mimeType: file.mimetype,
       fileSize: file.size,
       fileBuffer: file.buffer,
-      status: "pending",
+      status: 'pending',
       createdAt: new Date(),
     });
 
-    console.log("✅ Batch saved:", batch.batchNo);
+    console.log('✅ Batch saved:', batch.batchNo);
 
     /* ================= TRIGGER WORKER ================= */
 
     setImmediate(async () => {
       try {
-        console.log("🚀 Triggering CSV Worker...");
+        console.log('🚀 Triggering CSV Worker...');
         await runCsvImportWorker();
-        console.log("✅ Worker finished");
+        console.log('✅ Worker finished');
       } catch (err) {
-        console.log("❌ Worker trigger error:", err.message);
+        console.log('❌ Worker trigger error:', err.message);
       }
     });
 
@@ -4329,13 +4317,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "File uploaded successfully. Processing started.",
+      message: 'File uploaded successfully. Processing started.',
       batchNo: batch.batchNo,
       status: batch.status,
     });
-
   } catch (err) {
-    console.log("❌ Upload API Error:", err.message);
+    console.log('❌ Upload API Error:', err.message);
 
     return res.status(500).json({
       success: false,
@@ -4343,7 +4330,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
-
 
 export const getAllBatches = async (req, res) => {
   try {
@@ -5285,11 +5271,11 @@ export const updateInventoryFromCsv = async (req, res) => {
   const userId = req.body.userId;
 
   if (!file || !file.buffer) {
-    return res.status(400).json({ error: "No file uploaded." });
+    return res.status(400).json({ error: 'No file uploaded.' });
   }
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: "Invalid or missing userId." });
+    return res.status(400).json({ error: 'Invalid or missing userId.' });
   }
 
   try {
@@ -5302,19 +5288,16 @@ export const updateInventoryFromCsv = async (req, res) => {
       mimeType: file.mimetype,
       fileSize: file.size,
       fileBuffer: file.buffer,
-      status: "pending",
-      batchLogs: [
-        { message: "Inventory batch created" }
-      ]
+      status: 'pending',
+      batchLogs: [{ message: 'Inventory batch created' }],
     });
 
     return res.status(200).json({
       success: true,
-      message: "Inventory CSV uploaded. Processing will start shortly.",
+      message: 'Inventory CSV uploaded. Processing will start shortly.',
       batchNo: batch.batchNo,
       status: batch.status,
     });
-
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -5322,7 +5305,6 @@ export const updateInventoryFromCsv = async (req, res) => {
     });
   }
 };
-
 
 export const exportInventoryCsv = async (req, res) => {
   try {
@@ -5801,13 +5783,13 @@ export const trackProductView = async (req, res) => {
     const { productId } = req.body;
 
     if (!productId) {
-      return res.status(400).json({ message: "Product ID is required" });
+      return res.status(400).json({ message: 'Product ID is required' });
     }
 
     const product = await listingModel.findOne({ shopifyId: productId });
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ message: 'Product not found' });
     }
 
     const userId = product.userId;
@@ -5833,7 +5815,6 @@ export const trackProductView = async (req, res) => {
           },
         ],
       });
-
     } else {
       const lastWeek = new Date(existing.lastWeeklyReset);
       const isNewWeek = now - lastWeek > 1000 * 60 * 60 * 24 * 7;
@@ -5876,12 +5857,12 @@ export const trackProductView = async (req, res) => {
       if (productIndex > -1) {
         // update existing product
         await viewModel.updateOne(
-          { userId, "products.productId": productId },
+          { userId, 'products.productId': productId },
           {
             $inc: {
-              "products.$.totalViews": 1,
-              "products.$.weeklyViews": isNewWeek ? 0 : 1,
-              "products.$.monthlyViews": isNewMonth ? 0 : 1,
+              'products.$.totalViews': 1,
+              'products.$.weeklyViews': isNewWeek ? 0 : 1,
+              'products.$.monthlyViews': isNewMonth ? 0 : 1,
             },
           }
         );
@@ -5903,11 +5884,10 @@ export const trackProductView = async (req, res) => {
       }
     }
 
-    res.status(200).json({ message: "View counted" });
-
+    res.status(200).json({ message: 'View counted' });
   } catch (error) {
-    console.error("Error tracking product view:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error tracking product view:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -5932,7 +5912,6 @@ export const getTrackingCountForUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to get user view count' });
   }
 };
-
 
 export const addCsvfileForBulkUploader = async (req, res) => {
   const file = req.file;
@@ -6447,19 +6426,15 @@ export const approvelProduct = async (req, res) => {
   }
 };
 
-
-
-
-
-
-export const getTopProductsAdmin = async (req, res) => {
+export const getTopProductsByMerchant = async (req, res) => {
   try {
-    const { limit = 4, period = "month" } = req.query;
+    const { limit = 4, period = 'month' } = req.query;
+    const userId = req.userId;
 
     let startDate = new Date();
     let prevStartDate = new Date();
 
-    if (period === "week") {
+    if (period === 'week') {
       startDate.setDate(startDate.getDate() - 7);
       prevStartDate.setDate(prevStartDate.getDate() - 14);
     } else {
@@ -6467,64 +6442,119 @@ export const getTopProductsAdmin = async (req, res) => {
       prevStartDate.setMonth(prevStartDate.getMonth() - 2);
     }
 
-    // 🔹 CURRENT PERIOD
+    // ✅ CURRENT PERIOD (SELLER FILTER)
     const current = await orderModel.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
-      { $unwind: "$ProductSnapshot" },
+      { $unwind: '$ProductSnapshot' },
+      { $unwind: '$lineItems' },
+
+      {
+        $match: {
+          createdAt: { $gte: startDate },
+          'ProductSnapshot.merchantId': new mongoose.Types.ObjectId(userId),
+
+          $expr: {
+            $and: [
+              {
+                $eq: [
+                  { $toString: '$ProductSnapshot.productId' },
+                  { $toString: '$lineItems.product_id' },
+                ],
+              },
+              {
+                $ne: ['$lineItems.fulfillment_status', 'cancelled'],
+              },
+            ],
+          },
+        },
+      },
 
       {
         $group: {
-          _id: "$ProductSnapshot.productId",
-          units: { $sum: "$ProductSnapshot.quantity" },
+          _id: '$ProductSnapshot.productId',
+
+          units: {
+            $sum: '$ProductSnapshot.quantity',
+          },
 
           revenue: {
             $sum: {
               $multiply: [
-                "$ProductSnapshot.quantity",
+                '$ProductSnapshot.quantity',
                 {
                   $toDouble: {
-                    $ifNull: [
-                      "$ProductSnapshot.variant.price",
-                      0,
-                    ],
+                    $ifNull: ['$lineItems.price', 0],
                   },
                 },
               ],
             },
           },
 
-          name: { $first: "$ProductSnapshot.product.title" },
+          name: { $first: '$ProductSnapshot.product.title' },
         },
       },
     ]);
 
-    // 🔹 PREVIOUS PERIOD
+    // ✅ PREVIOUS PERIOD
     const previous = await orderModel.aggregate([
+      { $unwind: '$ProductSnapshot' },
+      { $unwind: '$lineItems' },
+
       {
         $match: {
           createdAt: { $gte: prevStartDate, $lt: startDate },
+          'ProductSnapshot.merchantId': new mongoose.Types.ObjectId(userId),
+
+          $expr: {
+            $and: [
+              {
+                $eq: [
+                  { $toString: '$ProductSnapshot.productId' },
+                  { $toString: '$lineItems.product_id' },
+                ],
+              },
+              {
+                $ne: ['$lineItems.fulfillment_status', 'cancelled'],
+              },
+            ],
+          },
         },
       },
-      { $unwind: "$ProductSnapshot" },
 
       {
         $group: {
-          _id: "$ProductSnapshot.productId",
-          units: { $sum: "$ProductSnapshot.quantity" },
+          _id: '$ProductSnapshot.productId',
+          units: { $sum: '$ProductSnapshot.quantity' },
         },
       },
     ]);
 
-    // 🔹 MAP previous data
+    // ✅ PREVIOUS MAP
     const prevMap = {};
     previous.forEach((p) => {
-      prevMap[p._id] = p.units;
+      const cleanId = String(p._id).replace(/\D/g, '');
+      prevMap[cleanId] = p.units;
     });
 
-    // 🔹 FINAL FORMAT
-    let result = current.map((item) => {
-      const prevUnits = prevMap[item._id] || 0;
+    // ✅ FETCH VIEWS (ONLY THIS SELLER)
+    const viewsData = await viewModel.find({
+      userId: userId, // 👈 important
+    });
 
+    const viewsMap = {};
+    viewsData.forEach((user) => {
+      user.products?.forEach((p) => {
+        const cleanId = String(p.productId).replace(/\D/g, '');
+        viewsMap[cleanId] = (viewsMap[cleanId] || 0) + p.totalViews;
+      });
+    });
+
+    // ✅ FINAL RESULT
+    let result = current.map((item) => {
+      const cleanId = String(item._id).replace(/\D/g, '');
+
+      const prevUnits = prevMap[cleanId] || 0;
+
+      // TREND
       let trend = 0;
       if (prevUnits === 0) {
         trend = item.units > 0 ? 100 : 0;
@@ -6532,16 +6562,21 @@ export const getTopProductsAdmin = async (req, res) => {
         trend = ((item.units - prevUnits) / prevUnits) * 100;
       }
 
+      // CONVERSION
+      const views = viewsMap[cleanId] || 0;
+      const conversion = views > 0 ? (item.units / views) * 100 : 0;
+
       return {
-        productId: item._id,
+        productId: cleanId,
         productName: item.name,
         totalUnitsSold: item.units,
         totalRevenue: item.revenue,
-        trend: trend.toFixed(1),
+        conversionRate: Number(conversion.toFixed(2)),
+        trend: Number(trend.toFixed(1)),
       };
     });
 
-    // 🔹 SORT + LIMIT
+    // SORT + LIMIT
     result = result
       .sort((a, b) => b.totalUnitsSold - a.totalUnitsSold)
       .slice(0, Number(limit));
@@ -6549,6 +6584,161 @@ export const getTopProductsAdmin = async (req, res) => {
     res.json({ success: true, data: result });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Error" });
+    res.status(500).json({ message: 'Error' });
+  }
+};
+
+export const getTopProductsAdmin = async (req, res) => {
+  try {
+    const { limit = 4, period = 'month' } = req.query;
+
+    let startDate = new Date();
+    let prevStartDate = new Date();
+
+    if (period === 'week') {
+      startDate.setDate(startDate.getDate() - 7);
+      prevStartDate.setDate(prevStartDate.getDate() - 14);
+    } else {
+      startDate.setMonth(startDate.getMonth() - 1);
+      prevStartDate.setMonth(prevStartDate.getMonth() - 2);
+    }
+
+    // ✅ CURRENT PERIOD (FIXED)
+    const current = await orderModel.aggregate([
+      { $unwind: '$ProductSnapshot' },
+      { $unwind: '$lineItems' },
+
+      {
+        $match: {
+          createdAt: { $gte: startDate },
+          $expr: {
+            $and: [
+              {
+                $eq: [
+                  { $toString: '$ProductSnapshot.productId' },
+                  { $toString: '$lineItems.product_id' },
+                ],
+              },
+              {
+                $ne: ['$lineItems.fulfillment_status', 'cancelled'],
+              },
+            ],
+          },
+        },
+      },
+
+      {
+        $group: {
+          _id: '$ProductSnapshot.productId',
+
+          units: {
+            $sum: '$ProductSnapshot.quantity',
+          },
+
+          revenue: {
+            $sum: {
+              $multiply: [
+                '$ProductSnapshot.quantity',
+                {
+                  $toDouble: {
+                    $ifNull: ['$lineItems.price', 0], // ✅ FIXED
+                  },
+                },
+              ],
+            },
+          },
+
+          name: { $first: '$ProductSnapshot.product.title' },
+        },
+      },
+    ]);
+
+    // ✅ PREVIOUS PERIOD (FIXED SAME WAY)
+    const previous = await orderModel.aggregate([
+      { $unwind: '$ProductSnapshot' },
+      { $unwind: '$lineItems' },
+
+      {
+        $match: {
+          createdAt: { $gte: prevStartDate, $lt: startDate },
+          $expr: {
+            $and: [
+              {
+                $eq: [
+                  { $toString: '$ProductSnapshot.productId' },
+                  { $toString: '$lineItems.product_id' },
+                ],
+              },
+              {
+                $ne: ['$lineItems.fulfillment_status', 'cancelled'],
+              },
+            ],
+          },
+        },
+      },
+
+      {
+        $group: {
+          _id: '$ProductSnapshot.productId',
+          units: { $sum: '$ProductSnapshot.quantity' },
+        },
+      },
+    ]);
+
+    // ✅ PREVIOUS MAP
+    const prevMap = {};
+    previous.forEach((p) => {
+      const cleanId = String(p._id).replace(/\D/g, '');
+      prevMap[cleanId] = p.units;
+    });
+
+    // ✅ FETCH VIEWS
+    const viewsData = await viewModel.find();
+
+    const viewsMap = {};
+    viewsData.forEach((user) => {
+      user.products?.forEach((p) => {
+        const cleanId = String(p.productId).replace(/\D/g, '');
+        viewsMap[cleanId] = (viewsMap[cleanId] || 0) + p.totalViews;
+      });
+    });
+
+    // ✅ FINAL RESULT
+    let result = current.map((item) => {
+      const cleanId = String(item._id).replace(/\D/g, '');
+
+      const prevUnits = prevMap[cleanId] || 0;
+
+      // 🔥 TREND
+      let trend = 0;
+      if (prevUnits === 0) {
+        trend = item.units > 0 ? 100 : 0;
+      } else {
+        trend = ((item.units - prevUnits) / prevUnits) * 100;
+      }
+
+      // 🔥 CONVERSION
+      const views = viewsMap[cleanId] || 0;
+      const conversion = views > 0 ? (item.units / views) * 100 : 0;
+
+      return {
+        productId: cleanId,
+        productName: item.name,
+        totalUnitsSold: item.units,
+        totalRevenue: item.revenue,
+        conversionRate: Number(conversion.toFixed(2)),
+        trend: Number(trend.toFixed(1)),
+      };
+    });
+
+    // ✅ SORT + LIMIT
+    result = result
+      .sort((a, b) => b.totalUnitsSold - a.totalUnitsSold)
+      .slice(0, Number(limit));
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error' });
   }
 };

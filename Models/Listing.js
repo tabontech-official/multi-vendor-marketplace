@@ -12,6 +12,7 @@ const listingSchema = new mongoose.Schema(
     updated_at: { type: Date },
     published_at: { type: Date },
     template_suffix: { type: String },
+    totalQuantity:{type:String},
     tags: {
       type: [String],
     },
