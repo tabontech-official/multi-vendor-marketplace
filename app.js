@@ -27,6 +27,8 @@ import { startCsvImportWorkerForInventory } from './controller/inventoryCsvWorke
 import contentRoutes from './Routes/contentRoutes.js';
 import adminFilesRouter from './Routes/adminFiles.js';
 import { startTopProductCron } from './controller/topProductCron.js';
+import { startAlertCron } from './controller/alertcron.js';
+import alertRouter from './Routes/alertRoutes.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -39,6 +41,7 @@ Connect();
 productSubscriptionExpiration();
 startCsvImportWorkerForInventory()
 startTopProductCron()
+startAlertCron()
 // deleteOrphanedProducts();
 financeScheduler.start();
 // financeCron()
@@ -74,6 +77,7 @@ app.use('/approval', approvalRouter);
 app.use('/variantOption', variantOptionRouter);
 app.use('/shippingProfile', shippingRouter);
 app.use('/size-chart', SizeChartRouter);
+app.use('/alert', alertRouter);
 
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store");

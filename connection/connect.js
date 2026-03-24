@@ -12,7 +12,7 @@ if (!global._mongooseConnection) {
 
 const Connect = async () => {
   if (global._mongooseConnection.isConnected) {
-    console.log(cyan('✅ Using existing MongoDB connection.'));
+    console.log(cyan(' Using existing MongoDB connection.'));
     return;
   }
 

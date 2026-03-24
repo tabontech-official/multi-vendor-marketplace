@@ -6834,7 +6834,7 @@ export const getTopProductsHistoryByMerchant = async (req, res) => {
     const pipeline = [
       {
         $match: {
-          merchantId: merchantObjectId, // ✅ exact match
+          merchantId: merchantObjectId, 
         },
       },
       {
