@@ -52,7 +52,7 @@ orderRouter.post('/updatetrackingShopify', updateTrackingInShopify);
 orderRouter.post('/cancelOrder',verifyToken, cancelShopifyOrder);
 orderRouter.get('/getPayoutByQuery',verifyToken, getPayoutOrders);
 orderRouter.get("/lineItemCount/:shopifyOrderId",getLineItemCountByShopifyOrderId)
-orderRouter.get("/getCancellationRequests",verifyToken,getAllRequestsGroupedByUser)
+orderRouter.get("/getCancellationRequests",getAllRequestsGroupedByUser)
 orderRouter.get("/getCancellationRequestsByUserId/:id",getRequestById)
 orderRouter.post('/addReferenceNumber',verifyToken, addReferenceToOrders);
 orderRouter.get("/getPayoutByUserId",verifyToken,getPayoutByUserId)

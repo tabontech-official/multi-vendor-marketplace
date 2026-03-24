@@ -1475,18 +1475,17 @@ export const resetPassword = async (req, res) => {
 //   }
 // };
 
-
 export const createPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
 
-    const email = decoded?.payLoad?.email ||decoded?.payLoad ;
+    const email = decoded?.payLoad?.email || decoded?.payLoad;
 
     if (!email) {
       return res.status(400).json({
-        message: "Invalid token payload",
+        message: 'Invalid token payload',
       });
     }
 
@@ -1494,7 +1493,7 @@ export const createPassword = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message: 'User not found',
       });
     }
 
@@ -1511,20 +1510,19 @@ export const createPassword = async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Password created successfully",
+      message: 'Password created successfully',
     });
-
   } catch (error) {
-    if (error.name === "TokenExpiredError") {
+    if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
-        message: "Token expired. Please request a new link.",
+        message: 'Token expired. Please request a new link.',
       });
     }
 
-    console.error("Error creating password:", error);
+    console.error('Error creating password:', error);
 
     res.status(500).json({
-      message: "Server error while creating password",
+      message: 'Server error while creating password',
     });
   }
 };
@@ -2300,21 +2298,57 @@ export const getAllOnboardUsersData = async (req, res) => {
 
 export const addOrderRequest = async (req, res) => {
   try {
+    console.log("===== ADD ORDER REQUEST API HIT =====");
+
     const { id } = req.params;
     const { request, orderId, orderNo, lineItemIds } = req.body;
 
+    console.log("User ID:", id);
+    console.log("Request Body:", req.body);
+
+    // 🔹 Check user
     const user = await authModel.findById(id);
-    if (!user) return res.status(404).json({ message: 'User not found.' });
+    console.log("User Found:", user ? "YES" : "NO");
 
-    const order = await orderModel.findOne({ orderId: String(orderId) });
-    if (!order) return res.status(404).json({ message: 'Order not found.' });
+    if (!user) {
+      console.log("❌ User not found");
+      return res.status(404).json({ message: 'User not found.' });
+    }
 
+    // 🔹 Clean orderId
+    const cleanOrderId = String(orderId).trim();
+    console.log("Incoming orderId:", orderId);
+    console.log("Clean orderId:", cleanOrderId);
+
+    // 🔹 Find order
+    const order = await orderModel.findOne({
+      orderId: cleanOrderId,
+    });
+
+    console.log("Order Found:", order ? "YES" : "NO");
+
+    if (!order) {
+      console.log("❌ Order not found in DB for:", cleanOrderId);
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    // 🔹 Line items
     const allLineItems = order.lineItems || [];
-    const requestedItems = allLineItems.filter((item) =>
-      lineItemIds.includes(item.id)
-    );
-    const productNames = requestedItems.map((item) => item.name);
+    console.log("All Line Items:", allLineItems);
 
+    console.log("Incoming lineItemIds:", lineItemIds);
+
+    // 🔥 Safe compare (string conversion)
+    const requestedItems = allLineItems.filter((item) =>
+      lineItemIds.map(String).includes(String(item.id))
+    );
+
+    console.log("Matched Requested Items:", requestedItems);
+
+    const productNames = requestedItems.map((item) => item.name);
+    console.log("Product Names:", productNames);
+
+    // 🔹 Save request
     const savedRequest = await orderRquestModel.create({
       userId: id,
       orderId,
@@ -2323,7 +2357,11 @@ export const addOrderRequest = async (req, res) => {
       productNames,
     });
 
+    console.log("Saved Request:", savedRequest);
+
+    // 🔹 Send email
     const email = 'aydimarketplace@gmail.com';
+
     await transporter.sendMail({
       to: email,
       subject: 'Request for Order Cancellation',
@@ -2341,16 +2379,18 @@ export const addOrderRequest = async (req, res) => {
       `,
     });
 
+    console.log("✅ Email sent successfully");
+
     return res.status(200).json({
       message: 'Request submitted successfully.',
       data: savedRequest,
     });
+
   } catch (error) {
-    console.error('Error in addOrderRequest:', error);
+    console.error("❌ Error in addOrderRequest:", error);
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
-
 export const getCollectionId = async (req, res) => {
   try {
     const { id } = req.params;
