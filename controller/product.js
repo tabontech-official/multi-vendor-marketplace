@@ -351,7 +351,6 @@ export const addUsedEquipments = async (req, res) => {
       parsedOptions[0]?.values?.length === 1 &&
       parsedOptions[0]?.values[0] === 'Default';
 
-
     if (track_quantity && productResponse?.product?.variants?.length) {
       try {
         console.log('🔄 Starting inventory sync...');
@@ -4304,16 +4303,16 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     /* ================= TRIGGER WORKER ================= */
 
-    setImmediate(async () => {
-      try {
-        console.log('🚀 Triggering CSV Worker...');
-        await runCsvImportWorker();
-        console.log('✅ Worker finished');
-      } catch (err) {
-        console.log('❌ Worker trigger error:', err.message);
-      }
-    });
-
+    // setImmediate(async () => {
+    //   try {
+    //     console.log('🚀 Triggering CSV Worker...');
+    //     await runCsvImportWorker();
+    //     console.log('✅ Worker finished');
+    //   } catch (err) {
+    //     console.log('❌ Worker trigger error:', err.message);
+    //   }
+    // });
+    await runCsvImportWorker();
     /* ================= RESPONSE ================= */
 
     return res.status(200).json({
@@ -6744,7 +6743,6 @@ export const getTopProductsAdmin = async (req, res) => {
   }
 };
 
-
 export const saveDailyTopProductsJob = async () => {
   try {
     const today = new Date();
@@ -6755,8 +6753,8 @@ export const saveDailyTopProductsJob = async () => {
     end.setDate(end.getDate() + 1);
 
     const data = await orderModel.aggregate([
-      { $unwind: "$ProductSnapshot" },
-      { $unwind: "$lineItems" },
+      { $unwind: '$ProductSnapshot' },
+      { $unwind: '$lineItems' },
 
       {
         $match: {
@@ -6765,12 +6763,12 @@ export const saveDailyTopProductsJob = async () => {
             $and: [
               {
                 $eq: [
-                  { $toString: "$ProductSnapshot.productId" },
-                  { $toString: "$lineItems.product_id" },
+                  { $toString: '$ProductSnapshot.productId' },
+                  { $toString: '$lineItems.product_id' },
                 ],
               },
               {
-                $ne: ["$lineItems.fulfillment_status", "cancelled"],
+                $ne: ['$lineItems.fulfillment_status', 'cancelled'],
               },
             ],
           },
@@ -6780,19 +6778,19 @@ export const saveDailyTopProductsJob = async () => {
       {
         $group: {
           _id: {
-            productId: "$ProductSnapshot.productId",
-            merchantId: "$ProductSnapshot.merchantId", // 🔥 TAKE FROM HERE
+            productId: '$ProductSnapshot.productId',
+            merchantId: '$ProductSnapshot.merchantId', // 🔥 TAKE FROM HERE
           },
-          unitsSold: { $sum: "$ProductSnapshot.quantity" },
+          unitsSold: { $sum: '$ProductSnapshot.quantity' },
           revenue: {
             $sum: {
               $multiply: [
-                "$ProductSnapshot.quantity",
-                { $toDouble: "$lineItems.price" },
+                '$ProductSnapshot.quantity',
+                { $toDouble: '$lineItems.price' },
               ],
             },
           },
-          productName: { $first: "$ProductSnapshot.product.title" },
+          productName: { $first: '$ProductSnapshot.product.title' },
         },
       },
     ]);
@@ -6810,23 +6808,21 @@ export const saveDailyTopProductsJob = async () => {
 
     await TopProductStats.insertMany(docs);
 
-    console.log("Top product stats saved");
+    console.log('Top product stats saved');
   } catch (err) {
-    console.error("Cron error:", err);
+    console.error('Cron error:', err);
   }
 };
 
-
-
 export const getTopProductsHistoryByMerchant = async (req, res) => {
   try {
-    console.log("API HIT: getTopProductsHistoryByMerchant");
+    console.log('API HIT: getTopProductsHistoryByMerchant');
 
     const { limit = 10 } = req.query;
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(400).json({ message: "User ID missing" });
+      return res.status(400).json({ message: 'User ID missing' });
     }
 
     const merchantObjectId = new mongoose.Types.ObjectId(userId);
@@ -6834,30 +6830,27 @@ export const getTopProductsHistoryByMerchant = async (req, res) => {
     const pipeline = [
       {
         $match: {
-          merchantId: merchantObjectId, 
+          merchantId: merchantObjectId,
         },
       },
       {
         $group: {
-          _id: "$productId",
-          productName: { $first: "$productName" },
-          units: { $sum: "$unitsSold" },
-          revenue: { $sum: "$revenue" },
-          views: { $sum: "$views" },
+          _id: '$productId',
+          productName: { $first: '$productName' },
+          units: { $sum: '$unitsSold' },
+          revenue: { $sum: '$revenue' },
+          views: { $sum: '$views' },
         },
       },
       {
         $addFields: {
           conversionRate: {
             $cond: [
-              { $gt: ["$views", 0] },
+              { $gt: ['$views', 0] },
               {
                 $round: [
                   {
-                    $multiply: [
-                      { $divide: ["$units", "$views"] },
-                      100,
-                    ],
+                    $multiply: [{ $divide: ['$units', '$views'] }, 100],
                   },
                   2,
                 ],
@@ -6878,10 +6871,9 @@ export const getTopProductsHistoryByMerchant = async (req, res) => {
     const data = await TopProductStats.aggregate(pipeline);
 
     return res.json({ success: true, data });
-
   } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ message: "Error fetching history" });
+    console.error('Error:', err);
+    res.status(500).json({ message: 'Error fetching history' });
   }
 };
 
@@ -6896,11 +6888,11 @@ export const getTopProductsHistoryAdmin = async (req, res) => {
 
       {
         $group: {
-          _id: "$productId",
-          productName: { $first: "$productName" },
-          units: { $sum: "$unitsSold" },
-          revenue: { $sum: "$revenue" },
-          views: { $sum: "$views" },
+          _id: '$productId',
+          productName: { $first: '$productName' },
+          units: { $sum: '$unitsSold' },
+          revenue: { $sum: '$revenue' },
+          views: { $sum: '$views' },
         },
       },
 
@@ -6908,14 +6900,11 @@ export const getTopProductsHistoryAdmin = async (req, res) => {
         $addFields: {
           conversionRate: {
             $cond: [
-              { $gt: ["$views", 0] },
+              { $gt: ['$views', 0] },
               {
                 $round: [
                   {
-                    $multiply: [
-                      { $divide: ["$units", "$views"] },
-                      100,
-                    ],
+                    $multiply: [{ $divide: ['$units', '$views'] }, 100],
                   },
                   2,
                 ],
@@ -6933,6 +6922,6 @@ export const getTopProductsHistoryAdmin = async (req, res) => {
     res.json({ success: true, data });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Error fetching admin history" });
+    res.status(500).json({ message: 'Error fetching admin history' });
   }
 };
