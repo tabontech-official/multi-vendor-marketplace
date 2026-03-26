@@ -11,6 +11,8 @@ import { Readable } from 'stream';
 import Papa from 'papaparse';
 import { PromoModel } from '../Models/Promotions.js';
 import { Parser } from 'json2csv';
+import { parse } from "csv-parse/sync";
+
 import path from 'path';
 import moment from 'moment';
 import { viewModel } from '../Models/viewModel.js';
@@ -4193,43 +4195,11 @@ export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
 //     return res.status(500).json({ success: false, error: err.message });
 //   }
 // };
+
+
 const generateBatchId = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
-
-// export const addCsvfileForProductFromBody = async (req, res) => {
-//   const file = req.file;
-//   const userId = req.userId;
-
-//   if (!file || !file.buffer) {
-//     return res.status(400).json({ error: 'No file uploaded.' });
-//   }
-
-//   try {
-//     const batchNo = `BATCH-${generateBatchId()}`;
-//     const batch = await csvImportBatchSchema.create({
-//       batchNo,
-//       userId,
-//       fileName: file.originalname,
-//       mimeType: file.mimetype,
-//       fileSize: file.size,
-//       fileBuffer: file.buffer, // 🔥 full file saved
-//       status: 'pending',
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: 'File uploaded successfully. Processing will start shortly.',
-//       batchNo: batch.batchNo,
-//       status: batch.status,
-//     });
-//   } catch (err) {
-//     return res.status(500).json({
-//       success: false,
-//       error: err.message,
-//     });
-//   }
-// };
 
 const validateCsvFile = (fileBuffer) => {
   try {
@@ -4270,6 +4240,56 @@ const validateCsvFile = (fileBuffer) => {
   }
 };
 
+// export const addCsvfileForProductFromBody = async (req, res) => {
+//   try {
+//     const file = req.file;
+//     const userId = req.userId;
+
+//     if (!file || !file.buffer) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'No file uploaded',
+//       });
+//     }
+
+//     console.log('📁 File received:', file.originalname);
+
+//     const batchNo = `BATCH-${generateBatchId()}`;
+
+//     /* ================= SAVE BATCH ================= */
+
+//     const batch = await csvImportBatchSchema.create({
+//       batchNo,
+//       userId,
+//       fileName: file.originalname,
+//       mimeType: file.mimetype,
+//       fileSize: file.size,
+//       fileBuffer: file.buffer,
+//       status: 'pending',
+//       createdAt: new Date(),
+//     });
+
+//     console.log('✅ Batch saved:', batch.batchNo);
+
+//     await runCsvImportWorker();
+   
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'File uploaded successfully. Processing started.',
+//       batchNo: batch.batchNo,
+//       status: batch.status,
+//     });
+//   } catch (err) {
+//     console.log('❌ Upload API Error:', err.message);
+
+//     return res.status(500).json({
+//       success: false,
+//       error: err.message,
+//     });
+//   }
+// };
+
 export const addCsvfileForProductFromBody = async (req, res) => {
   try {
     const file = req.file;
@@ -4278,15 +4298,30 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     if (!file || !file.buffer) {
       return res.status(400).json({
         success: false,
-        message: 'No file uploaded',
+        message: "No file uploaded",
       });
     }
 
-    console.log('📁 File received:', file.originalname);
+    console.log("📁 File received:", file.originalname);
+
+  
+
+    const csvString = file.buffer.toString("utf-8");
+
+    const records = parse(csvString, {
+      columns: true,
+      skip_empty_lines: true,
+    });
+
+    if (records.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: "Maximum 50 products allowed per upload. Please upload a smaller file.",
+      });
+    }
+
 
     const batchNo = `BATCH-${generateBatchId()}`;
-
-    /* ================= SAVE BATCH ================= */
 
     const batch = await csvImportBatchSchema.create({
       batchNo,
@@ -4295,34 +4330,22 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       mimeType: file.mimetype,
       fileSize: file.size,
       fileBuffer: file.buffer,
-      status: 'pending',
+      status: "pending",
       createdAt: new Date(),
     });
 
-    console.log('✅ Batch saved:', batch.batchNo);
+    console.log("✅ Batch saved:", batch.batchNo);
 
-    /* ================= TRIGGER WORKER ================= */
-
-    // setImmediate(async () => {
-    //   try {
-    //     console.log('🚀 Triggering CSV Worker...');
-    //     await runCsvImportWorker();
-    //     console.log('✅ Worker finished');
-    //   } catch (err) {
-    //     console.log('❌ Worker trigger error:', err.message);
-    //   }
-    // });
     await runCsvImportWorker();
-    /* ================= RESPONSE ================= */
 
     return res.status(200).json({
       success: true,
-      message: 'File uploaded successfully. Processing started.',
+      message: "File uploaded successfully. Processing started.",
       batchNo: batch.batchNo,
       status: batch.status,
     });
   } catch (err) {
-    console.log('❌ Upload API Error:', err.message);
+    console.log("❌ Upload API Error:", err.message);
 
     return res.status(500).json({
       success: false,
@@ -4330,6 +4353,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
 
 export const getAllBatches = async (req, res) => {
   try {

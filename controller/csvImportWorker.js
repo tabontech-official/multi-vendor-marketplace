@@ -152,11 +152,11 @@
 //           const generateHandle = (value) => {
 //             return value
 //               ?.toString()
-//               .trim() 
+//               .trim()
 //               .toLowerCase()
-//               .replace(/\s+/g, '-') 
-//               .replace(/[^a-z0-9-]/g, '') 
-//               .replace(/-+/g, '-') 
+//               .replace(/\s+/g, '-')
+//               .replace(/[^a-z0-9-]/g, '')
+//               .replace(/-+/g, '-')
 //               .replace(/^-|-$/g, '');
 //           };
 
@@ -174,8 +174,6 @@
 
 //             const shippingShortId = firstRow['Shipping Profile ID'] || null;
 //             const isPhysical = !!shippingShortId;
-
- 
 
 //             const optionNamesRaw = [
 //               firstRow['Option1 Name'],
@@ -944,8 +942,8 @@
 //       try {
 //         await notificationModel.create({
 //           userId: userId,
-//           message: `Batch ${batch.batchNo} import completed. 
-// Success: ${batch.summary.success}, 
+//           message: `Batch ${batch.batchNo} import completed.
+// Success: ${batch.summary.success},
 // Failed: ${batch.summary.failed}`,
 //           source: 'csv-import',
 //           seen: false,
@@ -1103,8 +1101,6 @@ const chunkArray = (array, size) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-
-
 export const runCsvImportWorker = async () => {
   console.log('✅ CSV Import Worker Running Every 3 Seconds');
 
@@ -1131,13 +1127,13 @@ export const runCsvImportWorker = async () => {
       const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
 
       /* ================= READ EXCEL ================= */
-const csvString = batch.fileBuffer.toString('utf-8');
+      const csvString = batch.fileBuffer.toString('utf-8');
 
-const rows = parse(csvString, {
-  columns: true,        // header row → keys
-  skip_empty_lines: true,
-  trim: true,
-});
+      const rows = parse(csvString, {
+        columns: true, // header row → keys
+        skip_empty_lines: true,
+        trim: true,
+      });
 
       if (!rows.length) throw new Error('Excel empty');
 
@@ -1168,11 +1164,11 @@ const rows = parse(csvString, {
           const generateHandle = (value) => {
             return value
               ?.toString()
-              .trim() 
+              .trim()
               .toLowerCase()
-              .replace(/\s+/g, '-') 
-              .replace(/[^a-z0-9-]/g, '') 
-              .replace(/-+/g, '-') 
+              .replace(/\s+/g, '-')
+              .replace(/[^a-z0-9-]/g, '')
+              .replace(/-+/g, '-')
               .replace(/^-|-$/g, '');
           };
 
@@ -1190,8 +1186,6 @@ const rows = parse(csvString, {
 
             const shippingShortId = firstRow['Shipping Profile ID'] || null;
             const isPhysical = !!shippingShortId;
-
- 
 
             const optionNamesRaw = [
               firstRow['Option1 Name'],
@@ -1555,42 +1549,42 @@ const rows = parse(csvString, {
               //   }
               // }
               for (const variant of createdProduct.variants) {
-  const inventoryItemId = variant.inventory_item_id;
+                const inventoryItemId = variant.inventory_item_id;
 
-  // ✅ find matching row by SKU
-  const matchingRow = productRows.find(
-    (row) => row['SKU'] === variant.sku
-  );
+                // ✅ find matching row by SKU
+                const matchingRow = productRows.find(
+                  (row) => row['SKU'] === variant.sku
+                );
 
-  const quantity = matchingRow
-    ? parseInt(matchingRow['Quantity']) || 0
-    : 0;
-console.log("quantity csv",quantity)
-  const inventoryLevelsRes = await shopifyRequest(
-    `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
-    'GET',
-    null,
-    shopifyApiKey,
-    shopifyAccessToken
-  );
+                const quantity = matchingRow
+                  ? parseInt(matchingRow['Quantity']) || 0
+                  : 0;
+                console.log('quantity csv', quantity);
+                const inventoryLevelsRes = await shopifyRequest(
+                  `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
+                  'GET',
+                  null,
+                  shopifyApiKey,
+                  shopifyAccessToken
+                );
 
-  const locationId =
-    inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+                const locationId =
+                  inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
 
-  if (locationId) {
-    await shopifyRequest(
-      `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
-      'POST',
-      {
-        location_id: locationId,
-        inventory_item_id: inventoryItemId,
-        available: quantity,
-      },
-      shopifyApiKey,
-      shopifyAccessToken
-    );
-  }
-}
+                if (locationId) {
+                  await shopifyRequest(
+                    `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
+                    'POST',
+                    {
+                      location_id: locationId,
+                      inventory_item_id: inventoryItemId,
+                      available: quantity,
+                    },
+                    shopifyApiKey,
+                    shopifyAccessToken
+                  );
+                }
+              }
             }
 
             /* ================= SHIPPING PROFILE ================= */
