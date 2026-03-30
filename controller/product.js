@@ -4448,37 +4448,15 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 };
 
 export const runWorkerEndpoint = async (req, res) => {
-  try {
-    const result = await runCsvImportWorker();
+  const authHeader = req.headers.authorization;
 
-    console.log('🧠 Worker result:', result);
-
-    // 🔥 trigger BEFORE response
-    if (!result?.done && process.env.AUTO_TRIGGER === 'true') {
-      const url = `${process.env.BASE_URL}/product/run-worker`;
-
-      console.log('🔁 Triggering next worker:', url);
-
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-        .then(() => console.log('✅ Next worker triggered'))
-        .catch((err) => console.log('❌ Trigger error:', err.message));
-    }
-
-    return res.status(200).json({
-      success: true,
-      done: false,
-    });
-  } catch (err) {
-    console.log('❌ Worker API Error:', err.message);
-
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ message: 'Unauthorized' });
   }
+
+  await runCsvImportWorker();
+
+  return res.status(200).json({ success: true });
 };
 
 // export const addCsvfileForProductFromBody = async (req, res) => {

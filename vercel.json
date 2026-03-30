@@ -14,5 +14,11 @@
       "src": "/(.*)",
       "dest": "/app.js"
     }
+  ],
+  "crons": [
+    {
+      "path": "/product/run-worker",
+      "schedule": "*/1 * * * *"
+    }
   ]
 }

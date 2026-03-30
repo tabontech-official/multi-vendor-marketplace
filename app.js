@@ -43,7 +43,7 @@ productSubscriptionExpiration();
 startCsvImportWorkerForInventory()
 startTopProductCron()
 startAlertCron()
-startCsvImportCron()
+// startCsvImportCron()
 
 // deleteOrphanedProducts();
 financeScheduler.start();
