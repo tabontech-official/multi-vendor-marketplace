@@ -4409,7 +4409,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     console.log('🔹 Triggering worker...');
 
     try {
-      const url = `${process.env.BASE_URL}/run-worker`;
+      const url = `${process.env.BASE_URL}/product/run-worker`;
       console.log('🌐 URL:', url);
 
       try {
@@ -4448,28 +4448,17 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
 export const runWorkerEndpoint = async (req, res) => {
   try {
+    console.log('================ WORKER START ================');
+
     const result = await runCsvImportWorker();
 
     console.log('🧠 Worker result:', result);
 
-    // 🔥 trigger BEFORE response
-    if (!result?.done) {
-      const url = `${process.env.BASE_URL}/run-worker`;
-
-      console.log('🔁 Triggering next worker:', url);
-
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-        .then(() => console.log('✅ Next worker triggered'))
-        .catch((err) => console.log('❌ Trigger error:', err.message));
-    }
-
     return res.status(200).json({
       success: true,
-      done: false,
+      done: result?.done ?? false,
     });
+
   } catch (err) {
     console.log('❌ Worker API Error:', err.message);
 

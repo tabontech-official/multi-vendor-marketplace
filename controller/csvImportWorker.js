@@ -2290,7 +2290,7 @@ export const runCsvImportWorker = async () => {
     console.log('➡️ shouldTrigger:', shouldTrigger);
 
     if (shouldTrigger) {
-      const url = `${process.env.BASE_URL}/run-worker`;
+      const url = `${process.env.BASE_URL}/product/run-worker`;
       console.log('🔁 Triggering next worker...');
       console.log('🌐 URL:', url);
 

@@ -114,7 +114,6 @@ productRouter.post(
   addCsvfileForProductFromBody
 );
 productRouter.post('/productUpdateWebhook', updateProductWebhook);
-productRouter.post('/run-worker', runWorkerEndpoint);
 
 productRouter.put(
   '/updateInventoryPrice/:id',
@@ -160,6 +159,7 @@ productRouter.post(
   addCsvfileForBulkUploader
 );
 
+productRouter.post('/run-worker', runWorkerEndpoint);
 
 
 
