@@ -967,8 +967,8 @@
 //       try {
 //         await notificationModel.create({
 //           userId: userId,
-//           message: `Batch ${batch.batchNo} import completed.
-// Success: ${batch.summary.success},
+//           message: `Batch ${batch.batchNo} import completed. 
+// Success: ${batch.summary.success}, 
 // Failed: ${batch.summary.failed}`,
 //           source: 'csv-import',
 //           seen: false,
@@ -1103,11 +1103,7 @@ async function limitedShopifyRequest(
         null;
 
       const shouldRetry =
-        status === 429 ||
-        status === 500 ||
-        status === 502 ||
-        status === 503 ||
-        status === 504;
+        status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 
       if (shouldRetry && retryCount < MAX_RETRIES) {
         let waitMs = 2000;
@@ -1352,9 +1348,7 @@ function buildOptionsAndVariants(productRows, firstRow) {
           price: row['Price'] || '0.00',
           compare_at_price: row['Compare At Price'] || null,
           inventory_management: trackQuantity ? 'shopify' : null,
-          inventory_quantity: trackQuantity
-            ? parseInt(row['Quantity']) || 0
-            : 0,
+          inventory_quantity: trackQuantity ? parseInt(row['Quantity']) || 0 : 0,
           requires_shipping: isPhysical,
           taxable: isPhysical,
           weight: isPhysical ? parseFloat(row['Weight']) || 0 : 0,
@@ -1735,9 +1729,7 @@ async function saveListingToDb({
 }) {
   const fullProduct = fullProductRes.product;
 
-  const hasSku = productRows.some(
-    (row) => row['SKU'] && row['SKU'].trim() !== ''
-  );
+  const hasSku = productRows.some((row) => row['SKU'] && row['SKU'].trim() !== '');
   const baseSku = hasSku ? productRows[0]['SKU'] : null;
   const baseBarcode = hasSku ? productRows[0]['Barcode'] : null;
 
@@ -1793,12 +1785,10 @@ async function saveListingToDb({
       height: img.height || null,
       src: img.src,
     })),
-    variantImages: Object.entries(variantImageMap).map(
-      ([variantId, images]) => ({
-        variantId,
-        images,
-      })
-    ),
+    variantImages: Object.entries(variantImageMap).map(([variantId, images]) => ({
+      variantId,
+      images,
+    })),
     inventory: {
       track_quantity: trackQuantity,
       quantity: trackQuantity ? parseInt(productRows[0]['Quantity']) || 0 : 0,
@@ -1853,8 +1843,13 @@ async function processSingleProduct({
   try {
     console.log('🟢 Processing:', handle);
 
-    const { trackQuantity, shippingShortId, isPhysical, options, variants } =
-      buildOptionsAndVariants(productRows, firstRow);
+    const {
+      trackQuantity,
+      shippingShortId,
+      isPhysical,
+      options,
+      variants,
+    } = buildOptionsAndVariants(productRows, firstRow);
 
     console.log('\n================ VARIANT DEBUG ================');
     console.log('🧪 FINAL OPTIONS:', JSON.stringify(options, null, 2));
@@ -1881,10 +1876,7 @@ async function processSingleProduct({
     const invalidCategories = categoryResult?.invalid || [];
 
     if (invalidCategories.length > 0) {
-      console.log(
-        `⚠️ Warning: Invalid categories for ${cleanHandle}:`,
-        invalidCategories
-      );
+      console.log(`⚠️ Warning: Invalid categories for ${cleanHandle}:`, invalidCategories);
     }
 
     const tagsArray = [
@@ -2020,11 +2012,7 @@ async function processSingleProduct({
   }
 }
 
-async function sendBatchCompletionNotification(
-  batch,
-  userId,
-  batchLevelError = null
-) {
+async function sendBatchCompletionNotification(batch, userId, batchLevelError = null) {
   try {
     await notificationModel.create({
       userId,
@@ -2100,25 +2088,10 @@ Failed: ${batch.summary.failed}`,
 export const runCsvImportWorker = async () => {
   console.log('✅ CSV Import Worker Running');
 
-  const withTimeout = (promise, ms = 20000) => {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), ms)
-      ),
-    ]);
-  };
-
   try {
     const batch = await csvImportBatchSchema.findOneAndUpdate(
       {
-        $or: [
-          { status: 'pending' },
-          {
-            status: 'processing',
-            lockedAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) },
-          },
-        ],
+        status: 'pending',
       },
       {
         status: 'processing',
@@ -2159,73 +2132,26 @@ export const runCsvImportWorker = async () => {
       const grouped = groupRowsByHandle(rows);
       const handles = Object.keys(grouped);
 
-      /* ================= INIT SAFE ================= */
-
-      if (!batch.processedCount) {
-        batch.processedCount = 0;
-      }
-
-      if (!batch.results || batch.processedCount === 0) {
-        batch.results = [];
-        batch.summary = {
-          total: handles.length,
-          success: 0,
-          failed: 0,
-        };
-      }
-
+      batch.results = [];
+      batch.summary = {
+        total: handles.length,
+        success: 0,
+        failed: 0,
+      };
       await batch.save();
 
-      console.log(
-        `🚀 Starting from index: ${batch.processedCount}/${handles.length}`
-      );
-
-      /* ================= MAIN LOOP ================= */
-
-      for (let i = batch.processedCount; i < handles.length; i++) {
-        const handle = handles[i];
+      for (const handle of handles) {
         const productRows = grouped[handle];
-
-        try {
-          await withTimeout(
-            processSingleProduct({
-              handle,
-              productRows,
-              userId,
-              batch,
-              shopifyStoreUrl,
-              shopifyApiKey,
-              shopifyAccessToken,
-            }),
-            20000 // ⏱ max 20 sec per product
-          );
-        } catch (err) {
-          console.log('⏱️ Product timeout or crash:', handle, err.message);
-
-          batch.results.push({
-            handle,
-            status: 'error',
-            message: err.message,
-            startedAt: new Date(),
-            completedAt: new Date(),
-          });
-
-          batch.summary.failed += 1;
-        }
-
-        /* ================= PROGRESS SAVE ================= */
-
-        batch.processedCount = i + 1;
-        batch.lockedAt = new Date(); // heartbeat
-
-        await batch.save();
-
-        console.log(
-          `📦 Progress: ${batch.processedCount}/${handles.length}`
-        );
+        await processSingleProduct({
+          handle,
+          productRows,
+          userId,
+          batch,
+          shopifyStoreUrl,
+          shopifyApiKey,
+          shopifyAccessToken,
+        });
       }
-
-      /* ================= FINAL STATUS ================= */
 
       if (batch.summary.failed > 0 && batch.summary.success > 0) {
         batch.status = 'completed';
@@ -2237,7 +2163,6 @@ export const runCsvImportWorker = async () => {
 
       batch.completedAt = new Date();
       batch.fileBuffer = undefined;
-
       await batch.save();
 
       await sendBatchCompletionNotification(batch, userId, batchLevelError);
