@@ -29,6 +29,7 @@ import adminFilesRouter from './Routes/adminFiles.js';
 import { startTopProductCron } from './controller/topProductCron.js';
 import { startAlertCron } from './controller/alertcron.js';
 import alertRouter from './Routes/alertRoutes.js';
+import { startCsvImportCron } from './controller/csvImportWorker.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation

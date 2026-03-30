@@ -2325,8 +2325,8 @@ export const runCsvImportWorker = async () => {
    OPTIONAL CRON STARTER
    ========================================================= */
 
-// export const startCsvImportCron = () => {
-//   cron.schedule('*/3 * * * * *', async () => {
-//     await runCsvImportWorker();
-//   });
-// };
+export const startCsvImportCron = () => {
+  cron.schedule('* * * * * *', async () => {
+    await runCsvImportWorker();
+  });
+};

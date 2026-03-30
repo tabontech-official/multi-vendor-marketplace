@@ -11,7 +11,7 @@ import { Readable } from 'stream';
 import Papa from 'papaparse';
 import { PromoModel } from '../Models/Promotions.js';
 import { Parser } from 'json2csv';
-import { parse } from "csv-parse/sync";
+import { parse } from 'csv-parse/sync';
 
 import path from 'path';
 import moment from 'moment';
@@ -4196,7 +4196,6 @@ export const getCategoryHierarchyFlexible = async (categoryValues = []) => {
 //   }
 // };
 
-
 const generateBatchId = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
@@ -4272,7 +4271,6 @@ const validateCsvFile = (fileBuffer) => {
 //     console.log('✅ Batch saved:', batch.batchNo);
 
 //     await runCsvImportWorker();
-   
 
 //     return res.status(200).json({
 //       success: true,
@@ -4411,7 +4409,19 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     console.log('🔹 Triggering worker...');
 
     try {
-      const result = await runCsvImportWorker();
+      const url = `${process.env.BASE_URL}/product/run-worker`;
+      console.log('🌐 URL:', url);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        console.log('✅ Worker API triggered:', response.status);
+      } catch (err) {
+        console.log('❌ Worker trigger failed:', err.message);
+      }
       console.log('🧠 Worker result:', result);
     } catch (workerErr) {
       console.log('❌ Worker execution failed:', workerErr.message);
@@ -4426,7 +4436,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       totalProducts,
       status: batch.status,
     });
-
   } catch (err) {
     console.log('❌ Upload API Error:', err.message);
     console.log('================ UPLOAD API FAILED ================\n');
@@ -4452,23 +4461,22 @@ export const runWorkerEndpoint = async (req, res) => {
 
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       })
-      .then(() => console.log('✅ Next worker triggered'))
-      .catch(err => console.log('❌ Trigger error:', err.message));
+        .then(() => console.log('✅ Next worker triggered'))
+        .catch((err) => console.log('❌ Trigger error:', err.message));
     }
 
     return res.status(200).json({
       success: true,
-      done: false
+      done: false,
     });
-
   } catch (err) {
     console.log('❌ Worker API Error:', err.message);
 
     return res.status(500).json({
       success: false,
-      error: err.message
+      error: err.message,
     });
   }
 };
@@ -4487,8 +4495,6 @@ export const runWorkerEndpoint = async (req, res) => {
 
 //     console.log("📁 File received:", file.originalname);
 
-  
-
 //     const csvString = file.buffer.toString("utf-8");
 
 //     const records = parse(csvString, {
@@ -4502,7 +4508,6 @@ export const runWorkerEndpoint = async (req, res) => {
 //         message: "Maximum 50 products allowed per upload. Please upload a smaller file.",
 //       });
 //     }
-
 
 //     const batchNo = `BATCH-${generateBatchId()}`;
 
@@ -4536,7 +4541,6 @@ export const runWorkerEndpoint = async (req, res) => {
 //     });
 //   }
 // };
-
 
 export const getAllBatches = async (req, res) => {
   try {
