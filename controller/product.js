@@ -4408,24 +4408,23 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     console.log('🔹 Triggering worker...');
 
-    // try {
-    //   const url = `${process.env.BASE_URL}/product/run-worker`;
-    //   console.log('🌐 URL:', url);
+    try {
+      const url = `${process.env.BASE_URL}/product/run-worker`;
+      console.log('🌐 URL:', url);
 
-    //   try {
-    //     const response = await fetch(url, {
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //     });
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+        });
 
-    //     console.log('✅ Worker API triggered:', response.status);
-    //   } catch (err) {
-    //     console.log('❌ Worker trigger failed:', err.message);
-    //   }
-    //   console.log('🧠 Worker result:', result);
-    // } catch (workerErr) {
-    //   console.log('❌ Worker execution failed:', workerErr.message);
-    // }
+        console.log('✅ Worker API triggered:', response.status);
+      } catch (err) {
+        console.log('❌ Worker trigger failed:', err.message);
+      }
+      console.log('🧠 Worker result:', result);
+    } catch (workerErr) {
+      console.log('❌ Worker execution failed:', workerErr.message);
+    }
 
     console.log('================ UPLOAD API END ================\n');
 
@@ -4448,15 +4447,37 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 };
 
 export const runWorkerEndpoint = async (req, res) => {
-  const authHeader = req.headers.authorization;
+  try {
+    const result = await runCsvImportWorker();
 
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    console.log('🧠 Worker result:', result);
+
+    // 🔥 trigger BEFORE response
+    if (!result?.done) {
+      const url = `${process.env.BASE_URL}/product/run-worker`;
+
+      console.log('🔁 Triggering next worker:', url);
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then(() => console.log('✅ Next worker triggered'))
+        .catch((err) => console.log('❌ Trigger error:', err.message));
+    }
+
+    return res.status(200).json({
+      success: true,
+      done: false,
+    });
+  } catch (err) {
+    console.log('❌ Worker API Error:', err.message);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
-
-  await runCsvImportWorker();
-
-  return res.status(200).json({ success: true });
 };
 
 // export const addCsvfileForProductFromBody = async (req, res) => {

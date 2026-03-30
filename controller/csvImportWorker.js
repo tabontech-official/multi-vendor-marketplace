@@ -2289,24 +2289,24 @@ export const runCsvImportWorker = async () => {
 
     console.log('➡️ shouldTrigger:', shouldTrigger);
 
-    // if (shouldTrigger) {
-    //   const url = `${process.env.BASE_URL}/product/run-worker`;
-    //   console.log('🔁 Triggering next worker...');
-    //   console.log('🌐 URL:', url);
+    if (shouldTrigger) {
+      const url = `${process.env.BASE_URL}/product/run-worker`;
+      console.log('🔁 Triggering next worker...');
+      console.log('🌐 URL:', url);
 
-    //   try {
-    //     const response = await fetch(url, {
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //     });
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
 
-    //     console.log('✅ Trigger response status:', response.status);
-    //   } catch (err) {
-    //     console.log('❌ Trigger error:', err.message);
-    //   }
-    // } else {
-    //   console.log('⛔ Trigger skipped');
-    // }
+        console.log('✅ Trigger response status:', response.status);
+      } catch (err) {
+        console.log('❌ Trigger error:', err.message);
+      }
+    } else {
+      console.log('⛔ Trigger skipped');
+    }
 
     console.log('================ WORKER END ================\n');
 
@@ -2323,7 +2323,7 @@ export const runCsvImportWorker = async () => {
    ========================================================= */
 
 export const startCsvImportCron = () => {
-  cron.schedule('*/3 * * * * *', async () => {
+  cron.schedule('* * * * * *', async () => {
     await runCsvImportWorker();
   });
 };

@@ -30,6 +30,7 @@ import { startTopProductCron } from './controller/topProductCron.js';
 import { startAlertCron } from './controller/alertcron.js';
 import alertRouter from './Routes/alertRoutes.js';
 import { startCsvImportCron } from './controller/csvImportWorker.js';
+import { runWorkerEndpoint } from './controller/product.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -43,7 +44,7 @@ productSubscriptionExpiration();
 startCsvImportWorkerForInventory()
 startTopProductCron()
 startAlertCron()
-// startCsvImportCron()
+startCsvImportCron()
 
 // deleteOrphanedProducts();
 financeScheduler.start();
@@ -94,6 +95,8 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
   res.send('API is running...')
 });
+
+app.post('/run-worker', runWorkerEndpoint);
 
 export default app;
 
