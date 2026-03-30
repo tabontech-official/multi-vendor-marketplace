@@ -2217,7 +2217,6 @@ export const runCsvImportWorker = async () => {
           status: 'completed',
           completedAt: new Date(),
           isProcessing: false,
-          fileBuffer: undefined,
         }
       );
 

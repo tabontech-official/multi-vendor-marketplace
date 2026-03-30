@@ -4408,24 +4408,24 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     console.log('🔹 Triggering worker...');
 
-    try {
-      const url = `${process.env.BASE_URL}/product/run-worker`;
-      console.log('🌐 URL:', url);
+    // try {
+    //   const url = `${process.env.BASE_URL}/product/run-worker`;
+    //   console.log('🌐 URL:', url);
 
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
+    //   try {
+    //     const response = await fetch(url, {
+    //       method: 'POST',
+    //       headers: { 'Content-Type': 'application/json' },
+    //     });
 
-        console.log('✅ Worker API triggered:', response.status);
-      } catch (err) {
-        console.log('❌ Worker trigger failed:', err.message);
-      }
-      console.log('🧠 Worker result:', result);
-    } catch (workerErr) {
-      console.log('❌ Worker execution failed:', workerErr.message);
-    }
+    //     console.log('✅ Worker API triggered:', response.status);
+    //   } catch (err) {
+    //     console.log('❌ Worker trigger failed:', err.message);
+    //   }
+    //   console.log('🧠 Worker result:', result);
+    // } catch (workerErr) {
+    //   console.log('❌ Worker execution failed:', workerErr.message);
+    // }
 
     console.log('================ UPLOAD API END ================\n');
 
