@@ -58,7 +58,7 @@ const csvImportBatchSchema = new mongoose.Schema(
       success: { type: Number, default: 0 },
       failed: { type: Number, default: 0 },
     },
-    processedCount: {
+    currentIndex: {
       type: Number,
       default: 0,
     },

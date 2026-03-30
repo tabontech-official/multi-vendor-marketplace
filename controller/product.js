@@ -4240,6 +4240,69 @@ const validateCsvFile = (fileBuffer) => {
   }
 };
 
+// export const addCsvfileForProductFromBody = async (req, res) => {
+//   try {
+//     const file = req.file;
+//     const userId = req.userId;
+
+//     if (!file || !file.buffer) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'No file uploaded',
+//       });
+//     }
+
+//     console.log('📁 File received:', file.originalname);
+
+//     const batchNo = `BATCH-${generateBatchId()}`;
+
+//     /* ================= SAVE BATCH ================= */
+
+//     const batch = await csvImportBatchSchema.create({
+//       batchNo,
+//       userId,
+//       fileName: file.originalname,
+//       mimeType: file.mimetype,
+//       fileSize: file.size,
+//       fileBuffer: file.buffer,
+//       status: 'pending',
+//       createdAt: new Date(),
+//     });
+
+//     console.log('✅ Batch saved:', batch.batchNo);
+
+//     await runCsvImportWorker();
+   
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'File uploaded successfully. Processing started.',
+//       batchNo: batch.batchNo,
+//       status: batch.status,
+//     });
+//   } catch (err) {
+//     console.log('❌ Upload API Error:', err.message);
+
+//     return res.status(500).json({
+//       success: false,
+//       error: err.message,
+//     });
+//   }
+// };
+
+function groupRowsByHandle(rows) {
+  const grouped = {};
+
+  for (const row of rows) {
+    const handle = row['Product URL']?.trim();
+    if (!handle) continue;
+
+    if (!grouped[handle]) grouped[handle] = [];
+    grouped[handle].push(row);
+  }
+
+  return grouped;
+}
 export const addCsvfileForProductFromBody = async (req, res) => {
   try {
     const file = req.file;
@@ -4256,6 +4319,27 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     const batchNo = `BATCH-${generateBatchId()}`;
 
+    /* ================= PARSE CSV FOR TOTAL ================= */
+
+    const csvString = file.buffer.toString('utf-8');
+
+    const rows = parse(csvString, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+
+    if (!rows.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'CSV is empty',
+      });
+    }
+
+    // 👇 same logic jo worker use karta hai
+    const grouped = groupRowsByHandle(rows);
+    const totalProducts = Object.keys(grouped).length;
+
     /* ================= SAVE BATCH ================= */
 
     const batch = await csvImportBatchSchema.create({
@@ -4267,19 +4351,31 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       fileBuffer: file.buffer,
       status: 'pending',
       createdAt: new Date(),
+
+      // ✅ IMPORTANT ADDITIONS
+      currentIndex: 0,
+      results: [],
+      summary: {
+        total: totalProducts,
+        success: 0,
+        failed: 0,
+      },
     });
 
     console.log('✅ Batch saved:', batch.batchNo);
+    console.log(`📊 Total products in batch: ${totalProducts}`);
 
+    // 🔥 trigger worker (first chunk)
     await runCsvImportWorker();
-   
 
     return res.status(200).json({
       success: true,
       message: 'File uploaded successfully. Processing started.',
       batchNo: batch.batchNo,
+      totalProducts,
       status: batch.status,
     });
+
   } catch (err) {
     console.log('❌ Upload API Error:', err.message);
 
@@ -4289,6 +4385,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
   }
 };
+
 
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   try {

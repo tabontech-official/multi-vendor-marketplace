@@ -967,8 +967,8 @@
 //       try {
 //         await notificationModel.create({
 //           userId: userId,
-//           message: `Batch ${batch.batchNo} import completed. 
-// Success: ${batch.summary.success}, 
+//           message: `Batch ${batch.batchNo} import completed.
+// Success: ${batch.summary.success},
 // Failed: ${batch.summary.failed}`,
 //           source: 'csv-import',
 //           seen: false,
@@ -1103,7 +1103,11 @@ async function limitedShopifyRequest(
         null;
 
       const shouldRetry =
-        status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+        status === 429 ||
+        status === 500 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504;
 
       if (shouldRetry && retryCount < MAX_RETRIES) {
         let waitMs = 2000;
@@ -1348,7 +1352,9 @@ function buildOptionsAndVariants(productRows, firstRow) {
           price: row['Price'] || '0.00',
           compare_at_price: row['Compare At Price'] || null,
           inventory_management: trackQuantity ? 'shopify' : null,
-          inventory_quantity: trackQuantity ? parseInt(row['Quantity']) || 0 : 0,
+          inventory_quantity: trackQuantity
+            ? parseInt(row['Quantity']) || 0
+            : 0,
           requires_shipping: isPhysical,
           taxable: isPhysical,
           weight: isPhysical ? parseFloat(row['Weight']) || 0 : 0,
@@ -1729,7 +1735,9 @@ async function saveListingToDb({
 }) {
   const fullProduct = fullProductRes.product;
 
-  const hasSku = productRows.some((row) => row['SKU'] && row['SKU'].trim() !== '');
+  const hasSku = productRows.some(
+    (row) => row['SKU'] && row['SKU'].trim() !== ''
+  );
   const baseSku = hasSku ? productRows[0]['SKU'] : null;
   const baseBarcode = hasSku ? productRows[0]['Barcode'] : null;
 
@@ -1785,10 +1793,12 @@ async function saveListingToDb({
       height: img.height || null,
       src: img.src,
     })),
-    variantImages: Object.entries(variantImageMap).map(([variantId, images]) => ({
-      variantId,
-      images,
-    })),
+    variantImages: Object.entries(variantImageMap).map(
+      ([variantId, images]) => ({
+        variantId,
+        images,
+      })
+    ),
     inventory: {
       track_quantity: trackQuantity,
       quantity: trackQuantity ? parseInt(productRows[0]['Quantity']) || 0 : 0,
@@ -1843,13 +1853,8 @@ async function processSingleProduct({
   try {
     console.log('🟢 Processing:', handle);
 
-    const {
-      trackQuantity,
-      shippingShortId,
-      isPhysical,
-      options,
-      variants,
-    } = buildOptionsAndVariants(productRows, firstRow);
+    const { trackQuantity, shippingShortId, isPhysical, options, variants } =
+      buildOptionsAndVariants(productRows, firstRow);
 
     console.log('\n================ VARIANT DEBUG ================');
     console.log('🧪 FINAL OPTIONS:', JSON.stringify(options, null, 2));
@@ -1876,7 +1881,10 @@ async function processSingleProduct({
     const invalidCategories = categoryResult?.invalid || [];
 
     if (invalidCategories.length > 0) {
-      console.log(`⚠️ Warning: Invalid categories for ${cleanHandle}:`, invalidCategories);
+      console.log(
+        `⚠️ Warning: Invalid categories for ${cleanHandle}:`,
+        invalidCategories
+      );
     }
 
     const tagsArray = [
@@ -2012,7 +2020,11 @@ async function processSingleProduct({
   }
 }
 
-async function sendBatchCompletionNotification(batch, userId, batchLevelError = null) {
+async function sendBatchCompletionNotification(
+  batch,
+  userId,
+  batchLevelError = null
+) {
   try {
     await notificationModel.create({
       userId,
@@ -2089,97 +2101,136 @@ export const runCsvImportWorker = async () => {
   console.log('✅ CSV Import Worker Running');
 
   try {
-    const batch = await csvImportBatchSchema.findOneAndUpdate(
-      {
-        status: 'pending',
-      },
-      {
-        status: 'processing',
-        lockedAt: new Date(),
-      },
-      {
-        new: true,
-        sort: { createdAt: 1 },
-      }
-    );
+    await preloadCategoryCache();
 
-    if (!batch) {
-      console.log('ℹ️ No pending batch found');
+    const config = await shopifyConfigurationModel.findOne();
+    if (!config) throw new Error('Shopify config missing');
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+
+    // ✅ GET MULTIPLE BATCHES (ROUND ROBIN BASE)
+    const batches = await csvImportBatchSchema
+      .find({
+        status: { $in: ['pending', 'processing'] },
+      })
+      .sort({ createdAt: 1 })
+      .limit(5); // 👈 number of parallel users
+
+    if (!batches.length) {
+      console.log('ℹ️ No batches found');
       return;
     }
 
-    const userId = batch.userId;
-    let batchLevelError = null;
+    for (const batch of batches) {
+      try {
+        // ❗ skip completed
+        if (batch.status === 'completed') continue;
 
-    try {
-      await preloadCategoryCache();
+        // mark processing
+        if (batch.status === 'pending') {
+          batch.status = 'processing';
+          batch.lockedAt = new Date();
+        }
 
-      const config = await shopifyConfigurationModel.findOne();
-      if (!config) throw new Error('Shopify config missing');
+        if (!batch.fileBuffer) {
+          console.log(`❌ Missing fileBuffer for ${batch.batchNo}`);
+          continue;
+        }
 
-      const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+        const csvString = batch.fileBuffer.toString('utf-8');
 
-      const csvString = batch.fileBuffer.toString('utf-8');
+        const rows = parse(csvString, {
+          columns: true,
+          skip_empty_lines: true,
+          trim: true,
+        });
 
-      const rows = parse(csvString, {
-        columns: true,
-        skip_empty_lines: true,
-        trim: true,
-      });
+        if (!rows.length) continue;
 
-      if (!rows.length) throw new Error('CSV is empty');
+        const grouped = groupRowsByHandle(rows);
+        const handles = Object.keys(grouped);
 
-      const grouped = groupRowsByHandle(rows);
-      const handles = Object.keys(grouped);
+        // ✅ INIT FIRST TIME
+        if (!batch.results || batch.results.length === 0) {
+          batch.results = [];
+          batch.summary = {
+            total: handles.length,
+            success: 0,
+            failed: 0,
+          };
+          batch.currentIndex = 0;
+        }
 
-      batch.results = [];
-      batch.summary = {
-        total: handles.length,
-        success: 0,
-        failed: 0,
-      };
-      await batch.save();
+        const index = batch.currentIndex || 0;
 
-      for (const handle of handles) {
+        // ❗ skip if already done
+        if (index >= handles.length) {
+          batch.status = 'completed';
+          batch.completedAt = new Date();
+          batch.fileBuffer = undefined;
+
+          await batch.save();
+
+          await sendBatchCompletionNotification(batch, batch.userId);
+          continue;
+        }
+
+        const handle = handles[index];
         const productRows = grouped[handle];
+
+        console.log(
+          `⚖️ User ${batch.userId} → Product ${index} (${batch.batchNo})`
+        );
+
         await processSingleProduct({
           handle,
           productRows,
-          userId,
+          userId: batch.userId,
           batch,
           shopifyStoreUrl,
           shopifyApiKey,
           shopifyAccessToken,
         });
-      }
 
-      if (batch.summary.failed > 0 && batch.summary.success > 0) {
-        batch.status = 'completed';
-      } else if (batch.summary.failed > 0) {
+        // ✅ move to next product
+        batch.currentIndex = index + 1;
+        batch.lockedAt = new Date();
+
+        // ✅ COMPLETE CHECK
+        if (batch.currentIndex >= handles.length) {
+          console.log(`🎉 Batch Completed: ${batch.batchNo}`);
+
+          batch.status = 'completed';
+          batch.completedAt = new Date();
+          batch.fileBuffer = undefined;
+
+          await sendBatchCompletionNotification(batch, batch.userId);
+        }
+
+        await batch.save();
+      } catch (innerErr) {
+        console.log(
+          `❌ Batch error (${batch.batchNo}):`,
+          innerErr.message
+        );
+
         batch.status = 'failed';
-      } else {
-        batch.status = 'completed';
+        batch.error = innerErr.message;
+        batch.completedAt = new Date();
+
+        await batch.save();
+
+        await sendBatchCompletionNotification(batch, batch.userId);
       }
-
-      batch.completedAt = new Date();
-      batch.fileBuffer = undefined;
-      await batch.save();
-
-      await sendBatchCompletionNotification(batch, userId, batchLevelError);
-    } catch (err) {
-      console.log('🔥 Batch Level Error:', err.message);
-
-      batchLevelError = err;
-
-      batch.status = 'failed';
-      batch.error = err.message;
-      batch.completedAt = new Date();
-      batch.fileBuffer = undefined;
-
-      await batch.save();
-
-      await sendBatchCompletionNotification(batch, userId, batchLevelError);
     }
+
+    // 🔁 AUTO LOOP (IMPORTANT)
+    setTimeout(() => {
+      runCsvImportWorker().catch((err) =>
+        console.log('Recursive worker error:', err.message)
+      );
+    }, 2000);
+
   } catch (err) {
     console.log('Worker Error:', err.message);
   }
