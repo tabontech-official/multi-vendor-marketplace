@@ -17,7 +17,7 @@
   ],
   "crons": [
     {
-      "path": "/run-worker",
+      "path": "/product/run-worker",
       "schedule": "*/1 * * * *"
     }
   ]
