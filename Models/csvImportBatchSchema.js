@@ -58,7 +58,10 @@ const csvImportBatchSchema = new mongoose.Schema(
       success: { type: Number, default: 0 },
       failed: { type: Number, default: 0 },
     },
-
+    processedCount: {
+      type: Number,
+      default: 0,
+    },
     error: String,
 
     // 🔥 NEW: Batch Level Logs
