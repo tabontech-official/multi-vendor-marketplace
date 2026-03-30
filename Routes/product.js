@@ -51,6 +51,7 @@ import {
   getTopProductsByMerchant,
   getTopProductsHistoryAdmin,
   getTopProductsHistoryByMerchant,
+  runWorkerEndpoint,
 } from '../controller/product.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -113,6 +114,8 @@ productRouter.post(
   addCsvfileForProductFromBody
 );
 productRouter.post('/productUpdateWebhook', updateProductWebhook);
+productRouter.post('/run-worker', runWorkerEndpoint);
+
 productRouter.put(
   '/updateInventoryPrice/:id',
   verifyToken,

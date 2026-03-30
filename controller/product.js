@@ -4303,24 +4303,44 @@ function groupRowsByHandle(rows) {
 
   return grouped;
 }
+
 export const addCsvfileForProductFromBody = async (req, res) => {
   try {
+    console.log('\n================ UPLOAD API START ================');
+
     const file = req.file;
     const userId = req.userId;
 
-    if (!file || !file.buffer) {
+    console.log('👤 userId:', userId);
+    console.log('📁 FILE OBJECT:', file);
+
+    if (!file) {
+      console.log('❌ No file object received');
       return res.status(400).json({
         success: false,
         message: 'No file uploaded',
       });
     }
 
-    console.log('📁 File received:', file.originalname);
+    console.log('📄 File name:', file.originalname);
+    console.log('📦 File size:', file.size);
+    console.log('📦 Buffer exists:', !!file.buffer);
+    console.log('📦 Buffer length:', file.buffer?.length);
+
+    if (!file.buffer) {
+      console.log('❌ Buffer missing → multer misconfigured');
+      return res.status(400).json({
+        success: false,
+        message: 'File buffer missing (check multer config)',
+      });
+    }
 
     const batchNo = `BATCH-${generateBatchId()}`;
+    console.log('🆔 Generated batchNo:', batchNo);
 
-    /* ================= PARSE CSV FOR TOTAL ================= */
+    /* ================= PARSE CSV ================= */
 
+    console.log('🔹 Parsing CSV...');
     const csvString = file.buffer.toString('utf-8');
 
     const rows = parse(csvString, {
@@ -4329,18 +4349,27 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       trim: true,
     });
 
+    console.log('📊 Total rows parsed:', rows.length);
+
     if (!rows.length) {
+      console.log('❌ CSV is empty');
       return res.status(400).json({
         success: false,
         message: 'CSV is empty',
       });
     }
 
-    // 👇 same logic jo worker use karta hai
+    /* ================= GROUP PRODUCTS ================= */
+
+    console.log('🔹 Grouping rows by handle...');
     const grouped = groupRowsByHandle(rows);
     const totalProducts = Object.keys(grouped).length;
 
+    console.log('🧩 Total grouped products:', totalProducts);
+
     /* ================= SAVE BATCH ================= */
+
+    console.log('🔹 Saving batch to DB...');
 
     const batch = await csvImportBatchSchema.create({
       batchNo,
@@ -4352,7 +4381,6 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       status: 'pending',
       createdAt: new Date(),
 
-      // ✅ IMPORTANT ADDITIONS
       currentIndex: 0,
       results: [],
       summary: {
@@ -4363,10 +4391,33 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     });
 
     console.log('✅ Batch saved:', batch.batchNo);
+    console.log('🆔 Batch ID:', batch._id);
+
+    // 🔥 VERIFY BUFFER SAVED
+    const verifyBatch = await csvImportBatchSchema.findById(batch._id);
+
+    console.log('🔍 Verifying saved batch...');
+    console.log('📦 DB fileBuffer exists:', !!verifyBatch.fileBuffer);
+    console.log('📦 DB buffer length:', verifyBatch.fileBuffer?.length);
+
+    if (!verifyBatch.fileBuffer) {
+      console.log('💥 CRITICAL: Buffer NOT saved in DB');
+    }
+
     console.log(`📊 Total products in batch: ${totalProducts}`);
 
-    // 🔥 trigger worker (first chunk)
-    await runCsvImportWorker();
+    /* ================= TRIGGER WORKER ================= */
+
+    console.log('🔹 Triggering worker...');
+
+    try {
+      const result = await runCsvImportWorker();
+      console.log('🧠 Worker result:', result);
+    } catch (workerErr) {
+      console.log('❌ Worker execution failed:', workerErr.message);
+    }
+
+    console.log('================ UPLOAD API END ================\n');
 
     return res.status(200).json({
       success: true,
@@ -4378,6 +4429,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
   } catch (err) {
     console.log('❌ Upload API Error:', err.message);
+    console.log('================ UPLOAD API FAILED ================\n');
 
     return res.status(500).json({
       success: false,
@@ -4386,6 +4438,40 @@ export const addCsvfileForProductFromBody = async (req, res) => {
   }
 };
 
+export const runWorkerEndpoint = async (req, res) => {
+  try {
+    const result = await runCsvImportWorker();
+
+    console.log('🧠 Worker result:', result);
+
+    // 🔥 trigger BEFORE response
+    if (!result?.done && process.env.AUTO_TRIGGER === 'true') {
+      const url = `${process.env.BASE_URL}/product/run-worker`;
+
+      console.log('🔁 Triggering next worker:', url);
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(() => console.log('✅ Next worker triggered'))
+      .catch(err => console.log('❌ Trigger error:', err.message));
+    }
+
+    return res.status(200).json({
+      success: true,
+      done: false
+    });
+
+  } catch (err) {
+    console.log('❌ Worker API Error:', err.message);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
 
 // export const addCsvfileForProductFromBody = async (req, res) => {
 //   try {

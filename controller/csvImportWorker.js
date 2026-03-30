@@ -1059,7 +1059,7 @@ import { authModel } from '../Models/auth.js';
 import { sendEmail } from '../middleware/sendEmail.js';
 import { notificationModel } from '../Models/Notifications.js';
 import { categoryModel } from '../Models/category.js';
-
+import fetch from 'node-fetch';
 /* =========================================================
    GLOBAL SHOPIFY RATE LIMITER
    ========================================================= */
@@ -2098,141 +2098,226 @@ Failed: ${batch.summary.failed}`,
    ========================================================= */
 
 export const runCsvImportWorker = async () => {
-  console.log('✅ CSV Import Worker Running');
+  console.log('\n================ WORKER START ================');
 
   try {
+    console.log('🔹 Step 0: Preloading categories...');
     await preloadCategoryCache();
 
+    console.log('🔹 Step 1: Fetching Shopify config...');
     const config = await shopifyConfigurationModel.findOne();
-    if (!config) throw new Error('Shopify config missing');
 
-    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
-
-    // ✅ GET MULTIPLE BATCHES (ROUND ROBIN BASE)
-    const batches = await csvImportBatchSchema
-      .find({
-        status: { $in: ['pending', 'processing'] },
-      })
-      .sort({ createdAt: 1 })
-      .limit(5); // 👈 number of parallel users
-
-    if (!batches.length) {
-      console.log('ℹ️ No batches found');
-      return;
+    if (!config) {
+      console.log('❌ Shopify config missing');
+      throw new Error('Shopify config missing');
     }
 
-    for (const batch of batches) {
-      try {
-        // ❗ skip completed
-        if (batch.status === 'completed') continue;
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } = config;
+    console.log('✅ Shopify config loaded');
 
-        // mark processing
-        if (batch.status === 'pending') {
-          batch.status = 'processing';
-          batch.lockedAt = new Date();
+    console.log('🔹 Step 2: Releasing stuck locks...');
+    const released = await csvImportBatchSchema.updateMany(
+      {
+        isProcessing: true,
+        lockExpiresAt: { $lt: new Date() },
+      },
+      { isProcessing: false }
+    );
+    console.log(`🔓 Released locks: ${released.modifiedCount}`);
+
+    console.log('🔹 Step 3: Fetching next batch...');
+    const batch = await csvImportBatchSchema.findOneAndUpdate(
+      {
+        status: { $in: ['pending', 'processing'] },
+        isProcessing: false,
+      },
+      {
+        isProcessing: true,
+        lockedAt: new Date(),
+        lockExpiresAt: new Date(Date.now() + 60 * 1000),
+        status: 'processing',
+      },
+      {
+        new: true,
+        sort: { createdAt: -1 },
+      }
+    );
+
+    if (!batch) {
+      console.log('ℹ️ No batch found → exiting worker');
+      return { done: true };
+    }
+
+    console.log(`🚀 Processing Batch: ${batch.batchNo}`);
+    console.log('📦 Batch currentIndex:', batch.currentIndex);
+
+    if (!batch.fileBuffer) {
+      console.log('❌ No fileBuffer found');
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        { isProcessing: false }
+      );
+      return { done: true };
+    }
+
+    console.log('🔹 Step 4: Parsing CSV...');
+    const csvString = batch.fileBuffer.toString('utf-8');
+
+    const rows = parse(csvString, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+
+    console.log(`📊 Total rows: ${rows.length}`);
+
+    if (!rows.length) {
+      console.log('❌ CSV empty');
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        {
+          status: 'failed',
+          error: 'CSV empty',
+          isProcessing: false,
         }
+      );
+      return { done: true };
+    }
 
-        if (!batch.fileBuffer) {
-          console.log(`❌ Missing fileBuffer for ${batch.batchNo}`);
-          continue;
-        }
+    const grouped = groupRowsByHandle(rows);
+    const handles = Object.keys(grouped);
 
-        const csvString = batch.fileBuffer.toString('utf-8');
+    console.log(`🧩 Total products (handles): ${handles.length}`);
 
-        const rows = parse(csvString, {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-        });
-
-        if (!rows.length) continue;
-
-        const grouped = groupRowsByHandle(rows);
-        const handles = Object.keys(grouped);
-
-        // ✅ INIT FIRST TIME
-        if (!batch.results || batch.results.length === 0) {
-          batch.results = [];
-          batch.summary = {
+    if (!batch.results || batch.results.length === 0) {
+      console.log('🔹 Initializing batch summary...');
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        {
+          results: [],
+          summary: {
             total: handles.length,
             success: 0,
             failed: 0,
-          };
-          batch.currentIndex = 0;
+          },
+          currentIndex: 0,
         }
-
-        const index = batch.currentIndex || 0;
-
-        // ❗ skip if already done
-        if (index >= handles.length) {
-          batch.status = 'completed';
-          batch.completedAt = new Date();
-          batch.fileBuffer = undefined;
-
-          await batch.save();
-
-          await sendBatchCompletionNotification(batch, batch.userId);
-          continue;
-        }
-
-        const handle = handles[index];
-        const productRows = grouped[handle];
-
-        console.log(
-          `⚖️ User ${batch.userId} → Product ${index} (${batch.batchNo})`
-        );
-
-        await processSingleProduct({
-          handle,
-          productRows,
-          userId: batch.userId,
-          batch,
-          shopifyStoreUrl,
-          shopifyApiKey,
-          shopifyAccessToken,
-        });
-
-        // ✅ move to next product
-        batch.currentIndex = index + 1;
-        batch.lockedAt = new Date();
-
-        // ✅ COMPLETE CHECK
-        if (batch.currentIndex >= handles.length) {
-          console.log(`🎉 Batch Completed: ${batch.batchNo}`);
-
-          batch.status = 'completed';
-          batch.completedAt = new Date();
-          batch.fileBuffer = undefined;
-
-          await sendBatchCompletionNotification(batch, batch.userId);
-        }
-
-        await batch.save();
-      } catch (innerErr) {
-        console.log(
-          `❌ Batch error (${batch.batchNo}):`,
-          innerErr.message
-        );
-
-        batch.status = 'failed';
-        batch.error = innerErr.message;
-        batch.completedAt = new Date();
-
-        await batch.save();
-
-        await sendBatchCompletionNotification(batch, batch.userId);
-      }
+      );
     }
 
-    // 🔁 AUTO LOOP (IMPORTANT)
-    setTimeout(() => {
-      runCsvImportWorker().catch((err) =>
-        console.log('Recursive worker error:', err.message)
-      );
-    }, 2000);
+    const index = batch.currentIndex || 0;
+    console.log('📍 Current index:', index);
 
+    if (index >= handles.length) {
+      console.log(`🎉 Batch Completed: ${batch.batchNo}`);
+
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        {
+          status: 'completed',
+          completedAt: new Date(),
+          isProcessing: false,
+          fileBuffer: undefined,
+        }
+      );
+
+      await sendBatchCompletionNotification(batch, batch.userId);
+
+      return { done: true };
+    }
+
+    const handle = handles[index];
+    const productRows = grouped[handle];
+
+    console.log(`⚙️ Processing product: ${handle}`);
+    console.log(`📦 Rows for this product: ${productRows.length}`);
+
+    try {
+      await processSingleProduct({
+        handle,
+        productRows,
+        userId: batch.userId,
+        batch,
+        shopifyStoreUrl,
+        shopifyApiKey,
+        shopifyAccessToken,
+      });
+
+      console.log('✅ Product processed successfully');
+
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        {
+          $inc: { currentIndex: 1 },
+          $set: {
+            lockedAt: new Date(),
+            isProcessing: false,
+          },
+        }
+      );
+    } catch (err) {
+      console.log('❌ Product processing error:', err.message);
+
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        {
+          $inc: {
+            currentIndex: 1,
+            'summary.failed': 1,
+          },
+          $push: {
+            results: {
+              handle,
+              status: 'error',
+              message: err.message,
+              completedAt: new Date(),
+            },
+          },
+          $set: {
+            isProcessing: false,
+          },
+        }
+      );
+    }
+
+    const isDone = index + 1 >= handles.length;
+
+    console.log('🔹 Step 5: Trigger decision');
+    console.log('➡️ isDone:', isDone);
+    console.log('➡️ AUTO_TRIGGER raw:', process.env.AUTO_TRIGGER);
+
+    const shouldTrigger =
+      !isDone &&
+      String(process.env.AUTO_TRIGGER).toLowerCase() === 'true';
+
+    console.log('➡️ shouldTrigger:', shouldTrigger);
+
+    if (shouldTrigger) {
+      const url = `${process.env.BASE_URL}/product/run-worker`;
+      console.log('🔁 Triggering next worker...');
+      console.log('🌐 URL:', url);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        console.log('✅ Trigger response status:', response.status);
+      } catch (err) {
+        console.log('❌ Trigger error:', err.message);
+      }
+    } else {
+      console.log('⛔ Trigger skipped');
+    }
+
+    console.log('================ WORKER END ================\n');
+
+    return { done: isDone };
   } catch (err) {
-    console.log('Worker Error:', err.message);
+    console.log('💥 Worker Error:', err.message);
+    console.log('================ WORKER FAILED ================\n');
+    return { done: true };
   }
 };
 
