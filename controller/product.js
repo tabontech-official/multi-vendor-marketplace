@@ -4409,7 +4409,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     console.log('🔹 Triggering worker...');
 
     try {
-      const url = `${process.env.BASE_URL}/product/run-worker`;
+      const url = `${process.env.BASE_URL}/run-worker`;
       console.log('🌐 URL:', url);
 
       try {
@@ -4454,7 +4454,7 @@ export const runWorkerEndpoint = async (req, res) => {
 
     // 🔥 trigger BEFORE response
     if (!result?.done) {
-      const url = `${process.env.BASE_URL}/product/run-worker`;
+      const url = `${process.env.BASE_URL}/run-worker`;
 
       console.log('🔁 Triggering next worker:', url);
 
