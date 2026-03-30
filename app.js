@@ -43,10 +43,11 @@ productSubscriptionExpiration();
 startCsvImportWorkerForInventory()
 startTopProductCron()
 startAlertCron()
+startCsvImportCron()
+
 // deleteOrphanedProducts();
 financeScheduler.start();
 // financeCron()
-startCsvImportCron()
 app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('combined'));
