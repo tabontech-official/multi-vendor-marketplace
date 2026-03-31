@@ -117,70 +117,149 @@ export const deleteUserFile = async (req, res) => {
   }
 };
 
+// export const getAllFiles = async (req, res) => {
+//   try {
+
+//     console.log("GET ALL FILES API CALLED");
+
+//     const files = await ContentUpload.aggregate([
+
+//       // users collection join
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "userId",
+//           foreignField: "_id",
+//           as: "user"
+//         }
+//       },
+
+//       {
+//         $unwind: {
+//           path: "$user",
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+
+//       // files array ko flatten
+//       {
+//         $unwind: "$files"
+//       },
+
+//       // name + email add
+//       {
+//         $addFields: {
+//           "files.merchantName": {
+//             $concat: ["$user.firstName", " ", "$user.lastName"]
+//           },
+//           "files.merchantEmail": "$user.email"
+//         }
+//       },
+
+//       // sirf file object return
+//       {
+//         $replaceRoot: { newRoot: "$files" }
+//       },
+
+//       { $sort: { createdAt: -1 } }
+
+//     ]);
+
+//     console.log("TOTAL FILES:", files.length);
+
+//     res.json({
+//       success: true,
+//       data: files
+//     });
+
+//   } catch (error) {
+
+//     console.error("🔥 Fetch all files error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error fetching files",
+//     });
+
+//   }
+// };
+
 export const getAllFiles = async (req, res) => {
   try {
-
     console.log("GET ALL FILES API CALLED");
 
     const files = await ContentUpload.aggregate([
-
-      // users collection join
+      // 🔹 Join users
       {
         $lookup: {
           from: "users",
           localField: "userId",
           foreignField: "_id",
-          as: "user"
-        }
+          as: "user",
+        },
       },
 
       {
         $unwind: {
           path: "$user",
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
 
-      // files array ko flatten
+      // 🔹 Sort parent FIRST (important)
       {
-        $unwind: "$files"
+        $sort: { createdAt: -1 },
       },
 
-      // name + email add
+      // 🔹 Flatten files
+      {
+        $unwind: "$files",
+      },
+
+      // 🔹 Add extra fields + carry createdAt
       {
         $addFields: {
           "files.merchantName": {
-            $concat: ["$user.firstName", " ", "$user.lastName"]
+            $trim: {
+              input: {
+                $concat: [
+                  { $ifNull: ["$user.firstName", ""] },
+                  " ",
+                  { $ifNull: ["$user.lastName", ""] },
+                ],
+              },
+            },
           },
-          "files.merchantEmail": "$user.email"
-        }
+          "files.merchantEmail": "$user.email",
+
+          // 🔥 IMPORTANT: carry parent timestamp
+          "files.createdAt": "$createdAt",
+        },
       },
 
-      // sirf file object return
+      // 🔹 Make file the root object
       {
-        $replaceRoot: { newRoot: "$files" }
+        $replaceRoot: { newRoot: "$files" },
       },
 
-      { $sort: { createdAt: -1 } }
-
+      {
+        $sort: { createdAt: -1 },
+      },
     ]);
 
     console.log("TOTAL FILES:", files.length);
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      data: files
+      data: files,
     });
-
   } catch (error) {
-
     console.error("🔥 Fetch all files error:", error);
 
     return res.status(500).json({
       success: false,
       message: "Error fetching files",
     });
-
   }
 };
 
