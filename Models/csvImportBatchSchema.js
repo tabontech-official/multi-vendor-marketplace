@@ -90,7 +90,7 @@ const csvImportBatchSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'completed', 'failed'],
+      enum: ['pending', 'processing', 'completed', 'failed', 'queued'],
       default: 'pending',
     },
 
@@ -126,10 +126,13 @@ const csvImportBatchSchema = new mongoose.Schema(
     results: [
       /* keep as-is */
     ],
-
+    handles: { type: [String], default: [] },
+    groupedProducts: { type: mongoose.Schema.Types.Mixed, default: {} },
+    queuedHandles: { type: [String], default: [] },
+    processedHandles: { type: [String], default: [] },
     error: String,
     lastProcessedAt: Date,
-
+    schedulerLocked: { type: Boolean, default: false },
     batchLogs: [
       {
         message: String,

@@ -29,7 +29,7 @@ import adminFilesRouter from './Routes/adminFiles.js';
 import { startTopProductCron } from './controller/topProductCron.js';
 import { startAlertCron } from './controller/alertcron.js';
 import alertRouter from './Routes/alertRoutes.js';
-import { startCsvImportCron } from './controller/csvImportWorker.js';
+import { runRoundRobinCsvScheduler } from './controller/product.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -44,7 +44,18 @@ startCsvImportWorkerForInventory()
 startTopProductCron()
 startAlertCron()
 // startCsvImportCron()
+function startCsvRoundRobinScheduler() {
+  console.log('🚀 Starting CSV Round Robin Scheduler...');
 
+  setInterval(async () => {
+    try {
+      await runRoundRobinCsvScheduler();
+    } catch (err) {
+      console.log('❌ Scheduler error:', err.message);
+    }
+  }, 1500); // every 1.5 sec
+}
+startCsvRoundRobinScheduler();
 // deleteOrphanedProducts();
 financeScheduler.start();
 // financeCron()

@@ -24,9 +24,10 @@ import ExcelJS from 'exceljs';
 import { shippingProfileModel } from '../Models/shippingProfileModel.js';
 import { v4 as uuidv4 } from 'uuid';
 import csvImportBatchSchema from '../Models/csvImportBatchSchema.js';
-import { runCsvImportWorker } from './csvImportWorker.js';
+// import { runCsvImportWorker } from './csvImportWorker.js';
 import { orderModel } from '../Models/order.js';
 import { TopProductStats } from '../Models/TopProductStats.js';
+import { csvQueue } from '../queue/csvQueue.js';
 export const shopifyRequest = async (
   url,
   method,
@@ -4302,6 +4303,142 @@ function groupRowsByHandle(rows) {
   return grouped;
 }
 
+// export const addCsvfileForProductFromBody = async (req, res) => {
+//   try {
+//     console.log('\n================ UPLOAD API START ================');
+
+//     const file = req.file;
+//     const userId = req.userId;
+
+//     console.log('👤 userId:', userId);
+
+//     if (!file) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'No file uploaded',
+//       });
+//     }
+
+//     if (!file.buffer) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'File buffer missing (check multer config)',
+//       });
+//     }
+
+//     console.log('📄 File name:', file.originalname);
+//     console.log('📦 File size:', file.size);
+
+//     const batchNo = `BATCH-${generateBatchId()}`;
+//     console.log('🆔 Batch:', batchNo);
+
+//     /* ================= PARSE CSV ================= */
+
+//     const csvString = file.buffer.toString('utf-8');
+
+//     const rows = parse(csvString, {
+//       columns: true,
+//       skip_empty_lines: true,
+//       trim: true,
+//     });
+
+//     if (!rows.length) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'CSV is empty',
+//       });
+//     }
+
+//     console.log('📊 Rows:', rows.length);
+
+//     /* ================= GROUP PRODUCTS ================= */
+
+//     const grouped = groupRowsByHandle(rows);
+//     const handles = Object.keys(grouped);
+//     const totalProducts = handles.length;
+
+//     console.log('🧩 Products:', totalProducts);
+
+//     if (!totalProducts) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'No valid products found (missing Product URL)',
+//       });
+//     }
+
+//     /* ================= SAVE BATCH ================= */
+
+//     const batch = await csvImportBatchSchema.create({
+//       batchNo,
+//       userId,
+//       fileName: file.originalname,
+//       mimeType: file.mimetype,
+//       fileSize: file.size,
+//       fileBuffer: file.buffer, // ⚠️ later move to storage
+//       status: 'queued',
+//       createdAt: new Date(),
+
+//       results: [],
+//       summary: {
+//         total: totalProducts,
+//         success: 0,
+//         failed: 0,
+//       },
+//     });
+
+//     console.log('✅ Batch saved:', batch._id);
+
+//     /* ================= ADD JOBS TO QUEUE ================= */
+
+//     console.log('🔹 Adding jobs to queue...');
+
+//     const jobPromises = handles.map((handle) => {
+//       return csvQueue.add(
+//         'csv-import', // ✅ MUST MATCH WORKER
+//         {
+//           handle,
+//           productRows: grouped[handle],
+//           userId: batch.userId,
+//           batchId: batch._id,
+//         },
+//         {
+//           jobId: `${batch._id}-${handle}`, // ✅ PREVENT DUPLICATE
+//           attempts: 3,
+//           backoff: {
+//             type: 'exponential',
+//             delay: 2000,
+//           },
+//           removeOnComplete: true,
+//           removeOnFail: false,
+//         }
+//       );
+//     });
+
+//     await Promise.all(jobPromises);
+
+//     console.log(`✅ ${handles.length} jobs added`);
+
+//     console.log('================ UPLOAD API END ================\n');
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'File uploaded and jobs queued successfully',
+//       batchNo: batch.batchNo,
+//       totalProducts,
+//       status: 'queued',
+//     });
+
+//   } catch (err) {
+//     console.log('❌ Upload API Error:', err.message);
+//     console.log('================ UPLOAD API FAILED ================\n');
+
+//     return res.status(500).json({
+//       success: false,
+//       error: err.message,
+//     });
+//   }
+// };
+
 export const addCsvfileForProductFromBody = async (req, res) => {
   try {
     console.log('\n================ UPLOAD API START ================');
@@ -4310,35 +4447,27 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     const userId = req.userId;
 
     console.log('👤 userId:', userId);
-    console.log('📁 FILE OBJECT:', file);
 
     if (!file) {
-      console.log('❌ No file object received');
       return res.status(400).json({
         success: false,
         message: 'No file uploaded',
       });
     }
 
-    console.log('📄 File name:', file.originalname);
-    console.log('📦 File size:', file.size);
-    console.log('📦 Buffer exists:', !!file.buffer);
-    console.log('📦 Buffer length:', file.buffer?.length);
-
     if (!file.buffer) {
-      console.log('❌ Buffer missing → multer misconfigured');
       return res.status(400).json({
         success: false,
         message: 'File buffer missing (check multer config)',
       });
     }
 
+    console.log('📄 File name:', file.originalname);
+    console.log('📦 File size:', file.size);
+
     const batchNo = `BATCH-${generateBatchId()}`;
-    console.log('🆔 Generated batchNo:', batchNo);
+    console.log('🆔 Batch:', batchNo);
 
-    /* ================= PARSE CSV ================= */
-
-    console.log('🔹 Parsing CSV...');
     const csvString = file.buffer.toString('utf-8');
 
     const rows = parse(csvString, {
@@ -4347,27 +4476,27 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       trim: true,
     });
 
-    console.log('📊 Total rows parsed:', rows.length);
-
     if (!rows.length) {
-      console.log('❌ CSV is empty');
       return res.status(400).json({
         success: false,
         message: 'CSV is empty',
       });
     }
 
-    /* ================= GROUP PRODUCTS ================= */
+    console.log('📊 Rows:', rows.length);
 
-    console.log('🔹 Grouping rows by handle...');
     const grouped = groupRowsByHandle(rows);
-    const totalProducts = Object.keys(grouped).length;
+    const handles = Object.keys(grouped);
+    const totalProducts = handles.length;
 
-    console.log('🧩 Total grouped products:', totalProducts);
+    console.log('🧩 Products:', totalProducts);
 
-    /* ================= SAVE BATCH ================= */
-
-    console.log('🔹 Saving batch to DB...');
+    if (!totalProducts) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid products found (missing Product URL)',
+      });
+    }
 
     const batch = await csvImportBatchSchema.create({
       batchNo,
@@ -4379,7 +4508,12 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       status: 'pending',
       createdAt: new Date(),
 
-      currentIndex: 0,
+      handles,
+      groupedProducts: grouped,
+      queuedHandles: [],
+      processedHandles: [],
+      schedulerLocked: false,
+
       results: [],
       summary: {
         total: totalProducts,
@@ -4388,52 +4522,15 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       },
     });
 
-    console.log('✅ Batch saved:', batch.batchNo);
-    console.log('🆔 Batch ID:', batch._id);
-
-    // 🔥 VERIFY BUFFER SAVED
-    const verifyBatch = await csvImportBatchSchema.findById(batch._id);
-
-    console.log('🔍 Verifying saved batch...');
-    console.log('📦 DB fileBuffer exists:', !!verifyBatch.fileBuffer);
-    console.log('📦 DB buffer length:', verifyBatch.fileBuffer?.length);
-
-    if (!verifyBatch.fileBuffer) {
-      console.log('💥 CRITICAL: Buffer NOT saved in DB');
-    }
-
-    console.log(`📊 Total products in batch: ${totalProducts}`);
-
-    /* ================= TRIGGER WORKER ================= */
-
-    console.log('🔹 Triggering worker...');
-
-    try {
-      const url = `${process.env.BASE_URL}/product/run-worker`;
-      console.log('🌐 URL:', url);
-
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-        });
-
-        console.log('✅ Worker API triggered:', response.status);
-      } catch (err) {
-        console.log('❌ Worker trigger failed:', err.message);
-      }
-      console.log('🧠 Worker result:', result);
-    } catch (workerErr) {
-      console.log('❌ Worker execution failed:', workerErr.message);
-    }
-
+    console.log('✅ Batch saved:', batch._id);
     console.log('================ UPLOAD API END ================\n');
 
     return res.status(200).json({
       success: true,
-      message: 'File uploaded successfully. Processing started.',
+      message: 'File uploaded successfully. Scheduler will queue products fairly.',
       batchNo: batch.batchNo,
       totalProducts,
-      status: batch.status,
+      status: 'pending',
     });
   } catch (err) {
     console.log('❌ Upload API Error:', err.message);
@@ -4466,6 +4563,108 @@ export const runWorkerEndpoint = async (req, res) => {
       success: false,
       error: err.message,
     });
+  }
+};
+
+export const runRoundRobinCsvScheduler = async () => {
+  console.log('\n================ ROUND ROBIN SCHEDULER START ================');
+
+  try {
+    const batches = await csvImportBatchSchema.find({
+      status: { $in: ['pending', 'queued', 'processing'] },
+    }).sort({ createdAt: 1 });
+
+    if (!batches.length) {
+      console.log('ℹ️ No active batches found');
+      return { queuedJobs: 0 };
+    }
+
+    let queuedJobs = 0;
+
+    for (const batch of batches) {
+      const handles = batch.handles || [];
+      const queuedHandles = batch.queuedHandles || [];
+      const processedHandles = batch.processedHandles || [];
+      const groupedProducts = batch.groupedProducts || {};
+
+      const nextHandle = handles.find(
+        (h) => !queuedHandles.includes(h) && !processedHandles.includes(h)
+      );
+
+      if (!nextHandle) {
+        console.log(`⏭️ No pending handle left for batch ${batch.batchNo}`);
+        continue;
+      }
+
+      const productRows = groupedProducts[nextHandle];
+
+      if (!productRows || !productRows.length) {
+        console.log(`⚠️ Missing rows for handle ${nextHandle} in batch ${batch.batchNo}`);
+
+        await csvImportBatchSchema.updateOne(
+          { _id: batch._id },
+          {
+            $push: {
+              processedHandles: nextHandle,
+              results: {
+                handle: nextHandle,
+                status: 'error',
+                message: 'Product rows missing in groupedProducts',
+                completedAt: new Date(),
+              },
+            },
+            $inc: {
+              'summary.failed': 1,
+            },
+            $set: {
+              status: 'processing',
+            },
+          }
+        );
+
+        continue;
+      }
+
+      await csvQueue.add(
+        'csv-import',
+        {
+          handle: nextHandle,
+          productRows,
+          userId: batch.userId,
+          batchId: batch._id,
+        },
+        {
+          jobId: `${batch._id}-${nextHandle}`,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
+
+      await csvImportBatchSchema.updateOne(
+        { _id: batch._id },
+        {
+          $push: { queuedHandles: nextHandle },
+          $set: { status: 'queued' },
+        }
+      );
+
+      queuedJobs += 1;
+      console.log(`✅ Queued ${nextHandle} from batch ${batch.batchNo}`);
+    }
+
+    console.log(`🎯 Total jobs queued this cycle: ${queuedJobs}`);
+    console.log('================ ROUND ROBIN SCHEDULER END ================\n');
+
+    return { queuedJobs };
+  } catch (err) {
+    console.log('❌ Scheduler Error:', err.message);
+    console.log('================ ROUND ROBIN SCHEDULER FAILED ================\n');
+    throw err;
   }
 };
 

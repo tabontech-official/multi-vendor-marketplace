@@ -3,7 +3,7 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
 import mongoose from 'mongoose';
-import { runCsvImportWorker } from './csvImportWorker.js';
+// import { runCsvImportWorker } from './csvImportWorker.js';
 export const uploadContent = async (req, res) => {
   try {
     const { userId } = req.body;
