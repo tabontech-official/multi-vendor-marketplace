@@ -30,6 +30,7 @@ import { startTopProductCron } from './controller/topProductCron.js';
 import { startAlertCron } from './controller/alertcron.js';
 import alertRouter from './Routes/alertRoutes.js';
 import { runRoundRobinCsvScheduler } from './controller/product.js';
+import { startBatchCompletionMonitor } from './worker/runBatchCompletionMonitor.js';
 // import { deleteOrphanedProducts } from './controller/BulkSchedular.js';
 const app = express();
 // Setup Swagger documentation
@@ -56,6 +57,7 @@ function startCsvRoundRobinScheduler() {
   }, 1500); // every 1.5 sec
 }
 startCsvRoundRobinScheduler();
+startBatchCompletionMonitor();
 // deleteOrphanedProducts();
 financeScheduler.start();
 // financeCron()
