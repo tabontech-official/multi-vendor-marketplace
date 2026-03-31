@@ -2219,29 +2219,64 @@ export const processSingleProduct = async ({
       userId,
     });
 
-    await csvImportBatchSchema.updateOne(
-      { _id: batchId },
-      {
-        $push: {
-          results: {
-            handle: cleanHandle,
-            status: 'success',
-            warnings: invalidCategories,
-            logs: invalidCategories.map((cat) => ({
-              step: 'category-validation',
-              message: `Invalid category provided: ${cat}`,
-            })),
-            startedAt: productStartTime,
-            completedAt: new Date(),
-          },
-        },
-        $inc: {
-          'summary.success': 1,
-          processedCount: 1,
-        },
-      }
-    );
+    // await csvImportBatchSchema.updateOne(
+    //   { _id: batchId },
+    //   {
+    //     $push: {
+    //       results: {
+    //         handle: cleanHandle,
+    //         status: 'success',
+    //         warnings: invalidCategories,
+    //         logs: invalidCategories.map((cat) => ({
+    //           step: 'category-validation',
+    //           message: `Invalid category provided: ${cat}`,
+    //         })),
+    //         startedAt: productStartTime,
+    //         completedAt: new Date(),
+    //       },
+    //     },
+    //     $inc: {
+    //       'summary.success': 1,
+    //       processedCount: 1,
+    //     },
+    //   }
+    // );
+const batch = await csvImportBatchSchema.findById(batchId);
 
+// 🚫 duplicate check
+if (batch.processedHandles?.includes(cleanHandle)) {
+  console.log('⛔ Duplicate skipped:', cleanHandle);
+  return true;
+}
+
+await csvImportBatchSchema.updateOne(
+  { _id: batchId },
+  {
+    $push: {
+      results: {
+        handle: cleanHandle,
+        status: 'success',
+        warnings: invalidCategories,
+        logs: invalidCategories.map((cat) => ({
+          step: 'category-validation',
+          message: `Invalid category provided: ${cat}`,
+        })),
+        startedAt: productStartTime,
+        completedAt: new Date(),
+      },
+      processedHandles: cleanHandle, // 👈 track processed
+    },
+
+    // ✅ SAFE increment (capped)
+    $set: {
+      'summary.success': Math.min(
+        (batch.summary.success || 0) + 1,
+        batch.summary.total || 0
+      ),
+      processedCount: (batch.processedCount || 0) + 1,
+    },
+  }
+);
     return true;
   } catch (productErr) {
     console.log('❌ Product Error:', productErr.message);
