@@ -51,14 +51,14 @@ export const csvQueue = new Queue('csv-import', {
   connection,
 
   defaultJobOptions: {
-    attempts: 3, // retry 3 times
+    attempts: 3, 
     backoff: {
       type: 'exponential',
       delay: 2000,
     },
 
-    removeOnComplete: 1000, // keep last 1000 jobs
-    removeOnFail: false, // keep failed jobs for debugging
+    removeOnComplete: 1000, 
+    removeOnFail: false, 
   },
 });
 
