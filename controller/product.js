@@ -4486,7 +4486,11 @@ export const addCsvfileForProductFromBody = async (req, res) => {
     console.log('📊 Rows:', rows.length);
 
     const grouped = groupRowsByHandle(rows);
-    const handles = Object.keys(grouped);
+    let handles = Object.keys(grouped);
+
+    // ✅ REMOVE DUPLICATES (important)
+    handles = [...new Set(handles)];
+
     const totalProducts = handles.length;
 
     console.log('🧩 Products:', totalProducts);
@@ -4504,15 +4508,17 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       fileName: file.originalname,
       mimeType: file.mimetype,
       fileSize: file.size,
-      fileBuffer: file.buffer,
+
+      // ❌ REMOVED fileBuffer (don’t store raw file)
+
       status: 'pending',
       createdAt: new Date(),
 
       handles,
       groupedProducts: grouped,
-      queuedHandles: [],
+
+      // ❌ REMOVED queuedHandles
       processedHandles: [],
-      schedulerLocked: false,
 
       results: [],
       summary: {
@@ -4527,7 +4533,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'File uploaded successfully. Scheduler will queue products fairly.',
+      message: 'File uploaded successfully. Scheduler will queue products.',
       batchNo: batch.batchNo,
       totalProducts,
       status: 'pending',
