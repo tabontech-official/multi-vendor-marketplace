@@ -4509,8 +4509,7 @@ export const addCsvfileForProductFromBody = async (req, res) => {
       mimeType: file.mimetype,
       fileSize: file.size,
 
-      // ❌ REMOVED fileBuffer (don’t store raw file)
-
+fileBuffer: file.buffer,
       status: 'pending',
       createdAt: new Date(),
 
