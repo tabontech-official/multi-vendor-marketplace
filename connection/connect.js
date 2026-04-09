@@ -17,7 +17,7 @@ const Connect = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(process.env.DB_URL || "mongodb+srv://multivendor:test123@cluster0.k1cc1.mongodb.net/multivendor", {
+    const conn = await mongoose.connect(process.env.DB_URL || "mongodb+srv://aydiactive:aydi123@cluster0.9zckikf.mongodb.net", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 10000,
