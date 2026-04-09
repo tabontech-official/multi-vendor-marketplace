@@ -45,18 +45,18 @@ startCsvImportWorkerForInventory()
 startTopProductCron()
 startAlertCron()
 // startCsvImportCron()
-function startCsvRoundRobinScheduler() {
-  console.log('🚀 Starting CSV Round Robin Scheduler...');
+// function startCsvRoundRobinScheduler() {
+//   console.log('🚀 Starting CSV Round Robin Scheduler...');
 
-  setInterval(async () => {
-    try {
-      await runRoundRobinCsvScheduler();
-    } catch (err) {
-      console.log('❌ Scheduler error:', err.message);
-    }
-  }, 1500); // every 1.5 sec
-}
-startCsvRoundRobinScheduler();
+//   setInterval(async () => {
+//     try {
+//       await runRoundRobinCsvScheduler();
+//     } catch (err) {
+//       console.log('❌ Scheduler error:', err.message);
+//     }
+//   }, 1500); // every 1.5 sec
+// }
+// startCsvRoundRobinScheduler();
 startBatchCompletionMonitor();
 // deleteOrphanedProducts();
 financeScheduler.start();
