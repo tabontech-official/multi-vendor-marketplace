@@ -2,10 +2,16 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
 
+// cloudinary.v2.config({
+//   cloud_name: 'dt2fvngtp',
+//   api_key: '331996837589612',
+//   api_secret: 'xNC1A5jDlmrfAx3TuAvyf-LFmG4',
+// });
+
 cloudinary.v2.config({
-  cloud_name: 'dt2fvngtp',
-  api_key: '331996837589612',
-  api_secret: 'xNC1A5jDlmrfAx3TuAvyf-LFmG4',
+  cloud_name: 'dqepza96x',
+  api_key: '642541825262966',
+  api_secret: 'yfXmw_n-2yLH1SCxqu3OZt65db0',
 });
 
 const storage = new CloudinaryStorage({
