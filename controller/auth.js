@@ -480,37 +480,6 @@ export const checkShopifyAdminTag = async (email) => {
   }
 };
 
-// export const signIn = async (req, res) => {
-//   try {
-//     const { error } = loginSchema.validate(req.body);
-//     if (error) {
-//       return res.status(400).json({ error: error.details[0].message });
-//     }
-
-//     const { email, password } = req.body;
-
-//     const user = await authModel.findOne({ email });
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) {
-//       return res.status(401).json({ message: 'Invalid password' });
-//     }
-
-//     const userRole = await checkShopifyAdminTag(email);
-
-//     user.role = userRole;
-//     await user.save();
-
-//     const token = createToken({ _id: user._id, role: user.role });
-
-//     res.json({ token, role: user.role, user });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Server error' });
-//   }
-// };
 
 export const signIn = async (req, res) => {
   try {
