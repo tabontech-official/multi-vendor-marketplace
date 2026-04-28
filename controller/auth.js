@@ -406,7 +406,7 @@ export const checkShopifyAdminTag = async (email) => {
     'Add Product',
     'Inventory',
     'Orders',
-    'ManageOrders',
+    'Manage Orders',
     'Promotions',
     'All Promotions',
     'Reports',
