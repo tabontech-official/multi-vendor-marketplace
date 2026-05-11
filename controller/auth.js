@@ -2331,22 +2331,22 @@ export const addOrderRequest = async (req, res) => {
     // 🔹 Send email
     const email = 'aydimarketplace@gmail.com';
 
-    await transporter.sendMail({
-      to: email,
-      subject: 'Request for Order Cancellation',
-      html: `
-        <div style="font-family: sans-serif;">
-          <p><strong>Request from:</strong> ${user.firstName} ${user.lastName}</p>
-          <p><strong>Email:</strong> ${user.email}</p>
-          <p><strong>Order No:</strong> ${orderNo}</p>
-          <p><strong>Message:</strong> ${request}</p>
-          <p><strong>Products:</strong></p>
-          <ul>
-            ${productNames.map((name) => `<li>${name}</li>`).join('')}
-          </ul>
-        </div>
-      `,
-    });
+    // await transporter.sendMail({
+    //   to: email,
+    //   subject: 'Request for Order Cancellation',
+    //   html: `
+    //     <div style="font-family: sans-serif;">
+    //       <p><strong>Request from:</strong> ${user.firstName} ${user.lastName}</p>
+    //       <p><strong>Email:</strong> ${user.email}</p>
+    //       <p><strong>Order No:</strong> ${orderNo}</p>
+    //       <p><strong>Message:</strong> ${request}</p>
+    //       <p><strong>Products:</strong></p>
+    //       <ul>
+    //         ${productNames.map((name) => `<li>${name}</li>`).join('')}
+    //       </ul>
+    //     </div>
+    //   `,
+    // });
 
     console.log("✅ Email sent successfully");
 
@@ -2358,6 +2358,40 @@ export const addOrderRequest = async (req, res) => {
   } catch (error) {
     console.error("❌ Error in addOrderRequest:", error);
     return res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
+
+export const checkOrderRequest = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { userId } = req.query;
+
+    if (!orderId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId and userId are required",
+      });
+    }
+
+    const existingRequest = await orderRquestModel.findOne({
+      orderId,
+      userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      submitted: !!existingRequest,
+      request: existingRequest,
+    });
+  } catch (error) {
+    console.error("Check order request error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to check order request",
+      error: error.message,
+    });
   }
 };
 export const getCollectionId = async (req, res) => {

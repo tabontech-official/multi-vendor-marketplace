@@ -13,7 +13,6 @@ import { Parser } from 'json2csv';
 import path from 'path';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-
 import fs from 'fs';
 import { notificationModel } from '../Models/NotificationSettings.js';
 import { viewModel } from '../Models/viewModel.js';
@@ -102,6 +101,70 @@ async function checkProductExists(productId) {
   }
 }
 
+const sendRefundEmail = async ({
+  to,
+  customerName,
+  orderNo,
+  refundAmount,
+  currency,
+  reason,
+}) => {
+  if (!to) {
+    console.log('⚠️ Customer email missing. Refund email skipped.');
+    return {
+      sent: false,
+      reason: 'Customer email missing',
+    };
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const subject = `Your refund has been processed for Order #${orderNo}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #222; line-height: 1.6;">
+      <h2>Your refund has been processed</h2>
+
+      <p>Hi ${customerName || 'Customer'},</p>
+
+      <p>
+        Your refund for order <strong>#${orderNo}</strong> has been processed successfully.
+      </p>
+
+      <p>
+        <strong>Refund Amount:</strong> ${currency || ''} ${Number(refundAmount || 0).toFixed(2)}
+      </p>
+
+      ${reason
+      ? `<p><strong>Reason:</strong> ${reason}</p>`
+      : ''
+    }
+
+      <p>
+        Depending on your bank or payment provider, it may take a few business days for the refund to appear in your account.
+      </p>
+
+      <p>Thank you.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to,
+    subject,
+    html,
+  });
+
+  return {
+    sent: true,
+  };
+};
 // export const createOrder = async (req, res) => {
 //   try {
 //     const orderData = req.body;
@@ -814,6 +877,179 @@ export const getFinanceSummaryForUser = async (req, res) => {
   }
 };
 
+// export const getOrderById = async (req, res) => {
+//   try {
+//     console.log('🚀 getOrderById API hit');
+
+//     const userId = req.userId?.toString();
+//     console.log('👤 Logged in User ID:', userId);
+
+//     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//       console.log('❌ Invalid user ID');
+//       return res.status(400).send({ message: 'Invalid user ID' });
+//     }
+
+//     const allOrders = await orderModel.find({});
+//     console.log('📦 Total Orders Found:', allOrders.length);
+
+//     const ordersGrouped = new Map();
+
+//     for (const order of allOrders) {
+//       console.log('\n===============================');
+//       console.log('🧾 Processing Order:', order.orderId);
+
+//       const filteredLineItems = [];
+//       const snapshots = order.ProductSnapshot || [];
+
+//       console.log('📸 Snapshot Count:', snapshots.length);
+//       console.log('🧺 LineItems Count:', order.lineItems?.length || 0);
+
+//       for (const item of order.lineItems || []) {
+//         const variantId = item.variant_id?.toString();
+//         const productId = item.product_id?.toString();
+
+//         console.log('\n➡️ Checking Line Item Variant:', variantId);
+
+//         if (!variantId && !productId) {
+//           console.log('⛔ Skipped: No variantId/productId');
+//           continue;
+//         }
+
+//         // 🔎 Find matching snapshot
+//         const snapshotItem = snapshots.find(
+//           (snap) =>
+//             snap.variantId?.toString() === variantId ||
+//             snap.productId?.toString() === productId
+//         );
+
+//         if (!snapshotItem) {
+//           console.log('❌ No matching snapshot found');
+//           continue;
+//         }
+
+//         console.log('✅ Snapshot found');
+//         console.log(
+//           '📌 Snapshot MerchantId:',
+//           snapshotItem.merchantId?.toString()
+//         );
+
+//         // 🚫 Skip if not this merchant
+//         if (snapshotItem.merchantId?.toString() !== userId) {
+//           console.log('🚫 Not this merchant item');
+//           continue;
+//         }
+
+//         console.log('🎯 Merchant match confirmed');
+
+//         const productData = snapshotItem.product || {};
+//         let imageData = null;
+
+//         // ✅ Variant Image
+//         if (
+//           snapshotItem.variant?.image_id &&
+//           Array.isArray(productData.variantImages)
+//         ) {
+//           const img = productData.variantImages.find(
+//             (i) =>
+//               i?.id &&
+//               snapshotItem.variant.image_id &&
+//               i.id.toString() === snapshotItem.variant.image_id.toString()
+//           );
+
+//           if (img) {
+//             console.log('🖼 Variant image found');
+//             imageData = {
+//               id: img.id,
+//               src: img.src,
+//               alt: img.alt || '',
+//               position: img.position,
+//               width: img.width,
+//               height: img.height,
+//             };
+//           }
+//         }
+
+//         // ✅ Product Image fallback
+//         if (!imageData && Array.isArray(productData.images)) {
+//           if (productData.images.length > 0) {
+//             const img = productData.images[0];
+//             console.log('🔁 Using product image fallback');
+//             imageData = {
+//               id: img.id || null,
+//               src: img.src || null,
+//               alt: img.alt || '',
+//               position: img.position || 1,
+//               width: img.width || null,
+//               height: img.height || null,
+//             };
+//           }
+//         }
+
+//         // ✅ Shopify lineItem fallback
+//         if (!imageData && item.image) {
+//           console.log('🔁 Using Shopify lineItem image');
+//           imageData = item.image;
+//         }
+
+//         if (!imageData) {
+//           console.log('⚠️ No image found, but keeping item');
+//         }
+
+//         console.log('✅ Line item added');
+
+//         filteredLineItems.push({
+//           ...item,
+//           image: imageData || null,
+//           payoutStatus: snapshotItem.variant?.payoutStatus || null,
+//           payoutReferenceId: snapshotItem.variant?.payoutReferenceId || null,
+//         });
+//       }
+
+//       if (!filteredLineItems.length) {
+//         console.log('🚫 No valid items for this order');
+//         continue;
+//       }
+
+//       const orderData = order.toObject();
+//       orderData.lineItems = filteredLineItems;
+
+//       if (ordersGrouped.has(order.orderId)) {
+//         const existing = ordersGrouped.get(order.orderId);
+//         existing.lineItems.push(...filteredLineItems);
+
+//         // 🔁 Dedupe by variant_id
+//         existing.lineItems = Array.from(
+//           new Map(
+//             existing.lineItems.map((li) => [li.variant_id?.toString(), li])
+//           ).values()
+//         );
+//       } else {
+//         ordersGrouped.set(order.orderId, orderData);
+//       }
+//     }
+
+//     const finalOrders = Array.from(ordersGrouped.values());
+
+//     console.log('\n===============================');
+//     console.log('📊 Final Orders Count:', finalOrders.length);
+
+//     if (!finalOrders.length) {
+//       console.log('❌ No orders found for this merchant');
+//       return res.status(404).send({ message: 'No orders found' });
+//     }
+
+//     console.log('✅ Sending response');
+
+//     return res.status(200).send({
+//       message: 'Orders found',
+//       data: finalOrders,
+//     });
+//   } catch (error) {
+//     console.error('❌ getOrderById error:', error);
+//     return res.status(500).send({ message: 'Internal Server Error' });
+//   }
+// };
+
 export const getOrderById = async (req, res) => {
   try {
     console.log('🚀 getOrderById API hit');
@@ -830,6 +1066,41 @@ export const getOrderById = async (req, res) => {
     console.log('📦 Total Orders Found:', allOrders.length);
 
     const ordersGrouped = new Map();
+
+    /* =====================================================
+       HELPERS: REFUND TRACKING
+    ===================================================== */
+    const getLineItemId = (item) => {
+      return item?.id || item?.lineItemId || item?.line_item_id || null;
+    };
+
+    const getRefundedQtyByLineItemId = (order, lineItemId) => {
+      return (order.refunds || []).reduce((total, refund) => {
+        const matchedRefundItems = (refund.refundItems || []).filter(
+          (item) => String(item.lineItemId) === String(lineItemId)
+        );
+
+        const refundedQtyForLine = matchedRefundItems.reduce((sum, item) => {
+          return sum + Number(item.quantity || 0);
+        }, 0);
+
+        return total + refundedQtyForLine;
+      }, 0);
+    };
+
+    const getRefundedAmountByLineItemId = (order, lineItemId) => {
+      return (order.refunds || []).reduce((total, refund) => {
+        const matchedRefundItems = (refund.refundItems || []).filter(
+          (item) => String(item.lineItemId) === String(lineItemId)
+        );
+
+        const refundedAmountForLine = matchedRefundItems.reduce((sum, item) => {
+          return sum + Number(item.amount || 0);
+        }, 0);
+
+        return total + refundedAmountForLine;
+      }, 0);
+    };
 
     for (const order of allOrders) {
       console.log('\n===============================');
@@ -852,7 +1123,6 @@ export const getOrderById = async (req, res) => {
           continue;
         }
 
-        // 🔎 Find matching snapshot
         const snapshotItem = snapshots.find(
           (snap) =>
             snap.variantId?.toString() === variantId ||
@@ -870,7 +1140,6 @@ export const getOrderById = async (req, res) => {
           snapshotItem.merchantId?.toString()
         );
 
-        // 🚫 Skip if not this merchant
         if (snapshotItem.merchantId?.toString() !== userId) {
           console.log('🚫 Not this merchant item');
           continue;
@@ -881,7 +1150,9 @@ export const getOrderById = async (req, res) => {
         const productData = snapshotItem.product || {};
         let imageData = null;
 
-        // ✅ Variant Image
+        /* =====================================================
+           IMAGE LOGIC
+        ===================================================== */
         if (
           snapshotItem.variant?.image_id &&
           Array.isArray(productData.variantImages)
@@ -895,6 +1166,7 @@ export const getOrderById = async (req, res) => {
 
           if (img) {
             console.log('🖼 Variant image found');
+
             imageData = {
               id: img.id,
               src: img.src,
@@ -906,11 +1178,12 @@ export const getOrderById = async (req, res) => {
           }
         }
 
-        // ✅ Product Image fallback
         if (!imageData && Array.isArray(productData.images)) {
           if (productData.images.length > 0) {
             const img = productData.images[0];
+
             console.log('🔁 Using product image fallback');
+
             imageData = {
               id: img.id || null,
               src: img.src || null,
@@ -922,24 +1195,97 @@ export const getOrderById = async (req, res) => {
           }
         }
 
-        // ✅ Shopify lineItem fallback
         if (!imageData && item.image) {
           console.log('🔁 Using Shopify lineItem image');
           imageData = item.image;
         }
 
-        // ❗ DO NOT SKIP IF IMAGE NOT FOUND
         if (!imageData) {
           console.log('⚠️ No image found, but keeping item');
         }
 
-        console.log('✅ Line item added');
+        /* =====================================================
+           REFUND + FULFILLMENT CALCULATION
+        ===================================================== */
+        const lineItemId = getLineItemId(item);
+
+        const originalQty = Number(item.quantity || 0);
+        const fulfilledQty = Number(item.fulfilled_quantity || 0);
+        const refundedQty = getRefundedQtyByLineItemId(order, lineItemId);
+
+        const handledQty = fulfilledQty + refundedQty;
+
+        const remainingQty = Math.max(originalQty - refundedQty, 0);
+
+        const refundableQty = Math.max(
+          originalQty - fulfilledQty - refundedQty,
+          0
+        );
+
+        const refundedAmount = getRefundedAmountByLineItemId(
+          order,
+          lineItemId
+        );
+
+        const itemPrice = Number(item.price || 0);
+        const originalAmount = itemPrice * originalQty;
+        const fulfilledAmount = itemPrice * fulfilledQty;
+        const remainingAmount = itemPrice * remainingQty;
+        const refundableAmount = itemPrice * refundableQty;
+
+        const isFullyRefunded = refundedQty >= originalQty && originalQty > 0;
+        const isPartiallyRefunded = refundedQty > 0 && refundedQty < originalQty;
+
+        let calculatedFulfillmentStatus = item.fulfillment_status || null;
+
+        if (originalQty > 0 && handledQty >= originalQty) {
+          calculatedFulfillmentStatus = 'fulfilled';
+        } else if (handledQty > 0 && handledQty < originalQty) {
+          calculatedFulfillmentStatus = 'partial';
+        } else {
+          calculatedFulfillmentStatus = item.fulfillment_status || null;
+        }
+
+        console.log('✅ Line item added with refund tracking');
 
         filteredLineItems.push({
           ...item,
+
           image: imageData || null,
+
           payoutStatus: snapshotItem.variant?.payoutStatus || null,
           payoutReferenceId: snapshotItem.variant?.payoutReferenceId || null,
+
+          // keep Shopify/raw item id
+          lineItemId,
+
+          // IMPORTANT:
+          // quantity yahan remaining after refund hai, same as admin API
+          quantity: remainingQty,
+
+          original_quantity: originalQty,
+          fulfilled_quantity: fulfilledQty,
+          refunded_quantity: refundedQty,
+
+          remaining_quantity: remainingQty,
+
+          // refund page ke liye direct useful field
+          refundable_quantity: refundableQty,
+
+          original_amount: Number(originalAmount.toFixed(2)),
+          fulfilled_amount: Number(fulfilledAmount.toFixed(2)),
+          refunded_amount: Number(refundedAmount.toFixed(2)),
+          remaining_amount: Number(remainingAmount.toFixed(2)),
+          refundable_amount: Number(refundableAmount.toFixed(2)),
+
+          refund_status: isFullyRefunded
+            ? 'fully_refunded'
+            : isPartiallyRefunded
+              ? 'partially_refunded'
+              : 'not_refunded',
+
+          // frontend status ke liye
+          calculated_fulfillment_status: calculatedFulfillmentStatus,
         });
       }
 
@@ -949,44 +1295,112 @@ export const getOrderById = async (req, res) => {
       }
 
       const orderData = order.toObject();
+
       orderData.lineItems = filteredLineItems;
+
+      // refunds frontend ko bhi chahiye
+      orderData.refunds = order.refunds || [];
+
+      // optional summary fields
+      orderData.totalRefundedQty = filteredLineItems.reduce((sum, item) => {
+        return sum + Number(item.refunded_quantity || 0);
+      }, 0);
+
+      orderData.totalFulfilledQty = filteredLineItems.reduce((sum, item) => {
+        return sum + Number(item.fulfilled_quantity || 0);
+      }, 0);
+
+      orderData.totalRemainingQty = filteredLineItems.reduce((sum, item) => {
+        return sum + Number(item.remaining_quantity || 0);
+      }, 0);
+
+      orderData.totalRefundableQty = filteredLineItems.reduce((sum, item) => {
+        return sum + Number(item.refundable_quantity || 0);
+      }, 0);
+
+      orderData.totalRefundedValue = filteredLineItems.reduce((sum, item) => {
+        return sum + Number(item.refunded_amount || 0);
+      }, 0);
+
+      orderData.totalRemainingValue = filteredLineItems.reduce((sum, item) => {
+        return sum + Number(item.remaining_amount || 0);
+      }, 0);
 
       if (ordersGrouped.has(order.orderId)) {
         const existing = ordersGrouped.get(order.orderId);
+
         existing.lineItems.push(...filteredLineItems);
 
-        // 🔁 Dedupe by variant_id
         existing.lineItems = Array.from(
           new Map(
-            existing.lineItems.map((li) => [li.variant_id?.toString(), li])
+            existing.lineItems.map((li) => [
+              li.variant_id?.toString() || li.id?.toString(),
+              li,
+            ])
           ).values()
         );
+
+        existing.refunds = order.refunds || [];
+
+        existing.totalRefundedQty = existing.lineItems.reduce((sum, item) => {
+          return sum + Number(item.refunded_quantity || 0);
+        }, 0);
+
+        existing.totalFulfilledQty = existing.lineItems.reduce((sum, item) => {
+          return sum + Number(item.fulfilled_quantity || 0);
+        }, 0);
+
+        existing.totalRemainingQty = existing.lineItems.reduce((sum, item) => {
+          return sum + Number(item.remaining_quantity || 0);
+        }, 0);
+
+        existing.totalRefundableQty = existing.lineItems.reduce((sum, item) => {
+          return sum + Number(item.refundable_quantity || 0);
+        }, 0);
+
+        existing.totalRefundedValue = existing.lineItems.reduce((sum, item) => {
+          return sum + Number(item.refunded_amount || 0);
+        }, 0);
+
+        existing.totalRemainingValue = existing.lineItems.reduce((sum, item) => {
+          return sum + Number(item.remaining_amount || 0);
+        }, 0);
       } else {
         ordersGrouped.set(order.orderId, orderData);
       }
     }
 
-    const finalOrders = Array.from(ordersGrouped.values());
+    const finalOrders = Array.from(ordersGrouped.values()).sort((a, b) => {
+      return Number(b.shopifyOrderNo || 0) - Number(a.shopifyOrderNo || 0);
+    });
 
     console.log('\n===============================');
     console.log('📊 Final Orders Count:', finalOrders.length);
 
     if (!finalOrders.length) {
       console.log('❌ No orders found for this merchant');
-      return res.status(404).send({ message: 'No orders found' });
+
+      return res.status(404).send({
+        message: 'No orders found',
+      });
     }
 
     console.log('✅ Sending response');
 
     return res.status(200).send({
-      message: 'Orders found',
+      message: 'Orders found with refund and fulfillment tracking',
       data: finalOrders,
     });
   } catch (error) {
     console.error('❌ getOrderById error:', error);
-    return res.status(500).send({ message: 'Internal Server Error' });
+
+    return res.status(500).send({
+      message: 'Internal Server Error',
+      error: error.message,
+    });
   }
 };
+
 
 export const deleteUser = async (req, res) => {
   orderModel.deleteMany().then((result) => {
@@ -1010,22 +1424,402 @@ export const getOrderByOrderId = async (req, res) => {
   }
 };
 
+
+// export const fulfillOrder = async (req, res) => {
+//   try {
+//     const { orderId, itemsToFulfill, trackingInfo } = req.body;
+
+//     if (!orderId || !Array.isArray(itemsToFulfill)) {
+//       return res
+//         .status(400)
+//         .json({ error: 'Order ID and fulfillment items are required.' });
+//     }
+
+//     const shopifyConfig = await shopifyConfigurationModel.findOne();
+
+//     if (!shopifyConfig) {
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+//     }
+
+//     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+//     const order = await orderModel.findOne({ orderId });
+
+//     if (!order) {
+//       return res.status(404).json({ error: 'Order not found in MongoDB.' });
+//     }
+
+//     const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
+
+//     const fulfillmentOrdersRes = await shopifyRequest(
+//       fulfillmentOrdersUrl,
+//       'GET',
+//       null,
+//       null,
+//       shopifyAccessToken
+//     );
+
+//     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
+
+//     if (!fulfillmentOrder?.id) {
+//       return res
+//         .status(400)
+//         .json({ error: 'No fulfillment order found for this order.' });
+//     }
+
+//     const fulfillmentLineItems = [];
+
+//     itemsToFulfill.forEach((itemToFulfill) => {
+//       const fulfillable = fulfillmentOrder.line_items.find(
+//         (f) => Number(f.line_item_id) === Number(itemToFulfill.lineItemId)
+//       );
+
+//       if (!fulfillable) return;
+
+//       const remainingQty = Number(fulfillable.fulfillable_quantity || 0);
+//       const requestedQty = Number(itemToFulfill.quantity || 0);
+
+//       if (requestedQty > 0 && requestedQty <= remainingQty) {
+//         fulfillmentLineItems.push({
+//           lineItemId: Number(itemToFulfill.lineItemId),
+//           fulfillmentOrderLineItemId: fulfillable.id,
+//           quantity: requestedQty,
+//         });
+//       }
+//     });
+
+//     if (fulfillmentLineItems.length === 0) {
+//       return res.status(400).json({
+//         error: 'No valid line items to fulfill. Check remaining quantities.',
+//       });
+//     }
+
+//     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
+
+//     const query = `
+//       mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {
+//         fulfillmentCreateV2(fulfillment: $fulfillment) {
+//           fulfillment {
+//             id
+//             status
+//             createdAt
+//           }
+//           userErrors {
+//             field
+//             message
+//           }
+//         }
+//       }
+//     `;
+
+//     const variables = {
+//       fulfillment: {
+//         lineItemsByFulfillmentOrder: [
+//           {
+//             fulfillmentOrderId: `gid://shopify/FulfillmentOrder/${fulfillmentOrder.id}`,
+//             fulfillmentOrderLineItems: fulfillmentLineItems.map((item) => ({
+//               id: `gid://shopify/FulfillmentOrderLineItem/${item.fulfillmentOrderLineItemId}`,
+//               quantity: item.quantity,
+//             })),
+//           },
+//         ],
+//         notifyCustomer: true,
+//         trackingInfo: {
+//           number: trackingInfo?.number || null,
+//           url: trackingInfo?.url || null,
+//           company: trackingInfo?.company || null,
+//         },
+//       },
+//     };
+
+//     const response = await fetch(graphqlUrl, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'X-Shopify-Access-Token': shopifyAccessToken,
+//       },
+//       body: JSON.stringify({ query, variables }),
+//     });
+
+//     const result = await response.json();
+
+//     console.log('🛬 Shopify Response:', result);
+
+//     if (
+//       result.errors ||
+//       result.data?.fulfillmentCreateV2?.userErrors?.length > 0
+//     ) {
+//       return res.status(400).json({
+//         error: 'GraphQL fulfillment error.',
+//         details: result.errors || result.data.fulfillmentCreateV2.userErrors,
+//       });
+//     }
+
+//     const newFulfillment = result.data.fulfillmentCreateV2.fulfillment;
+
+//     const fulfilledAt = newFulfillment?.createdAt
+//       ? new Date(newFulfillment.createdAt)
+//       : new Date();
+
+//     /*
+//       IMPORTANT:
+//       lineItems: Array hai, isliye hum direct fields add kar sakte hain:
+//       - fulfilledAt
+//       - fulfillmentHistory
+//       - fulfillment_status
+//       - fulfilled_quantity
+//     */
+
+//     order.lineItems = order.lineItems.map((item) => {
+//       const fulfilled = fulfillmentLineItems.find(
+//         (fulfilledItem) => Number(fulfilledItem.lineItemId) === Number(item.id)
+//       );
+
+//       if (!fulfilled || fulfilled.quantity <= 0) {
+//         return item;
+//       }
+
+//       const alreadyFulfilled = Number(item.fulfilled_quantity || 0);
+//       const totalFulfilled = alreadyFulfilled + Number(fulfilled.quantity || 0);
+//       const totalQty = Number(item.quantity || 0);
+
+//       const fulfillmentHistory = Array.isArray(item.fulfillmentHistory)
+//         ? item.fulfillmentHistory
+//         : [];
+
+//       const updatedItem = {
+//         ...item,
+
+//         fulfilled_quantity: totalFulfilled,
+
+//         // latest fulfilled time
+//         fulfilledAt,
+
+//         // keep complete fulfillment history
+//         fulfillmentHistory: [
+//           ...fulfillmentHistory,
+//           {
+//             fulfillmentId: newFulfillment?.id || null,
+//             quantity: Number(fulfilled.quantity || 0),
+//             fulfilledAt,
+//             status: newFulfillment?.status || 'SUCCESS',
+//             trackingInfo: {
+//               number: trackingInfo?.number || null,
+//               url: trackingInfo?.url || null,
+//               company: trackingInfo?.company || null,
+//             },
+//           },
+//         ],
+//       };
+
+//       if (totalFulfilled >= totalQty) {
+//         updatedItem.fulfillment_status = 'fulfilled';
+//       } else if (totalFulfilled > 0) {
+//         updatedItem.fulfillment_status = 'partial';
+//       }
+
+//       console.log(
+//         `📌 Updating DB: item ${item.id}, fulfilled ${fulfilled.quantity}, total fulfilled ${totalFulfilled}, status: ${updatedItem.fulfillment_status || 'unfulfilled'}`
+//       );
+
+//       return updatedItem;
+//     });
+
+//     /*
+//       Optional order-level fulfillment history.
+//       Useful for Shopify response reference.
+//     */
+//     order.shopifyFulfillments = Array.isArray(order.shopifyFulfillments)
+//       ? order.shopifyFulfillments
+//       : [];
+
+//     const alreadyExists = order.shopifyFulfillments.some(
+//       (f) => f.id === newFulfillment.id
+//     );
+
+//     if (!alreadyExists) {
+//       order.shopifyFulfillments.push({
+//         ...newFulfillment,
+//         fulfilledAt,
+//         trackingInfo: {
+//           number: trackingInfo?.number || null,
+//           url: trackingInfo?.url || null,
+//           company: trackingInfo?.company || null,
+//         },
+//         itemsToFulfill: fulfillmentLineItems.map((item) => ({
+//           lineItemId: item.lineItemId,
+//           quantity: item.quantity,
+//         })),
+//       });
+//     }
+
+//     await order.save();
+
+//     return res.status(200).json({
+//       message: 'Order fulfilled successfully and MongoDB updated.',
+//       data: newFulfillment,
+//     });
+//   } catch (error) {
+//     console.error('Fulfill Order Error:', error);
+
+//     return res.status(500).json({
+//       error: 'Server error while fulfilling order.',
+//       details: error.message,
+//     });
+//   }
+// };
+
+// export const getOrderDatafromShopify = async (req, res) => {
+//   const { id: orderId, userId: merchantId } = req.params;
+
+//   if (!merchantId) {
+//     return res.status(400).json({ error: 'User ID is required.' });
+//   }
+
+//   try {
+//     /* ===============================
+//        FETCH SHOPIFY CONFIG
+//     =============================== */
+//     const shopifyConfig = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfig) {
+//       return res
+//         .status(404)
+//         .json({ error: 'Shopify configuration not found.' });
+//     }
+
+//     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
+
+//     /* ===============================
+//        FETCH SHOPIFY ORDER
+//     =============================== */
+//     const response = await axios.get(
+//       `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}.json`,
+//       {
+//         headers: {
+//           'X-Shopify-Access-Token': shopifyAccessToken,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     );
+
+//     const shopifyOrder = response.data?.order;
+//     if (!shopifyOrder) {
+//       return res.status(404).json({ message: 'Order not found on Shopify' });
+//     }
+
+//     /* ===============================
+//        FETCH DB ORDER
+//     =============================== */
+//     const dbOrder = await orderModel.findOne({ orderId }).lean();
+//     if (!dbOrder) {
+//       return res.status(404).json({ message: 'Order not found in database' });
+//     }
+
+//     /* ===============================
+//        FILTER MERCHANT PRODUCTS
+//     =============================== */
+//     const merchantProducts = (dbOrder.ProductSnapshot || []).filter(
+//       (item) => String(item.merchantId) === String(merchantId)
+//     );
+
+//     if (!merchantProducts.length) {
+//       return res.status(404).json({
+//         message: 'No products found for this merchant in this order',
+//       });
+//     }
+
+//     /* ===============================
+//        MAP LINE ITEMS (CRITICAL LOGIC)
+//     =============================== */
+//     const dbLineItems = dbOrder.lineItems || [];
+
+//     const enrichedProducts = merchantProducts.map((item) => {
+//       const matchedLineItem = dbLineItems.find(
+//         (li) => String(li.variant_id) === String(item.variantId)
+//       );
+
+//       const totalQty = matchedLineItem?.quantity ?? item.quantity;
+//       const fulfilledQty = matchedLineItem?.fulfilled_quantity ?? 0;
+
+//       // ✅ REAL remaining qty (Shopify-safe)
+//       const remainingQty = Math.max(totalQty - fulfilledQty, 0);
+
+//       return {
+//         productId: item.productId,
+//         variantId: item.variantId,
+
+//         // ✅ THIS IS WHAT SHOPIFY NEEDS
+//         lineItemId: matchedLineItem?.id || null,
+
+//         quantity: totalQty,
+//         fulfilled_quantity: fulfilledQty,
+//         fulfillable_quantity: remainingQty,
+
+//         fulfillment_status: matchedLineItem?.fulfillment_status ?? null,
+
+//         product: item.product,
+//         variant: item.variant,
+//       };
+//     });
+
+//     /* ===============================
+//        FINAL RESPONSE (NO STRUCTURE CHANGE)
+//     =============================== */
+//     const responseOrder = {
+//       orderId: shopifyOrder.id,
+//       shopifyOrderNo: shopifyOrder.order_number,
+//       financial_status: shopifyOrder.financial_status,
+//       fulfillment_status: shopifyOrder.fulfillment_status,
+//       currency: shopifyOrder.currency,
+//       total_price: shopifyOrder.total_price,
+//       created_at: shopifyOrder.created_at,
+
+//       customer: shopifyOrder.customer,
+//       customers: dbOrder.customer,
+//       shipping_address: shopifyOrder.shipping_address,
+//       billing_address: shopifyOrder.billing_address,
+
+//       products: enrichedProducts,
+//       fulfillments: shopifyOrder.fulfillments || [],
+
+//       serialNumber: dbOrder.serialNumber,
+//       payoutStatus: dbOrder.payoutStatus,
+//       dbCreatedAt: dbOrder.createdAt,
+//     };
+
+//     return res.status(200).json({
+//       message: 'Order fetched with correct lineItemId & quantities',
+//       data: responseOrder,
+//     });
+//   } catch (error) {
+//     console.error('❌ Error:', error.response?.data || error.message);
+
+//     return res.status(500).json({
+//       message: 'Failed to fetch order data',
+//       error: error.response?.data || error.message,
+//     });
+//   }
+// };
+
+
 export const fulfillOrder = async (req, res) => {
   try {
     const { orderId, itemsToFulfill, trackingInfo } = req.body;
 
     if (!orderId || !Array.isArray(itemsToFulfill)) {
-      return res
-        .status(400)
-        .json({ error: 'Order ID and fulfillment items are required.' });
+      return res.status(400).json({
+        error: 'Order ID and fulfillment items are required.',
+      });
     }
 
     const shopifyConfig = await shopifyConfigurationModel.findOne();
 
     if (!shopifyConfig) {
-      return res
-        .status(404)
-        .json({ error: 'Shopify configuration not found.' });
+      return res.status(404).json({
+        error: 'Shopify configuration not found.',
+      });
     }
 
     const { shopifyAccessToken, shopifyStoreUrl } = shopifyConfig;
@@ -1033,10 +1827,13 @@ export const fulfillOrder = async (req, res) => {
     const order = await orderModel.findOne({ orderId });
 
     if (!order) {
-      return res.status(404).json({ error: 'Order not found in MongoDB.' });
+      return res.status(404).json({
+        error: 'Order not found in MongoDB.',
+      });
     }
 
     const fulfillmentOrdersUrl = `${shopifyStoreUrl}/admin/api/2024-01/orders/${orderId}/fulfillment_orders.json`;
+
     const fulfillmentOrdersRes = await shopifyRequest(
       fulfillmentOrdersUrl,
       'GET',
@@ -1048,9 +1845,9 @@ export const fulfillOrder = async (req, res) => {
     const fulfillmentOrder = fulfillmentOrdersRes?.fulfillment_orders?.[0];
 
     if (!fulfillmentOrder?.id) {
-      return res
-        .status(400)
-        .json({ error: 'No fulfillment order found for this order.' });
+      return res.status(400).json({
+        error: 'No fulfillment order found for this order.',
+      });
     }
 
     const fulfillmentLineItems = [];
@@ -1060,19 +1857,17 @@ export const fulfillOrder = async (req, res) => {
         (f) => Number(f.line_item_id) === Number(itemToFulfill.lineItemId)
       );
 
-      if (!fulfillable) {
-        return;
-      }
+      if (!fulfillable) return;
 
-      const remainingQty = fulfillable.fulfillable_quantity || 0;
-      const requestedQty = itemToFulfill.quantity;
+      const remainingQty = Number(fulfillable.fulfillable_quantity || 0);
+      const requestedQty = Number(itemToFulfill.quantity || 0);
 
       if (requestedQty > 0 && requestedQty <= remainingQty) {
         fulfillmentLineItems.push({
+          lineItemId: Number(itemToFulfill.lineItemId),
           fulfillmentOrderLineItemId: fulfillable.id,
           quantity: requestedQty,
         });
-      } else {
       }
     });
 
@@ -1083,12 +1878,14 @@ export const fulfillOrder = async (req, res) => {
     }
 
     const graphqlUrl = `${shopifyStoreUrl}/admin/api/2024-01/graphql.json`;
+
     const query = `
       mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {
         fulfillmentCreateV2(fulfillment: $fulfillment) {
           fulfillment {
             id
             status
+            createdAt
           }
           userErrors {
             field
@@ -1128,6 +1925,7 @@ export const fulfillOrder = async (req, res) => {
     });
 
     const result = await response.json();
+
     console.log('🛬 Shopify Response:', result);
 
     if (
@@ -1140,58 +1938,226 @@ export const fulfillOrder = async (req, res) => {
       });
     }
 
-    const newFulfillment = result.data.fulfillmentCreateV2.fulfillment;
+    const newFulfillment = result.data?.fulfillmentCreateV2?.fulfillment;
 
+    if (!newFulfillment?.id) {
+      return res.status(400).json({
+        error: 'Fulfillment was not created on Shopify.',
+        details: result,
+      });
+    }
+
+    const fulfilledAt = newFulfillment?.createdAt
+      ? new Date(newFulfillment.createdAt)
+      : new Date();
+
+    /*
+      Prepare shopify fulfillment history before inventory decrement.
+      This avoids duplicate decrement if same fulfillment already exists.
+    */
+    order.shopifyFulfillments = Array.isArray(order.shopifyFulfillments)
+      ? order.shopifyFulfillments
+      : [];
+
+    const alreadyExists = order.shopifyFulfillments.some(
+      (f) => String(f.id) === String(newFulfillment.id)
+    );
+
+    /*
+      Helper: decrement local listing inventory by fulfilled quantity.
+      Matching:
+      - listing.id OR listing.shopifyId = Shopify product_id
+      - variants.id = Shopify variant_id
+    */
+    const decrementListingInventory = async () => {
+      for (const fulfilled of fulfillmentLineItems) {
+        const matchedOrderLineItem = order.lineItems.find(
+          (item) => Number(item.id) === Number(fulfilled.lineItemId)
+        );
+
+        if (!matchedOrderLineItem) {
+          console.log(
+            `⚠️ Order line item not found for lineItemId: ${fulfilled.lineItemId}`
+          );
+          continue;
+        }
+
+        const productId = String(matchedOrderLineItem.product_id || '');
+        const variantId = String(matchedOrderLineItem.variant_id || '');
+        const fulfilledQty = Number(fulfilled.quantity || 0);
+
+        if (!productId || !variantId || fulfilledQty <= 0) {
+          console.log('⚠️ Missing productId/variantId/fulfilledQty');
+          continue;
+        }
+
+        const listing = await listingModel.findOne({
+          $or: [{ id: productId }, { shopifyId: productId }],
+        });
+
+        if (!listing) {
+          console.log(`⚠️ Listing not found for productId: ${productId}`);
+          continue;
+        }
+
+        let variantFound = false;
+
+        listing.variants = listing.variants.map((variant) => {
+          if (String(variant.id) !== String(variantId)) {
+            return variant;
+          }
+
+          variantFound = true;
+
+          const currentQty = Number(variant.inventory_quantity || 0);
+          const newQty = Math.max(currentQty - fulfilledQty, 0);
+
+          return {
+            ...variant,
+            inventory_quantity: newQty,
+          };
+        });
+
+        if (!variantFound) {
+          console.log(
+            `⚠️ Variant not found in listing. productId: ${productId}, variantId: ${variantId}`
+          );
+          continue;
+        }
+
+        const newTotalQty = listing.variants.reduce((sum, variant) => {
+          return sum + Number(variant.inventory_quantity || 0);
+        }, 0);
+
+        listing.inventory = {
+          ...listing.inventory,
+          quantity: newTotalQty,
+        };
+
+        listing.totalQuantity = String(newTotalQty);
+        listing.updated_at = new Date();
+
+        await listing.save();
+
+        console.log(
+          `✅ Listing inventory decremented. Product: ${productId}, Variant: ${variantId}, Qty -${fulfilledQty}, New Total: ${newTotalQty}`
+        );
+      }
+    };
+
+    /*
+      Update order line items fulfillment info.
+      This updates:
+      - fulfilled_quantity
+      - fulfilledAt
+      - fulfillmentHistory
+      - fulfillment_status
+    */
     order.lineItems = order.lineItems.map((item) => {
-      const fulfilled = itemsToFulfill.find(
+      const fulfilled = fulfillmentLineItems.find(
         (fulfilledItem) => Number(fulfilledItem.lineItemId) === Number(item.id)
       );
 
-      if (fulfilled && fulfilled.quantity > 0) {
-        const alreadyFulfilled = item.fulfilled_quantity || 0;
-        const totalFulfilled = alreadyFulfilled + fulfilled.quantity;
-
-        const updatedItem = {
-          ...item,
-          fulfilled_quantity: totalFulfilled,
-        };
-
-        if (totalFulfilled >= item.quantity) {
-          updatedItem.fulfillment_status = 'fulfilled';
-        }
-
-        console.log(
-          `📌 Updating DB: item ${item.id}, fulfilled ${fulfilled.quantity}, total fulfilled ${totalFulfilled}, status: ${updatedItem.fulfillment_status || 'partial'}`
-        );
-        return updatedItem;
+      if (!fulfilled || Number(fulfilled.quantity || 0) <= 0) {
+        return item;
       }
 
-      return item;
+      const alreadyFulfilled = Number(item.fulfilled_quantity || 0);
+      const newlyFulfilled = Number(fulfilled.quantity || 0);
+      const totalFulfilled = alreadyFulfilled + newlyFulfilled;
+      const totalQty = Number(item.quantity || 0);
+
+      const fulfillmentHistory = Array.isArray(item.fulfillmentHistory)
+        ? item.fulfillmentHistory
+        : [];
+
+      const updatedItem = {
+        ...item,
+
+        fulfilled_quantity: totalFulfilled,
+        fulfilledAt,
+
+        fulfillmentHistory: [
+          ...fulfillmentHistory,
+          {
+            fulfillmentId: newFulfillment.id,
+            quantity: newlyFulfilled,
+            fulfilledAt,
+            status: newFulfillment?.status || 'SUCCESS',
+            trackingInfo: {
+              number: trackingInfo?.number || null,
+              url: trackingInfo?.url || null,
+              company: trackingInfo?.company || null,
+            },
+          },
+        ],
+      };
+
+      if (totalFulfilled >= totalQty) {
+        updatedItem.fulfillment_status = 'fulfilled';
+      } else if (totalFulfilled > 0) {
+        updatedItem.fulfillment_status = 'partial';
+      } else {
+        updatedItem.fulfillment_status = item.fulfillment_status || null;
+      }
+
+      console.log(
+        `📌 Updating DB: item ${item.id}, fulfilled ${newlyFulfilled}, total fulfilled ${totalFulfilled}, status: ${updatedItem.fulfillment_status || 'unfulfilled'}`
+      );
+
+      return updatedItem;
     });
 
-    order.shopifyFulfillments = order.shopifyFulfillments || [];
-    const alreadyExists = order.shopifyFulfillments.some(
-      (f) => f.id === newFulfillment.id
-    );
-
+    /*
+      IMPORTANT:
+      Inventory decrement only once per Shopify fulfillment.
+      If fulfillment already exists, do not decrement again.
+    */
     if (!alreadyExists) {
-      order.shopifyFulfillments.push(newFulfillment);
+      await decrementListingInventory();
+
+      order.shopifyFulfillments.push({
+        ...newFulfillment,
+        fulfilledAt,
+        trackingInfo: {
+          number: trackingInfo?.number || null,
+          url: trackingInfo?.url || null,
+          company: trackingInfo?.company || null,
+        },
+        itemsToFulfill: fulfillmentLineItems.map((item) => ({
+          lineItemId: item.lineItemId,
+          quantity: item.quantity,
+        })),
+      });
     } else {
+      console.log(
+        `⚠️ Fulfillment already exists in MongoDB. Inventory decrement skipped. Fulfillment ID: ${newFulfillment.id}`
+      );
     }
 
     await order.save();
 
     return res.status(200).json({
-      message: 'Order partially fulfilled successfully and MongoDB updated.',
-      data: newFulfillment,
+      message: 'Order fulfilled successfully. Order and listing inventory updated.',
+      data: {
+        fulfillment: newFulfillment,
+        fulfilledAt,
+        inventoryUpdated: !alreadyExists,
+        itemsFulfilled: fulfillmentLineItems.map((item) => ({
+          lineItemId: item.lineItemId,
+          quantity: item.quantity,
+        })),
+      },
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ error: 'Server error while fulfilling order.' });
+    console.error('Fulfill Order Error:', error);
+
+    return res.status(500).json({
+      error: 'Server error while fulfilling order.',
+      details: error.message,
+    });
   }
 };
-
 export const getOrderDatafromShopify = async (req, res) => {
   const { id: orderId, userId: merchantId } = req.params;
 
@@ -1252,7 +2218,7 @@ export const getOrderDatafromShopify = async (req, res) => {
     }
 
     /* ===============================
-       MAP LINE ITEMS (CRITICAL LOGIC)
+       MAP LINE ITEMS
     =============================== */
     const dbLineItems = dbOrder.lineItems || [];
 
@@ -1264,14 +2230,12 @@ export const getOrderDatafromShopify = async (req, res) => {
       const totalQty = matchedLineItem?.quantity ?? item.quantity;
       const fulfilledQty = matchedLineItem?.fulfilled_quantity ?? 0;
 
-      // ✅ REAL remaining qty (Shopify-safe)
       const remainingQty = Math.max(totalQty - fulfilledQty, 0);
 
       return {
         productId: item.productId,
         variantId: item.variantId,
 
-        // ✅ THIS IS WHAT SHOPIFY NEEDS
         lineItemId: matchedLineItem?.id || null,
 
         quantity: totalQty,
@@ -1286,7 +2250,41 @@ export const getOrderDatafromShopify = async (req, res) => {
     });
 
     /* ===============================
-       FINAL RESPONSE (NO STRUCTURE CHANGE)
+       FILTER REFUNDS FOR THIS MERCHANT
+    =============================== */
+    const merchantLineItemIds = enrichedProducts
+      .map((item) => String(item.lineItemId))
+      .filter(Boolean);
+
+    const refunds = (dbOrder.refunds || [])
+      .map((refund) => {
+        const merchantRefundItems = (refund.refundItems || []).filter((item) =>
+          merchantLineItemIds.includes(String(item.lineItemId))
+        );
+
+        const merchantItemsAmount = merchantRefundItems.reduce(
+          (total, item) => total + Number(item.amount || 0),
+          0
+        );
+
+        const merchantRefundAmount =
+          merchantItemsAmount +
+          (refund.shippingRefunded ? Number(refund.shippingAmount || 0) : 0);
+
+        return {
+          ...refund,
+          refundItems: merchantRefundItems,
+          refundAmount: Number(merchantRefundAmount.toFixed(2)),
+        };
+      })
+      .filter(
+        (refund) =>
+          refund.refundItems.length > 0 ||
+          refund.shippingRefunded === true
+      );
+
+    /* ===============================
+       FINAL RESPONSE
     =============================== */
     const responseOrder = {
       orderId: shopifyOrder.id,
@@ -1305,13 +2303,15 @@ export const getOrderDatafromShopify = async (req, res) => {
       products: enrichedProducts,
       fulfillments: shopifyOrder.fulfillments || [],
 
+      refunds,
+
       serialNumber: dbOrder.serialNumber,
       payoutStatus: dbOrder.payoutStatus,
       dbCreatedAt: dbOrder.createdAt,
     };
 
     return res.status(200).json({
-      message: 'Order fetched with correct lineItemId & quantities',
+      message: 'Order fetched with correct lineItemId, quantities & refunds',
       data: responseOrder,
     });
   } catch (error) {
@@ -1323,6 +2323,197 @@ export const getOrderDatafromShopify = async (req, res) => {
     });
   }
 };
+// export const getAllOrdersForAdmin = async (req, res) => {
+//   try {
+//     const allOrders = await orderModel.find({});
+
+//     const finalOrders = [];
+//     const merchantDetailsMap = new Map();
+//     const merchantStatsMap = new Map();
+
+//     for (const order of allOrders) {
+//       console.log(
+//         '\n Processing Order:',
+//         order.shopifyOrderNo,
+//         'Order ID:',
+//         order.orderId
+//       );
+
+//       const merchantGroups = new Map();
+//       const snapshots = order.ProductSnapshot || [];
+
+//       for (const item of order.lineItems || []) {
+//         const variantId = item.variant_id?.toString();
+//         const productId = item.product_id?.toString();
+
+//         let merchantId = null;
+//         let imageData = null;
+
+//         // 🔥 Find matching snapshot item
+//         const snapshotItem = snapshots.find(
+//           (snap) =>
+//             snap.variantId?.toString() === variantId ||
+//             snap.productId?.toString() === productId
+//         );
+
+//         if (snapshotItem) {
+//           merchantId = snapshotItem.merchantId?.toString() || null;
+
+//           const productData = snapshotItem.product;
+
+//           // ✅ Variant image first
+//           if (
+//             snapshotItem.variant?.image_id &&
+//             Array.isArray(productData?.variantImages)
+//           ) {
+//             const image = productData.variantImages.find(
+//               (img) => img.id === snapshotItem.variant.image_id
+//             );
+//             if (image) {
+//               imageData = {
+//                 id: image.id,
+//                 src: image.src,
+//                 alt: image.alt,
+//                 position: image.position,
+//                 width: image.width,
+//                 height: image.height,
+//               };
+//             }
+//           }
+
+//           // ✅ Fallback product image
+//           if (
+//             !imageData &&
+//             Array.isArray(productData?.images) &&
+//             productData.images.length > 0
+//           ) {
+//             const defaultImage = productData.images[0];
+//             imageData = {
+//               id: defaultImage.id || null,
+//               src: defaultImage.src,
+//               alt: defaultImage.alt || '',
+//               position: defaultImage.position || 1,
+//               width: defaultImage.width || null,
+//               height: defaultImage.height || null,
+//             };
+//           }
+//         }
+
+//         if (!merchantId) {
+//           console.log(
+//             '⚠️ Skipped item because merchantId could not be determined'
+//           );
+//           continue;
+//         }
+
+//         const enrichedItem = {
+//           ...item,
+//           image: imageData || item.image || null,
+//           orderId: order.orderId,
+//           customer: [
+//             {
+//               first_name: order.customer?.first_name || '',
+//               last_name: order.customer?.last_name || '',
+//               email: order.customer?.email || '',
+//               phone: order.customer?.phone || '',
+//               created_at: order.customer?.created_at || '',
+//               default_address: order.customer?.default_address || {},
+//             },
+//           ],
+//         };
+
+//         // Group by merchant
+//         if (!merchantGroups.has(merchantId)) {
+//           merchantGroups.set(merchantId, []);
+//         }
+//         merchantGroups.get(merchantId).push(enrichedItem);
+
+//         // Fetch merchant details once
+//         if (!merchantDetailsMap.has(merchantId)) {
+//           const merchant = await authModel
+//             .findById(merchantId)
+//             .select('-password');
+
+//           if (merchant) {
+//             merchantDetailsMap.set(merchantId, {
+//               _id: merchant._id,
+//               name: `${merchant.firstName} ${merchant.lastName}`,
+//               email: merchant.email,
+//               role: merchant.role,
+//               dispatchAddress: merchant.dispatchAddress,
+//               dispatchCountry: merchant.dispatchCountry,
+//             });
+//           } else {
+//             merchantDetailsMap.set(merchantId, { id: merchantId });
+//           }
+//         }
+
+//         // Stats
+//         if (!merchantStatsMap.has(merchantId)) {
+//           merchantStatsMap.set(merchantId, {
+//             totalOrdersCount: 0,
+//             totalOrderValue: 0,
+//             ordersSeen: new Set(),
+//           });
+//         }
+
+//         const stats = merchantStatsMap.get(merchantId);
+
+//         if (!stats.ordersSeen.has(order.orderId)) {
+//           stats.ordersSeen.add(order.orderId);
+//           stats.totalOrdersCount += 1;
+//         }
+
+//         const amount =
+//           parseFloat(item.price || 0) * parseInt(item.quantity || 1);
+
+//         stats.totalOrderValue += amount;
+//       }
+
+//       // Build response (UNCHANGED STRUCTURE)
+//       const merchantsArray = [];
+//       const lineItemsByMerchant = {};
+
+//       merchantGroups.forEach((items, merchantId) => {
+//         const merchantInfo = merchantDetailsMap.get(merchantId) || {
+//           id: merchantId,
+//         };
+//         const stats = merchantStatsMap.get(merchantId);
+
+//         merchantsArray.push({
+//           id: merchantId,
+//           info: merchantInfo,
+//           totalOrdersCount: stats?.totalOrdersCount || 0,
+//           totalOrderValue: stats?.totalOrderValue || 0,
+//         });
+
+//         lineItemsByMerchant[merchantId] = items;
+//       });
+
+//       finalOrders.push({
+//         serialNo: order.shopifyOrderNo,
+//         merchants: merchantsArray,
+//         lineItemsByMerchant,
+//       });
+//     }
+
+//     if (finalOrders.length > 0) {
+//       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
+
+//       return res.status(200).send({
+//         message: 'Orders grouped per order (not merged by merchant)',
+//         data: finalOrders,
+//       });
+//     } else {
+//       return res
+//         .status(404)
+//         .send({ message: 'No orders found across merchants' });
+//     }
+//   } catch (error) {
+//     console.error('❌ Error in getAllOrdersForAdmin:', error);
+//     return res.status(500).send({ message: 'Internal Server Error' });
+//   }
+// };
 
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
@@ -1331,6 +2522,36 @@ export const getAllOrdersForAdmin = async (req, res) => {
     const finalOrders = [];
     const merchantDetailsMap = new Map();
     const merchantStatsMap = new Map();
+
+    const getRefundedQtyByLineItemId = (order, lineItemId) => {
+      return (order.refunds || []).reduce((total, refund) => {
+        const matchedRefundItems = (refund.refundItems || []).filter(
+          (item) => String(item.lineItemId) === String(lineItemId)
+        );
+
+        const refundedQtyForLine = matchedRefundItems.reduce(
+          (sum, item) => sum + Number(item.quantity || 0),
+          0
+        );
+
+        return total + refundedQtyForLine;
+      }, 0);
+    };
+
+    const getRefundedAmountByLineItemId = (order, lineItemId) => {
+      return (order.refunds || []).reduce((total, refund) => {
+        const matchedRefundItems = (refund.refundItems || []).filter(
+          (item) => String(item.lineItemId) === String(lineItemId)
+        );
+
+        const refundedAmountForLine = matchedRefundItems.reduce(
+          (sum, item) => sum + Number(item.amount || 0),
+          0
+        );
+
+        return total + refundedAmountForLine;
+      }, 0);
+    };
 
     for (const order of allOrders) {
       console.log(
@@ -1347,10 +2568,14 @@ export const getAllOrdersForAdmin = async (req, res) => {
         const variantId = item.variant_id?.toString();
         const productId = item.product_id?.toString();
 
+        const lineItemId =
+          item.id ||
+          item.lineItemId ||
+          item.line_item_id;
+
         let merchantId = null;
         let imageData = null;
 
-        // 🔥 Find matching snapshot item
         const snapshotItem = snapshots.find(
           (snap) =>
             snap.variantId?.toString() === variantId ||
@@ -1362,7 +2587,6 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
           const productData = snapshotItem.product;
 
-          // ✅ Variant image first
           if (
             snapshotItem.variant?.image_id &&
             Array.isArray(productData?.variantImages)
@@ -1370,6 +2594,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
             const image = productData.variantImages.find(
               (img) => img.id === snapshotItem.variant.image_id
             );
+
             if (image) {
               imageData = {
                 id: image.id,
@@ -1382,13 +2607,13 @@ export const getAllOrdersForAdmin = async (req, res) => {
             }
           }
 
-          // ✅ Fallback product image
           if (
             !imageData &&
             Array.isArray(productData?.images) &&
             productData.images.length > 0
           ) {
             const defaultImage = productData.images[0];
+
             imageData = {
               id: defaultImage.id || null,
               src: defaultImage.src,
@@ -1407,8 +2632,38 @@ export const getAllOrdersForAdmin = async (req, res) => {
           continue;
         }
 
+        const originalQty = Number(item.quantity || 0);
+        const refundedQty = getRefundedQtyByLineItemId(order, lineItemId);
+        const remainingQty = Math.max(originalQty - refundedQty, 0);
+
+        const refundedAmount = getRefundedAmountByLineItemId(order, lineItemId);
+
+        const itemPrice = Number(item.price || 0);
+        const originalAmount = itemPrice * originalQty;
+        const remainingAmount = itemPrice * remainingQty;
+
+        const isFullyRefunded = remainingQty === 0 && originalQty > 0;
+        const isPartiallyRefunded = refundedQty > 0 && remainingQty > 0;
+
         const enrichedItem = {
           ...item,
+
+          quantity: remainingQty,
+
+          original_quantity: originalQty,
+          refunded_quantity: refundedQty,
+          remaining_quantity: remainingQty,
+
+          original_amount: Number(originalAmount.toFixed(2)),
+          refunded_amount: Number(refundedAmount.toFixed(2)),
+          remaining_amount: Number(remainingAmount.toFixed(2)),
+
+          refund_status: isFullyRefunded
+            ? 'fully_refunded'
+            : isPartiallyRefunded
+              ? 'partially_refunded'
+              : 'not_refunded',
+
           image: imageData || item.image || null,
           orderId: order.orderId,
           customer: [
@@ -1423,13 +2678,12 @@ export const getAllOrdersForAdmin = async (req, res) => {
           ],
         };
 
-        // Group by merchant
         if (!merchantGroups.has(merchantId)) {
           merchantGroups.set(merchantId, []);
         }
+
         merchantGroups.get(merchantId).push(enrichedItem);
 
-        // Fetch merchant details once
         if (!merchantDetailsMap.has(merchantId)) {
           const merchant = await authModel
             .findById(merchantId)
@@ -1449,11 +2703,14 @@ export const getAllOrdersForAdmin = async (req, res) => {
           }
         }
 
-        // Stats
         if (!merchantStatsMap.has(merchantId)) {
           merchantStatsMap.set(merchantId, {
             totalOrdersCount: 0,
             totalOrderValue: 0,
+            totalRefundedValue: 0,
+            totalRemainingValue: 0,
+            totalRefundedQty: 0,
+            totalRemainingQty: 0,
             ordersSeen: new Set(),
           });
         }
@@ -1465,13 +2722,13 @@ export const getAllOrdersForAdmin = async (req, res) => {
           stats.totalOrdersCount += 1;
         }
 
-        const amount =
-          parseFloat(item.price || 0) * parseInt(item.quantity || 1);
-
-        stats.totalOrderValue += amount;
+        stats.totalOrderValue += originalAmount;
+        stats.totalRefundedValue += refundedAmount;
+        stats.totalRemainingValue += remainingAmount;
+        stats.totalRefundedQty += refundedQty;
+        stats.totalRemainingQty += remainingQty;
       }
 
-      // Build response (UNCHANGED STRUCTURE)
       const merchantsArray = [];
       const lineItemsByMerchant = {};
 
@@ -1479,13 +2736,29 @@ export const getAllOrdersForAdmin = async (req, res) => {
         const merchantInfo = merchantDetailsMap.get(merchantId) || {
           id: merchantId,
         };
+
         const stats = merchantStatsMap.get(merchantId);
 
         merchantsArray.push({
           id: merchantId,
           info: merchantInfo,
+
           totalOrdersCount: stats?.totalOrdersCount || 0,
-          totalOrderValue: stats?.totalOrderValue || 0,
+
+          totalOrderValue: Number(
+            (stats?.totalOrderValue || 0).toFixed(2)
+          ),
+
+          totalRefundedValue: Number(
+            (stats?.totalRefundedValue || 0).toFixed(2)
+          ),
+
+          totalRemainingValue: Number(
+            (stats?.totalRemainingValue || 0).toFixed(2)
+          ),
+
+          totalRefundedQty: stats?.totalRefundedQty || 0,
+          totalRemainingQty: stats?.totalRemainingQty || 0,
         });
 
         lineItemsByMerchant[merchantId] = items;
@@ -1493,6 +2766,10 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
       finalOrders.push({
         serialNo: order.shopifyOrderNo,
+        orderId: order.orderId,
+
+        refunds: order.refunds || [],
+
         merchants: merchantsArray,
         lineItemsByMerchant,
       });
@@ -1502,20 +2779,22 @@ export const getAllOrdersForAdmin = async (req, res) => {
       finalOrders.sort((a, b) => b.serialNo - a.serialNo);
 
       return res.status(200).send({
-        message: 'Orders grouped per order (not merged by merchant)',
+        message: 'Orders grouped per order with refund tracking',
         data: finalOrders,
       });
-    } else {
-      return res
-        .status(404)
-        .send({ message: 'No orders found across merchants' });
     }
+
+    return res.status(404).send({
+      message: 'No orders found across merchants',
+    });
   } catch (error) {
     console.error('❌ Error in getAllOrdersForAdmin:', error);
-    return res.status(500).send({ message: 'Internal Server Error' });
+
+    return res.status(500).send({
+      message: 'Internal Server Error',
+    });
   }
 };
-
 export const addPaypalAccount = async (req, res) => {
   try {
     const { payPal, merchantIds } = req.body;
@@ -2220,9 +3499,8 @@ export const getPayout = async (req, res) => {
           const merchant = await authModel.findById(merchantId);
 
           if (merchant) {
-            merchantName = `${merchant.firstName || ''} ${
-              merchant.lastName || ''
-            }`.trim();
+            merchantName = `${merchant.firstName || ''} ${merchant.lastName || ''
+              }`.trim();
 
             merchantEmail = merchant.email || 'N/A';
             commissionRate = Number(merchant.comissionRate || 0);
@@ -3052,11 +4330,11 @@ export const getPayoutOrders = async (req, res) => {
     const merchant = await authModel.findById(userId);
     const merchantAccount = merchant
       ? {
-          paypalAccount: merchant.paypalAccount || '',
-          paypalAccountNo: merchant.paypalAccountNo || '',
-          paypalReferenceNo: merchant.paypalReferenceNo || '',
-          bankDetails: merchant.bankDetails || {},
-        }
+        paypalAccount: merchant.paypalAccount || '',
+        paypalAccountNo: merchant.paypalAccountNo || '',
+        paypalReferenceNo: merchant.paypalReferenceNo || '',
+        bankDetails: merchant.bankDetails || {},
+      }
       : null;
 
     const commissionRate = Number(merchant?.comissionRate || 0);
@@ -4314,5 +5592,740 @@ export const getMonthlyRevenue = async (req, res) => {
   } catch (error) {
     console.error('❌ getMonthlyRevenue error:', error);
     res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+// export const createRefund = async (req, res) => {
+//   try {
+//     const {
+//       orderId,
+//       merchantId,
+//       refundItems = [],
+//       reason = '',
+//       restock = true,
+//       refundShipping = false,
+//       shippingAmount = 0,
+//       notifyCustomer = true,
+//     } = req.body;
+
+//     if (!orderId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'orderId is required',
+//       });
+//     }
+
+//     if (!Array.isArray(refundItems)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'refundItems must be an array',
+//       });
+//     }
+
+//     if (refundItems.length === 0 && !refundShipping) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Select at least one item or shipping to refund',
+//       });
+//     }
+
+//     const order = await orderModel.findOne({
+//       orderId: String(orderId),
+//     });
+
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Order not found in database',
+//       });
+//     }
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+
+//     if (!shopifyConfiguration) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Shopify configuration not found',
+//       });
+//     }
+
+//     const {
+//       shopifyApiKey,
+//       shopifyAccessToken,
+//       shopifyStoreUrl,
+//     } = shopifyConfiguration;
+
+//     const shopifyOrderId = order.orderId;
+
+//     const orderLineItems = Array.isArray(order.lineItems)
+//       ? order.lineItems
+//       : [];
+
+//     const existingRefunds = Array.isArray(order.refunds)
+//       ? order.refunds
+//       : [];
+
+//     const refundLineItems = [];
+//     const refundItemsForDb = [];
+
+//     for (const refundItem of refundItems) {
+//       const {
+//         lineItemId,
+//         productId,
+//         variantId,
+//         quantity,
+//       } = refundItem;
+
+//       if (!lineItemId || !quantity || Number(quantity) <= 0) {
+//         return res.status(400).json({
+//           success: false,
+//           message: 'Each refund item must have lineItemId and valid quantity',
+//         });
+//       }
+
+//       const matchedLineItem = orderLineItems.find((item) => {
+//         const itemLineItemId =
+//           item.id ||
+//           item.lineItemId ||
+//           item.line_item_id;
+
+//         return String(itemLineItemId) === String(lineItemId);
+//       });
+
+//       if (!matchedLineItem) {
+//         return res.status(404).json({
+//           success: false,
+//           message: `Line item not found: ${lineItemId}`,
+//         });
+//       }
+
+//       const orderedQty = Number(matchedLineItem.quantity || 0);
+
+//       const alreadyRefundedQty = existingRefunds.reduce((total, refund) => {
+//         const refundedItem = refund.refundItems?.find(
+//           (item) => String(item.lineItemId) === String(lineItemId)
+//         );
+
+//         return total + Number(refundedItem?.quantity || 0);
+//       }, 0);
+
+//       const remainingRefundableQty = orderedQty - alreadyRefundedQty;
+
+//       if (Number(quantity) > remainingRefundableQty) {
+//         return res.status(400).json({
+//           success: false,
+//           message: `Only ${remainingRefundableQty} quantity is refundable for line item ${lineItemId}`,
+//         });
+//       }
+
+//       const itemPrice = Number(
+//         matchedLineItem.price ||
+//           matchedLineItem.variant?.price ||
+//           matchedLineItem.product?.price ||
+//           0
+//       );
+
+//       const itemRefundAmount = itemPrice * Number(quantity);
+
+//       refundLineItems.push({
+//         line_item_id: Number(lineItemId),
+//         quantity: Number(quantity),
+//         restock_type: restock ? 'cancel' : 'no_restock',
+//       });
+
+//       refundItemsForDb.push({
+//         productId: String(productId || matchedLineItem.product_id || ''),
+//         variantId: String(variantId || matchedLineItem.variant_id || ''),
+//         lineItemId: String(lineItemId),
+//         quantity: Number(quantity),
+//         amount: Number(itemRefundAmount.toFixed(2)),
+//       });
+//     }
+
+//     const calculatePayload = {
+//       refund: {},
+//     };
+
+//     if (refundLineItems.length > 0) {
+//       calculatePayload.refund.refund_line_items = refundLineItems;
+//     }
+
+//     if (refundShipping) {
+//       calculatePayload.refund.shipping = {
+//         amount: Number(shippingAmount || 0).toFixed(2),
+//       };
+//     }
+
+//     if (order?.currency) {
+//       calculatePayload.refund.currency = order.currency;
+//     }
+
+//     const calculateResponse = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/orders/${shopifyOrderId}/refunds/calculate.json`,
+//       'POST',
+//       calculatePayload,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     if (!calculateResponse?.refund) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Refund calculation failed',
+//         data: calculateResponse,
+//       });
+//     }
+
+//     const calculatedRefund = calculateResponse.refund;
+
+//     const transactions = (calculatedRefund.transactions || []).map(
+//       (transaction) => ({
+//         ...transaction,
+//         kind: 'refund',
+//       })
+//     );
+
+//     if (!transactions.length) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'No refundable transaction found',
+//         data: calculatedRefund,
+//       });
+//     }
+
+//     const createRefundPayload = {
+//       refund: {
+//         notify: notifyCustomer,
+//         note: reason || 'Refund created from marketplace',
+//         refund_line_items: calculatedRefund.refund_line_items || [],
+//         transactions,
+//       },
+//     };
+
+//     if (order?.currency) {
+//       createRefundPayload.refund.currency = order.currency;
+//     }
+
+//     if (refundShipping && calculatedRefund.shipping) {
+//       createRefundPayload.refund.shipping = {
+//         amount: Number(shippingAmount || 0).toFixed(2),
+//       };
+//     }
+
+//     const refundResponse = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/orders/${shopifyOrderId}/refunds.json`,
+//       'POST',
+//       createRefundPayload,
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const shopifyRefund = refundResponse?.refund;
+
+//     const transactionRefundAmount = (shopifyRefund?.transactions || []).reduce(
+//       (total, transaction) => {
+//         return total + Number(transaction.amount || 0);
+//       },
+//       0
+//     );
+
+//     const fallbackRefundAmount =
+//       refundItemsForDb.reduce((total, item) => total + Number(item.amount || 0), 0) +
+//       (refundShipping ? Number(shippingAmount || 0) : 0);
+
+//     const finalRefundAmount =
+//       transactionRefundAmount > 0
+//         ? transactionRefundAmount
+//         : fallbackRefundAmount;
+
+//     await orderModel.updateOne(
+//       { orderId: String(orderId) },
+//       {
+//         $push: {
+//           refunds: {
+//             refundId: String(shopifyRefund?.id || ''),
+//             status: 'success',
+//             refundItems: refundItemsForDb,
+//             shippingRefunded: Boolean(refundShipping),
+//             shippingAmount: refundShipping ? Number(shippingAmount || 0) : 0,
+//             refundAmount: Number(finalRefundAmount.toFixed(2)),
+//             reason,
+//             restock,
+//             notifyCustomer,
+//             shopifyRefund: shopifyRefund || {},
+//             refundedAt: new Date(),
+//           },
+//         },
+//       }
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Refund created successfully',
+//       refund: shopifyRefund,
+//       calculatedRefund,
+//       savedRefund: {
+//         refundId: String(shopifyRefund?.id || ''),
+//         refundItems: refundItemsForDb,
+//         shippingRefunded: Boolean(refundShipping),
+//         shippingAmount: refundShipping ? Number(shippingAmount || 0) : 0,
+//         refundAmount: Number(finalRefundAmount.toFixed(2)),
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Create Refund Error:', error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Failed to create refund',
+//       error: error?.message,
+//       details: error?.response?.data || null,
+//     });
+//   }
+// };
+
+
+export const createRefund = async (req, res) => {
+  try {
+    const {
+      orderId,
+      merchantId,
+      refundItems = [],
+      reason = '',
+      restock = true,
+      refundShipping = false,
+      shippingAmount = 0,
+      notifyCustomer = true,
+    } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'orderId is required',
+      });
+    }
+
+    if (!Array.isArray(refundItems)) {
+      return res.status(400).json({
+        success: false,
+        message: 'refundItems must be an array',
+      });
+    }
+
+    if (refundItems.length === 0 && !refundShipping) {
+      return res.status(400).json({
+        success: false,
+        message: 'Select at least one item or shipping to refund',
+      });
+    }
+
+    const order = await orderModel.findOne({
+      orderId: String(orderId),
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found in database',
+      });
+    }
+
+    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+
+    if (!shopifyConfiguration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Shopify configuration not found',
+      });
+    }
+
+    const { shopifyApiKey, shopifyAccessToken, shopifyStoreUrl } =
+      shopifyConfiguration;
+
+    const shopifyOrderId = order.orderId;
+
+    const orderLineItems = Array.isArray(order.lineItems)
+      ? order.lineItems
+      : [];
+
+    const existingRefunds = Array.isArray(order.refunds)
+      ? order.refunds
+      : [];
+
+    const refundLineItems = [];
+    const refundItemsForDb = [];
+
+    for (const refundItem of refundItems) {
+      const { lineItemId, productId, variantId, quantity } = refundItem;
+
+      if (!lineItemId || !quantity || Number(quantity) <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each refund item must have lineItemId and valid quantity',
+        });
+      }
+
+      const matchedLineItem = orderLineItems.find((item) => {
+        const itemLineItemId = item.id || item.lineItemId || item.line_item_id;
+
+        return String(itemLineItemId) === String(lineItemId);
+      });
+
+      if (!matchedLineItem) {
+        return res.status(404).json({
+          success: false,
+          message: `Line item not found: ${lineItemId}`,
+        });
+      }
+
+      const orderedQty = Number(matchedLineItem.quantity || 0);
+
+      const alreadyRefundedQty = existingRefunds.reduce((total, refund) => {
+        const matchedRefundItems = (refund.refundItems || []).filter(
+          (item) => String(item.lineItemId) === String(lineItemId)
+        );
+
+        const qty = matchedRefundItems.reduce((sum, item) => {
+          return sum + Number(item.quantity || 0);
+        }, 0);
+
+        return total + qty;
+      }, 0);
+
+      const remainingRefundableQty = orderedQty - alreadyRefundedQty;
+
+      if (Number(quantity) > remainingRefundableQty) {
+        return res.status(400).json({
+          success: false,
+          message: `Only ${remainingRefundableQty} quantity is refundable for line item ${lineItemId}`,
+        });
+      }
+
+      const itemPrice = Number(
+        matchedLineItem.price ||
+        matchedLineItem.variant?.price ||
+        matchedLineItem.product?.price ||
+        0
+      );
+
+      const itemRefundAmount = itemPrice * Number(quantity);
+
+      refundLineItems.push({
+        line_item_id: Number(lineItemId),
+        quantity: Number(quantity),
+        restock_type: restock ? 'cancel' : 'no_restock',
+      });
+
+      refundItemsForDb.push({
+        productId: String(productId || matchedLineItem.product_id || ''),
+        variantId: String(variantId || matchedLineItem.variant_id || ''),
+        lineItemId: String(lineItemId),
+        quantity: Number(quantity),
+        amount: Number(itemRefundAmount.toFixed(2)),
+      });
+    }
+
+    const calculatePayload = {
+      refund: {},
+    };
+
+    if (refundLineItems.length > 0) {
+      calculatePayload.refund.refund_line_items = refundLineItems;
+    }
+
+    if (refundShipping) {
+      calculatePayload.refund.shipping = {
+        amount: Number(shippingAmount || 0).toFixed(2),
+      };
+    }
+
+    if (order?.currency) {
+      calculatePayload.refund.currency = order.currency;
+    }
+
+    const calculateResponse = await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/orders/${shopifyOrderId}/refunds/calculate.json`,
+      'POST',
+      calculatePayload,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    if (!calculateResponse?.refund) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refund calculation failed',
+        data: calculateResponse,
+      });
+    }
+
+    const calculatedRefund = calculateResponse.refund;
+
+    const transactions = (calculatedRefund.transactions || []).map(
+      (transaction) => ({
+        ...transaction,
+        kind: 'refund',
+      })
+    );
+
+    if (!transactions.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'No refundable transaction found',
+        data: calculatedRefund,
+      });
+    }
+
+    const createRefundPayload = {
+      refund: {
+        notify: notifyCustomer,
+        note: reason || 'Refund created from marketplace',
+        refund_line_items: calculatedRefund.refund_line_items || [],
+        transactions,
+      },
+    };
+
+    if (order?.currency) {
+      createRefundPayload.refund.currency = order.currency;
+    }
+
+    if (refundShipping && calculatedRefund.shipping) {
+      createRefundPayload.refund.shipping = {
+        amount: Number(shippingAmount || 0).toFixed(2),
+      };
+    }
+
+    const refundResponse = await shopifyRequest(
+      `${shopifyStoreUrl}/admin/api/2024-01/orders/${shopifyOrderId}/refunds.json`,
+      'POST',
+      createRefundPayload,
+      shopifyApiKey,
+      shopifyAccessToken
+    );
+
+    const shopifyRefund = refundResponse?.refund;
+
+    if (!shopifyRefund?.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refund was not created on Shopify',
+        data: refundResponse,
+      });
+    }
+
+    const transactionRefundAmount = (shopifyRefund?.transactions || []).reduce(
+      (total, transaction) => {
+        return total + Number(transaction.amount || 0);
+      },
+      0
+    );
+
+    const fallbackRefundAmount =
+      refundItemsForDb.reduce((total, item) => {
+        return total + Number(item.amount || 0);
+      }, 0) + (refundShipping ? Number(shippingAmount || 0) : 0);
+
+    const finalRefundAmount =
+      transactionRefundAmount > 0
+        ? transactionRefundAmount
+        : fallbackRefundAmount;
+
+    /*
+      Increment local listing inventory only when restock is true.
+      If restock false, refund money happens but inventory should not come back.
+    */
+    const incrementListingInventory = async () => {
+      if (!restock) {
+        console.log('ℹ️ Restock disabled. Listing inventory increment skipped.');
+        return [];
+      }
+
+      const inventoryUpdates = [];
+
+      for (const refundItem of refundItemsForDb) {
+        const productId = String(refundItem.productId || '');
+        const variantId = String(refundItem.variantId || '');
+        const refundQty = Number(refundItem.quantity || 0);
+
+        if (!productId || !variantId || refundQty <= 0) {
+          console.log('⚠️ Missing productId/variantId/refundQty');
+          continue;
+        }
+
+        const listing = await listingModel.findOne({
+          $or: [{ id: productId }, { shopifyId: productId }],
+        });
+
+        if (!listing) {
+          console.log(`⚠️ Listing not found for productId: ${productId}`);
+
+          inventoryUpdates.push({
+            productId,
+            variantId,
+            quantity: refundQty,
+            updated: false,
+            reason: 'Listing not found',
+          });
+
+          continue;
+        }
+
+        let variantFound = false;
+        let oldVariantQty = 0;
+        let newVariantQty = 0;
+
+        listing.variants = listing.variants.map((variant) => {
+          if (String(variant.id) !== String(variantId)) {
+            return variant;
+          }
+
+          variantFound = true;
+
+          oldVariantQty = Number(variant.inventory_quantity || 0);
+          newVariantQty = oldVariantQty + refundQty;
+
+          return {
+            ...variant,
+            inventory_quantity: newVariantQty,
+          };
+        });
+
+        if (!variantFound) {
+          console.log(
+            `⚠️ Variant not found in listing. productId: ${productId}, variantId: ${variantId}`
+          );
+
+          inventoryUpdates.push({
+            productId,
+            variantId,
+            quantity: refundQty,
+            updated: false,
+            reason: 'Variant not found',
+          });
+
+          continue;
+        }
+
+        const newTotalQty = listing.variants.reduce((sum, variant) => {
+          return sum + Number(variant.inventory_quantity || 0);
+        }, 0);
+
+        listing.inventory = {
+          ...listing.inventory,
+          quantity: newTotalQty,
+        };
+
+        listing.totalQuantity = String(newTotalQty);
+        listing.updated_at = new Date();
+
+        await listing.save();
+
+        console.log(
+          `✅ Listing inventory incremented. Product: ${productId}, Variant: ${variantId}, Qty +${refundQty}, Variant Qty: ${oldVariantQty} -> ${newVariantQty}, New Total: ${newTotalQty}`
+        );
+
+        inventoryUpdates.push({
+          productId,
+          variantId,
+          quantity: refundQty,
+          oldVariantQty,
+          newVariantQty,
+          newTotalQty,
+          updated: true,
+        });
+      }
+
+      return inventoryUpdates;
+    };
+
+    const inventoryUpdates = await incrementListingInventory();
+    let refundEmailStatus = {
+      sent: false,
+      reason: 'Notification disabled',
+    };
+
+    if (notifyCustomer) {
+      try {
+        const customerEmail =
+          order?.customer?.email ||
+          order?.customer?.default_address?.email ||
+          order?.email ||
+          order?.customers?.email ||
+          '';
+
+        const customerName =
+          `${order?.customer?.first_name || order?.customer?.firstName || ''} ${order?.customer?.last_name || order?.customer?.lastName || ''
+            }`.trim() || 'Customer';
+
+        refundEmailStatus = await sendRefundEmail({
+          to: customerEmail,
+          customerName,
+          orderNo: order.shopifyOrderNo || order.orderId,
+          refundAmount: finalRefundAmount,
+          currency: order.currency || '',
+          reason,
+        });
+      } catch (emailError) {
+        console.error('Refund email sending failed:', emailError);
+
+        refundEmailStatus = {
+          sent: false,
+          reason: emailError.message,
+        };
+      }
+    }
+    const savedRefund = {
+      refundId: String(shopifyRefund?.id || ''),
+      status: 'success',
+      emailNotification: refundEmailStatus,
+
+      refundItems: refundItemsForDb,
+      shippingRefunded: Boolean(refundShipping),
+      shippingAmount: refundShipping ? Number(shippingAmount || 0) : 0,
+      refundAmount: Number(finalRefundAmount.toFixed(2)),
+      reason,
+      restock,
+      notifyCustomer,
+      shopifyRefund: shopifyRefund || {},
+      inventoryRestocked: Boolean(restock),
+      inventoryUpdates,
+      refundedAt: new Date(),
+    };
+
+    await orderModel.updateOne(
+      { orderId: String(orderId) },
+      {
+        $push: {
+          refunds: savedRefund,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Refund created successfully',
+      refund: shopifyRefund,
+      calculatedRefund,
+      savedRefund: {
+        refundId: savedRefund.refundId,
+        refundItems: refundItemsForDb,
+        shippingRefunded: savedRefund.shippingRefunded,
+        shippingAmount: savedRefund.shippingAmount,
+        refundAmount: savedRefund.refundAmount,
+        inventoryRestocked: savedRefund.inventoryRestocked,
+        inventoryUpdates,
+        emailNotification: refundEmailStatus,
+      },
+    });
+  } catch (error) {
+    console.error('Create Refund Error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create refund',
+      error: error?.message,
+      details: error?.response?.data || null,
+    });
   }
 };

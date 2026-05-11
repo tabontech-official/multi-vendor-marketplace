@@ -29,6 +29,7 @@ import {
   updateMerchantCommission,
   bulkUpdateMerchantCommission,
   sendFinanceReminder,
+  checkOrderRequest,
 } from '../controller/auth.js';
 import { cpUpload } from '../middleware/cloudinary.js';
 import { verifyShopifyWebhook } from '../middleware/verifyShopifyWebhook.js';
@@ -67,6 +68,8 @@ authRouter.get('/getSingleUser/:id', getSingleUser);
 authRouter.get('/getAllMerchant', getAllMerchants);
 authRouter.get('/getAllOnboardUsers/:id', getAllOnboardUsersData);
 authRouter.post('/addRequestForOrderCancellation/:id', addOrderRequest);
+authRouter.get("/check/:orderId", checkOrderRequest);
+
 authRouter.get('/getCollcetion/:id', getCollectionId);
 authRouter.get('/getBrandAssets/:id', getBrandAssets);
 authRouter.post('/addMerchantAccountDetails', addMerchantAccDetails);

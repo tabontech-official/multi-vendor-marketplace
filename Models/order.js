@@ -32,6 +32,44 @@ const orderSchema = new mongoose.Schema(
         },
       },
     ],
+    refunds: [
+  {
+    refundId: String,
+    status: {
+      type: String,
+      default: "success",
+    },
+    refundItems: [
+      {
+        productId: String,
+        variantId: String,
+        lineItemId: String,
+        quantity: Number,
+        amount: Number,
+      },
+    ],
+    shippingRefunded: {
+      type: Boolean,
+      default: false,
+    },
+    shippingAmount: {
+      type: Number,
+      default: 0,
+    },
+    refundAmount: {
+      type: Number,
+      default: 0,
+    },
+    reason: String,
+    restock: Boolean,
+    notifyCustomer: Boolean,
+    shopifyRefund: Object,
+    refundedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
     merchantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
