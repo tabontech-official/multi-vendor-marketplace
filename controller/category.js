@@ -10,51 +10,51 @@ import { listingModel } from '../Models/Listing.js';
 import csv from "csv-parser";
 import { Readable } from "stream";
 
-// const generateUniqueCatNo = async () => {
-//   try {
-//     const categories = await categoryModel.find({}, 'catNo').lean();
-
-//     let maxNumber = 0;
-
-//     categories.forEach((cat) => {
-//       const numberPart = parseInt(cat.catNo.replace('cat_', ''));
-//       if (!isNaN(numberPart) && numberPart > maxNumber) {
-//         maxNumber = numberPart;
-//       }
-//     });
-
-//     const newCatNo = `cat_${maxNumber + 1}`;
-//     return newCatNo;
-//   } catch (error) {
-//     console.error('Error generating unique catNo:', error);
-//     throw new Error('Failed to generate unique catNo');
-//   }
-// };
-
-
 const generateUniqueCatNo = async () => {
   try {
     const categories = await categoryModel.find({}, 'catNo').lean();
 
-    let maxNumber = 999; // start point
+    let maxNumber = 999;
 
     categories.forEach((cat) => {
       const numberPart = parseInt(cat.catNo.replace('cat_', ''));
-
       if (!isNaN(numberPart) && numberPart > maxNumber) {
         maxNumber = numberPart;
       }
     });
 
-    const newCatNo = `cat_${maxNumber + 1}`
-
+    const newCatNo = `cat_${maxNumber + 1}`;
     return newCatNo;
-
   } catch (error) {
     console.error('Error generating unique catNo:', error);
     throw new Error('Failed to generate unique catNo');
   }
 };
+
+
+// const generateUniqueCatNo = async () => {
+//   try {
+//     const categories = await categoryModel.find({}, 'catNo').lean();
+
+//     let maxNumber = 999; // start point
+
+//     categories.forEach((cat) => {
+//       const numberPart = parseInt(cat.catNo.replace('cat_', ''));
+
+//       if (!isNaN(numberPart) && numberPart > maxNumber) {
+//         maxNumber = numberPart;
+//       }
+//     });
+
+//     const newCatNo = `cat_${maxNumber + 1}`
+
+//     return newCatNo;
+
+//   } catch (error) {
+//     console.error('Error generating unique catNo:', error);
+//     throw new Error('Failed to generate unique catNo');
+//   }
+// };
 
 export const createCategory = async (req, res) => {
   try {
