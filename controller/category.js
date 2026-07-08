@@ -10,26 +10,119 @@ import { listingModel } from '../Models/Listing.js';
 import csv from "csv-parser";
 import { Readable } from "stream";
 
-const generateUniqueCatNo = async () => {
+// const generateUniqueCatNo = async () => {
+//   try {
+//     const categories = await categoryModel.find({}, 'catNo').lean();
+
+//     let maxNumber = 999;
+
+//     categories.forEach((cat) => {
+//       const numberPart = parseInt(cat.catNo.replace('cat_', ''));
+//       if (!isNaN(numberPart) && numberPart > maxNumber) {
+//         maxNumber = numberPart;
+//       }
+//     });
+
+//     const newCatNo = `cat_${maxNumber + 1}`;
+//     return newCatNo;
+//   } catch (error) {
+//     console.error('Error generating unique catNo:', error);
+//     throw new Error('Failed to generate unique catNo');
+//   }
+// };
+
+
+
+const generateUniqueCatNo = async (level, parentCatNo = "") => {
   try {
-    const categories = await categoryModel.find({}, 'catNo').lean();
+    let nextNumber;
 
-    let maxNumber = 999;
+    console.log("LEVEL:", level);
+    console.log("PARENT:", parentCatNo);
 
-    categories.forEach((cat) => {
-      const numberPart = parseInt(cat.catNo.replace('cat_', ''));
-      if (!isNaN(numberPart) && numberPart > maxNumber) {
-        maxNumber = numberPart;
+    // Level 1
+    if (level === "level1") {
+      const lastCat = await categoryModel
+        .findOne({ level: "level1" })
+        .sort({ catNo: -1 })
+        .lean();
+
+      nextNumber = lastCat
+        ? parseInt(lastCat.catNo.replace("cat_", "")) + 1000
+        : 1000;
+    }
+
+    // Level 2
+    else if (level === "level2") {
+      if (!parentCatNo) {
+        throw new Error("Level 2 category requires parentCatNo");
       }
+
+      const children = await categoryModel
+        .find({ parentCatNo })
+        .sort({ catNo: -1 })
+        .lean();
+
+      if (children.length > 0) {
+        nextNumber =
+          parseInt(children[0].catNo.replace("cat_", "")) + 100;
+      } else {
+        nextNumber =
+          parseInt(parentCatNo.replace("cat_", "")) + 100;
+      }
+    }
+
+    // Level 3
+    else if (level === "level3") {
+      if (!parentCatNo) {
+        throw new Error("Level 3 category requires parentCatNo");
+      }
+
+      const children = await categoryModel
+        .find({ parentCatNo })
+        .sort({ catNo: -1 })
+        .lean();
+
+      if (children.length > 0) {
+        nextNumber =
+          parseInt(children[0].catNo.replace("cat_", "")) + 10;
+      } else {
+        nextNumber =
+          parseInt(parentCatNo.replace("cat_", "")) + 10;
+      }
+    }
+
+    else {
+      throw new Error("Invalid category level");
+    }
+
+
+    const newCatNo = `cat_${nextNumber}`;
+
+
+    // Duplicate safety check
+    const exists = await categoryModel.findOne({
+      catNo: newCatNo,
     });
 
-    const newCatNo = `cat_${maxNumber + 1}`;
+    if (exists) {
+      throw new Error(
+        `Duplicate catNo generated: ${newCatNo}`
+      );
+    }
+
+
+    console.log("Generated CatNo:", newCatNo);
+
     return newCatNo;
+
+
   } catch (error) {
-    console.error('Error generating unique catNo:', error);
-    throw new Error('Failed to generate unique catNo');
+    console.error("Error generating catNo:", error);
+    throw error;
   }
 };
+
 
 
 // const generateUniqueCatNo = async () => {
@@ -69,9 +162,13 @@ export const createCategory = async (req, res) => {
 
     console.log('Starting category saving process...');
 
-    for (const [index, category] of categories.entries()) {
-      const catNo = await generateUniqueCatNo();
-      console.log(`Generating catNo for category ${category.title}: ${catNo}`);
+for (const [index, category] of categories.entries()) {
+    const catNo = await generateUniqueCatNo(
+      category.level,
+      category.parentCatNo
+    );
+
+    console.log(`Generating catNo for category ${category.title}: ${catNo}`);
 
       const categoryToSave = new categoryModel({
         title: category.title,
