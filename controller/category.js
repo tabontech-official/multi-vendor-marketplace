@@ -46,7 +46,7 @@ const generateUniqueCatNo = async () => {
       }
     });
 
-    const newCatNo = `cat_${maxNumber + 1}`;
+    const newCatNo = `cat_${maxNumber + 1}`
 
     return newCatNo;
 
