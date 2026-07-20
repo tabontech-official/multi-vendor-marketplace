@@ -106,7 +106,14 @@ import { Readable } from 'stream';
 //   }
 // };
 
-
+const normalizeHandle = (value = '') => {
+  return value
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
 const generateUniqueCatNo = async (level, parentCatNo = '') => {
   try {
     let nextNumber;
@@ -291,12 +298,29 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    const collectionId = await createShopifyCollection(
-      description,
-      title,
-      validCollectionRules,
-      handle
-    );
+    // const collectionId = await createShopifyCollection(
+    //   description,
+    //   title,
+    //   validCollectionRules,
+    //   handle
+    // );
+    const lastSavedCategory =
+  savedCategories[savedCategories.length - 1];
+
+const baseHandle = normalizeHandle(handle || title);
+
+const shopifyHandle = `${baseHandle}-${normalizeHandle(
+  lastSavedCategory.catNo
+)}`;
+
+console.log('Unique Shopify handle:', shopifyHandle);
+
+const collectionId = await createShopifyCollection(
+  description,
+  title,
+  validCollectionRules,
+  shopifyHandle
+);
     for (const savedCategory of savedCategories) {
       savedCategory.categoryId = collectionId;
       await savedCategory.save();
