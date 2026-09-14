@@ -3028,8 +3028,19 @@ export const updateSingleVariant = async (req, res) => {
       {
         variant: {
           id: variantId,
-          price: price?.toString(),
-          compare_at_price: compare_at_price?.toString(),
+          // price: price?.toString(),
+          // compare_at_price: compare_at_price?.toString(),
+          price:
+  price !== undefined && price !== null
+    ? price.toString()
+    : undefined,
+
+compare_at_price:
+  compare_at_price === null || compare_at_price === ''
+    ? null
+    : compare_at_price !== undefined
+      ? compare_at_price.toString()
+      : undefined,
           sku,
           barcode,
           option1,
@@ -3097,12 +3108,22 @@ export const updateSingleVariant = async (req, res) => {
 
     const updateFields = {};
 
-    if (price !== undefined)
-      updateFields['variants.$.price'] = price.toString();
+    // if (price !== undefined)
+    //   updateFields['variants.$.price'] = price.toString();
 
-    if (compare_at_price !== undefined)
-      updateFields['variants.$.compare_at_price'] = compare_at_price.toString();
+    // if (compare_at_price !== undefined)
+    //   updateFields['variants.$.compare_at_price'] = compare_at_price.toString();
 
+    if (price !== undefined && price !== null) {
+  updateFields['variants.$.price'] = price.toString();
+}
+
+if (compare_at_price !== undefined) {
+  updateFields['variants.$.compare_at_price'] =
+    compare_at_price === null || compare_at_price === ''
+      ? null
+      : compare_at_price.toString();
+}
     if (inventory_quantity !== undefined)
       updateFields['variants.$.inventory_quantity'] =
         parseInt(inventory_quantity) || 0;
