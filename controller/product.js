@@ -12,6 +12,7 @@ import Papa from 'papaparse';
 import { PromoModel } from '../Models/Promotions.js';
 import { Parser } from 'json2csv';
 import { parse } from 'csv-parse/sync';
+import jwt from "jsonwebtoken";
 
 import path from 'path';
 import moment from 'moment';
@@ -5690,152 +5691,948 @@ const generateInventoryBatchNo = () => {
   return `INV-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 };
 
+// export const updateInventoryFromCsv = async (req, res) => {
+//   const file = req.file;
+//   const userId = req.body.userId;
+
+//   if (!file || !file.buffer) {
+//     return res.status(400).json({ error: 'No file uploaded.' });
+//   }
+
+//   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//     return res.status(400).json({ error: 'Invalid or missing userId.' });
+//   }
+
+//   try {
+//     const batchNo = generateInventoryBatchNo();
+
+//     const batch = await csvImportBatchSchema.create({
+//       batchNo,
+//       userId,
+//       fileName: file.originalname,
+//       mimeType: file.mimetype,
+//       fileSize: file.size,
+//       fileBuffer: file.buffer,
+//       status: 'pending',
+//       batchLogs: [{ message: 'Inventory batch created' }],
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Inventory CSV uploaded. Processing will start shortly.',
+//       batchNo: batch.batchNo,
+//       status: batch.status,
+//     });
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       error: err.message,
+//     });
+//   }
+// };
+
+
+
 export const updateInventoryFromCsv = async (req, res) => {
+  console.log("\n==============================================");
+  console.log("📥 INVENTORY CSV UPLOAD");
+  console.log("==============================================");
+
   const file = req.file;
   const userId = req.body.userId;
 
-  if (!file || !file.buffer) {
-    return res.status(400).json({ error: 'No file uploaded.' });
+  if (!file?.buffer) {
+    return res.status(400).json({
+      success: false,
+      error: "No file uploaded.",
+    });
   }
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: 'Invalid or missing userId.' });
+    return res.status(400).json({
+      success: false,
+      error: "Invalid or missing userId.",
+    });
   }
 
   try {
-    const batchNo = generateInventoryBatchNo();
+    // ==============================
+    // Shopify Config
+    // ==============================
 
-    const batch = await csvImportBatchSchema.create({
-      batchNo,
-      userId,
-      fileName: file.originalname,
-      mimeType: file.mimetype,
-      fileSize: file.size,
-      fileBuffer: file.buffer,
-      status: 'pending',
-      batchLogs: [{ message: 'Inventory batch created' }],
+    const config = await shopifyConfigurationModel.findOne();
+
+    if (!config) {
+      return res.status(400).json({
+        success: false,
+        error: "Shopify configuration missing.",
+      });
+    }
+
+    const {
+      shopifyApiKey,
+      shopifyAccessToken,
+      shopifyStoreUrl,
+    } = config;
+
+    // ==============================
+    // Parse CSV
+    // ==============================
+
+    const rows = [];
+
+    await new Promise((resolve, reject) => {
+      Readable.from(file.buffer)
+        .pipe(csv())
+        .on("data", (row) => {
+          rows.push(row);
+        })
+        .on("end", resolve)
+        .on("error", reject);
     });
+
+    console.log("Total CSV rows:", rows.length);
+
+    const results = [];
+
+    // ==============================
+    // Process one row at a time
+    // ==============================
+
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+
+      console.log("\n----------------------------------");
+      console.log(`Processing row ${index + 1}/${rows.length}`);
+      console.log("----------------------------------");
+
+      const sku =
+        row["Variant SKU"]?.trim() || "";
+
+      const variantId =
+        row["Variant Shopify ID"]?.trim() || "";
+
+      const quantityRaw =
+        row["Variant Inventory Qty"]?.trim();
+
+      console.log("SKU:", sku || "EMPTY");
+      console.log("Variant ID:", variantId || "EMPTY");
+      console.log("Quantity:", quantityRaw);
+
+      if (!sku && !variantId) {
+        results.push({
+          row: index + 1,
+          status: "failed",
+          message: "SKU and Variant Shopify ID missing",
+        });
+
+        continue;
+      }
+
+      if (
+        quantityRaw === undefined ||
+        quantityRaw === null ||
+        quantityRaw === ""
+      ) {
+        results.push({
+          row: index + 1,
+          sku,
+          variantId,
+          status: "failed",
+          message: "Inventory quantity missing",
+        });
+
+        continue;
+      }
+
+      const quantity = Number.parseInt(quantityRaw, 10);
+
+      if (Number.isNaN(quantity)) {
+        results.push({
+          row: index + 1,
+          sku,
+          variantId,
+          status: "failed",
+          message: "Invalid inventory quantity",
+        });
+
+        continue;
+      }
+
+      try {
+        // ==============================
+        // Find product
+        // ==============================
+
+        const query = variantId
+          ? {
+              "variants.id": variantId,
+            }
+          : {
+              "variants.sku": sku,
+            };
+
+        console.log("Finding product:", query);
+
+        const product = await listingModel.findOne(query);
+
+        if (!product) {
+          console.log("❌ Product not found");
+
+          results.push({
+            row: index + 1,
+            sku,
+            variantId,
+            status: "failed",
+            message: "Product not found",
+          });
+
+          continue;
+        }
+
+        // ==============================
+        // Find exact variant
+        // ==============================
+
+        const variant = product.variants.find((v) => {
+          if (variantId) {
+            return String(v.id) === String(variantId);
+          }
+
+          return String(v.sku || "").trim() === sku;
+        });
+
+        if (!variant) {
+          console.log("❌ Variant not found");
+
+          results.push({
+            row: index + 1,
+            sku,
+            variantId,
+            status: "failed",
+            message: "Variant not found",
+          });
+
+          continue;
+        }
+
+        console.log("✅ Variant found:", variant.id);
+
+        // ==============================
+        // Get inventory_item_id
+        // ==============================
+
+        const variantResponse = await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/variants/${variant.id}.json`,
+          "GET",
+          null,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+
+        const inventoryItemId =
+          variantResponse?.variant?.inventory_item_id;
+
+        if (!inventoryItemId) {
+          throw new Error("inventory_item_id not found");
+        }
+
+        console.log(
+          "Inventory Item ID:",
+          inventoryItemId
+        );
+
+        // ==============================
+        // Get location
+        // ==============================
+
+        const levelsResponse = await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
+          "GET",
+          null,
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+
+        const locationId =
+          levelsResponse?.inventory_levels?.[0]?.location_id;
+
+        if (!locationId) {
+          throw new Error("Shopify location not found");
+        }
+
+        console.log("Location ID:", locationId);
+
+        // ==============================
+        // Update Shopify inventory
+        // ==============================
+
+        await shopifyRequest(
+          `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
+          "POST",
+          {
+            location_id: locationId,
+            inventory_item_id: inventoryItemId,
+            available: quantity,
+          },
+          shopifyApiKey,
+          shopifyAccessToken
+        );
+
+        console.log(
+          `✅ Shopify inventory updated: ${quantity}`
+        );
+
+        // ==============================
+        // Update local DB
+        // ==============================
+
+        variant.inventory_quantity = quantity;
+        variant.inventory_item_id = inventoryItemId;
+        variant.location_id = locationId;
+
+        await product.save({
+          optimisticConcurrency: false,
+        });
+
+        console.log("✅ Local DB updated");
+
+        results.push({
+          row: index + 1,
+          sku,
+          variantId,
+          quantity,
+          status: "success",
+        });
+
+      } catch (rowError) {
+        console.log(
+          `❌ Row ${index + 1} failed:`,
+          rowError.message
+        );
+
+        results.push({
+          row: index + 1,
+          sku,
+          variantId,
+          status: "failed",
+          message: rowError.message,
+        });
+      }
+    }
+
+    // ==============================
+    // Final response
+    // ==============================
+
+    const successCount =
+      results.filter(
+        (item) => item.status === "success"
+      ).length;
+
+    const failedCount =
+      results.filter(
+        (item) => item.status === "failed"
+      ).length;
+
+    console.log("\n==============================================");
+    console.log("✅ INVENTORY CSV FINISHED");
+    console.log("Success:", successCount);
+    console.log("Failed:", failedCount);
+    console.log("==============================================");
 
     return res.status(200).json({
       success: true,
-      message: 'Inventory CSV uploaded. Processing will start shortly.',
-      batchNo: batch.batchNo,
-      status: batch.status,
+      message: "Inventory CSV processing completed.",
+      total: rows.length,
+      updated: successCount,
+      failed: failedCount,
+      results,
     });
+
   } catch (err) {
+    console.log("🔥 INVENTORY CSV ERROR");
+    console.log(err.message);
+    console.log(err.stack);
+
     return res.status(500).json({
       success: false,
       error: err.message,
     });
   }
 };
+// export const exportInventoryCsv = async (req, res) => {
+//   try {
+//     const { userId, variantIds } = req.query;
+
+//     if (!userId) {
+//       return res.status(400).json({ message: 'Missing userId parameter.' });
+//     }
+
+//     const variantIdsArray = variantIds ? variantIds.split(',') : [];
+
+//     const products = await listingModel.find({ userId });
+
+//     if (!products.length) {
+//       return res.status(404).json({ message: 'No products found.' });
+//     }
+
+//     const rows = [];
+//     let productCounter = 101; // numbering starts from 101
+
+//     for (const product of products) {
+//       const status = product.status || 'unknown';
+
+//       // Map image_id → src
+//       const imageMap = {};
+//       (product.images || []).forEach((img) => {
+//         imageMap[String(img.id)] = img.src;
+//       });
+
+//       (product.variants || []).forEach((variant) => {
+//         if (
+//           variantIdsArray.length > 0 &&
+//           !variantIdsArray.includes(String(variant.id))
+//         ) {
+//           return;
+//         }
+
+//         rows.push({
+//           'Product No': productCounter,
+//           'Product Title': product.title || '',
+//           'Variant Title': variant.title || '',
+//           'Variant SKU': variant.sku || '',
+//           'Variant Option1': variant.option1 || '',
+//           'Variant Option2': variant.option2 || '',
+//           'Variant Option3': variant.option3 || '',
+//           'Variant Price': variant.price || '',
+//           'Variant Compare At Price': variant.compare_at_price || '',
+//           'Variant Inventory Qty': variant.inventory_quantity || 0,
+//           'Variant Image':
+//             variant.image_id && imageMap[variant.image_id]
+//               ? imageMap[variant.image_id]
+//               : '',
+//           Status: status,
+//         });
+//       });
+
+//       productCounter++;
+//     }
+
+//     if (rows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: 'No variant data found in database.' });
+//     }
+
+//     const fields = [
+//       'Product No',
+//       'Product Title',
+//       'Variant Title',
+//       'Variant SKU',
+//       'Variant Option1',
+//       'Variant Option2',
+//       'Variant Option3',
+//       'Variant Price',
+//       'Variant Compare At Price',
+//       'Variant Inventory Qty',
+//       'Variant Image',
+//       'Status',
+//     ];
+
+//     const parser = new Parser({ fields });
+//     const csv = parser.parse(rows);
+
+//     const filename = `db-variant-inventory-${Date.now()}.csv`;
+
+//     const isVercel = process.env.VERCEL === '1';
+//     const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+
+//     if (!isVercel && !fs.existsSync(exportDir)) {
+//       fs.mkdirSync(exportDir, { recursive: true });
+//     }
+
+//     const filePath = path.join(exportDir, filename);
+//     fs.writeFileSync(filePath, csv);
+
+//     res.download(filePath, filename, (err) => {
+//       if (err) {
+//         console.error('Download error:', err);
+//         res.status(500).send('Error downloading file');
+//       }
+//       fs.unlinkSync(filePath);
+//     });
+//   } catch (error) {
+//     console.error('Export Error:', error);
+//     res
+//       .status(500)
+//       .json({ message: 'Server error during export.', error: error.message });
+//   }
+// };
 
 export const exportInventoryCsv = async (req, res) => {
   try {
     const { userId, variantIds } = req.query;
 
-    if (!userId) {
-      return res.status(400).json({ message: 'Missing userId parameter.' });
+    console.log("====================================");
+    console.log("EXPORT INVENTORY REQUEST START");
+    console.log("Query userId:", userId);
+    console.log("Raw variantIds:", variantIds);
+    console.log("====================================");
+
+    // =====================================================
+    // 1. VERIFY JWT AND GET ROLE
+    // =====================================================
+    const authHeader = req.headers.authorization;
+
+    console.log("Authorization header exists:", !!authHeader);
+    console.log(
+      "Authorization header starts Bearer:",
+      authHeader?.startsWith("Bearer ")
+    );
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("EXPORT FAILED: Authorization token missing");
+
+      return res.status(401).json({
+        message: "Authorization token is required.",
+      });
     }
 
-    const variantIdsArray = variantIds ? variantIds.split(',') : [];
+    const token = authHeader.split(" ")[1];
 
-    const products = await listingModel.find({ userId });
+    console.log("Token received:", !!token);
+    console.log("Token length:", token?.length);
+    console.log("SECRET_KEY loaded:", !!process.env.SECRET_KEY);
+
+    let decoded;
+
+    try {
+      console.log("Decoded without verify:", jwt.decode(token));
+
+      decoded = jwt.verify(
+        token,
+        process.env.SECRET_KEY
+      );
+
+      console.log("JWT VERIFIED SUCCESSFULLY");
+      console.log("Verified payload:", decoded);
+
+    } catch (error) {
+      console.error("JWT VERIFY FAILED");
+      console.error("JWT error name:", error.name);
+      console.error("JWT error message:", error.message);
+
+      return res.status(401).json({
+        message: "Invalid or expired token.",
+        error: error.message, // temporary debugging only
+      });
+    }
+
+    // =====================================================
+    // 2. ROLE / USER INFO
+    // =====================================================
+
+    const role =
+      decoded?.payLoad?.role ||
+      decoded?.role ||
+      "";
+
+    const tokenUserId =
+      decoded?.payLoad?._id ||
+      decoded?.payLoad?.id ||
+      decoded?.payLoad?.userId ||
+      decoded?.userId ||
+      decoded?.id ||
+      null;
+
+    const isGlobalAdmin =
+      decoded?.payLoad?.isAdmin === true ||
+      role === "Dev Admin" ||
+      role === "DevAdmin" ||
+      role === "Master Admin";
+
+    console.log("====================================");
+    console.log("AUTH DATA");
+    console.log("Role:", role);
+    console.log(
+      "payLoad.isAdmin:",
+      decoded?.payLoad?.isAdmin
+    );
+    console.log("Global Admin:", isGlobalAdmin);
+    console.log("Token User ID:", tokenUserId);
+    console.log("Query User ID:", userId);
+    console.log("====================================");
+
+    // =====================================================
+    // 3. NORMALIZE VARIANT IDS
+    // =====================================================
+    const variantIdsArray = variantIds
+      ? variantIds
+          .split(",")
+          .map((id) => String(id).trim())
+          .filter(Boolean)
+      : [];
+
+    console.log(
+      "Normalized variant IDs:",
+      variantIdsArray
+    );
+
+    console.log(
+      "Selected variant count:",
+      variantIdsArray.length
+    );
+
+    // =====================================================
+    // 4. DETERMINE USER FILTER
+    // =====================================================
+
+    const effectiveUserId =
+      tokenUserId || userId;
+
+    console.log(
+      "Effective User ID:",
+      effectiveUserId
+    );
+
+    if (!isGlobalAdmin && !effectiveUserId) {
+      console.log(
+        "EXPORT FAILED: Unable to determine user account"
+      );
+
+      return res.status(400).json({
+        message:
+          "Unable to determine user account.",
+      });
+    }
+
+    // =====================================================
+    // 5. CREATE DATABASE QUERY
+    // =====================================================
+    let productQuery = {};
+
+    if (variantIdsArray.length > 0) {
+      if (isGlobalAdmin) {
+        productQuery = {
+          "variants.id": {
+            $in: variantIdsArray,
+          },
+        };
+      } else {
+        productQuery = {
+          userId: effectiveUserId,
+          "variants.id": {
+            $in: variantIdsArray,
+          },
+        };
+      }
+    } else {
+      if (isGlobalAdmin) {
+        productQuery = {};
+      } else {
+        productQuery = {
+          userId: effectiveUserId,
+        };
+      }
+    }
+
+    console.log("====================================");
+    console.log("DATABASE QUERY");
+    console.log(
+      JSON.stringify(productQuery, null, 2)
+    );
+    console.log("====================================");
+
+    // =====================================================
+    // 6. FETCH PRODUCTS
+    // =====================================================
+    const products = await listingModel
+      .find(productQuery)
+      .lean();
+
+    console.log(
+      "Products found:",
+      products.length
+    );
 
     if (!products.length) {
-      return res.status(404).json({ message: 'No products found.' });
+      console.log(
+        "EXPORT FAILED: No products matched query"
+      );
+
+      // Extra debug query
+      if (variantIdsArray.length > 0) {
+        const debugProducts =
+          await listingModel
+            .find({
+              "variants.id": {
+                $in: variantIdsArray,
+              },
+            })
+            .select({
+              title: 1,
+              userId: 1,
+              "variants.id": 1,
+            })
+            .lean();
+
+        console.log(
+          "DEBUG products found without user filter:",
+          debugProducts.length
+        );
+
+        console.dir(
+          debugProducts,
+          { depth: 5 }
+        );
+      }
+
+      return res.status(404).json({
+        message:
+          "No products found for export.",
+      });
     }
 
+    // =====================================================
+    // 7. BUILD CSV ROWS
+    // =====================================================
     const rows = [];
-    let productCounter = 101; // numbering starts from 101
+    let productCounter = 101;
 
     for (const product of products) {
-      const status = product.status || 'unknown';
+      const productVariants =
+        Array.isArray(product.variants)
+          ? product.variants
+          : [];
 
-      // Map image_id → src
+      console.log("------------------------------------");
+      console.log("Processing product:", product.title);
+      console.log("Product userId:", product.userId);
+      console.log(
+        "Variants in product:",
+        productVariants.length
+      );
+
+      console.log(
+        "Variant IDs in product:",
+        productVariants.map((v) =>
+          String(v?.id || "").trim()
+        )
+      );
+
+      let productHasExportedVariant = false;
+
       const imageMap = {};
-      (product.images || []).forEach((img) => {
-        imageMap[String(img.id)] = img.src;
+
+      (product.images || []).forEach((image) => {
+        if (image?.id) {
+          imageMap[String(image.id)] =
+            image.src || "";
+        }
+
+        if (image?.imageId) {
+          imageMap[String(image.imageId)] =
+            image.src || "";
+        }
       });
 
-      (product.variants || []).forEach((variant) => {
+      for (const variant of productVariants) {
+        const variantId = String(
+          variant?.id || ""
+        ).trim();
+
         if (
           variantIdsArray.length > 0 &&
-          !variantIdsArray.includes(String(variant.id))
+          !variantIdsArray.includes(variantId)
         ) {
-          return;
+          continue;
+        }
+
+        console.log(
+          "MATCHED VARIANT:",
+          variantId,
+          variant.title
+        );
+
+        productHasExportedVariant = true;
+
+        let variantImage = "";
+
+        if (
+          variant.image_id &&
+          imageMap[String(variant.image_id)]
+        ) {
+          variantImage =
+            imageMap[String(variant.image_id)];
+        }
+
+        if (
+          !variantImage &&
+          Array.isArray(product.variantImages)
+        ) {
+          const variantImageObject =
+            product.variantImages.find(
+              (item) =>
+                String(item.variantId) ===
+                variantId
+            );
+
+          if (
+            variantImageObject?.images?.length
+          ) {
+            variantImage =
+              variantImageObject.images[0]
+                ?.src || "";
+          }
+        }
+
+        if (
+          !variantImage &&
+          Array.isArray(product.images) &&
+          product.images.length > 0
+        ) {
+          variantImage =
+            product.images[0]?.src || "";
         }
 
         rows.push({
-          'Product No': productCounter,
-          'Product Title': product.title || '',
-          'Variant Title': variant.title || '',
-          'Variant SKU': variant.sku || '',
-          'Variant Option1': variant.option1 || '',
-          'Variant Option2': variant.option2 || '',
-          'Variant Option3': variant.option3 || '',
-          'Variant Price': variant.price || '',
-          'Variant Compare At Price': variant.compare_at_price || '',
-          'Variant Inventory Qty': variant.inventory_quantity || 0,
-          'Variant Image':
-            variant.image_id && imageMap[variant.image_id]
-              ? imageMap[variant.image_id]
-              : '',
-          Status: status,
+          "Product No": productCounter,
+          "Product Title":
+            product.title || "",
+          "Variant Title":
+            variant.title || "",
+          "Variant SKU":
+            variant.sku || "",
+          "Variant Option1":
+            variant.option1 || "",
+          "Variant Option2":
+            variant.option2 || "",
+          "Variant Option3":
+            variant.option3 || "",
+          "Variant Price":
+            variant.price ?? "",
+          "Variant Compare At Price":
+            variant.compare_at_price ?? "",
+          "Variant Inventory Qty":
+            variant.inventory_quantity ?? 0,
+          "Variant Image":
+            variantImage,
+          Status:
+            product.status || "unknown",
+          "Product Shopify ID":
+            product.shopifyId ||
+            product.id ||
+            "",
+          "Variant Shopify ID":
+            variant.id || "",
         });
+      }
+
+      if (productHasExportedVariant) {
+        productCounter++;
+      }
+    }
+
+    console.log("====================================");
+    console.log(
+      "Total CSV rows generated:",
+      rows.length
+    );
+    console.log("====================================");
+
+    // =====================================================
+    // 8. NO MATCHED VARIANTS
+    // =====================================================
+    if (!rows.length) {
+      console.log(
+        "Requested IDs:",
+        variantIdsArray
+      );
+
+      const allAvailableIds =
+        products.flatMap((product) =>
+          (product.variants || []).map(
+            (variant) =>
+              String(
+                variant?.id || ""
+              ).trim()
+          )
+        );
+
+      console.log(
+        "Available IDs in fetched products:",
+        allAvailableIds
+      );
+
+      return res.status(404).json({
+        message:
+          "No selected variants were found.",
+        requestedVariantIds:
+          variantIdsArray,
       });
-
-      productCounter++;
     }
 
-    if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No variant data found in database.' });
-    }
-
+    // =====================================================
+    // 9. GENERATE CSV
+    // =====================================================
     const fields = [
-      'Product No',
-      'Product Title',
-      'Variant Title',
-      'Variant SKU',
-      'Variant Option1',
-      'Variant Option2',
-      'Variant Option3',
-      'Variant Price',
-      'Variant Compare At Price',
-      'Variant Inventory Qty',
-      'Variant Image',
-      'Status',
+      "Product No",
+      "Product Title",
+      "Variant Title",
+      "Variant SKU",
+      "Variant Option1",
+      "Variant Option2",
+      "Variant Option3",
+      "Variant Price",
+      "Variant Compare At Price",
+      "Variant Inventory Qty",
+      "Variant Image",
+      "Status",
+      "Product Shopify ID",
+      "Variant Shopify ID",
     ];
 
-    const parser = new Parser({ fields });
+    const parser = new Parser({
+      fields,
+    });
+
     const csv = parser.parse(rows);
 
-    const filename = `db-variant-inventory-${Date.now()}.csv`;
+    const filename =
+      `db-variant-inventory-${Date.now()}.csv`;
 
-    const isVercel = process.env.VERCEL === '1';
-    const exportDir = isVercel ? '/tmp' : path.join(process.cwd(), 'exports');
+    res.setHeader(
+      "Content-Type",
+      "text/csv; charset=utf-8"
+    );
 
-    if (!isVercel && !fs.existsSync(exportDir)) {
-      fs.mkdirSync(exportDir, { recursive: true });
-    }
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    );
 
-    const filePath = path.join(exportDir, filename);
-    fs.writeFileSync(filePath, csv);
+    console.log(
+      `EXPORT SUCCESS: ${rows.length} variants`
+    );
 
-    res.download(filePath, filename, (err) => {
-      if (err) {
-        console.error('Download error:', err);
-        res.status(500).send('Error downloading file');
-      }
-      fs.unlinkSync(filePath);
-    });
+    console.log(
+      "EXPORT INVENTORY REQUEST END"
+    );
+
+    return res.status(200).send(csv);
+
   } catch (error) {
-    console.error('Export Error:', error);
-    res
-      .status(500)
-      .json({ message: 'Server error during export.', error: error.message });
+    console.error(
+      "EXPORT INVENTORY FATAL ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Server error during inventory export.",
+      error: error.message,
+    });
   }
 };
 
