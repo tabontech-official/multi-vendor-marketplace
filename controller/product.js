@@ -2976,207 +2976,793 @@ export const getSingleVariantData = async (req, res) => {
   }
 };
 
+// export const updateSingleVariant = async (req, res) => {
+//   let shopifyStoreUrl, shopifyApiKey, shopifyAccessToken;
+
+//   try {
+//     console.log('\n==============================');
+//     console.log('🔵 UPDATE SINGLE VARIANT START');
+//     console.log('==============================');
+
+//     const { productId, variantId } = req.params;
+//     const variantBody = req.body.variant || {};
+
+//     console.log('📌 Product ID:', productId);
+//     console.log('📌 Variant ID:', variantId);
+//     console.log('📦 Incoming Body:', variantBody);
+
+//     const {
+//       price,
+//       inventory_quantity,
+//       sku,
+//       option1,
+//       option2,
+//       option3,
+//       weight,
+//       compare_at_price,
+//       barcode,
+//       inventory_policy,
+//     } = variantBody;
+
+//     /* ============================================
+//        STEP 1: LOAD SHOPIFY CONFIG
+//     ============================================ */
+
+//     const shopifyConfiguration = await shopifyConfigurationModel.findOne();
+//     if (!shopifyConfiguration) {
+//       return res.status(404).json({ error: 'Shopify config missing' });
+//     }
+
+//     shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
+//     shopifyApiKey = shopifyConfiguration.shopifyApiKey;
+//     shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+
+//     console.log('✅ Shopify Config Loaded');
+
+//     /* ============================================
+//        STEP 2: UPDATE VARIANT ON SHOPIFY
+//     ============================================ */
+
+//     const variantUpdateRes = await shopifyRequest(
+//       `${shopifyStoreUrl}/admin/api/2024-01/variants/${variantId}.json`,
+//       'PUT',
+//       {
+//         variant: {
+//           id: variantId,
+//           // price: price?.toString(),
+//           // compare_at_price: compare_at_price?.toString(),
+//           price:
+//   price !== undefined && price !== null
+//     ? price.toString()
+//     : undefined,
+
+// compare_at_price:
+//   compare_at_price === null || compare_at_price === ''
+//     ? null
+//     : compare_at_price !== undefined
+//       ? compare_at_price.toString()
+//       : undefined,
+//           sku,
+//           barcode,
+//           option1,
+//           option2,
+//           option3,
+//           weight,
+//           inventory_policy,
+//           inventory_management: 'shopify',
+//         },
+//       },
+//       shopifyApiKey,
+//       shopifyAccessToken
+//     );
+
+//     const updatedVariant = variantUpdateRes?.variant;
+
+//     if (!updatedVariant) {
+//       return res.status(400).json({ error: 'Shopify variant update failed' });
+//     }
+
+//     console.log('✅ Shopify Variant Updated');
+
+//     /* ============================================
+//        STEP 3: UPDATE INVENTORY ON SHOPIFY
+//     ============================================ */
+
+//     if (inventory_quantity !== undefined && updatedVariant.inventory_item_id) {
+//       console.log('📦 Updating Shopify Inventory...');
+
+//       // Get location
+//       const inventoryLevelsRes = await shopifyRequest(
+//         `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${updatedVariant.inventory_item_id}`,
+//         'GET',
+//         null,
+//         shopifyApiKey,
+//         shopifyAccessToken
+//       );
+
+//       const locationId = inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+
+//       if (!locationId) {
+//         console.log('❌ No location found for inventory');
+//       } else {
+//         await shopifyRequest(
+//           `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
+//           'POST',
+//           {
+//             location_id: locationId,
+//             inventory_item_id: updatedVariant.inventory_item_id,
+//             available: parseInt(inventory_quantity) || 0,
+//           },
+//           shopifyApiKey,
+//           shopifyAccessToken
+//         );
+
+//         console.log('✅ Shopify Inventory Updated');
+//       }
+//     }
+
+//     /* ============================================
+//        STEP 4: UPDATE MONGODB FROM BODY
+//     ============================================ */
+
+//     console.log('🔄 Updating MongoDB...');
+
+//     const updateFields = {};
+
+//     // if (price !== undefined)
+//     //   updateFields['variants.$.price'] = price.toString();
+
+//     // if (compare_at_price !== undefined)
+//     //   updateFields['variants.$.compare_at_price'] = compare_at_price.toString();
+
+//     if (price !== undefined && price !== null) {
+//   updateFields['variants.$.price'] = price.toString();
+// }
+
+// if (compare_at_price !== undefined) {
+//   updateFields['variants.$.compare_at_price'] =
+//     compare_at_price === null || compare_at_price === ''
+//       ? null
+//       : compare_at_price.toString();
+// }
+//     if (inventory_quantity !== undefined)
+//       updateFields['variants.$.inventory_quantity'] =
+//         parseInt(inventory_quantity) || 0;
+
+//     if (sku !== undefined) updateFields['variants.$.sku'] = sku;
+
+//     if (barcode !== undefined) updateFields['variants.$.barcode'] = barcode;
+
+//     if (option1 !== undefined) updateFields['variants.$.option1'] = option1;
+
+//     if (option2 !== undefined) updateFields['variants.$.option2'] = option2;
+
+//     if (option3 !== undefined) updateFields['variants.$.option3'] = option3;
+
+//     if (weight !== undefined) updateFields['variants.$.weight'] = weight;
+
+//     const dbUpdate = await listingModel.findOneAndUpdate(
+//       {
+//         shopifyId: productId,
+//         'variants.id': variantId,
+//       },
+//       { $set: updateFields },
+//       { new: true }
+//     );
+
+//     if (!dbUpdate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Variant not found in Mongo',
+//       });
+//     }
+
+//     console.log('✅ Mongo Updated Successfully');
+
+//     console.log('==============================');
+//     console.log('🟢 UPDATE SINGLE VARIANT END');
+//     console.log('==============================\n');
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Variant updated successfully',
+//     });
+//   } catch (error) {
+//     console.error('🔴 ERROR:', error?.response?.data || error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error updating variant',
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+
 export const updateSingleVariant = async (req, res) => {
-  let shopifyStoreUrl, shopifyApiKey, shopifyAccessToken;
+  let shopifyUpdated = false;
 
   try {
-    console.log('\n==============================');
-    console.log('🔵 UPDATE SINGLE VARIANT START');
-    console.log('==============================');
-
     const { productId, variantId } = req.params;
-    const variantBody = req.body.variant || {};
-
-    console.log('📌 Product ID:', productId);
-    console.log('📌 Variant ID:', variantId);
-    console.log('📦 Incoming Body:', variantBody);
+    const body = req.body?.variant || {};
 
     const {
       price,
-      inventory_quantity,
+      compare_at_price,
       sku,
+      barcode,
       option1,
       option2,
       option3,
       weight,
-      compare_at_price,
-      barcode,
+      weight_unit,
+      inventory_quantity,
       inventory_policy,
-    } = variantBody;
+      track_quantity,
+      location_id,
+    } = body;
 
-    /* ============================================
-       STEP 1: LOAD SHOPIFY CONFIG
-    ============================================ */
+    const API_VERSION = "2026-10";
 
-    const shopifyConfiguration = await shopifyConfigurationModel.findOne();
-    if (!shopifyConfiguration) {
-      return res.status(404).json({ error: 'Shopify config missing' });
+    // STEP 1: Validate request
+    if (!productId || !variantId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID and Variant ID are required",
+      });
     }
 
-    shopifyStoreUrl = shopifyConfiguration.shopifyStoreUrl;
-    shopifyApiKey = shopifyConfiguration.shopifyApiKey;
-    shopifyAccessToken = shopifyConfiguration.shopifyAccessToken;
+    if (
+      track_quantity !== undefined &&
+      typeof track_quantity !== "boolean"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "track_quantity must be true or false",
+      });
+    }
 
-    console.log('✅ Shopify Config Loaded');
+    let requestedQuantity;
 
-    /* ============================================
-       STEP 2: UPDATE VARIANT ON SHOPIFY
-    ============================================ */
+    if (
+      inventory_quantity !== undefined &&
+      inventory_quantity !== null
+    ) {
+      requestedQuantity = Number(inventory_quantity);
 
-    const variantUpdateRes = await shopifyRequest(
-      `${shopifyStoreUrl}/admin/api/2024-01/variants/${variantId}.json`,
-      'PUT',
-      {
-        variant: {
-          id: variantId,
-          // price: price?.toString(),
-          // compare_at_price: compare_at_price?.toString(),
-          price:
-  price !== undefined && price !== null
-    ? price.toString()
-    : undefined,
+      if (
+        inventory_quantity === "" ||
+        !Number.isSafeInteger(requestedQuantity) ||
+        requestedQuantity < 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid inventory quantity",
+        });
+      }
+    }
 
-compare_at_price:
-  compare_at_price === null || compare_at_price === ''
-    ? null
-    : compare_at_price !== undefined
-      ? compare_at_price.toString()
-      : undefined,
-          sku,
-          barcode,
-          option1,
-          option2,
-          option3,
-          weight,
-          inventory_policy,
-          inventory_management: 'shopify',
-        },
-      },
+    if (
+      inventory_policy !== undefined &&
+      !["deny", "continue"].includes(inventory_policy)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid inventory policy",
+      });
+    }
+
+    // STEP 2: Load configuration
+    const config = await shopifyConfigurationModel.findOne();
+
+    if (!config) {
+      return res.status(404).json({
+        success: false,
+        message: "Shopify configuration missing",
+      });
+    }
+
+    const {
+      shopifyStoreUrl,
       shopifyApiKey,
-      shopifyAccessToken
-    );
+      shopifyAccessToken,
+    } = config;
 
-    const updatedVariant = variantUpdateRes?.variant;
+    const baseUrl =
+      `${shopifyStoreUrl.replace(/\/$/, "")}` +
+      `/admin/api/${API_VERSION}`;
 
-    if (!updatedVariant) {
-      return res.status(400).json({ error: 'Shopify variant update failed' });
-    }
-
-    console.log('✅ Shopify Variant Updated');
-
-    /* ============================================
-       STEP 3: UPDATE INVENTORY ON SHOPIFY
-    ============================================ */
-
-    if (inventory_quantity !== undefined && updatedVariant.inventory_item_id) {
-      console.log('📦 Updating Shopify Inventory...');
-
-      // Get location
-      const inventoryLevelsRes = await shopifyRequest(
-        `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels.json?inventory_item_ids=${updatedVariant.inventory_item_id}`,
-        'GET',
-        null,
+    const request = (path, method = "GET", data = null) =>
+      shopifyRequest(
+        `${baseUrl}${path}`,
+        method,
+        data,
         shopifyApiKey,
         shopifyAccessToken
       );
 
-      const locationId = inventoryLevelsRes?.inventory_levels?.[0]?.location_id;
+    // STEP 3: Check database record
+    const localProduct = await listingModel.findOne({
+      shopifyId: String(productId),
+      "variants.id": String(variantId),
+    });
 
-      if (!locationId) {
-        console.log('❌ No location found for inventory');
-      } else {
-        await shopifyRequest(
-          `${shopifyStoreUrl}/admin/api/2024-01/inventory_levels/set.json`,
-          'POST',
-          {
-            location_id: locationId,
-            inventory_item_id: updatedVariant.inventory_item_id,
-            available: parseInt(inventory_quantity) || 0,
-          },
-          shopifyApiKey,
-          shopifyAccessToken
-        );
-
-        console.log('✅ Shopify Inventory Updated');
-      }
-    }
-
-    /* ============================================
-       STEP 4: UPDATE MONGODB FROM BODY
-    ============================================ */
-
-    console.log('🔄 Updating MongoDB...');
-
-    const updateFields = {};
-
-    // if (price !== undefined)
-    //   updateFields['variants.$.price'] = price.toString();
-
-    // if (compare_at_price !== undefined)
-    //   updateFields['variants.$.compare_at_price'] = compare_at_price.toString();
-
-    if (price !== undefined && price !== null) {
-  updateFields['variants.$.price'] = price.toString();
-}
-
-if (compare_at_price !== undefined) {
-  updateFields['variants.$.compare_at_price'] =
-    compare_at_price === null || compare_at_price === ''
-      ? null
-      : compare_at_price.toString();
-}
-    if (inventory_quantity !== undefined)
-      updateFields['variants.$.inventory_quantity'] =
-        parseInt(inventory_quantity) || 0;
-
-    if (sku !== undefined) updateFields['variants.$.sku'] = sku;
-
-    if (barcode !== undefined) updateFields['variants.$.barcode'] = barcode;
-
-    if (option1 !== undefined) updateFields['variants.$.option1'] = option1;
-
-    if (option2 !== undefined) updateFields['variants.$.option2'] = option2;
-
-    if (option3 !== undefined) updateFields['variants.$.option3'] = option3;
-
-    if (weight !== undefined) updateFields['variants.$.weight'] = weight;
-
-    const dbUpdate = await listingModel.findOneAndUpdate(
-      {
-        shopifyId: productId,
-        'variants.id': variantId,
-      },
-      { $set: updateFields },
-      { new: true }
-    );
-
-    if (!dbUpdate) {
+    if (!localProduct) {
       return res.status(404).json({
         success: false,
-        error: 'Variant not found in Mongo',
+        message: "Product variant not found in database",
       });
     }
 
-    console.log('✅ Mongo Updated Successfully');
+    // STEP 4: Get Shopify variant
+    const variantResponse = await request(
+      `/variants/${variantId}.json`
+    );
 
-    console.log('==============================');
-    console.log('🟢 UPDATE SINGLE VARIANT END');
-    console.log('==============================\n');
+    const existingVariant = variantResponse?.variant;
+
+    if (!existingVariant) {
+      return res.status(404).json({
+        success: false,
+        message: "Variant not found in Shopify",
+      });
+    }
+
+    if (
+      String(existingVariant.product_id) !== String(productId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Variant does not belong to this product",
+      });
+    }
+
+    const inventoryItemId = existingVariant.inventory_item_id;
+
+    if (!inventoryItemId) {
+      return res.status(400).json({
+        success: false,
+        message: "Inventory item ID missing",
+      });
+    }
+
+    // STEP 5: Get actual tracking status
+    const itemResponse = await request(
+      `/inventory_items/${inventoryItemId}.json`
+    );
+
+    const inventoryItem = itemResponse?.inventory_item;
+
+    if (
+      !inventoryItem ||
+      typeof inventoryItem.tracked !== "boolean"
+    ) {
+      return res.status(502).json({
+        success: false,
+        message: "Unable to read Shopify inventory tracking",
+      });
+    }
+
+    const currentTracking = inventoryItem.tracked;
+
+    const desiredTracking =
+      track_quantity === undefined
+        ? currentTracking
+        : track_quantity;
+
+    console.log("Current Tracking:", currentTracking);
+    console.log("Desired Tracking:", desiredTracking);
+
+    // STEP 6: Resolve location BEFORE making changes
+    let selectedLocationId = null;
+    let locationNeedsConnection = false;
+
+    if (
+      desiredTracking &&
+      requestedQuantity !== undefined
+    ) {
+      const levelsResponse = await request(
+        `/inventory_levels.json?inventory_item_ids=${inventoryItemId}`
+      );
+
+      const levels = levelsResponse?.inventory_levels || [];
+
+      if (location_id !== undefined && location_id !== null) {
+        const matching = levels.find(
+          (level) =>
+            String(level.location_id) === String(location_id)
+        );
+
+        selectedLocationId = String(location_id);
+
+        if (!matching) {
+          if (levels.length > 0) {
+            return res.status(422).json({
+              success: false,
+              message:
+                "Selected location is not connected to this inventory item",
+            });
+          }
+
+          locationNeedsConnection = true;
+        }
+      } else if (levels.length === 1) {
+        selectedLocationId = String(levels[0].location_id);
+      } else if (levels.length > 1) {
+        return res.status(422).json({
+          success: false,
+          message:
+            "Multiple inventory locations found. Provide location_id.",
+        });
+      } else {
+        // No inventory level exists.
+        // Use the store's location only when unambiguous.
+        const locationsResponse = await request(
+          "/locations.json"
+        );
+
+        const activeLocations =
+          (locationsResponse?.locations || []).filter(
+            (location) => location.active === true
+          );
+
+        if (activeLocations.length !== 1) {
+          return res.status(422).json({
+            success: false,
+            message:
+              "Inventory location required. Provide location_id.",
+          });
+        }
+
+        selectedLocationId = String(activeLocations[0].id);
+        locationNeedsConnection = true;
+      }
+    }
+
+    // STEP 7: Prepare Shopify variant changes
+    const variantPayload = {
+      id: variantId,
+    };
+
+    if (price !== undefined && price !== null) {
+      variantPayload.price = String(price);
+    }
+
+    if (compare_at_price !== undefined) {
+      variantPayload.compare_at_price =
+        compare_at_price === null || compare_at_price === ""
+          ? null
+          : String(compare_at_price);
+    }
+
+    if (sku !== undefined) {
+      variantPayload.sku = sku;
+    }
+
+    if (barcode !== undefined) {
+      variantPayload.barcode = barcode;
+    }
+
+    if (option1 !== undefined) {
+      variantPayload.option1 = option1;
+    }
+
+    if (option2 !== undefined) {
+      variantPayload.option2 = option2;
+    }
+
+    if (option3 !== undefined) {
+      variantPayload.option3 = option3;
+    }
+
+    if (weight !== undefined) {
+      const parsedWeight = Number(weight);
+
+      if (!Number.isFinite(parsedWeight) || parsedWeight < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid weight",
+        });
+      }
+
+      variantPayload.weight = parsedWeight;
+    }
+
+    if (weight_unit !== undefined) {
+      variantPayload.weight_unit = weight_unit;
+    }
+
+    if (inventory_policy !== undefined) {
+      variantPayload.inventory_policy = inventory_policy;
+    }
+
+    // Do not force inventory_management here.
+
+    // STEP 8: Update Shopify variant
+    if (Object.keys(variantPayload).length > 1) {
+      const updateResponse = await request(
+        `/variants/${variantId}.json`,
+        "PUT",
+        {
+          variant: variantPayload,
+        }
+      );
+
+      if (!updateResponse?.variant) {
+        throw new Error("Shopify variant update failed");
+      }
+
+      shopifyUpdated = true;
+    }
+
+    // STEP 9: Update tracking
+    if (desiredTracking !== currentTracking) {
+      const trackingResponse = await request(
+        `/inventory_items/${inventoryItemId}.json`,
+        "PUT",
+        {
+          inventory_item: {
+            id: inventoryItemId,
+            tracked: desiredTracking,
+          },
+        }
+      );
+
+      if (
+        trackingResponse?.inventory_item?.tracked !==
+        desiredTracking
+      ) {
+        throw new Error(
+          "Shopify inventory tracking update failed"
+        );
+      }
+
+      shopifyUpdated = true;
+
+      console.log("Tracking changed:", desiredTracking);
+    }
+
+    // STEP 10: Set inventory quantity
+    if (
+      desiredTracking === true &&
+      requestedQuantity !== undefined
+    ) {
+      if (locationNeedsConnection) {
+        await request(
+          "/inventory_levels/connect.json",
+          "POST",
+          {
+            inventory_item_id: inventoryItemId,
+            location_id: selectedLocationId,
+          }
+        );
+
+        shopifyUpdated = true;
+      }
+
+      await request(
+        "/inventory_levels/set.json",
+        "POST",
+        {
+          inventory_item_id: inventoryItemId,
+          location_id: selectedLocationId,
+          available: requestedQuantity,
+        }
+      );
+
+      shopifyUpdated = true;
+
+      console.log("Quantity updated:", requestedQuantity);
+    } else {
+      console.log(
+        "Quantity update skipped because tracking is OFF or quantity was not supplied"
+      );
+    }
+
+    // STEP 11: Fetch final Shopify state
+    const finalVariantResponse = await request(
+      `/variants/${variantId}.json`
+    );
+
+    const finalVariant = finalVariantResponse?.variant;
+
+    const finalItemResponse = await request(
+      `/inventory_items/${inventoryItemId}.json`
+    );
+
+    const finalItem = finalItemResponse?.inventory_item;
+
+    if (
+      !finalVariant ||
+      !finalItem ||
+      typeof finalItem.tracked !== "boolean"
+    ) {
+      throw new Error("Could not verify Shopify variant");
+    }
+
+    const finalTracking = finalItem.tracked;
+
+    let finalQuantity = 0;
+    let finalLocationId = null;
+
+    if (finalTracking) {
+      const finalLevelsResponse = await request(
+        `/inventory_levels.json?inventory_item_ids=${inventoryItemId}`
+      );
+
+      const finalLevels =
+        finalLevelsResponse?.inventory_levels || [];
+
+      finalQuantity = finalLevels.reduce(
+        (total, level) =>
+          total + (Number(level.available) || 0),
+        0
+      );
+
+      if (selectedLocationId) {
+        finalLocationId = selectedLocationId;
+      } else if (finalLevels.length === 1) {
+        finalLocationId = String(finalLevels[0].location_id);
+      }
+    }
+
+    // STEP 12: Prepare MongoDB variant update
+    const variantFields = {};
+
+    const fields = [
+      "title",
+      "option1",
+      "option2",
+      "option3",
+      "price",
+      "compare_at_price",
+      "sku",
+      "barcode",
+      "weight",
+      "weight_unit",
+      "image_id",
+      "inventory_item_id",
+    ];
+
+    for (const field of fields) {
+      if (finalVariant[field] !== undefined) {
+        variantFields[`variants.$.${field}`] =
+          finalVariant[field];
+      }
+    }
+
+    variantFields["variants.$.inventory_management"] =
+      finalTracking ? "shopify" : null;
+
+    variantFields["variants.$.inventory_quantity"] =
+      finalTracking ? finalQuantity : 0;
+
+    if (finalLocationId !== null) {
+      variantFields["variants.$.location_id"] =
+        String(finalLocationId);
+    }
+
+    // STEP 13: Save updated variant to database
+    const updatedProduct = await listingModel.findOneAndUpdate(
+      {
+        shopifyId: String(productId),
+        "variants.id": String(variantId),
+      },
+      {
+        $set: variantFields,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedProduct) {
+      return res.status(502).json({
+        success: false,
+        shopifyUpdated: true,
+        message:
+          "Shopify updated but database variant sync failed",
+      });
+    }
+
+    // STEP 14: Calculate product inventory summary
+    // Uses tracked variant records stored in this product.
+    const trackedVariants = updatedProduct.variants.filter(
+      (variant) => variant.inventory_management === "shopify"
+    );
+
+    const totalQuantity = trackedVariants.reduce(
+      (total, variant) =>
+        total + (Number(variant.inventory_quantity) || 0),
+      0
+    );
+
+    const productTracking = trackedVariants.length > 0;
+
+    // STEP 15: Update product-level inventory
+    const productUpdate = await listingModel.findOneAndUpdate(
+      {
+        _id: updatedProduct._id,
+      },
+      {
+        $set: {
+          "inventory.track_quantity": productTracking,
+          "inventory.quantity": totalQuantity,
+          totalQuantity: String(totalQuantity),
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+
+console.log("===== PRODUCT INVENTORY DEBUG =====");
+
+console.log(
+  "Tracked Variants:",
+  trackedVariants.map((variant) => ({
+    id: variant.id,
+    title: variant.title,
+    inventory_management: variant.inventory_management,
+    inventory_quantity: variant.inventory_quantity,
+  }))
+);
+
+console.log("Calculated Tracking:", productTracking);
+console.log("Calculated Quantity:", totalQuantity);
+
+console.log("Saved Product ID:", productUpdate?._id);
+console.log("Saved Inventory:", productUpdate?.inventory);
+console.log("Saved Total Quantity:", productUpdate?.totalQuantity);
+
+console.log("===================================");
+
+    if (!productUpdate) {
+      return res.status(502).json({
+        success: false,
+        shopifyUpdated: true,
+        message:
+          "Variant updated but product inventory summary failed",
+      });
+    }
+
+    // STEP 16: Send response
+    console.log("Variant successfully synchronized");
 
     return res.status(200).json({
       success: true,
-      message: 'Variant updated successfully',
+      message: "Variant updated successfully",
+      variantId: String(variantId),
+      inventory: {
+        tracked: finalTracking,
+        quantity: finalTracking ? finalQuantity : null,
+        location_id: finalLocationId,
+      },
+      productInventory: {
+        track_quantity: productTracking,
+        quantity: totalQuantity,
+        totalQuantity: String(totalQuantity),
+      },
     });
+
   } catch (error) {
-    console.error('🔴 ERROR:', error?.response?.data || error);
+    console.error("Update Variant Error:", error);
 
     return res.status(500).json({
       success: false,
-      message: 'Error updating variant',
+      shopifyUpdated,
+      message: "Error updating variant",
       error: error.message,
     });
   }
 };
+
+
 
 export const syncProductVariants = async (req, res) => {
   try {
